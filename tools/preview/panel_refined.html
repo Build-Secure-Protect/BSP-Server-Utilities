@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Display Panel Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The owner's picks from set B drawn together: the block in look A (three.js r128) and the settings screen in look B
+   with SAVE and CLOSE, in Text mode, Image mode from a web address and Image mode from the server folder.
+   Screens at 1.5x the in-game GUI size (344 x 230 -> 516 x 345). Text on the panels is sample text. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.view3d{ width:100%; max-width:760px; aspect-ratio:16/8; background:#0b0d11; border-radius:3px; display:block; }
+.sw{ width:11px; height:11px; display:inline-block; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); flex:none; }
+.sw.on{ box-shadow:0 0 0 1.5px #B58CFF; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.face{ background:#0C0E12; box-shadow:inset 0 0 0 2px #2A2F3A; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:3px; color:#E6EAF2; text-align:center; overflow:hidden; }
+.face .l{ white-space:nowrap; }
+.lineRow{ display:flex; gap:5px; align-items:center; padding:3px 5px; box-sizing:border-box; }
+.lineRow.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.mode-img{ display:none !important; } body.img .mode-img{ display:flex !important; } body.img .mode-txt{ display:none !important; }
+.mode-img .inp, .mode-img .keys, .mode-img .lbl{ flex:none; }
+.grid16{ display:grid; grid-template-columns:repeat(8,11px); gap:3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>The Display Panel, refined</h1>
+  <p class="lede">Your picks from set B drawn together for a last look before SU-5 to SU-8 are built: the slim-bezel block (D41) at full brightness (D42), and the settings screen with the big clickable preview and the inspector (D43), sizes that scale with the panel (D44), the 16 colours and a #RRGGBB box (D45), 16 lines of 80 characters (D46), dark or clear backgrounds (D47), SAVE and CLOSE (D48) and the image pane (D49). The staff-online and action-log faces are set C.</p>
+</header>
+
+<section>
+  <h2>1. The block in the world</h2>
+  <div class="card">
+    <p>Left to right: a single block, a 4 x 2 panel with text, and a 2 x 2 panel with a clear background, where the wall shows through behind the text. The bezel runs round the outside of each joined panel only; the teal light sits in the bottom-right corner. The block is 3 pixels deep against the wall it is placed on, like BSP-Core's Score Screen, and joins with panels of the same facing on the same wall into the largest full rectangle up to 8 x 6.</p>
+    <canvas class="view3d" id="refined" style="aspect-ratio:16/7"></canvas>
+  </div>
+</section>
+
+<section>
+  <h2>2. The settings screen (right-click the panel; admins only)</h2>
+  <div class="card">
+    <h3>Text mode</h3>
+    <p>The face fills the top: what players will see, redrawn as you type. Click a line on it to pick it (outlined in violet). The inspector under it edits the picked line: its text with the count against 80, the size (S, M, L, XL) with − and +, the colour (a click on the swatch opens the 16 Minecraft colours and a # box, drawn open here), the alignment and bold. + ADD LINE adds one under the picked line (4 / 16 counts them); UP and DOWN move it; DELETE LINE asks SURE?. The modes run down the left with the background under them. Nothing reaches the panel in the world until SAVE; CLOSE (or Escape) leaves it as it was.</p>
+    <div class="stage"><div class="scr v" style="width:516px;height:345px">
+        <div class="hd"><span class="ttl v">Display panel</span><span class="sm m">click a line on the face to pick it</span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div style="width:74px;display:flex;flex-direction:column;gap:4px"><span class="mini on">Text</span><span class="mini">Image</span><span class="mini">Staff online</span><span class="mini">Action log</span><div class="grow"></div><div class="lbl">Background</div>
+            <div class="keys" style="flex-wrap:wrap;gap:4px"><span class="sw" style="background:#0C0E12;box-shadow:0 0 0 1.5px #B58CFF"></span><span class="sw" style="background:#10151C"></span><span class="sw" style="background:#1d2b44"></span><span class="sw" style="background:#2b1d2f"></span><span class="sw" style="background:#1f2b1f"></span><span class="sw" style="background:repeating-conic-gradient(#555 0 25%,#999 0 50%) 0/6px 6px"></span></div>
+            <div class="sm m">the chequered one is clear</div></div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:6px"><div style="position:relative"><div class="face" style="width:410px;height:150px">
+      <div class="l m" style="font-size:10px;letter-spacing:.2em">WELCOME TO</div>
+      <div class="l" style="font:700 20px Oswald;color:#FFAA00;letter-spacing:.04em">BUILD SECURE PROTECT</div>
+      <div class="l" style="font-size:10px;color:#55FFFF">Rules: /rules · Staff online at spawn</div>
+      <div class="l" style="font-size:9px">Totems can be stolen. Guard yours.</div></div><div style="position:absolute;left:52px;right:52px;top:50px;height:28px;box-shadow:0 0 0 1px #B58CFF"></div></div>
+            <div style="display:flex;gap:5px;align-items:center"><span class="lbl">Line 2</span><div class="inp focus" style="flex:1">BUILD SECURE PROTECT▏</div><span class="sm m">20 / 80</span></div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative">
+              <span class="lbl">Size</span><span class="key sm">−</span><span class="sm b" style="width:14px;text-align:center">XL</span><span class="key sm">+</span>
+              <span class="lbl" style="margin-left:6px">Colour</span><span class="sw on" style="background:#FFAA00"></span>
+              <span class="lbl" style="margin-left:6px">Align</span><span class="mini">L</span><span class="mini on">C</span><span class="mini">R</span>
+              <span class="mini on">B</span>
+              <div style="position:absolute;left:96px;top:-74px;background:#10151C;box-shadow:0 0 0 1px #B58CFF,0 6px 16px rgba(0,0,0,.6);padding:6px;display:flex;flex-direction:column;gap:5px;z-index:2"><div class="grid16"><span class="sw" style="background:#000000"></span><span class="sw" style="background:#0000AA"></span><span class="sw" style="background:#00AA00"></span><span class="sw" style="background:#00AAAA"></span><span class="sw" style="background:#AA0000"></span><span class="sw" style="background:#AA00AA"></span><span class="sw on" style="background:#FFAA00"></span><span class="sw" style="background:#AAAAAA"></span><span class="sw" style="background:#555555"></span><span class="sw" style="background:#5555FF"></span><span class="sw" style="background:#55FF55"></span><span class="sw" style="background:#55FFFF"></span><span class="sw" style="background:#FF5555"></span><span class="sw" style="background:#FF55FF"></span><span class="sw" style="background:#FFFF55"></span><span class="sw" style="background:#FFFFFF"></span></div><div style="display:flex;gap:4px;align-items:center"><span class="sm m">#</span><div class="inp" style="width:62px">FFAA00</div></div></div>
+            </div>
+            <div class="keys"><span class="key sm v">+ Add line</span><span class="sm m">4 / 16</span><span class="key sm">Up</span><span class="key sm">Down</span><span style="flex:1"></span><span class="key sm warn">Delete line</span></div></div>
+        </div>
+        <div class="hd"><span class="sm m">4 x 2 · BSP-Spawn · placed by Mrgregles</span><span class="keys"><span class="key ghost">Close</span><span class="key v">Save</span></span></div>
+      </div></div>
+  </div>
+  <div class="card">
+    <h3>Image mode, from a web address</h3>
+    <p>The server fetches the address (http or https, up to 4 MB) when you press SAVE or REFRESH NOW, and the line under the timer says what came back (or why it failed). Players get the picture from the server, never from the address.</p>
+    <div class="stage"><div class="scr v" style="width:516px;height:345px">
+        <div class="hd"><span class="ttl v">Display panel</span><span class="sm m">the face as players see it</span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div style="width:74px;display:flex;flex-direction:column;gap:4px"><span class="mini">Text</span><span class="mini on">Image</span><span class="mini">Staff online</span><span class="mini">Action log</span><div class="grow"></div><div class="lbl">Background</div>
+            <div class="keys" style="flex-wrap:wrap;gap:4px"><span class="sw" style="background:#0C0E12;box-shadow:0 0 0 1.5px #B58CFF"></span><span class="sw" style="background:#10151C"></span><span class="sw" style="background:#1d2b44"></span><span class="sw" style="background:#2b1d2f"></span><span class="sw" style="background:#1f2b1f"></span><span class="sw" style="background:repeating-conic-gradient(#555 0 25%,#999 0 50%) 0/6px 6px"></span></div>
+            <div class="sm m">the chequered one is clear</div></div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:6px"><div class="face" style="width:410px;height:128px;background:linear-gradient(135deg,#2f4a2a,#3a5a8a 60%,#8a6a3a)"><div class="l" style="font:700 12px Oswald;color:#fff;text-shadow:1px 1px 0 #000">SPAWN MAP</div></div><div style="display:flex;flex-direction:column;gap:5px">
+        <div class="lbl">Source</div>
+        <div class="keys"><span class="mini on">Web address</span><span class="mini">Server folder</span></div>
+        <div class="inp focus">https://example.com/bsp/spawn-map.png▏</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Fit</div><div class="keys"><span class="mini on">Fit inside</span><span class="mini">Fill and crop</span><span class="mini">Stretch</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Refresh</div><div class="keys"><span class="key sm">Refresh now</span><span class="mini on">Off</span><span class="mini">5 min</span><span class="mini">15</span><span class="mini">60</span></div></div>
+        </div>
+        <div class="sm m">Loaded · 1024 x 512 PNG · 312 KB · shown at 512 x 256</div>
+      </div></div>
+        </div>
+        <div class="hd"><span class="sm m">4 x 2 · BSP-Spawn · placed by Mrgregles</span><span class="keys"><span class="key ghost">Close</span><span class="key v">Save</span></span></div>
+      </div></div>
+  </div>
+  <div class="card">
+    <h3>Image mode, from the server folder</h3>
+    <p>SERVER FOLDER lists the PNG, JPEG and GIF files in <code>config/bsp_server_utilities/images/</code> on this server with their size; click one to pick it.</p>
+    <div class="stage"><div class="scr v" style="width:516px;height:345px">
+        <div class="hd"><span class="ttl v">Display panel</span><span class="sm m">the face as players see it</span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div style="width:74px;display:flex;flex-direction:column;gap:4px"><span class="mini">Text</span><span class="mini on">Image</span><span class="mini">Staff online</span><span class="mini">Action log</span><div class="grow"></div><div class="lbl">Background</div>
+            <div class="keys" style="flex-wrap:wrap;gap:4px"><span class="sw" style="background:#0C0E12;box-shadow:0 0 0 1.5px #B58CFF"></span><span class="sw" style="background:#10151C"></span><span class="sw" style="background:#1d2b44"></span><span class="sw" style="background:#2b1d2f"></span><span class="sw" style="background:#1f2b1f"></span><span class="sw" style="background:repeating-conic-gradient(#555 0 25%,#999 0 50%) 0/6px 6px"></span></div>
+            <div class="sm m">the chequered one is clear</div></div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:6px"><div class="face" style="width:410px;height:128px;background:linear-gradient(135deg,#2f4a2a,#3a5a8a 60%,#8a6a3a)"><div class="l" style="font:700 12px Oswald;color:#fff;text-shadow:1px 1px 0 #000">SPAWN MAP</div></div><div style="display:flex;flex-direction:column;gap:5px">
+        <div class="lbl">Source</div>
+        <div class="keys"><span class="mini">Web address</span><span class="mini on">Server folder</span><span class="sm m">config/bsp_server_utilities/images/</span></div>
+        <div class="box" style="padding:2px 0;flex:none">
+          <div class="lineRow"><span class="sm">event-banner.png</span><span class="sm m" style="margin-left:auto">1600 x 400 · 410 KB</span></div>
+          <div class="lineRow sel"><span class="sm b">spawn-map.png</span><span class="sm m" style="margin-left:auto">1024 x 512 · 312 KB</span></div>
+          <div class="lineRow"><span class="sm">vote-rewards.jpg</span><span class="sm m" style="margin-left:auto">800 x 800 · 96 KB</span></div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Fit</div><div class="keys"><span class="mini on">Fit inside</span><span class="mini">Fill and crop</span><span class="mini">Stretch</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Refresh</div><div class="keys"><span class="key sm">Refresh now</span><span class="mini on">Off</span><span class="mini">5 min</span><span class="mini">15</span><span class="mini">60</span></div></div>
+        </div>
+        <div class="sm m">Loaded · 1024 x 512 PNG · 312 KB · shown at 512 x 256</div>
+      </div></div>
+        </div>
+        <div class="hd"><span class="sm m">4 x 2 · BSP-Spawn · placed by Mrgregles</span><span class="keys"><span class="key ghost">Close</span><span class="key v">Save</span></span></div>
+      </div></div>
+  </div>
+</section>
+
+<section>
+  <h2>To confirm</h2>
+  <div class="card">
+    <ol>
+      <li><b>R1. SAVE and CLOSE stay with look B.</b> Look B was drawn saving as you go, but D48 chose SAVE. Default: the preview changes at once, the world's panel on SAVE, as drawn here. Or look B's way, every change straight to the world.</li>
+      <li><b>R2. The colour picker</b> opens beside the swatch with the 16 colours and a # box, and closes when a colour is picked or you click elsewhere. Default: yes, as drawn.</li>
+      <li><b>R3. Players who are not admins.</b> Default: right-clicking a panel does nothing for them and they cannot break it; an admin breaking one in survival gets the block back, in creative nothing drops. Or anyone may break it like any block.</li>
+    </ol>
+  </div>
+</section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+document.querySelectorAll('.tb[data-mode]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tb[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+  const img = b.dataset.mode === 'img';
+  document.body.classList.toggle('img', img);
+  document.querySelectorAll('.scr .mini').forEach(m => {
+    if (m.textContent === 'Text') m.classList.toggle('on', !img);
+    if (m.textContent === 'Image') m.classList.toggle('on', img);
+  });
+}));
+
+function contentTexture(wBlocks, hBlocks, single) {
+  const px = 128, c = document.createElement('canvas');
+  c.width = wBlocks * px; c.height = hBlocks * px;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0C0E12'; g.fillRect(0, 0, c.width, c.height);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const cx = c.width / 2;
+  // every line is shrunk to fit the face, as the panel's text is in game
+  const put = (text, colour, size, family, y) => {
+    let s = size; g.font = family.replace('#', s);
+    while (g.measureText(text).width > c.width * 0.9 && s > 8) { s -= 2; g.font = family.replace('#', s); }
+    g.fillStyle = colour; g.fillText(text, cx, y);
+  };
+  if (single) {
+    put('SHOP', '#FFAA00', 34, 'bold #px Oswald, sans-serif', c.height * 0.42);
+    put('this way →', '#55FFFF', 18, '#px "IBM Plex Sans", sans-serif', c.height * 0.68);
+  } else {
+    put('W E L C O M E   T O', '#AAAAAA', 22, '#px "IBM Plex Sans", sans-serif', c.height * 0.2);
+    put('BUILD SECURE PROTECT', '#FFAA00', 58, 'bold #px Oswald, sans-serif', c.height * 0.43);
+    put('Rules: /rules · Staff online at spawn', '#55FFFF', 24, '#px "IBM Plex Sans", sans-serif', c.height * 0.66);
+    put('Totems can be stolen. Guard yours.', '#FFFFFF', 20, '#px "IBM Plex Sans", sans-serif', c.height * 0.83);
+  }
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+
+function wallTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const v = 92 + Math.floor(Math.random() * 30); g.fillStyle = `rgb(${v},${v},${v + 4})`; g.fillRect(x * 16, y * 16, 16, 16);
+  }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(12, 6); return t;
+}
+
+function box(w, h, d, mat, x, y, z) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; }
+
+function panel(look, wB, hB, single) {
+  const grp = new THREE.Group(), D = 3 / 16;
+  const content = new THREE.MeshBasicMaterial({ map: contentTexture(wB, hB, single) });
+  if (look === 'A') {
+    const bez = new THREE.MeshLambertMaterial({ color: 0x2A2F3A }), b = 1 / 16;
+    grp.add(box(wB, hB, D, new THREE.MeshLambertMaterial({ color: 0x15181f }), wB / 2, hB / 2, D / 2));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(wB - 2 * b, hB - 2 * b), content); face.position.set(wB / 2, hB / 2, D + 0.002); grp.add(face);
+    grp.add(box(wB, b, 0.02, bez, wB / 2, b / 2, D + 0.006)); grp.add(box(wB, b, 0.02, bez, wB / 2, hB - b / 2, D + 0.006));
+    grp.add(box(b, hB, 0.02, bez, b / 2, hB / 2, D + 0.006)); grp.add(box(b, hB, 0.02, bez, wB - b / 2, hB / 2, D + 0.006));
+    grp.add(box(0.05, 0.03, 0.02, new THREE.MeshBasicMaterial({ color: 0x19D3B0 }), wB - 0.12, 0.032, D + 0.018));
+  } else if (look === 'B') {
+    grp.add(box(wB, hB, D * 0.6, new THREE.MeshLambertMaterial({ color: 0x9AA3B5 }), wB / 2, hB / 2, D * 0.3));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(wB - 0.08, hB - 0.08), content); face.position.set(wB / 2, hB / 2, D * 0.6 + 0.002); grp.add(face);
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(wB - 0.06, hB - 0.06), new THREE.MeshBasicMaterial({ color: 0x19D3B0, transparent: true, opacity: 0.08 }));
+    glass.position.set(wB / 2, hB / 2, D + 0.004); grp.add(glass);
+    const sc = document.createElement('canvas'); sc.width = 4; sc.height = 64; const sg = sc.getContext('2d');
+    for (let i = 0; i < 64; i += 4) { sg.fillStyle = 'rgba(25,211,176,0.10)'; sg.fillRect(0, i, 4, 1); }
+    const st = new THREE.CanvasTexture(sc); st.wrapS = st.wrapT = THREE.RepeatWrapping; st.repeat.set(1, hB * 4);
+    const scan = new THREE.Mesh(new THREE.PlaneGeometry(wB - 0.08, hB - 0.08), new THREE.MeshBasicMaterial({ map: st, transparent: true }));
+    scan.position.set(wB / 2, hB / 2, D + 0.006); grp.add(scan);
+    const glow = new THREE.MeshBasicMaterial({ color: 0x19D3B0 }), e = 0.025;
+    grp.add(box(wB, e, 0.02, glow, wB / 2, e / 2, D)); grp.add(box(wB, e, 0.02, glow, wB / 2, hB - e / 2, D));
+    grp.add(box(e, hB, 0.02, glow, e / 2, hB / 2, D)); grp.add(box(e, hB, 0.02, glow, wB - e / 2, hB / 2, D));
+  } else {
+    const iron = new THREE.MeshLambertMaterial({ color: 0x5b6070 }), f = 2 / 16;
+    grp.add(box(wB, hB, D - 1 / 16, new THREE.MeshLambertMaterial({ color: 0x1a1d24 }), wB / 2, hB / 2, (D - 1 / 16) / 2));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(wB - 2 * f, hB - 2 * f), content); face.position.set(wB / 2, hB / 2, D - 1 / 16 + 0.002); grp.add(face);
+    grp.add(box(wB, f, D, iron, wB / 2, f / 2, D / 2)); grp.add(box(wB, f, D, iron, wB / 2, hB - f / 2, D / 2));
+    grp.add(box(f, hB, D, iron, f / 2, hB / 2, D / 2)); grp.add(box(f, hB, D, iron, wB - f / 2, hB / 2, D / 2));
+    const rivet = new THREE.MeshLambertMaterial({ color: 0xc9ccd6 });
+    [[f / 2, f / 2], [wB - f / 2, f / 2], [f / 2, hB - f / 2], [wB - f / 2, hB - f / 2]].forEach(([x, y]) => grp.add(box(0.05, 0.05, 0.03, rivet, x, y, D + 0.01)));
+  }
+  return grp;
+}
+
+
+function sceneRefined() {
+  const canvas = document.getElementById('refined');
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true });
+  const w = canvas.clientWidth || 760, h = canvas.clientHeight || 330;
+  r.setSize(w, h, false); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const s = new THREE.Scene(); s.background = new THREE.Color(0x0b0d11);
+  const cam = new THREE.PerspectiveCamera(30, w / h, 0.1, 100);
+  cam.position.set(3.6, 1.6, 10.5); cam.lookAt(3.6, 1.2, 0);
+  s.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-3, 5, 6); s.add(sun);
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(14, 9), new THREE.MeshLambertMaterial({ map: wallTexture() })); wall.position.set(3.6, 1.2, 0); s.add(wall);
+  const one = panel('A', 1, 1, true); one.position.set(-0.9, 0.8, 0); s.add(one);
+  const four = panel('A', 4, 2, false); four.position.set(0.7, 0.3, 0); s.add(four);
+  // a 2 x 2 panel with a clear background: the bezel and the text only
+  const clear = new THREE.Group(), b = 1 / 16, D = 3 / 16, bez = new THREE.MeshLambertMaterial({ color: 0x2A2F3A });
+  clear.add(box(2, b, D, bez, 1, b / 2, D / 2)); clear.add(box(2, b, D, bez, 1, 2 - b / 2, D / 2));
+  clear.add(box(b, 2, D, bez, b / 2, 1, D / 2)); clear.add(box(b, 2, D, bez, 2 - b / 2, 1, D / 2));
+  clear.add(box(0.05, 0.03, 0.02, new THREE.MeshBasicMaterial({ color: 0x19D3B0 }), 2 - 0.12, 0.032, D + 0.01));
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#FFFF55'; g.font = 'bold 40px Oswald, sans-serif'; g.fillText('VOTE', 128, 92);
+  g.fillStyle = '#FFFFFF'; g.font = '22px "IBM Plex Sans", sans-serif'; g.fillText('/vote for rewards', 128, 150);
+  const t = new THREE.CanvasTexture(c);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(2 - 2 * b, 2 - 2 * b), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
+  face.position.set(1, 1, 0.01); clear.add(face);
+  clear.position.set(5.4, 0.3, 0); s.add(clear);
+  r.render(s, cam);
+}
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(sceneRefined);
+</script>
+</body>
+</html>

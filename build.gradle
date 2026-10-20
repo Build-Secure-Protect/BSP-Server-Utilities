@@ -1,0 +1,140 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_archive_name
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            // Mixins with obfuscated names need their reference map remapped in a dev run.
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', mod_id
+            args '--nogui'
+        }
+
+        // ./gradlew runGameTestServer: runs every registered GameTest headlessly and exits.
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+// One server-side mixin: the creative inventory's slot packet, for the action log (HEAD and RETURN injects only).
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "mixins.${mod_id}.json"
+}
+
+repositories {
+    mavenCentral()
+    // BSP-Core has no published artifact: its built jar is picked up from the sibling repo.
+    flatDir { dirs bsp_core_libs }
+    // Dev-run-only jars (LuckPerms for the GameTests), not shipped. See tools/make_luckperms_dev_jar.py in BSP Region Guard.
+    flatDir { dirs 'libs' }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // Optional at runtime: only compat/BspCore touches it, and only when the mod is loaded.
+    compileOnly fg.deobf("blank:bsp-core:${bsp_core_version}")
+    // Dev runs load it (the full jar, so they also get the MySQL driver BSP-Core ships).
+    runtimeOnly fg.deobf("blank:bsp-core:${bsp_core_version}")
+
+    // LuckPerms API: compile only. At runtime the bridge checks whether it is present.
+    compileOnly "net.luckperms:api:${luckperms_api_version}"
+
+    // LuckPerms in dev runs only (the GameTests exercise the bridge); see BSP Region Guard's tools/make_luckperms_dev_jar.py.
+    if (file('libs/LuckPerms-Forge-inner-5.4.102.jar').exists()) {
+        runtimeOnly fg.deobf("blank:LuckPerms-Forge-inner:5.4.102")
+    }
+    if (file('libs/LuckPerms-Forge-dev-5.4.102.jar').exists()) {
+        runtimeOnly files('libs/LuckPerms-Forge-dev-5.4.102.jar')
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
+            forge_version: forge_version, forge_version_range: forge_version_range,
+            loader_version_range: loader_version_range,
+            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors: mod_authors, mod_description: mod_description,
+            bsp_core_version_range: bsp_core_version_range,
+    ]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                'MixinConfigs'            : "mixins.${mod_id}.json",
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// The screen text: every key the client code looks up must exist in the language file (tools/gen_lang.py writes it).
+tasks.register('checkLang', Exec) {
+    group = 'verification'
+    description = 'Checks the client code against the language file (tools/check_lang.py).'
+    commandLine 'python3', 'tools/check_lang.py'
+    inputs.files(fileTree('src/main/java/com/mrgregles/bsp_server_utilities/client'), 'src/main/resources/assets/bsp_server_utilities/lang/en_us.json', 'tools/check_lang.py')
+    outputs.upToDateWhen { true }
+}
+tasks.named('check') {
+    dependsOn 'checkLang'
+}

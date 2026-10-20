@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""Writes BSP-Server Utilities' language file. Edit this script, never the output.
+
+  python3 tools/gen_lang.py
+"""
+import json
+from pathlib import Path
+
+LANG = Path(__file__).resolve().parent.parent / "src/main/resources/assets/bsp_server_utilities/lang/en_us.json"
+
+KEYS = {
+    "bsp_server_utilities.name": "BSP-Server Utilities",
+}
+# /serverutils status (%s = a value filled in)
+STATUS = {
+    "server": "This server: %s",
+    "local": "Records are kept on this server only.",
+    "shared": "Shared storage: %s",
+    "note": "  %s",
+    "luckperms": "LuckPerms: %s",
+    "bsp_core": "BSP-Core: installed",
+    "no_bsp_core": "BSP-Core: not installed",
+    "staff": "Staff groups: %s; operators count as staff: %s",
+    "yes": "yes",
+    "no": "no",
+    "afk": "AFK: players are marked AFK after %s min idle; kicking is off.",
+    "afk_kick": "AFK: players are marked AFK after %s min idle and kicked after %s min AFK (never staff or operators).",
+    "afk_off": "AFK: detection is off.",
+}
+KEYS.update({"message.bsp_server_utilities.status." + k: v for k, v in STATUS.items()})
+# The rules popup and /su rules
+RULES = {
+    "agreed": "Thank you for agreeing to the rules. Have fun!",
+    "changed": "The rules changed while you were reading. Here they are again.",
+    "held": "Agree to the rules first. Type /rules if the window has closed.",
+    "none": "There are no rules yet, so nobody is asked to agree.",
+    "line": "%s. %s  %s",
+    "status": "Rules version %s: %s rules, %s players agreed to this version.",
+    "full": "There are already %s rules, the most there can be.",
+    "no_title": "A rule needs a title.",
+    "added": "Rule %s added: %s",
+    "no_such": "There is no rule %s.",
+    "removed": "Rule %s removed: %s",
+    "unknown_player": "No player called %s has been on this server.",
+    "reset": "%s will be asked to agree to the rules again.",
+    "asked_again": "Rules version %s: every player is asked to agree again.",
+}
+KEYS.update({"message.bsp_server_utilities.rules." + k: v for k, v in RULES.items()})
+# Staff online
+KEYS.update({
+    "message.bsp_server_utilities.staff.away": "You show as away on the staff panels. /su away again when you are back.",
+    "message.bsp_server_utilities.staff.back": "You show as online again on the staff panels.",
+    "message.bsp_server_utilities.staff.away_only": "Staff who are not admins can use /su away only.",
+    "message.bsp_server_utilities.afk.now": "You are now AFK.",
+    "message.bsp_server_utilities.afk.back": "You are back.",
+    "message.bsp_server_utilities.afk.warn": "You will be kicked for being idle in 1 minute.",
+})
+# The Display Panel
+KEYS.update({
+    "block.bsp_server_utilities.display_panel": "Display Panel",
+    "tooltip.bsp_server_utilities.display_panel": "Shows text or a picture. Panels side by side join into one, up to 8 x 6.",
+    "tooltip.bsp_server_utilities.display_panel.admins": "Only admins can place, set up and break it.",
+    "message.bsp_server_utilities.panel.admins_only": "Only admins can place a Display Panel.",
+})
+# Screen text (client code looks these up as gui.bsp_server_utilities.<key>; %s marks a value filled in; keys ending
+# in .one / .many are the singular and plural of a count).
+GUI = {
+    # the rules popup and /rules
+    "rules.ticked": "%s of %s ticked",
+    "rules.read_only": "read only",
+    "rules.tick_every_rule": "Tick every rule to agree",
+    "rules.every_rule_ticked": "Every rule ticked",
+    "rules.leave_server": "LEAVE SERVER",
+    "rules.agree": "AGREE",
+    "rules.close": "CLOSE",
+    "rules.you_agreed_on": "You agreed on %s",
+    "rules.no_rules": "There are no rules yet.",
+    # the admin panel and its RULES tab
+    "admin.title": "SERVER UTILITIES",
+    "admin.tab.rules": "RULES",
+    "rules.popup_text": "POPUP TEXT",
+    "rules.add_rule": "+ Add rule",
+    "rules.new_rule": "New rule",
+    "rules.count": "%s / %s",
+    "rules.title": "Title",
+    "rules.text": "Text (optional)",
+    "rules.heading": "Heading",
+    "rules.intro": "Intro line",
+    "rules.leave_message": "Message when a player leaves",
+    "rules.up": "UP",
+    "rules.down": "DOWN",
+    "rules.delete": "DELETE",
+    "rules.sure": "SURE?",
+    "rules.preview": "PREVIEW",
+    "rules.ask_again": "ASK EVERYONE AGAIN",
+    "rules.version_agreed": "Version %s \u00b7 %s players agreed",
+    "rules.version_counting": "Version %s \u00b7 counting players",
+    "note.saved": "Saved",
+    "note.added": "Rule added",
+    "note.deleted": "Rule deleted",
+    "note.full": "%s rules is the most there can be",
+    "note.asked_again": "Everyone is asked to agree again",
+    "note.refused": "Not saved",
+    "note.no_title": "A rule needs a title",
+    # the Display Panel's settings
+    "panel.title": "DISPLAY PANEL",
+    "panel.hint": "click a line on the face to pick it",
+    "panel.mode.text": "Text",
+    "panel.mode.image": "Image",
+    "panel.mode.staff": "Staff online",
+    "panel.mode.log": "Action log",
+    "panel.background": "Background",
+    "panel.clear_hint": "chequered: clear",
+    "panel.no_lines": "No lines yet. + ADD LINE starts one.",
+    "panel.line": "Line %s",
+    "panel.count": "%s / %s",
+    "panel.size": "Size",
+    "panel.colour": "Colour",
+    "panel.align": "Align",
+    "panel.align.left": "L",
+    "panel.align.centre": "C",
+    "panel.align.right": "R",
+    "panel.bold": "B",
+    "panel.add_line": "+ ADD LINE",
+    "panel.up": "UP",
+    "panel.down": "DOWN",
+    "panel.delete_line": "DELETE LINE",
+    "panel.sure": "SURE?",
+    "panel.save": "SAVE",
+    "panel.close": "CLOSE",
+    "panel.status": "%s x %s \u00b7 %s \u00b7 placed by %s",
+    # Image mode
+    "panel.hint_image": "the face as players see it",
+    "panel.source": "Source",
+    "panel.web_address": "Web address",
+    "panel.server_folder": "Server folder",
+    "panel.no_files": "No pictures in config/bsp_server_utilities/images/ on this server.",
+    "panel.file_size": "%s x %s \u00b7 %s KB",
+    "panel.fit": "Fit",
+    "panel.fit.inside": "Fit inside",
+    "panel.fit.fill": "Fill and crop",
+    "panel.fit.stretch": "Stretch",
+    "panel.refresh": "Refresh",
+    "panel.refresh_now": "REFRESH NOW",
+    "panel.refresh.off": "Off",
+    "panel.refresh.five": "5 min",
+    "panel.save_first": "SAVE first, then refresh",
+    "panel.picture_loading": "Loading the picture\u2026",
+    "panel.picture_after_save": "The picture shows here after SAVE",
+    "panel.image_changed": "Changed: SAVE fetches the picture",
+    "panel.not_loaded": "Not loaded yet",
+    "panel.loaded": "Loaded \u00b7 %s x %s %s \u00b7 %s KB \u00b7 shown at %s x %s",
+    "panel.error.not_an_image": "That is not a PNG, JPEG or GIF picture",
+    "panel.error.too_many_pixels": "The picture is too big (%s); 8192 a side at most",
+    "panel.error.bad_address": "Only http and https addresses work",
+    "panel.error.http": "The address answered %s",
+    "panel.error.timed_out": "The address did not answer within %s seconds",
+    "panel.error.unreachable": "The address could not be reached (%s)",
+    "panel.error.too_big": "The file is bigger than %s KB",
+    "panel.error.no_file": "There is no file %s in the images folder",
+    "panel.error.no_source": "Pick a web address or a file",
+    "panel.show": "Show",
+    "panel.roles": "Roles",
+    "panel.staff.all": "Online and offline",
+    "panel.staff.online_only": "Online only",
+    "panel.staff.every_role": "Every role",
+    "panel.kinds": "Kinds",
+    "panel.lines": "Lines",
+    "panel.log.all": "All servers",
+    "panel.log.here": "This server",
+    "panel.log.every_kind": "Every kind",
+    "panel.log.kind.cmd": "Commands",
+    "panel.log.kind.item": "Creative items",
+    "panel.log.kind.mode": "Game modes",
+    "panel.log.kind.give": "Gives",
+    "panel.log.kind.switch": "Switches",
+    # the Action log face
+    "log.title": "ACTION LOG",
+    "log.all_servers": "all servers \u00b7 kept %s days",
+    "log.this_server": "%s only \u00b7 kept %s days",
+    "log.none": "Nothing logged yet.",
+    # the LOG tab
+    "log.what": "WHAT IS LOGGED",
+    "log.find": "find a command",
+    "log.no_match": "No command matches.",
+    "log.never": "never (private)",
+    "log.waiting": "Waiting for the server\u2026",
+    "log.footer": "Full text for staff \u00b7 players see coordinates hidden \u00b7 %s days",
+    "log.server_all": "All servers",
+    "log.kind_all": "All kinds",
+    # the AFK tab
+    "afk.detection": "AFK DETECTION",
+    "afk.mark": "Mark idle players AFK",
+    "afk.after": "AFK after",
+    "afk.min": "min",
+    "afk.min_afk": "min AFK",
+    "afk.active": "Active: turning the head, chat, commands, breaking, placing, using, attacking, containers, dropping, steering. Water and minecarts do not count.",
+    "afk.kicking": "KICKING",
+    "afk.kick": "Kick players AFK too long",
+    "afk.kick_after": "Kick after",
+    "afk.message": "Kick message",
+    "afk.count": "%s/%s",
+    "afk.never_staff": "Staff and operators are never kicked.",
+    "afk.now": "AFK NOW \u00b7 %s",
+    "afk.all_servers": "all servers",
+    "afk.waiting": "Waiting for the server\u2026",
+    "afk.nobody": "Nobody is AFK.",
+    "afk.typed_away": "away (/su away)",
+    "afk.kicked_in": "kicked in %s",
+    "afk.footer": "Saved for every server \u00b7 staff and operators are never kicked",
+    "afk.refresh": "REFRESH",
+    # /actionlog
+    "log.screen_sub": "what staff did, kept %s days",
+    "log.intro": "Every command staff run (private messages never), items they take from the creative menu or give, and game-mode changes, on every server.",
+    "log.screen_hint": "Newest 100 \u00b7 scroll for more \u00b7 coordinates hidden",
+    "log.close": "CLOSE",
+    # the Staff online face
+    "staff.title": "STAFF ONLINE",
+    "staff.count": "%s of %s",
+    "staff.none": "No staff yet. Admins choose the staff groups with /su.",
+    "staff.away": "away",
+    "staff.footer": "Ask any of them for help \u00b7 staff mark themselves away with /su away",
+    "staff.groups": "STAFF GROUPS",
+    "staff.add_group": "+ Add a LuckPerms group",
+    "staff.operators": "Operators count as staff",
+    "staff.summary": "%s staff \u00b7 %s online \u00b7 %s away",
+    "staff.people": "PEOPLE",
+    "staff.refresh": "REFRESH",
+    "staff.waiting": "Waiting for the server\u2026",
+    "staff.no_people": "Nobody yet. Add a LuckPerms group on the left.",
+    "staff.seen": "seen %s ago",
+    "staff.lp_group": "LuckPerms group",
+    "staff.no_luckperms": "LuckPerms is not reachable on this server.",
+    "staff.label": "Label on the panel",
+    "staff.colour": "Colour",
+    "staff.order": "Order",
+    "staff.remove": "REMOVE",
+    "staff.members": "%s members: %s",
+    "admin.tab.staff": "STAFF",
+    "admin.tab.log": "LOG",
+    "admin.tab.afk": "AFK",
+    "ago.now": "now",
+    "ago.minutes": "%s min",
+    "ago.hours": "%s h",
+    "ago.days": "%s d",
+}
+KEYS.update({"gui.bsp_server_utilities." + k: v for k, v in GUI.items()})
+
+
+def main():
+    LANG.parent.mkdir(parents=True, exist_ok=True)
+    LANG.write_text(json.dumps(KEYS, indent=2, ensure_ascii=False) + "\n")
+    print(f"{LANG.relative_to(LANG.parents[6])}: {len(KEYS)} lines")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html, body { margin: 0; padding: 0; background: #1b2129; overflow: hidden; }
+#shot { position: absolute; left: 0; top: 0; display: inline-block; }
+.bgworld { padding: 18px; background:
+    linear-gradient(rgba(10,14,20,.58), rgba(10,14,20,.58)),
+    radial-gradient(ellipse at 20% 85%, #3d5a3a 0, transparent 45%),
+    radial-gradient(ellipse at 75% 90%, #4b6b45 0, transparent 40%),
+    radial-gradient(ellipse at 60% 20%, #6d8fb3 0, transparent 55%),
+    linear-gradient(#8fb2d6, #5f7f9e 55%, #3a5137 56%, #2d3f2b); }
+.cap { font: 600 13px "IBM Plex Sans", sans-serif; color: #e6eaf2; }
+.capm { font: 400 12px "IBM Plex Sans", sans-serif; color: #9aa3b5; }
+.vt { font-family: "VT323", monospace; -webkit-font-smoothing: none; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;600&display=swap"></head>
+<body><div id="shot"><div style="position:relative;width:600px;height:150px;background:#0C0E12;overflow:hidden"><div class="vt" style="position:absolute;left:30px;top:34px;color:#19D3B0;font-size:44px;line-height:40px">BSP SERVER UTILITIES</div><div style="position:absolute;left:30px;top:84px;font:400 12.5px 'IBM Plex Sans',sans-serif;color:#E6EAF2">Rules popup · display panels · staff online · action log · AFK</div><div class="vt" style="position:absolute;left:30px;top:106px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div><div style="position:absolute;right:22px;top:24px;width:150px;height:100px;background:#2A2F3A"><div style="position:absolute;inset:3px;background:#10151C" class="vt"><div style="position:absolute;left:7px;top:4px;color:#19D3B0;font-size:15px">STAFF ONLINE</div><div style="position:absolute;left:7px;top:24px;display:flex;gap:5px;align-items:center;font-size:14px"><span style="width:6px;height:6px;background:#8FE04A;display:inline-block"></span><span style="color:#FFD23A">Mrgregles</span><span style="color:#9AA3B5;font-size:12px">Spawn</span></div><div style="position:absolute;left:7px;top:40px;display:flex;gap:5px;align-items:center;font-size:14px"><span style="width:6px;height:6px;background:#8FE04A;display:inline-block"></span><span style="color:#B58CFF">Ferrous</span><span style="color:#9AA3B5;font-size:12px">Wild</span></div><div style="position:absolute;left:7px;top:56px;display:flex;gap:5px;align-items:center;font-size:14px"><span style="width:6px;height:6px;background:#F2B544;display:inline-block"></span><span style="color:#19D3B0">Bramble</span><span style="color:#9AA3B5;font-size:12px">away</span></div><div style="position:absolute;left:7px;top:72px;display:flex;gap:5px;align-items:center;font-size:14px"><span style="width:6px;height:6px;background:#3A3F4A;display:inline-block"></span><span style="color:#6B7280">Wren</span><span style="color:#9AA3B5;font-size:12px">2 d</span></div></div><div style="position:absolute;right:6px;bottom:0;width:14px;height:2px;background:#19D3B0"></div></div></div></div>
+<script>
+document.fonts.ready.then(() => setTimeout(() => {
+  const r = document.getElementById('shot').getBoundingClientRect();
+  document.title = Math.ceil(r.width) + 'x' + Math.ceil(r.height);
+}, 300));
+</script>
+</body></html>

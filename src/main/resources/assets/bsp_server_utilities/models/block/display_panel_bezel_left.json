@@ -1,0 +1,43 @@
+{
+  "textures": {
+    "face": "bsp_server_utilities:block/display_panel_face",
+    "back": "bsp_server_utilities:block/display_panel_back",
+    "bezel": "bsp_server_utilities:block/display_panel_bezel",
+    "led": "bsp_server_utilities:block/display_panel_led",
+    "particle": "bsp_server_utilities:block/display_panel_bezel"
+  },
+  "elements": [
+    {
+      "from": [
+        15,
+        0,
+        12.75
+      ],
+      "to": [
+        16,
+        16,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bezel"
+        },
+        "south": {
+          "texture": "#bezel"
+        },
+        "east": {
+          "texture": "#bezel"
+        },
+        "west": {
+          "texture": "#bezel"
+        },
+        "up": {
+          "texture": "#bezel"
+        },
+        "down": {
+          "texture": "#bezel"
+        }
+      }
+    }
+  ]
+}

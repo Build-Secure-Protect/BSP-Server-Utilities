@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFK Tab Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The owner's pick from set D (look A, D79 to D82) drawn as it will be built, with the points to confirm. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>The AFK tab, refined</h1>
+<p class="lede">Your pick from set D: look A (D79) with everyone AFK now listed across the network (D80), steppers from 1 to 60 and from 5 to 240 minutes (D81) and the kick message written here (D82). What the tab changes is saved for every server, like the STAFF tab. Three points to confirm below. Sample data.</p></header>
+<section><h2>1. Kicking on, with a player close to the limit</h2><div class="card"><p>Juniper has been AFK for 26 of 30 minutes: the red note counts down. Kestrel typed <code>/su away</code>, which is not AFK and is never kicked (staff never are). A switch or a step takes effect at once; the message is saved a second after typing stops.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v">Server utilities</span><span class="tabs"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab on">AFK</span></span></div><div class="grow" style="display:flex;gap:10px"><div class="box" style="width:200px;padding:6px 8px;display:flex;flex-direction:column;gap:7px">
+<div class="vv sm up b">AFK detection</div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle on"></span><span>Mark idle players AFK</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">AFK after</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">5</span><span class="key sm">+</span></span><span class="sm m">min</span></span></div>
+<div class="sm m">Active: turning the head, chat, commands, breaking, placing, using, attacking, containers, dropping, steering. Water and minecarts do not count.</div>
+<div class="vv sm up b" style="margin-top:3px">Kicking</div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle on"></span><span>Kick players AFK too long</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Kick after</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">30</span><span class="key sm">+</span></span><span class="sm m">min AFK</span></span></div>
+<div class="lbl">Kick message</div><div class="inp">You were idle for too long. Come back any time!</div>
+</div><div class="box grow" style="padding:4px;overflow:hidden;display:flex;flex-direction:column;gap:3px"><div class="hd" style="padding:0 3px"><span class="vv sm up b">AFK now · 5</span><span class="sm m">all servers</span></div><table class="tbl"><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Pip</td><td class="m">12 min</td><td><span class="srv">BSP-Spawn</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#19D3B0">Bramble</td><td class="m">8 min</td><td><span class="srv">BSP-Spawn</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Juniper</td><td class="m">26 min <span class="sm r">kicked in 4 min</span></td><td><span class="srv">BSP-Wild</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Tamsin</td><td class="m">6 min</td><td><span class="srv">BSP-Nether</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#B58CFF">Kestrel</td><td class="m">away (/su away)</td><td><span class="srv">BSP-Wild</span></td></tr></table></div></div><div class="hd"><span class="sm m">Saved for every server · staff and operators are never kicked</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+<section><h2>2. Kicking off</h2><div class="card"><p>The kick settings stay editable but dim the switch; no countdowns.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v">Server utilities</span><span class="tabs"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab on">AFK</span></span></div><div class="grow" style="display:flex;gap:10px"><div class="box" style="width:200px;padding:6px 8px;display:flex;flex-direction:column;gap:7px">
+<div class="vv sm up b">AFK detection</div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle on"></span><span>Mark idle players AFK</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">AFK after</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">5</span><span class="key sm">+</span></span><span class="sm m">min</span></span></div>
+<div class="sm m">Active: turning the head, chat, commands, breaking, placing, using, attacking, containers, dropping, steering. Water and minecarts do not count.</div>
+<div class="vv sm up b" style="margin-top:3px">Kicking</div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle"></span><span class="m">Kick players AFK too long</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Kick after</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">30</span><span class="key sm">+</span></span><span class="sm m">min AFK</span></span></div>
+<div class="lbl">Kick message</div><div class="inp">You were idle for too long. Come back any time!</div>
+</div><div class="box grow" style="padding:4px;overflow:hidden;display:flex;flex-direction:column;gap:3px"><div class="hd" style="padding:0 3px"><span class="vv sm up b">AFK now · 5</span><span class="sm m">all servers</span></div><table class="tbl"><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Pip</td><td class="m">12 min</td><td><span class="srv">BSP-Spawn</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#19D3B0">Bramble</td><td class="m">8 min</td><td><span class="srv">BSP-Spawn</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Juniper</td><td class="m">26 min</td><td><span class="srv">BSP-Wild</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#9AA3B5">Tamsin</td><td class="m">6 min</td><td><span class="srv">BSP-Nether</span></td></tr><tr><td><span class="dot away"></span></td><td class="b" style="color:#B58CFF">Kestrel</td><td class="m">away (/su away)</td><td><span class="srv">BSP-Wild</span></td></tr></table></div></div><div class="hd"><span class="sm m">Saved for every server · staff and operators are never kicked</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+<section><h2>3. What players see</h2><div class="card"><p>Their own chat when they go AFK, a warning a minute before a kick (R2), and when they come back; the disconnect screen with the admin's message.</p><div class="stage"><div class="world" style="width:360px"><div class="chat"><span style="color:#FFAA00">You are now AFK.</span><span style="color:#FF5555">You will be kicked for being idle in 1 minute.</span><span style="color:#55FF55">You are back.</span></div><div style="height:10px"></div><div class="scr" style="width:316px;height:110px;background:#2b2018;align-items:center;justify-content:center;text-align:center;gap:8px"><span class="m">Connection Lost</span><span>You were idle for too long. Come back any time!</span><span class="key" style="width:150px">Back to server list</span></div></div></div></div></section>
+<section><h2>To confirm</h2><div class="card"><ol>
+<li><b>R1 a player already past the limit when kicking is turned on:</b> their AFK time counts from when they went AFK, so they are kicked within a minute (default); or every AFK player's kick clock starts when kicking is turned on.</li>
+<li><b>R2 a warning before a kick:</b> the player sees one chat line a minute before (default); or no warning.</li>
+<li><b>R3 the AFK now list:</b> players and staff AFK, plus staff away by <code>/su away</code> marked as such (default); or AFK players only.</li>
+</ol></div></section>
+</div></body></html>

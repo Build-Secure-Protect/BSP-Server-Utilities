@@ -1,0 +1,124 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The owner's picks from set B drawn together: the block in look A (three.js r128) and the settings screen in look B
+   with SAVE and CLOSE, in Text mode, Image mode from a web address and Image mode from the server folder.
+   Screens at 1.5x the in-game GUI size (344 x 230 -> 516 x 345). Text on the panels is sample text. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.view3d{ width:100%; max-width:760px; aspect-ratio:16/8; background:#0b0d11; border-radius:3px; display:block; }
+.sw{ width:11px; height:11px; display:inline-block; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); flex:none; }
+.sw.on{ box-shadow:0 0 0 1.5px #B58CFF; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.face{ background:#0C0E12; box-shadow:inset 0 0 0 2px #2A2F3A; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:3px; color:#E6EAF2; text-align:center; overflow:hidden; }
+.face .l{ white-space:nowrap; }
+.lineRow{ display:flex; gap:5px; align-items:center; padding:3px 5px; box-sizing:border-box; }
+.lineRow.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.mode-img{ display:none !important; } body.img .mode-img{ display:flex !important; } body.img .mode-txt{ display:none !important; }
+.mode-img .inp, .mode-img .keys, .mode-img .lbl{ flex:none; }
+.grid16{ display:grid; grid-template-columns:repeat(8,11px); gap:3px; }
+</style>
+<style>
+html, body { margin: 0; padding: 0; background: #1b2129; overflow: hidden; }
+#shot { position: absolute; left: 0; top: 0; display: inline-block; }
+.bgworld { padding: 18px; background:
+    linear-gradient(rgba(10,14,20,.58), rgba(10,14,20,.58)),
+    radial-gradient(ellipse at 20% 85%, #3d5a3a 0, transparent 45%),
+    radial-gradient(ellipse at 75% 90%, #4b6b45 0, transparent 40%),
+    radial-gradient(ellipse at 60% 20%, #6d8fb3 0, transparent 55%),
+    linear-gradient(#8fb2d6, #5f7f9e 55%, #3a5137 56%, #2d3f2b); }
+.cap { font: 600 13px "IBM Plex Sans", sans-serif; color: #e6eaf2; }
+.capm { font: 400 12px "IBM Plex Sans", sans-serif; color: #9aa3b5; }
+.vt { font-family: "VT323", monospace; -webkit-font-smoothing: none; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;600&display=swap"></head>
+<body><div id="shot"><div class="bgworld"><div class="scr v" style="width:516px;height:345px">
+        <div class="hd"><span class="ttl v">Display panel</span><span class="sm m">the face as players see it</span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div style="width:74px;display:flex;flex-direction:column;gap:4px"><span class="mini">Text</span><span class="mini on">Image</span><span class="mini">Staff online</span><span class="mini">Action log</span><div class="grow"></div><div class="lbl">Background</div>
+            <div class="keys" style="flex-wrap:wrap;gap:4px"><span class="sw" style="background:#0C0E12;box-shadow:0 0 0 1.5px #B58CFF"></span><span class="sw" style="background:#10151C"></span><span class="sw" style="background:#1d2b44"></span><span class="sw" style="background:#2b1d2f"></span><span class="sw" style="background:#1f2b1f"></span><span class="sw" style="background:repeating-conic-gradient(#555 0 25%,#999 0 50%) 0/6px 6px"></span></div>
+            <div class="sm m">the chequered one is clear</div></div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:6px"><div class="face" style="width:410px;height:128px;background:linear-gradient(135deg,#2f4a2a,#3a5a8a 60%,#8a6a3a)"><div class="l" style="font:700 12px Oswald;color:#fff;text-shadow:1px 1px 0 #000">SPAWN MAP</div></div><div style="display:flex;flex-direction:column;gap:5px">
+        <div class="lbl">Source</div>
+        <div class="keys"><span class="mini on">Web address</span><span class="mini">Server folder</span></div>
+        <div class="inp focus">https://example.com/bsp/spawn-map.png▏</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Fit</div><div class="keys"><span class="mini on">Fit inside</span><span class="mini">Fill and crop</span><span class="mini">Stretch</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><div class="lbl">Refresh</div><div class="keys"><span class="key sm">Refresh now</span><span class="mini on">Off</span><span class="mini">5 min</span><span class="mini">15</span><span class="mini">60</span></div></div>
+        </div>
+        <div class="sm m">Loaded · 1024 x 512 PNG · 312 KB · shown at 512 x 256</div>
+      </div></div>
+        </div>
+        <div class="hd"><span class="sm m">4 x 2 · BSP-Spawn · placed by Mrgregles</span><span class="keys"><span class="key ghost">Close</span><span class="key v">Save</span></span></div>
+      </div></div></div>
+<script>
+document.fonts.ready.then(() => setTimeout(() => {
+  const r = document.getElementById('shot').getBoundingClientRect();
+  document.title = Math.ceil(r.width) + 'x' + Math.ceil(r.height);
+}, 300));
+</script>
+</body></html>

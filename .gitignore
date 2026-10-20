@@ -1,0 +1,37 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+run
+run-data
+logs
+src/generated/.cache
+
+# Files from Forge MDK
+forge*changelog.txt
+
+.DS_Store
+mcmodsrepo
+
+# dev-run-only mod jars (LuckPerms for the GameTests); never shipped
+libs/
+
+# local Mohist test server (jar, world, logs)
+server/

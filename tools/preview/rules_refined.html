@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rules Screens Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The owner's picks from set A drawn together: the popup (look A, tick boxes on the right, LEAVE SERVER) and the
+   RULES tab (look A). Drawn at 1.5x the in-game GUI size (popup 300 x 220 -> 450 x 330; admin panel 344 x 210 -> 516 x 315).
+   The rules are sample text. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.rule .tick{ margin-left:auto; margin-top:1px; }
+.rule > div{ flex:1; min-width:0; }
+.sure{ background:#D63B2F !important; color:#fff !important; box-shadow:none !important; }
+.count{ font:600 9px var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>The rules screens, refined</h1>
+  <p class="lede">Your picks from set A drawn together for a last look before SU-2 is built. The popup is the checklist (D31) with each tick box on the right of its rule; AGREE stays dim until every box is ticked (D32); the leave key reads LEAVE SERVER (D33). The RULES tab is the list beside an editor (D34) with ASK EVERYONE AGAIN in the footer (D35) and the version and agreement count (D37). Drawn at one and a half times the in-game size; the rules are sample text.</p>
+</header>
+
+<section>
+  <h2>1. The popup a player meets at first join</h2>
+  <div class="ctl"><span class="note">Show:</span>
+    <button class="tb on" data-state="some">3 of 5 ticked</button>
+    <button class="tb" data-state="all">All ticked</button>
+  </div>
+  <div class="card">
+    <p>The player is held still and cannot build, chat or be hurt while this shows (D8). A click anywhere on a rule's row ticks or unticks its box, not only on the box itself. The list scrolls with the mouse wheel when the rules do not fit; the scroll bar shows how much is below. Escape does nothing. LEAVE SERVER disconnects at once with the message you set; the player is asked again at their next join.</p>
+    <div class="stage">
+      <div class="world"><div class="scr q" style="width:450px;height:330px">
+        <div class="hd"><span class="ttl q">Server rules</span><span class="sm m"><b class="qq js-count">3</b> of 5 ticked</span></div>
+        <div class="m" style="font-size:10px">Welcome to Build Secure Protect. Tick each rule to show you have read it, then press AGREE.</div>
+        <div class="grow" style="display:flex;gap:4px">
+          <div class="box grow" style="overflow:hidden">
+<div class="rule"><span class="num">1</span><div><div class="t">Be kind in chat</div><div class="x">No hate, threats or spam. Keep arguments out of global chat.</div></div><span class="tick on"></span></div>
+<div class="rule"><span class="num">2</span><div><div class="t">No cheats</div><div class="x">No x-ray, hacked clients, duping or macros. Report bugs to staff instead of using them.</div></div><span class="tick on"></span></div>
+<div class="rule"><span class="num">3</span><div><div class="t">Raids follow the totem rules</div><div class="x">Stealing totems is the game. Griefing builds outside a raid is not.</div></div><span class="tick on"></span></div>
+<div class="rule"><span class="num">4</span><div><div class="t">No lag machines</div><div class="x">Huge redstone clocks and farms that slow the server down will be removed.</div></div><span class="tick js-t"></span></div>
+<div class="rule"><span class="num">5</span><div><div class="t">Staff have the last word</div><div class="x">If staff ask you to stop something, stop and talk it through.</div></div><span class="tick js-t"></span></div>
+          </div>
+          <div class="sb" style="height:100%"><i style="top:0;height:70%"></i></div>
+        </div>
+        <div class="hd">
+          <span class="key leave">Leave server</span>
+          <span class="hint js-hint">Tick every rule to agree</span>
+          <span class="key q lock js-agree">Agree</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>The same panel from <code>/rules</code></h3>
+    <p>Read-only, for anyone at any time (D12): the numbers stay, the tick boxes go, and one CLOSE key replaces LEAVE SERVER and AGREE. The bottom line says when this player agreed.</p>
+    <div class="stage">
+      <div class="world"><div class="scr q" style="width:450px;height:330px">
+        <div class="hd"><span class="ttl q">Server rules</span><span class="sm m">read only</span></div>
+        <div class="m" style="font-size:10px">Welcome to Build Secure Protect. Tick each rule to show you have read it, then press AGREE.</div>
+        <div class="box grow" style="overflow:hidden">
+<div class="rule"><span class="num">1</span><div><div class="t">Be kind in chat</div><div class="x">No hate, threats or spam. Keep arguments out of global chat.</div></div></div>
+<div class="rule"><span class="num">2</span><div><div class="t">No cheats</div><div class="x">No x-ray, hacked clients, duping or macros. Report bugs to staff instead of using them.</div></div></div>
+<div class="rule"><span class="num">3</span><div><div class="t">Raids follow the totem rules</div><div class="x">Stealing totems is the game. Griefing builds outside a raid is not.</div></div></div>
+<div class="rule"><span class="num">4</span><div><div class="t">No lag machines</div><div class="x">Huge redstone clocks and farms that slow the server down will be removed.</div></div></div>
+<div class="rule"><span class="num">5</span><div><div class="t">Staff have the last word</div><div class="x">If staff ask you to stop something, stop and talk it through.</div></div></div>
+        </div>
+        <div class="hd"><span class="hint">You agreed on 20 Oct 2026</span><span class="key ghost">Close</span></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2. The RULES tab of the admin panel</h2>
+  <div class="card">
+    <p><code>/su</code> opens the panel on RULES (STAFF and LOG come with their own tasks). Left: POPUP TEXT, the rules in order, + ADD RULE. Right: the picked rule's title and text; UP and DOWN move it, DELETE asks SURE? within three seconds. Every edit saves at once and reaches every server. PREVIEW opens the popup exactly as a player sees it; closing it changes nothing. The counters beside each label show how much of the limit is used (D36).</p>
+    <div class="stage">
+      <div class="scr v" style="width:516px;height:315px">
+        <div class="hd"><span class="ttl v">Server utilities</span><span class="tabs"><span class="tab on">Rules</span><span class="tab">Staff</span><span class="tab">Log</span></span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div class="box" style="width:165px;padding:3px 0;display:flex;flex-direction:column">
+            <div class="row"><span class="vv sm up b">Popup text</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">1</span><span>Be kind in chat</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">2</span><span>No cheats</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">3</span><span>Raids follow the totem…</span></div>
+            <div class="row sel"><span class="num" style="color:#B58CFF">4</span><span class="b">No lag machines</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">5</span><span>Staff have the last word</span></div>
+            <div class="grow"></div>
+            <div class="row"><span class="vv b">+ Add rule</span><span class="m sm" style="margin-left:auto">5 / 20</span></div>
+          </div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:5px">
+            <div class="hd"><span class="lbl">Title</span><span class="m count">15 / 48</span></div>
+            <div class="inp focus">No lag machines▏</div>
+            <div class="hd"><span class="lbl">Text (optional)</span><span class="m count">74 / 400</span></div>
+            <div class="area grow">Huge redstone clocks and farms that slow the server down will be removed.</div>
+            <div class="keys"><span class="key sm">Up</span><span class="key sm">Down</span><span style="flex:1"></span><span class="key sm warn">Delete</span></div>
+          </div>
+        </div>
+        <div class="hd"><span class="sm m">Version 4 · 37 players agreed</span><span class="keys"><span class="key ghost">Preview</span><span class="key warn">Ask everyone again</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>POPUP TEXT picked, and ASK EVERYONE AGAIN waiting for SURE?</h3>
+    <p>The heading, the intro line and the message LEAVE SERVER shows are edited on the POPUP TEXT row. The red key turns into SURE? for three seconds after the first click; a second click raises the version to 5, the count starts again from 0, and every player sees the popup at their next join (for players online at that moment, see R3 below).</p>
+    <div class="stage">
+      <div class="scr v" style="width:516px;height:315px">
+        <div class="hd"><span class="ttl v">Server utilities</span><span class="tabs"><span class="tab on">Rules</span><span class="tab">Staff</span><span class="tab">Log</span></span></div>
+        <div class="grow" style="display:flex;gap:10px">
+          <div class="box" style="width:165px;padding:3px 0;display:flex;flex-direction:column">
+            <div class="row sel"><span class="vv sm up b">Popup text</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">1</span><span>Be kind in chat</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">2</span><span>No cheats</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">3</span><span>Raids follow the totem…</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">4</span><span>No lag machines</span></div>
+            <div class="row"><span class="num" style="color:#B58CFF">5</span><span>Staff have the last word</span></div>
+            <div class="grow"></div>
+            <div class="row"><span class="vv b">+ Add rule</span><span class="m sm" style="margin-left:auto">5 / 20</span></div>
+          </div>
+          <div class="grow" style="display:flex;flex-direction:column;gap:5px">
+            <div class="hd"><span class="lbl">Heading</span><span class="m count">12 / 32</span></div>
+            <div class="inp">Server rules</div>
+            <div class="hd"><span class="lbl">Intro line</span><span class="m count">90 / 160</span></div>
+            <div class="area" style="height:38px">Welcome to Build Secure Protect. Tick each rule to show you have read it, then press AGREE.</div>
+            <div class="hd"><span class="lbl">Message when a player leaves</span><span class="m count">58 / 160</span></div>
+            <div class="area" style="height:38px">You need to agree to the rules to play. Come back any time.</div>
+          </div>
+        </div>
+        <div class="hd"><span class="sm m">Version 4 · 37 players agreed</span><span class="keys"><span class="key ghost">Preview</span><span class="key sure">Sure?</span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>To confirm</h2>
+  <div class="card">
+    <ol>
+      <li><b>R1. A click anywhere on a rule's row ticks it.</b> Default: yes, the whole row is the tick target, which is easier than hitting the small box. Or only the box itself.</li>
+      <li><b>R2. The message LEAVE SERVER shows is edited on the POPUP TEXT row</b> with the heading and intro, up to 160 characters. Default: yes. Or a fixed message from the language file.</li>
+      <li><b>R3. Players online when you press ASK EVERYONE AGAIN</b> see the popup straight away. Default: yes, at once. Or only at their next join.</li>
+    </ol>
+  </div>
+</section>
+</div>
+<script>
+document.querySelectorAll('.tb[data-state]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tb[data-state]').forEach(x => x.classList.toggle('on', x === b));
+  const all = b.dataset.state === 'all';
+  document.querySelectorAll('.js-t').forEach(t => t.classList.toggle('on', all));
+  document.querySelectorAll('.js-agree').forEach(a => a.classList.toggle('lock', !all));
+  document.querySelectorAll('.js-hint').forEach(h => h.textContent = all ? 'Every rule ticked' : 'Tick every rule to agree');
+  document.querySelectorAll('.js-count').forEach(c => c.textContent = all ? '5' : '3');
+}));
+</script>
+</body>
+</html>

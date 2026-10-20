@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mrgregles.bsp_server_utilities.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "bsp_server_utilities.refmap.json",
+  "mixins": [
+    "CreativeSlotMixin",
+    "ContainerClickMixin"
+  ],
+  "server": [],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
