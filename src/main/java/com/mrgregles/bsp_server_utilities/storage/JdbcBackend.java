@@ -24,7 +24,7 @@ import java.util.UUID;
  * MySQL through plain JDBC, as BSP RankUp and BSP Region Guard do it. No driver is bundled: BSP-Core's full jar
  * provides one on Forge servers and Mohist ships its own. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row).
  */
 public final class JdbcBackend implements StorageBackend {
     private final StorageSettings.Database settings;
@@ -64,6 +64,7 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_seen (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, seen_at BIGINT NOT NULL, server VARCHAR(64) NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid VARCHAR(36) NOT NULL, at_ms BIGINT NOT NULL, server VARCHAR(64) NOT NULL, actor_id VARCHAR(36) NOT NULL, actor VARCHAR(32) NOT NULL, role_group VARCHAR(64) NOT NULL, role_label VARCHAR(48) NOT NULL, colour INT NOT NULL, kind VARCHAR(16) NOT NULL, text TEXT NOT NULL, UNIQUE KEY uid (uid), KEY at (at_ms))");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log_switches (cmd VARCHAR(64) NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL)");
         }
     }
@@ -236,6 +237,24 @@ public final class JdbcBackend implements StorageBackend {
             ps.setInt(4, s.kickMinutes());
             ps.setString(5, s.message());
             ps.setLong(6, s.revision());
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.chunks.ChunkSettings loadChunkSettings() throws SQLException {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT settings FROM " + prefix + "chunk_settings WHERE id = 1")) {
+            return rs.next() ? com.mrgregles.bsp_server_utilities.chunks.ChunkSettings.decode(rs.getString(1)) : null;
+        }
+    }
+
+    @Override
+    public void saveChunkSettings(com.mrgregles.bsp_server_utilities.chunks.ChunkSettings s) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "chunk_settings (id, settings, revision) VALUES (1, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE settings = VALUES(settings), revision = VALUES(revision)")) {
+            ps.setString(1, s.encode());
+            ps.setLong(2, s.revision());
             ps.executeUpdate();
         }
     }

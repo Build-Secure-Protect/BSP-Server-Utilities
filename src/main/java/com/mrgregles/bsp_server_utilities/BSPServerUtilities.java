@@ -40,12 +40,15 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.log.LogSync.init();
         com.mrgregles.bsp_server_utilities.afk.AfkService.registerNotices();
         com.mrgregles.bsp_server_utilities.afk.AfkService.registerEvents();
+        com.mrgregles.bsp_server_utilities.chunks.ChunkService.registerNotices();
+        com.mrgregles.bsp_server_utilities.chunks.ChunkService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
             RulesService.onServerStarted(e.getServer());
             StaffDirectory.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.log.ActionLog.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.afk.AfkService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.chunks.ChunkService.onServerStarted(e.getServer());
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
         MinecraftForge.EVENT_BUS.addListener(ServerUtilsCommands::onRegister);
@@ -60,11 +63,13 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.access.StaffSync.sendTo(p);
                 com.mrgregles.bsp_server_utilities.log.LogSync.sendTo(p);
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogin(p);
+                com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogin(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogout(p);
+                com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogout(p);
                 StaffDirectory.onLogout(p);
             }
         });
@@ -78,6 +83,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.access.StaffSync.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.log.LogSync.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.afk.AfkService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.chunks.ChunkService.tick(e.getServer());
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

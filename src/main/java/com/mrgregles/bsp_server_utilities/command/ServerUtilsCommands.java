@@ -194,6 +194,10 @@ public final class ServerUtilsCommands {
         source.sendSuccess(() -> !afk.enabled() ? Component.translatable("message.bsp_server_utilities.status.afk_off")
                 : afk.kick() ? Component.translatable("message.bsp_server_utilities.status.afk_kick", afk.afkMinutes(), afk.kickMinutes())
                 : Component.translatable("message.bsp_server_utilities.status.afk", afk.afkMinutes()), false);
+        com.mrgregles.bsp_server_utilities.chunks.ChunkSettings chunks = com.mrgregles.bsp_server_utilities.chunks.ChunkService.settings(source.getServer());
+        int unloaded = com.mrgregles.bsp_server_utilities.chunks.ChunkData.get(source.getServer()).suspended().size();
+        source.sendSuccess(() -> chunks.enabled() ? Component.translatable("message.bsp_server_utilities.status.chunks", chunks.minutes(), unloaded)
+                : Component.translatable("message.bsp_server_utilities.status.chunks_off"), false);
         return 1;
     }
 }

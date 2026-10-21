@@ -73,6 +73,12 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminAfkEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminAfkEditPacket::encode).decoder(AdminAfkEditPacket::decode)
                 .consumerMainThread(AdminAfkEditPacket::handle).add();
+        CHANNEL.messageBuilder(AdminChunksPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminChunksPacket::encode).decoder(AdminChunksPacket::decode)
+                .consumerMainThread(AdminChunksPacket::handle).add();
+        CHANNEL.messageBuilder(AdminChunksEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminChunksEditPacket::encode).decoder(AdminChunksEditPacket::decode)
+                .consumerMainThread(AdminChunksEditPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

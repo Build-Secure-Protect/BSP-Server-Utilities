@@ -24,6 +24,7 @@ public final class MemoryBackend implements StorageBackend {
     @Nullable
     private StaffGroups staffGroups;
     private com.mrgregles.bsp_server_utilities.afk.AfkSettings afkSettings;
+    private com.mrgregles.bsp_server_utilities.chunks.ChunkSettings chunkSettings;
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
     private final Map<String, Boolean> switches = new HashMap<>();
@@ -130,6 +131,18 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void saveStaffGroups(StaffGroups groups) throws Exception {
         check();
         staffGroups = groups;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.chunks.ChunkSettings loadChunkSettings() throws Exception {
+        check();
+        return chunkSettings;
+    }
+
+    @Override
+    public synchronized void saveChunkSettings(com.mrgregles.bsp_server_utilities.chunks.ChunkSettings settings) throws Exception {
+        check();
+        chunkSettings = settings;
     }
 
     @Override

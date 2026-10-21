@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}) and AFK ({@link AfkTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}) and CHUNKS ({@link ChunksTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,11 +54,12 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
     private final AfkTab afk = new AfkTab(this);
+    private final ChunksTab chunks = new ChunksTab(this);
 
     public AdminScreen(AdminViewPacket view) {
         super(Component.literal(Tr.t("admin.title")));
@@ -234,6 +235,10 @@ public class AdminScreen extends Screen {
         afk.accept(p);
     }
 
+    void acceptChunks(com.mrgregles.bsp_server_utilities.network.AdminChunksPacket p) {
+        chunks.accept(p);
+    }
+
     private void openTab() {
         if (tab == STAFF) {
             staff.open();
@@ -241,6 +246,8 @@ public class AdminScreen extends Screen {
             log.open();
         } else if (tab == AFK) {
             afk.open();
+        } else if (tab == CHUNKS) {
+            chunks.open();
         }
     }
 
@@ -270,6 +277,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == AFK) {
             afk.addWidgets(left(), top());
+            return;
+        }
+        if (tab == CHUNKS) {
+            chunks.addWidgets(left(), top());
             return;
         }
         int x = left() + PANE_X, y = top();
@@ -320,6 +331,9 @@ public class AdminScreen extends Screen {
         if (tab == AFK) {
             afk.tick();
         }
+        if (tab == CHUNKS) {
+            chunks.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -354,10 +368,10 @@ public class AdminScreen extends Screen {
         g.fill(x, y, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, y, W, H, Ui.VIOLET);
         Ui.text(g, font, Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD), x + PAD, y + 7, Ui.VIOLET, 1f);
-        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk")};
+        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(46, Ui.width(font, tabs[i], TINY) + 16);
+            int tabW = Math.max(36, Ui.width(font, tabs[i], TINY) + 12); // five tabs beside the title
             tx -= tabW;
             boolean on = i == tab;
             g.fill(tx, y + 5, tx + tabW, y + 18, on ? Ui.VIOLET : Ui.DIM);
@@ -369,6 +383,11 @@ public class AdminScreen extends Screen {
         if (tab == STAFF) {
             staff.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial);
+            return;
+        }
+        if (tab == CHUNKS) {
+            chunks.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the name box
             return;
         }
         if (tab == AFK) {
@@ -585,6 +604,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == AFK) {
             return afk.scroll(delta);
+        }
+        if (tab == CHUNKS) {
+            return chunks.scroll(delta);
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {

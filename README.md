@@ -7,6 +7,7 @@ Features:
 - **Rules popup**: new players read and tick the server's rules before they can move; admins write the rules in game. Agreements count for the whole network.
 - **Display panels**: an admin wall block that joins into panels up to 8 x 6 and shows text, a picture, the staff online or the action log.
 - **Staff online**: which staff are on, on which server, or away, across the network; staff groups come from LuckPerms.
+- **Chunk unloading**: chunks other mods keep loaded for a player's machines unload when that player has been away from the server for 5 minutes, and load again when they return; BSP-Core's totem and projector chunks never unload.
 - **AFK detection**: players idle for 5 minutes are marked AFK (staff show as away on the staff panels); admins can have players AFK too long kicked, never staff or operators.
 - **Action log**: every command staff run (private messages never), items they take from the creative menu or give, and game-mode changes, kept for a week and shared across the servers. Admins switch single commands off; every switch change is logged. Players read it with coordinates hidden.
 

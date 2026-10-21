@@ -26,6 +26,8 @@ STATUS = {
     "afk": "AFK: players are marked AFK after %s min idle; kicking is off.",
     "afk_kick": "AFK: players are marked AFK after %s min idle and kicked after %s min AFK (never staff or operators).",
     "afk_off": "AFK: detection is off.",
+    "chunks": "Chunks: machines' chunks unload when their owner has been away %s min (BSP-Core's never); %s tickets unloaded now.",
+    "chunks_off": "Chunks: unloading is off.",
 }
 KEYS.update({"message.bsp_server_utilities.status." + k: v for k, v in STATUS.items()})
 # The rules popup and /su rules
@@ -54,6 +56,7 @@ KEYS.update({
     "message.bsp_server_utilities.afk.now": "You are now AFK.",
     "message.bsp_server_utilities.afk.back": "You are back.",
     "message.bsp_server_utilities.afk.warn": "You will be kicked for being idle in 1 minute.",
+    "message.bsp_server_utilities.chunks.back": "Non-totem chunks were unloaded while you were away; they are loaded again now.",
 })
 # The Display Panel
 KEYS.update({
@@ -209,6 +212,34 @@ GUI = {
     "afk.kicked_in": "kicked in %s",
     "afk.footer": "Saved for every server \u00b7 staff and operators are never kicked",
     "afk.refresh": "REFRESH",
+    # the CHUNKS tab
+    "chunks.unloading": "UNLOADING",
+    "chunks.enabled": "Unload when owners leave",
+    "chunks.after": "After",
+    "chunks.min_away": "min away",
+    "chunks.never": "Mods never unloaded",
+    "chunks.bsp_core_always": "bsp_core (always)",
+    "chunks.always": "Always loaded",
+    "chunks.add_player": "+ add a player",
+    "chunks.player_name": "Player name",
+    "chunks.add": "ADD",
+    "chunks.col_player": "Player",
+    "chunks.col_where": "Where",
+    "chunks.col_loaded": "on",
+    "chunks.col_unloaded": "off",
+    "chunks.here": "online here",
+    "chunks.away": "away %s",
+    "chunks.always_loaded": "always loaded",
+    "chunks.waiting": "Waiting for the server\u2026",
+    "chunks.none": "No machine of anyone's holds chunks here.",
+    "chunks.no_owner": "NO OWNER FOUND \u00b7 %s",
+    "chunks.unload": "UNLOAD",
+    "chunks.restore": "RESTORE",
+    "chunks.restore_now": "RESTORE NOW",
+    "chunks.unload_now": "UNLOAD NOW",
+    "chunks.players": "PLAYERS",
+    "chunks.refresh": "REFRESH",
+    "chunks.footer": "Checked every minute \u00b7 BSP-Core's totem and projector chunks are never touched",
     # /actionlog
     "log.screen_sub": "what staff did, kept %s days",
     "log.intro": "Every command staff run (private messages never), items they take from the creative menu or give, and game-mode changes, on every server.",
@@ -239,6 +270,7 @@ GUI = {
     "admin.tab.staff": "STAFF",
     "admin.tab.log": "LOG",
     "admin.tab.afk": "AFK",
+    "admin.tab.chunks": "CHUNKS",
     "ago.now": "now",
     "ago.minutes": "%s min",
     "ago.hours": "%s h",

@@ -193,3 +193,25 @@ In game (an operator):
 3. Type a kick message: the counter follows up to 160; a second after typing stops it is saved (close and reopen the tab to see it kept).
 4. With a second player idle past the AFK time: they appear under AFK NOW with the minutes counting up. Turn kicking on with KICK AFTER at 5: within five minutes of the limit a red "kicked in 4 min" appears; the player sees the warning a minute before and is sent off with your message at the limit.
 5. A staff member who typed `/su away` shows as "away (/su away)" and never gets a countdown.
+
+## 2026-10-21: SU-15, chunk unloading, server side
+
+Headless: 52 GameTests pass, twice (new: a machine's ticket kept at four minutes away, taken at five and kept as the owner's, taken again when the mod adds it back, back as it was on join; BSP-Core's tickets (BSP-Core loaded in the test run) and an exempt mod's left alone, exempting a mod giving its tickets back; a machine broken while unloaded forgotten with its placer record; always loaded players kept, UNLOAD NOW, marking always loaded giving back at once, RESTORE NOW holding until the player joins and leaves; owners read from saved data (an `ownerUUID` deep down, a skull's owner, a Most / Least pair, a UUID string, none); a machine with no owner listed, unloaded by hand, kept unloaded when the mod adds it back, restored; the settings within their limits). The tests use this mod's own id for the tickets, since Forge accepts only loaded mods' ids. Settings are edited in the CHUNKS tab (SU-16); until then they are the defaults (on, 5 minutes). **Nothing of this has run in a live game.**
+
+On a test server (the pack, one other player or a second account):
+1. The other player places an RFTools Builder with chunk loading on (or a Mekanism machine with an Anchor upgrade, an AE2 spatial anchor, a Flux point) somewhere you can watch, e.g. a furnace line next to it. They leave.
+2. Stay far away. After 5 to 6 minutes `/su status` shows tickets unloaded; the machine's area stops working (a furnace there stops smelting; check with `/forceload query` or a mod's chunk overlay if you have one).
+3. They join again: "Non-totem chunks were unloaded while you were away; they are loaded again now." in gold, and the area runs again within a few seconds.
+4. A placed Shatter Totem with Anchor stays loaded the whole time (BSP-Core's chunks are never touched).
+5. A machine placed before this mod was installed: its owner comes from its own data (most of these mods save one) or the Region Guard claim; if neither, it stays loaded (it will show in the CHUNKS tab under "no owner found").
+6. Restart the server while the player is away: their machines stay unloaded after the restart and come back when they join.
+
+## 2026-10-21: SU-16, the CHUNKS tab
+
+Headless: 53 GameTests pass, twice (new: the tab's data with the owner away two minutes and one chunk loaded by which mod, a machine with no owner listed under nobody, BSP-Core left out of the mod chips, the packets round trip, a player refused, UNLOAD NOW and RESTORE NOW, UNLOAD and RESTORE on a machine with no owner, the settings becoming the network's). **Nothing of this has run in a client.**
+
+In game (an operator, with SU-15's machines from the section above):
+1. `/su`, CHUNKS (the fifth tab; RULES to CHUNKS all fit beside the title): the look matches `tools/preview/chunks_refined.html`.
+2. Left: the switch, AFTER − / + (1 to 60), the chips of mods holding chunks here (`bsp_core (always)` greyed), click one to exempt it (violet); ALWAYS LOADED: + add a player, type a name that has played here, ADD; click a name to remove it.
+3. Right: the player with machines, "away 2 min" in amber while under the time, grey after; the green and red counts follow the minute's check. Click the row: their machines with mod, place and chunks; RESTORE NOW brings them back (and they stay while the player is away); UNLOAD NOW wants a second click within three seconds. PLAYERS goes back.
+4. NO OWNER FOUND lists machines nobody could be matched to (placed before the mod, no saved owner, no claim); UNLOAD turns the line red and the chunk unloads; RESTORE brings it back.

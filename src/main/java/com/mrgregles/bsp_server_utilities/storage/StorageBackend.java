@@ -83,6 +83,14 @@ public interface StorageBackend {
 
     void saveAfkSettings(com.mrgregles.bsp_server_utilities.afk.AfkSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ chunk unloading (SU-15)
+
+    /** The network's chunk unloading settings, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.chunks.ChunkSettings loadChunkSettings() throws Exception;
+
+    void saveChunkSettings(com.mrgregles.bsp_server_utilities.chunks.ChunkSettings settings) throws Exception;
+
     String describe();
 
     void close() throws Exception;

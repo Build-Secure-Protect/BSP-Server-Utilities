@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-21
+
+### Added
+- The CHUNKS tab of the admin panel (`/su`): UNLOADING (on or off, after 1 to 60 minutes away), the mods never unloaded as chips (BSP-Core always), the players always loaded (+ add a player by name); every player whose machines hold chunks on this server with where they are and how many chunks are loaded and unloaded; machines whose owner could not be found, with UNLOAD and RESTORE. Picking a player shows their machines (mod, place, chunks) with RESTORE NOW and UNLOAD NOW (a second click to confirm). The tab keys are a little narrower so five fit beside the title.
+- Chunk unloading, server side: once a minute each server looks at the chunks other mods keep loaded through Forge (RFTools Builder, Mekanism's Anchor upgrade, AE2's spatial anchor, Flux Networks, Railcraft's worldspikes and the like) and finds whose machine holds each: the owner the machine saves itself, else who placed it (recorded from now on), else the owner of the BSP-Region Guard claim it stands in. When that player has been away from this server for 5 minutes (moving to another server counts), the machine's chunks are unloaded; when they join again they load again, a few at a time, if the machine is still there, and the player is told. BSP-Core's totem and projector chunks are never touched, nor temporary loads (teleports, trains, world generation), `/forceload` or plugin chunks. Admins can exempt mods, mark players always loaded, give a player's chunks back early, unload them at once, and unload machines whose owner could not be found. The settings are one set for the network; `/su status` shows them and how many tickets are unloaded.
+
 ## [0.1.0] - 2026-10-20
 
 ### Added
