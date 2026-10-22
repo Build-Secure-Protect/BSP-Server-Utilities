@@ -55,9 +55,20 @@ def element(source, start, index):
     return s[i:pos]
 
 
-def four_tabs(html):
-    """The mock-ups drawn before the AFK tab show three tabs; the panel has four."""
-    return re.sub(r'(<span class="tab( on)?">Log</span>)(</span>)', r'\1<span class="tab">AFK</span>\3', html)
+TABS = ["Rules", "Staff", "Log", "AFK", "Chunks", "Drops"]
+
+
+def six_tabs(html):
+    """Mock-ups drawn before the later tabs show three to five; the panel has six, with the title a little smaller to fit."""
+    def rebuild(m):
+        on = re.search(r'<span class="tab on"[^>]*>([^<]*)</span>', m.group(0))
+        picked = on.group(1) if on else ""
+        return '<span class="tabs">' + "".join(
+            f'<span class="tab{" on" if t == picked else ""}" style="width:46px">{t}</span>' for t in TABS) + "</span>"
+    out = re.sub(r'<span class="tabs">(?:<span class="tab[^"]*"[^>]*>[^<]*</span>)+</span>', rebuild, html)
+    if out != html:
+        out = out.replace('<span class="ttl v">Server utilities</span>', '<span class="ttl v" style="font-size:10.5px">Server utilities</span>')
+    return out
 
 
 def page(name, head, body):
@@ -66,7 +77,7 @@ def page(name, head, body):
 
 
 def from_mockup(name, source, start, index, wrap=True, css="", swap=()):
-    el = four_tabs(element(source, start, index))
+    el = six_tabs(element(source, start, index))
     for old, new in swap:
         el = el.replace(old, new)
     page(name, head_of(source) + (f"<style>{css}</style>" if css else ""), f'<div class="bgworld">{el}</div>' if wrap else el)
@@ -90,6 +101,13 @@ SCREENS = [
     ("panel_log_pane", "staff_log_refined.html", '<div class="scr v"', 4, True),
     ("admin_afk", "afk_refined.html", '<div class="scr v"', 0, True, "", [("AFK now · 5", "AFK now · 4")]),  # the built tab counts staff typed away apart
     ("afk_player", "afk_refined.html", '<div class="world"', 0, False),
+    ("admin_chunks", "chunks_refined.html", '<div class="scr v"', 0, True, ".tbl td:nth-child(5) { display: none; }",
+     [("on BSP-Wild 20 min", "away 20 min"), ("<td>Loaded</td><td>Unloaded</td>", "<td>On</td><td>Off</td>")]),  # as built: mods are in a player's view
+    ("admin_chunks_player", "chunks_refined.html", '<div class="scr v"', 1, True),
+    ("chunks_return", "chunks_refined.html", '<div class="world"', 0, False),
+    ("admin_drops", "drops_refined.html", '<div class="scr v"', 0, True),
+    ("admin_drops_search", "drops_refined.html", '<div class="scr v"', 1, True),
+    ("clear_chat", "drops_refined.html", '<div class="world"', 0, False),
 ]
 
 # ---------------------------------------------------------------- the block, drawn in CSS
@@ -176,7 +194,7 @@ def network():
         body += box(20 + i * 210, 20, 180, 56, n, s, "#19D3B0")
         body += f'<div style="position:absolute;left:{110 + i * 210}px;top:76px;width:0;height:58px;border-left:1.5px dashed #9AA3B5"></div>'
     body += '<div style="position:absolute;left:110px;top:134px;width:420px;border-top:1.5px dashed #9AA3B5"></div>'
-    body += box(110, 150, 200, 56, "MySQL", "rules, agreements, staff groups, the log, switches, AFK settings", "#B58CFF")
+    body += box(110, 150, 200, 56, "MySQL", "rules, staff groups, the log, AFK, chunk and drop settings", "#B58CFF")
     body += box(330, 150, 200, 56, "Redis", "changes reach every server at once", "#B58CFF")
     body += '<div class="capm" style="position:absolute;left:20px;top:222px;width:600px;text-align:center">BSP-Core\'s database and Redis are used when it is installed; without them each server keeps its own.</div>'
     body += "</div>"
@@ -186,7 +204,7 @@ def network():
 def banner():
     body = (f'<div style="position:relative;width:600px;height:150px;background:#0C0E12;overflow:hidden">'
             f'<div class="vt" style="position:absolute;left:30px;top:34px;color:#19D3B0;font-size:44px;line-height:40px">BSP SERVER UTILITIES</div>'
-            f'<div style="position:absolute;left:30px;top:84px;font:400 12.5px \'IBM Plex Sans\',sans-serif;color:#E6EAF2">Rules popup · display panels · staff online · action log · AFK</div>'
+            f'<div style="position:absolute;left:30px;top:84px;font:400 12.5px \'IBM Plex Sans\',sans-serif;color:#E6EAF2">Rules · display panels · staff online · action log · AFK · chunks · drops</div>'
             f'<div class="vt" style="position:absolute;left:30px;top:106px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div>'
             f'<div style="position:absolute;right:22px;top:24px;width:150px;height:100px;background:#2A2F3A">'
             f'<div style="position:absolute;inset:3px;background:#10151C" class="vt">'

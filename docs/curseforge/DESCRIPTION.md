@@ -1,8 +1,8 @@
 ![BSP-Server Utilities](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/banner.png)
 
-**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; and idle players are marked AFK, and kicked if you want. Made for the Build Secure Protect network; works on any Forge 1.20.1 or Mohist server.
+**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; and things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all. Made for the Build Secure Protect network; works on any Forge 1.20.1 or Mohist server.
 
-**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, and two boards for its Score Screens), LuckPerms (staff groups; the Forge mod, or the Bukkit plugin on Mohist), BSP-InventorySync (the rules popup waits for your inventory).
+**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, and two boards for its Score Screens), LuckPerms (staff groups; the Forge mod, or the Bukkit plugin on Mohist), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
 
 ## For players: the rules
 
@@ -38,9 +38,21 @@ Type **/actionlog** to read the newest 100 entries yourself. Every command staff
 
 Stand idle for 5 minutes and you are marked AFK; turn your head or do anything and you are back. Floating in water or riding a minecart in a loop does not count as doing something. Type **/afk** to be AFK at once. If the server kicks idle players, you are warned a minute before.
 
+## For players: your machines while you are away
+
+![Back online](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/chunks_return.png)
+
+If your machines keep chunks loaded (an RFTools Builder, a Mekanism machine with an Anchor upgrade, an AE2 spatial anchor, a Flux point and the like), those chunks unload once you have been away from the server for 5 minutes, so the server runs smoothly for whoever is on. Moving to another server on the network counts as away. Your Shatter Totem and projector chunks always stay loaded. When you come back your machines' chunks load again within a few seconds, and you are told so.
+
+## For players: things on the ground
+
+![Clearing the ground](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/clear_chat.png)
+
+Dropped items and experience orbs last 5 minutes of the server's time whether or not anyone is near, so piles left where nobody goes are gone by the time someone passes; your death drops last 15 minutes, time to run back for them. A Shatter Totem on the ground is never removed. When an admin clears the ground you are warned 60 and 30 seconds before.
+
 ## For admins: the admin panel
 
-Operators and BSP-Core admins type **/serverutils** (or **/su**).
+Operators and BSP-Core admins type **/serverutils** (or **/su**): six tabs, RULES, STAFF, LOG, AFK, CHUNKS and DROPS.
 
 ![The RULES tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_rules.png)
 
@@ -90,16 +102,37 @@ Pick a group (or **+ Add a LuckPerms group**) to choose its LuckPerms group, the
 
 **AFK:** whether idle players are marked AFK and after how many minutes (1 to 60); whether players AFK too long are kicked (off to begin with), after how many minutes AFK (5 to 240), and the message they see. Staff and operators are never kicked. On the right, everyone AFK on any server, how long, where, and a red countdown beside anyone close to a kick.
 
+## For admins: chunk loading
+
+![The CHUNKS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_chunks.png)
+
+**CHUNKS:** the chunks other mods keep loaded through Forge, by whose machine holds them. Each machine's owner is found from the machine's own saved owner (most chunk-loading mods keep one), else from who placed it (recorded from the day this mod is installed), else from the BSP-Region Guard claim it stands in. On the left: the switch, how many minutes away before a player's chunks unload (1 to 60, 5 to begin with), mods never unloaded (click a chip; BSP-Core's always), and players always loaded (a server farm account, say). On the right: everyone with machines here, where they are, and how many chunks are on and off; below, machines whose owner could not be found, with UNLOAD and RESTORE. Every minute the server checks; a mod that puts its ticket back is caught at the next check, and unloaded chunks stay unloaded across restarts until their owner returns. Temporary loads (teleports, trains, world generation), `/forceload` and plugin chunks are left alone.
+
+![A player's machines](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_chunks_player.png)
+
+Click a player for their machines: the mod, where, and how many chunks; RESTORE NOW brings them back (and they stay until the player next joins and leaves), UNLOAD NOW unloads them at once (a second click to confirm).
+
+## For admins: dropped items
+
+![The DROPS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_drops.png)
+
+**DROPS:** how long items and experience orbs last (1 to 60 minutes) and a player's death drops (1 to 60), counted on the server's running clock whether or not anyone is near; switch that off to count only while players are near, as vanilla does. Nothing counts per item: each is stamped once when it drops and checked every 5 seconds (5,000 items take under 2 ms). Items whose mod gives them a lifespan of their own, and BSP-Core's items, are never removed. **CLEAR ITEMS NOW** clears this server, every server, or one by name (or `/su clearitems here | all | <server>`): players there are warned at 60 and 30 seconds, then every dropped item and orb goes, and items in chunks not loaded at the time go when their chunk next loads; each server reports its count to you. The footer counts what went in the last hour.
+
+![Adding an exception](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_drops_search.png)
+
+**Exceptions:** + add an item opens a search over every item in the pack, by name or id; give the picked item its own time (1 to 120 minutes) or NEVER. Never items are kept by a clear too.
+
 ## A network of servers
 
 ![Several servers, shared records](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/network.png)
 
-With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, and the AFK settings are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online and who is AFK. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar or Mohist provides one.
+With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, and the AFK, chunk and drop settings are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online and who is AFK. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar or Mohist provides one.
 
 ## With the other BSP mods
 
-- **BSP-Core:** its database, Redis and server name; its admins can edit; its admin kit gives go into the action log; **STAFF ONLINE** and **ACTION LOG** are boards you can pick on its Score Screens.
+- **BSP-Core:** its database, Redis and server name; its admins can edit; its admin kit gives go into the action log; **STAFF ONLINE** and **ACTION LOG** are boards you can pick on its Score Screens; its totem and projector chunks are never unloaded and its items never removed from the ground.
 - **BSP-InventorySync:** the rules popup waits until a player's inventory has arrived, so nothing is lost while they read.
+- **BSP-Region Guard:** the owner of the claim a chunk-loading machine stands in, when the machine itself does not say whose it is.
 - **LuckPerms:** staff are the members of the groups you pick in the STAFF tab.
 
 ## Commands
@@ -111,7 +144,8 @@ With BSP-Core installed and its storage on MySQL, nothing needs setting up: the 
 | `/afk` | everyone | AFK until your next action |
 | `/su away` | staff | show as away on the staff panels, until typed again |
 | `/serverutils`, `/su` | operators, BSP-Core admins | the admin panel |
-| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK settings |
+| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings |
+| `/su clearitems here \| all \| <server>` | operators, BSP-Core admins | clear dropped items after a 60-second warning |
 | `/su rules list \| add <title> [text] \| remove <n> \| status \| reset <player> \| askagain` | operators, BSP-Core admins | the rules from chat or the console |
 
 ## Links
