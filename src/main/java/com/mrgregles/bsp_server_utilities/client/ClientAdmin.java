@@ -18,6 +18,12 @@ public final class ClientAdmin {
         }
     }
 
+    public static void drops(com.mrgregles.bsp_server_utilities.network.AdminDropsPacket packet) {
+        if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
+            screen.acceptDrops(packet);
+        }
+    }
+
     public static void chunks(com.mrgregles.bsp_server_utilities.network.AdminChunksPacket packet) {
         if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
             screen.acceptChunks(packet);

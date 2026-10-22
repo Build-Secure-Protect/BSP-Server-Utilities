@@ -224,6 +224,19 @@ public final class StaffDirectory {
         }
     }
 
+    /** The other servers heard from within {@value #STALE_MS} ms (every server sends its staff list every 30 seconds). */
+    public static java.util.List<String> knownServers() {
+        long now = clock.getAsLong();
+        java.util.List<String> out = new ArrayList<>();
+        REMOTE.forEach((srv, p) -> {
+            if (now - p.atMs() <= STALE_MS && !srv.equals(Storage.currentServerId())) {
+                out.add(srv);
+            }
+        });
+        java.util.Collections.sort(out);
+        return out;
+    }
+
     /** A staff member left this server: the last-seen record, shared, and the new list of online staff. */
     public static void onLogout(ServerPlayer player) {
         AWAY.remove(player.getUUID());

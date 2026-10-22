@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}) and CHUNKS ({@link ChunksTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}) and DROPS ({@link DropsTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,12 +54,13 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
     private final AfkTab afk = new AfkTab(this);
     private final ChunksTab chunks = new ChunksTab(this);
+    private final DropsTab drops = new DropsTab(this);
 
     public AdminScreen(AdminViewPacket view) {
         super(Component.literal(Tr.t("admin.title")));
@@ -239,6 +240,10 @@ public class AdminScreen extends Screen {
         chunks.accept(p);
     }
 
+    void acceptDrops(com.mrgregles.bsp_server_utilities.network.AdminDropsPacket p) {
+        drops.accept(p);
+    }
+
     private void openTab() {
         if (tab == STAFF) {
             staff.open();
@@ -248,6 +253,8 @@ public class AdminScreen extends Screen {
             afk.open();
         } else if (tab == CHUNKS) {
             chunks.open();
+        } else if (tab == DROPS) {
+            drops.open();
         }
     }
 
@@ -281,6 +288,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == CHUNKS) {
             chunks.addWidgets(left(), top());
+            return;
+        }
+        if (tab == DROPS) {
+            drops.addWidgets(left(), top());
             return;
         }
         int x = left() + PANE_X, y = top();
@@ -334,6 +345,9 @@ public class AdminScreen extends Screen {
         if (tab == CHUNKS) {
             chunks.tick();
         }
+        if (tab == DROPS) {
+            drops.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -367,11 +381,10 @@ public class AdminScreen extends Screen {
         int x = left(), y = top();
         g.fill(x, y, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, y, W, H, Ui.VIOLET);
-        Ui.text(g, font, Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD), x + PAD, y + 7, Ui.VIOLET, 1f);
-        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks")};
+        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(36, Ui.width(font, tabs[i], TINY) + 12); // five tabs beside the title
+            int tabW = Math.max(36, Ui.width(font, tabs[i], TINY) + 12);
             tx -= tabW;
             boolean on = i == tab;
             g.fill(tx, y + 5, tx + tabW, y + 18, on ? Ui.VIOLET : Ui.DIM);
@@ -380,9 +393,18 @@ public class AdminScreen extends Screen {
             hits.add(new Ui.Hit(tx, y + 5, tabW, 13, () -> showTab(which)));
             tx -= 4;
         }
+        // the title in the room the tabs leave, smaller when six tabs need it
+        String title = Tr.t("admin.title");
+        float titleScale = Math.min(1f, (tx - x - PAD - 2) / (float) Math.max(1, Ui.width(font, title, 1f)));
+        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), x + PAD, y + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
         if (tab == STAFF) {
             staff.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial);
+            return;
+        }
+        if (tab == DROPS) {
+            drops.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the search box
             return;
         }
         if (tab == CHUNKS) {
@@ -607,6 +629,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == CHUNKS) {
             return chunks.scroll(delta);
+        }
+        if (tab == DROPS) {
+            return drops.scroll(delta);
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {

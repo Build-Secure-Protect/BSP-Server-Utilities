@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
+### Added
+- The DROPS tab of the admin panel (`/su`): DESPAWN (count time while nobody is near, ITEMS and DEATH DROPS 1 to 60 minutes, XP orbs following items) and CLEAR ITEMS NOW (this server, all servers or one by name; a second click to confirm); the exceptions on the right with + add an item (a search over every item by name or id, the picked item's time 1 to 120 minutes or NEVER) and × to remove; the footer counts what went in the last hour. The title is drawn smaller when six tabs need the room.
+- Despawn times for dropped items, server side: items and experience orbs on the ground last 5 minutes of the server's running time, counted whether or not anyone is near, so piles in places nobody visits go as soon as their chunk loads and chunks held without entity ticking stop collecting them; a player's death drops last 15 minutes; orbs follow the items' time; per-item exceptions (1 to 120 minutes, or never). Items whose mod gives them a lifespan of their own, and BSP-Core's items, are never touched. Nothing counts per item: each is stamped once when it drops and checked once every 5 seconds (5,000 items take under 2 ms). The settings are one set for the network; `/su status` shows them and how many items and orbs were removed in the last hour.
+- `/su clearitems here | all | <server>` (operators and BSP-Core admins): the chosen servers warn their players 60 and 30 seconds before, then remove every dropped item and orb (never exceptions, mod-timed and BSP-Core items kept); items in chunks not loaded at the time go when their chunk next loads; each server reports its count to the admin. A second clear during a countdown starts it again.
+
 ## [0.2.0] - 2026-10-21
 
 ### Added

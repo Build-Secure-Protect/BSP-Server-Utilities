@@ -91,6 +91,14 @@ public interface StorageBackend {
 
     void saveChunkSettings(com.mrgregles.bsp_server_utilities.chunks.ChunkSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ despawn times (SU-17)
+
+    /** The network's despawn settings, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.despawn.DespawnSettings loadDespawnSettings() throws Exception;
+
+    void saveDespawnSettings(com.mrgregles.bsp_server_utilities.despawn.DespawnSettings settings) throws Exception;
+
     String describe();
 
     void close() throws Exception;

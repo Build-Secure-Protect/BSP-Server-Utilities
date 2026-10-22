@@ -42,6 +42,9 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.afk.AfkService.registerEvents();
         com.mrgregles.bsp_server_utilities.chunks.ChunkService.registerNotices();
         com.mrgregles.bsp_server_utilities.chunks.ChunkService.registerEvents();
+        com.mrgregles.bsp_server_utilities.despawn.DespawnService.registerNotices();
+        com.mrgregles.bsp_server_utilities.despawn.DespawnService.registerEvents();
+        com.mrgregles.bsp_server_utilities.despawn.ClearService.registerNotices();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
             RulesService.onServerStarted(e.getServer());
@@ -49,8 +52,11 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.log.ActionLog.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.afk.AfkService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.chunks.ChunkService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.despawn.ClearService.onServerStarted();
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
         MinecraftForge.EVENT_BUS.addListener(ServerUtilsCommands::onRegister);
         // The rules popup: the gate at login, the hold, the popup (RulesHold blocks actions while held).
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, RulesService::onLogin);
@@ -84,6 +90,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.log.LogSync.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.afk.AfkService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.despawn.DespawnService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.despawn.ClearService.tick(e.getServer());
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

@@ -48,6 +48,15 @@ public final class ServerUtilsCommands {
                     return 1;
                 }))
                 .then(Commands.literal("status").requires(Perms::canEdit).executes(c -> status(c.getSource())))
+                .then(Commands.literal("clearitems").requires(Perms::canEdit)
+                        .then(Commands.argument("where", StringArgumentType.word())
+                                .suggests((c, b) -> {
+                                    b.suggest("here");
+                                    b.suggest("all");
+                                    com.mrgregles.bsp_server_utilities.access.StaffDirectory.knownServers().forEach(b::suggest);
+                                    return b.buildFuture();
+                                })
+                                .executes(c -> clearItems(c.getSource(), StringArgumentType.getString(c, "where")))))
                 .then(Commands.literal("rules").requires(Perms::canEdit)
                         .then(Commands.literal("list").executes(c -> rulesList(c.getSource())))
                         .then(Commands.literal("status").executes(c -> rulesStatus(c.getSource())))
@@ -174,6 +183,21 @@ public final class ServerUtilsCommands {
         return 1;
     }
 
+    /** {@code /su clearitems here | all | <server>} (D110, D113, D115). */
+    private static int clearItems(CommandSourceStack source, String where) {
+        String w = where.strip();
+        boolean known = w.equalsIgnoreCase("here") || w.equalsIgnoreCase("all") || w.equals(Storage.currentServerId())
+                || com.mrgregles.bsp_server_utilities.access.StaffDirectory.knownServers().contains(w);
+        if (!known) {
+            source.sendFailure(Component.translatable("message.bsp_server_utilities.clear.unknown", w));
+            return 0;
+        }
+        String to = com.mrgregles.bsp_server_utilities.despawn.ClearService.start(source.getServer(), w, source.getPlayer());
+        source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.clear.started",
+                to.equals(com.mrgregles.bsp_server_utilities.despawn.ClearService.ALL) ? Component.translatable("message.bsp_server_utilities.clear.every_server") : Component.literal(to)), true);
+        return 1;
+    }
+
     private static int status(CommandSourceStack source) {
         Storage s = Storage.active();
         StorageSettings.Resolved settings = StorageSettings.current();
@@ -198,6 +222,9 @@ public final class ServerUtilsCommands {
         int unloaded = com.mrgregles.bsp_server_utilities.chunks.ChunkData.get(source.getServer()).suspended().size();
         source.sendSuccess(() -> chunks.enabled() ? Component.translatable("message.bsp_server_utilities.status.chunks", chunks.minutes(), unloaded)
                 : Component.translatable("message.bsp_server_utilities.status.chunks_off"), false);
+        com.mrgregles.bsp_server_utilities.despawn.DespawnSettings drops = com.mrgregles.bsp_server_utilities.despawn.DespawnService.settings(source.getServer());
+        long[] gone = com.mrgregles.bsp_server_utilities.despawn.DespawnService.removedLastHour(source.getServer());
+        source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.status.drops", drops.itemMinutes(), drops.deathMinutes(), gone[0], gone[1]), false);
         return 1;
     }
 }

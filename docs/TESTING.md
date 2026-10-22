@@ -215,3 +215,25 @@ In game (an operator, with SU-15's machines from the section above):
 2. Left: the switch, AFTER − / + (1 to 60), the chips of mods holding chunks here (`bsp_core (always)` greyed), click one to exempt it (violet); ALWAYS LOADED: + add a player, type a name that has played here, ADD; click a name to remove it.
 3. Right: the player with machines, "away 2 min" in amber while under the time, grey after; the green and red counts follow the minute's check. Click the row: their machines with mod, place and chunks; RESTORE NOW brings them back (and they stay while the player is away); UNLOAD NOW wants a second click within three seconds. PLAYERS goes back.
 4. NO OWNER FOUND lists machines nobody could be matched to (placed before the mod, no saved owner, no claim); UNLOAD turns the line red and the chunk unloads; RESTORE brings it back.
+
+## 2026-10-22: SU-17, despawn times and clearing items, server side
+
+Headless: 58 GameTests pass, twice (new: items, an orb and a death drop removed at 5 and 15 minutes of running time, an exception of 1 minute and a never exception, vanilla's lifespan set a little longer than ours, the count for `/su status`, BSP-Core's items never timed or cleared; items loaded from disk that ran out, or lay there before a clear, turned away, a never item and a fresh one kept; the clear warning at 60 and 30 seconds, replaced by a second clear, taking the item and the orb and keeping the never item, the admin's count, the time kept for unloaded chunks; the check over 5,000 items timed at about 1.5 ms; settings within their limits). The settings are edited in the DROPS tab (SU-18); until then the defaults hold (items 5 minutes, death drops 15, orbs as items). **Nothing of this has run in a live game.**
+
+In game:
+1. Drop a stack and walk 200 blocks away for 5 minutes, then come back: it is gone (vanilla would have kept it, since its chunk stopped ticking).
+2. Die with things in your inventory: they are still there after 6 minutes, gone after 15.
+3. `/su status` ends with the Drops line and the counts of the last hour.
+4. `/su clearitems here`: a red warning at once ("60 seconds"), another at 30, then "Items on the ground were cleared (n)." in gold and your own grey line with the count. A Shatter Totem on the ground stays.
+5. With two servers sharing storage: `/su clearitems all` from one; both warn and clear; you get a line for each server. `/su clearitems <the other server>` clears only that one; tab completion offers the server names.
+6. Clear, then visit a far chunk where items lay before: they are gone on arrival.
+
+## 2026-10-22: SU-18, the DROPS tab
+
+Headless: 59 GameTests pass (new: the tab's packets round trip, a player refused for settings and for a clear, an admin's times and an exception becoming the network's, an unknown server starting nothing, CLEAR ITEMS for this server starting the countdown and the tab showing it). **Nothing of this has run in a client.**
+
+In game (an operator):
+1. `/su`, DROPS (the sixth tab; the title shrinks to fit): the look matches `tools/preview/drops_refined.html`.
+2. Left: the switch, ITEMS and DEATH DROPS − / + (1 to 60), the orbs switch; `/su status` shows the new times.
+3. CLEAR ITEMS NOW: the chips This server, All servers and the other servers heard from; CLEAR ITEMS wants a second click; while counting down it reads COUNTING DOWN · CLEAR AGAIN (pressing it twice again restarts the countdown).
+4. Right: + add an item, type `diam`: Diamond, Diamond Block, Diamond Pickaxe ... (modded items too, by name or id); pick one, − / + up to 120 or NEVER, ADD: the line appears with its time (never in gold); × removes it. Drop that item and check it lasts its own time.

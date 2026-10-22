@@ -6,7 +6,8 @@
   "refmap": "bsp_server_utilities.refmap.json",
   "mixins": [
     "CreativeSlotMixin",
-    "ContainerClickMixin"
+    "ContainerClickMixin",
+    "ExperienceOrbAccess"
   ],
   "server": [],
   "client": [],

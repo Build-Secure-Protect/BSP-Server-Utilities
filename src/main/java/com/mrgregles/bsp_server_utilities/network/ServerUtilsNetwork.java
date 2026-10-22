@@ -79,6 +79,12 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminChunksEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminChunksEditPacket::encode).decoder(AdminChunksEditPacket::decode)
                 .consumerMainThread(AdminChunksEditPacket::handle).add();
+        CHANNEL.messageBuilder(AdminDropsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminDropsPacket::encode).decoder(AdminDropsPacket::decode)
+                .consumerMainThread(AdminDropsPacket::handle).add();
+        CHANNEL.messageBuilder(AdminDropsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminDropsEditPacket::encode).decoder(AdminDropsEditPacket::decode)
+                .consumerMainThread(AdminDropsEditPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

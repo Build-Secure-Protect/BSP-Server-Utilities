@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drops Tab Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set F: three looks for the DROPS tab of the admin panel (owner decisions D101 to D110), with the clear
+   command. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>The DROPS tab, three looks</h1>
+<p class="lede">Mock-up set F for despawn times (D101 to D110): a sixth tab in <code>/su</code> with the times for the network (items 5 minutes, death drops 15, XP orbs as items, counted while the server runs whether or not anyone is near), the exceptions list (an item with its own time or never, added through an item search), how many were removed in the last hour, and CLEAR ITEMS for this server, every server or one picked (also <code>/su clearitems here | all | &lt;server&gt;</code>). The title is drawn a little smaller to make room for six tabs. Sample data.</p></header>
+<section><h2>A. Two columns, like the other tabs</h2><div class="card"><p>Times and CLEAR ITEMS with its server chips on the left; the exceptions on the right with + ADD AN ITEM (the search) and × to remove.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Server utilities</span><span class="tabs"><span class="tab" style="width:46px">Rules</span><span class="tab" style="width:46px">Staff</span><span class="tab" style="width:46px">Log</span><span class="tab" style="width:46px">AFK</span><span class="tab" style="width:46px">Chunks</span><span class="tab on" style="width:46px">Drops</span></span></div><div class="grow" style="display:flex;gap:10px"><div class="box" style="width:180px;padding:6px 8px;display:flex;flex-direction:column;gap:6px">
+<div class="vv sm up b">Despawn</div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle on"></span><span>Count time while nobody is near</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Items</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">5</span><span class="key sm">+</span></span><span class="sm m">min</span></span></div><div style="display:flex;align-items:center;justify-content:space-between"><span class="lbl">Death drops</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key sm">−</span><span class="val">15</span><span class="key sm">+</span></span><span class="sm m">min</span></span></div>
+<div style="display:flex;align-items:center;gap:6px"><span class="toggle on"></span><span class="sm">XP orbs follow items</span></div>
+<div class="sm m">Items a mod times itself (the Shatter Totem) are never removed.</div>
+<div class="vv sm up b" style="margin-top:4px">Clear items now</div>
+<div style="display:flex;flex-wrap:wrap;gap:3px"><span class="chip on">This server</span> <span class="chip">All servers</span> <span class="chip">BSP-Wild</span> <span class="chip">BSP-Nether</span></div>
+<div><span class="key sm warn">Clear items</span></div>
+</div><div class="box grow" style="padding:4px;overflow:hidden;display:flex;flex-direction:column;gap:3px"><div class="hd" style="padding:0 3px"><span class="vv sm up b">Exceptions · 5</span><span class="vv sm b">+ add an item</span></div><table class="tbl" style="font-size:8.6px"><tr><td class="b">Netherite Ingot</td><td class="m mono" style="font-size:8px">minecraft:netherite_ingot</td><td class="g b">never</td><td class="r">×</td></tr><tr><td class="b">Elytra</td><td class="m mono" style="font-size:8px">minecraft:elytra</td><td class="g b">never</td><td class="r">×</td></tr><tr><td class="b">Cobblestone</td><td class="m mono" style="font-size:8px">minecraft:cobblestone</td><td class=" b">1 min</td><td class="r">×</td></tr><tr><td class="b">Rotten Flesh</td><td class="m mono" style="font-size:8px">minecraft:rotten_flesh</td><td class=" b">1 min</td><td class="r">×</td></tr><tr><td class="b">Shulker Box</td><td class="m mono" style="font-size:8px">minecraft:shulker_box</td><td class=" b">30 min</td><td class="r">×</td></tr></table></div></div><div class="hd"><span class="sm m">Removed in the last hour: 1 204 items · 310 orbs · saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+<section><h2>B. One form</h2><div class="card"><p>Each setting with a sentence; the exceptions as one wrapped line; the server choice and CLEAR ITEMS in the footer.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Server utilities</span><span class="tabs"><span class="tab" style="width:46px">Rules</span><span class="tab" style="width:46px">Staff</span><span class="tab" style="width:46px">Log</span><span class="tab" style="width:46px">AFK</span><span class="tab" style="width:46px">Chunks</span><span class="tab on" style="width:46px">Drops</span></span></div><div class="box grow" style="padding:2px 4px;display:flex;flex-direction:column;overflow:hidden">
+<div style="display:flex;gap:10px;align-items:flex-start;padding:4px 6px;border-top:1px solid #1c222c"><div style="width:120px" class="b">Count time while nobody is near</div><div style="width:110px"><span class="toggle on"></span></div><div class="grow sm m">Items in places nobody visits go when their chunk next loads.</div></div>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:4px 6px;border-top:1px solid #1c222c"><div style="width:120px" class="b">Items</div><div style="width:110px"><span class="step"><span class="key sm">−</span><span class="val">5</span><span class="key sm">+</span></span> <span class="sm m">min</span></div><div class="grow sm m">From when they drop, while the server runs.</div></div>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:4px 6px;border-top:1px solid #1c222c"><div style="width:120px" class="b">Death drops</div><div style="width:110px"><span class="step"><span class="key sm">−</span><span class="val">15</span><span class="key sm">+</span></span> <span class="sm m">min</span></div><div class="grow sm m">Time to run back for your things.</div></div>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:4px 6px;border-top:1px solid #1c222c"><div style="width:120px" class="b">XP orbs</div><div style="width:110px"><span class="toggle on"></span></div><div class="grow sm m">The same time as items.</div></div>
+<div class="hd" style="padding:5px 6px 2px"><span class="vv sm up b">Exceptions</span><span class="vv sm b">+ add an item</span></div>
+<div class="sm" style="padding:0 6px">Netherite Ingot <span class="g">never</span> · Elytra <span class="g">never</span> · Cobblestone 1 min · Rotten Flesh 1 min · Shulker Box 30 min</div>
+</div><div class="hd"><span class="sm m">1 204 items · 310 orbs removed in the last hour</span><span class="keys"><span class="key ghost">This server ▾</span><span class="key sm warn">Clear items</span></span></div></div></div></div></section>
+<section><h2>C. Three cards</h2><div class="card"><p>Times with the minutes large, exceptions as chips, and a clear card with the server choice.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Server utilities</span><span class="tabs"><span class="tab" style="width:46px">Rules</span><span class="tab" style="width:46px">Staff</span><span class="tab" style="width:46px">Log</span><span class="tab" style="width:46px">AFK</span><span class="tab" style="width:46px">Chunks</span><span class="tab on" style="width:46px">Drops</span></span></div><div class="grow" style="display:flex;gap:8px"><div class="cardg" style="width:150px"><div class="vv sm up b">Times</div><div style="display:flex;align-items:flex-end;gap:6px"><span class="big">5</span><span class="m">min items</span></div><div style="display:flex;align-items:flex-end;gap:6px"><span class="big g">15</span><span class="m">min death drops</span></div><div class="sm m">XP orbs as items · nobody near counts</div></div>
+<div class="cardg grow"><div class="hd"><span class="vv sm up b">Exceptions</span><span class="vv sm b">+ add</span></div><span class="pchip" style="margin:0 3px 3px 0"><b>Netherite Ingot</b><span class="g">never</span></span><span class="pchip" style="margin:0 3px 3px 0"><b>Elytra</b><span class="g">never</span></span><span class="pchip" style="margin:0 3px 3px 0"><b>Cobblestone</b><span class="m">1 min</span></span><span class="pchip" style="margin:0 3px 3px 0"><b>Rotten Flesh</b><span class="m">1 min</span></span><span class="pchip" style="margin:0 3px 3px 0"><b>Shulker Box</b><span class="m">30 min</span></span></div>
+<div class="cardg" style="width:120px"><div class="r sm up b">Clear items</div><div style="display:flex;flex-direction:column;gap:3px"><span class="chip on">This server</span><span class="chip">All servers</span><span class="chip">BSP-Wild</span><span class="chip">BSP-Nether</span></div><span class="key sm warn">Clear now</span></div></div><div class="hd"><span class="sm m">Removed in the last hour: 1 204 items · 310 orbs · saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+<section><h2>The clear, in chat (every look)</h2><div class="card"><p>With the default warning (F3): the players on the servers being cleared see a red line, then the gold one; the admin gets the count from each server.</p><div class="stage"><div class="world" style="width:440px"><div class="chat"><span style="color:#FF5555">Items on the ground will be cleared in 30 seconds.</span><span style="color:#FFAA00">Items on the ground were cleared (312).</span><span style="color:#AAAAAA">[to the admin] Cleared: BSP-Spawn 312 items · BSP-Wild 98 · BSP-Nether 0</span></div></div></div></div></section>
+<section><h2>Decisions</h2><div class="card"><ol>
+<li><b>F1 the tab's look:</b> A two columns, B one form, or C three cards.</li>
+<li><b>F2 what the clear removes:</b> dropped items and XP orbs, or items only.</li>
+<li><b>F3 a warning:</b> 30 seconds' notice in chat on the servers being cleared, or cleared at once.</li>
+<li><b>F4 unloaded chunks:</b> items in chunks not loaded at the time go when their chunk next loads, or only loaded ones are cleared.</li>
+<li><b>F5 who may clear:</b> operators and BSP-Core admins, or staff too.</li>
+</ol></div></section>
+</div></body></html>

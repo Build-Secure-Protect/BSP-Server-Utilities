@@ -25,6 +25,7 @@ public final class MemoryBackend implements StorageBackend {
     private StaffGroups staffGroups;
     private com.mrgregles.bsp_server_utilities.afk.AfkSettings afkSettings;
     private com.mrgregles.bsp_server_utilities.chunks.ChunkSettings chunkSettings;
+    private com.mrgregles.bsp_server_utilities.despawn.DespawnSettings despawnSettings;
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
     private final Map<String, Boolean> switches = new HashMap<>();
@@ -131,6 +132,18 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void saveStaffGroups(StaffGroups groups) throws Exception {
         check();
         staffGroups = groups;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.despawn.DespawnSettings loadDespawnSettings() throws Exception {
+        check();
+        return despawnSettings;
+    }
+
+    @Override
+    public synchronized void saveDespawnSettings(com.mrgregles.bsp_server_utilities.despawn.DespawnSettings settings) throws Exception {
+        check();
+        despawnSettings = settings;
     }
 
     @Override
