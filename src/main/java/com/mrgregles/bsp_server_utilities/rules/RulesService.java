@@ -86,8 +86,20 @@ public final class RulesService {
     private RulesService() {
     }
 
+    /** The config file's master switch, and the setup guide's for the network (D150). */
     public static boolean enabled() {
-        return ServerUtilsConfig.getOr(ServerUtilsConfig.RULES_ENABLED, true);
+        return ServerUtilsConfig.getOr(ServerUtilsConfig.RULES_ENABLED, true) && !com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.RULES);
+    }
+
+    /** Whether the player is still at the gate or held by the popup (the setup card waits for both, D144). */
+    public static boolean busy(UUID player) {
+        return GATES.containsKey(player) || HELD.containsKey(player);
+    }
+
+    /** Rules turned off: nobody waits at the gate or is held any more. */
+    public static void releaseAll() {
+        GATES.clear();
+        HELD.clear();
     }
 
     public static RuleSet rules(MinecraftServer server) {
@@ -117,6 +129,7 @@ public final class RulesService {
 
     /** Changes the rules (not the version); the result is sanitised, saved, sent to the other servers and shown to anyone held. */
     public static RuleSet edit(MinecraftServer server, UnaryOperator<RuleSet> change) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.RULES); // changed in its tab: set up (D152)
         RulesData data = RulesData.get(server);
         RuleSet old = data.rules();
         RuleSet next = change.apply(old).withVersion(old.version()).sanitised().withRevision(nextRevision(old));

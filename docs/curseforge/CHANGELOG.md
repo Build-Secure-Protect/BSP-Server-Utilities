@@ -1,58 +1,22 @@
-# BSP-Server Utilities 0.1.0: first release
+# BSP-Server Utilities 0.4.0: the client check and the setup guide
 
-The first public release of BSP-Server Utilities for Minecraft 1.20.1 (Forge 47.4.10 and Mohist), made for the Build Secure Protect modpack. Works on its own; uses **BSP-Core 1.4.0** or newer, **LuckPerms** and **BSP-InventorySync** when they are installed. Needed on the client and the server.
+For Minecraft 1.20.1, Forge 47.4 or newer. **Clients and servers both need 0.4.0**: the network protocol changed, so an older client is refused by a 0.4.0 server (and the other way round). Works on its own; uses **BSP-Core 1.4.0** or newer, **LuckPerms** and **BSP-InventorySync** when they are installed.
 
-## The rules popup
-- **One set of rules for the network:** a heading, an intro line, the message LEAVE SERVER shows, and up to 20 rules, each a bold title (48 characters) with optional text (400).
-- **Asked once:** a player who has not agreed to the current rules sees the popup once they have settled in (after BSP-InventorySync has restored their inventory, or 2 seconds after login). Agreeing counts on every server.
-- **Held until they answer:** kept in place, unable to build, use, attack, pick up or drop items, open containers, chat or run any command but `/rules`, and unhurt.
-- **Read, then agree:** a tick box on the right of every rule (a click anywhere on the row ticks it); AGREE stays dim until every box is ticked, and the server checks the ticks too. LEAVE SERVER disconnects with the admin's message; Escape does nothing; the popup comes back if another screen replaces it.
-- **Ask everyone again:** raises the version; players online see the popup at once, everyone else at their next join.
-- `/rules` for everyone: the same panel, read only, with the date you agreed.
+## The client check
+- **At login:** every client says, inside Forge's own handshake, which mods it has (with versions and file fingerprints), its resource packs (with fingerprints), the shader Oculus has chosen, its brightness, and the stone test: common stone-type blocks must still have all six faces, draw as solid blocks and not be largely see-through, which catches an xray pack whatever it is called. The login waits for the answer, so a refused player never enters the world; a client that does not answer in 20 seconds is turned away.
+- **Refused, with a list:** "You can't join with:", each mod or pack to remove, and the admins' message (160 characters, editable). Switching a blocked pack on in game kicks with the same message.
+- **The rules:** a block list of words (matched anywhere in a mod, pack or shader name; xray, x-ray, freecam, baritone, wurst and meteor to start), exact mod ids and packs by fingerprint; names allowed anyway; exempt players. Blocking something a player online already has kicks nobody: they are refused at their next join.
+- **Flags for admins, never refusals:** mods not in the trusted setup, pack mods whose file differs, packs not in it, brightness past the slider's top (the player is told staff can see it), mods Forge listed that the report left out.
+- **The trusted setup:** an admin's own game, taken with TRUST MY SETUP, saved for the network and written to `config/bsp_server_utilities/trusted_setup.json`; a newer copy dropped onto another server is read at start-up or on `/su clientcheck reload`.
+- **The CLIENTS tab:** everyone on the network with their flags, their mods and packs with BLOCK, KICK with a typed reason ("Removed by staff"), today's refusals; the rules page with the network's rules or the server's own. `/su client <player>` in chat.
+- Refusals and kicks are in the action log as Client check entries, seen by staff only.
 
-## Display Panels
-- **The block:** a thin wall panel with a black face (Functional Blocks tab; no recipe). Panels side by side and above each other join into one, up to 8 wide and 6 high, with a slim bezel round the outside only and a small teal light in its corner. Every block keeps the settings, so breaking the bottom-left block or adding blocks keeps them. Only admins place, set up and break panels; pistons and explosions leave them alone.
-- **Text:** up to 16 lines of 80 characters, each with a size (S, M, L, XL, a share of the panel's height), a colour (the 16 chat colours or a #RRGGBB value, `&` codes inside a line), alignment and bold; a dark background or clear.
-- **Pictures:** from a web address or from `config/bsp_server_utilities/images/` on the server; PNG, JPEG and the first frame of a GIF, up to 4 MB; fit inside, fill and crop, or stretch; REFRESH NOW and a refresh timer (off, 5, 15 or 60 minutes). The server fetches the picture and sends it to players, so players never contact the address.
-- **Staff online** and **Action log** faces (below).
-- **Settings screen:** right-click a panel. The face as players will see it, the mode, the background, and the pane for the mode; nothing changes in the world until SAVE. Faces are drawn at full brightness.
+## The setup guide
+- **The card:** a few seconds after an operator or admin joins, while anything is not set up, a card in the top right corner and a line in chat offer SETUP NOW, LATER or IGNORE SETUP; the game goes on (press T to click it). Ignoring is per admin.
+- **The guide:** the admin panel, page by page: Welcome (this server's name, written to the config file, and its storage), staff groups, rules, action log, AFK, chunk unloading, despawn times, client check, display panels, then Finish with each page set up, off or later. BACK, TURN OFF FEATURE, SETUP LATER and NEXT on every page; closing part way leaves the rest for later. Changing a feature in its own tab counts as set up.
+- **Off switches for every feature,** saved for the network: rules, action log (asked twice), despawn times (vanilla's five minutes), client check, staff online, display panels (dark, not placeable), AFK and chunk unloading.
+- `/su setup [now | later | ignore]`, SETUP GUIDE on the RULES tab, and a setup line in `/su status`. Servers updating from 0.3.0 see the guide once.
 
-## Staff online
-- **Who counts:** members of the LuckPerms groups chosen in the STAFF tab (each with a label and a colour, in order), plus operators unless switched off. `staff.groups` in the config only fills the list the first time.
-- **The face:** STAFF ONLINE and the count, a column per role in its colour, and each person with a dot (green online, amber away, grey offline) and the server they are on, "away", or how long ago they were seen.
-- **Across the network:** every server reports its online staff on each join and leave and every 30 seconds; faces update at once on the same server, within a second or two from another with Redis, within 30 seconds without.
-- `/su away` marks a staff member away until they type it again or leave. Staff who are AFK show as away too while they are.
-- **Panel settings:** online and offline, or online only; which roles.
-
-## The action log
-- **What is logged:** every command staff, operators, the console and RCON run (private messages never), items staff take from the creative menu (counted per item over five seconds, so moving items around is not logged), gives, game-mode changes, and BSP-Core's admin kit gives.
-- **Switches:** admins turn logging off for single commands in the LOG tab; every switch change is itself an entry, so nothing is switched off quietly.
-- **Shared and kept a week:** entries go to every server and are deleted after `log.keepDays` (7). Nobody can edit or delete an entry in game.
-- **Coordinates hidden for players:** panels and `/actionlog` show `/tp · · ·`; staff read the full text in the LOG tab.
-- **The face:** ACTION LOG, newest first: how long ago, who in their role's colour, what, and the server; every server or this one, which kinds, 6, 8 or 12 lines.
-- `/actionlog` for everyone: the newest 100 entries, read only.
-
-## AFK detection
-- **Idle for 5 minutes is AFK:** turning the head or doing anything the server sees (chat, commands, breaking, placing, using, attacking, clicking in a container, dropping, steering a vehicle) counts as active; being carried by water or a minecart does not. A player reading the rules popup is never idle.
-- Players are told when they go AFK and when they are back. `/afk` marks a player AFK at once.
-- **Kicking (off until turned on):** a player AFK for 30 minutes is warned a minute before, then sent off with the admin's message. Staff and operators are never kicked.
-
-## The admin panel
-- `/serverutils` (or `/su`) for operators and BSP-Core admins, with four tabs:
-  - **RULES:** popup text, the rules in order with + ADD RULE, the picked row's boxes with counters, UP, DOWN, DELETE (SURE?), PREVIEW, ASK EVERYONE AGAIN (SURE?), and how many players on the network agreed.
-  - **STAFF:** the staff groups (a LuckPerms group, label, colour, order, REMOVE), the operators switch, and everyone with their role and where they are.
-  - **LOG:** a switch per command with a search, private messages listed as never logged; the newest entries in full text with server and kind filters.
-  - **AFK:** detection on or off and its minutes (1 to 60), kicking on or off, its minutes (5 to 240) and message; everyone AFK now on any server, with a countdown beside anyone close to a kick.
-- Everything the tabs change is saved for every server.
-
-## With BSP-Core
-- Its database, Redis and server name are used when it is installed (this mod keeps its own tables, prefix `bsp_su_`).
-- STAFF ONLINE and ACTION LOG are boards for its Score Screens.
-- Its admins can edit; its admin kit gives are logged.
-
-## Commands
-- `/rules`, `/actionlog`, `/afk` (everyone); `/su away` (staff).
-- `/serverutils` or `/su` (the admin panel), `/su status`, `/su rules list | add <title> [text] | remove <n> | status | reset <player> | askagain`.
-
-## A network of servers
-- With shared storage (automatic when BSP-Core's `storage.mode` is `mysql`): the rules and agreements, the staff groups, last-seen times, the action log and its switches, and the AFK settings live in MySQL; notices between servers go through Redis, with the table as the safety net. No database driver is bundled: BSP-Core's full jar or Mohist provides one.
+## Also
+- The admin panel has seven tabs; the tab keys are narrower so they all fit.
+- Shared storage loads its MySQL driver itself (BSP-Core's full jar carries one), so it no longer depends on BSP-Core connecting first.

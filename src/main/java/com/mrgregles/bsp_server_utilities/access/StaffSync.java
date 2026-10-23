@@ -29,11 +29,16 @@ public final class StaffSync {
         if (dirty) {
             dirty = false;
             wait = 20;
-            ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), StaffViewPacket.of(StaffDirectory.roster(server), System.currentTimeMillis()));
+            ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), StaffViewPacket.of(shown(server), System.currentTimeMillis()));
         }
     }
 
     public static void sendTo(ServerPlayer player) {
-        ServerUtilsNetwork.sendTo(player, StaffViewPacket.of(StaffDirectory.roster(player.server), System.currentTimeMillis()));
+        ServerUtilsNetwork.sendTo(player, StaffViewPacket.of(shown(player.server), System.currentTimeMillis()));
+    }
+
+    /** What players' panels and boards show: nobody while staff online is turned off (D150). */
+    public static java.util.List<StaffDirectory.Member> shown(MinecraftServer server) {
+        return com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.STAFF) ? java.util.List.of() : StaffDirectory.roster(server);
     }
 }

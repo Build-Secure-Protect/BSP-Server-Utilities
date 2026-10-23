@@ -82,6 +82,7 @@ public final class DespawnService {
     }
 
     public static DespawnSettings setSettings(MinecraftServer server, DespawnSettings s) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.DESPAWN); // changed in its tab: set up (D152)
         DespawnData data = DespawnData.get(server);
         DespawnSettings next = s.withRevision(Math.max(System.currentTimeMillis(), data.settings().revision() + 1)).sanitised();
         data.setSettings(next);
@@ -144,12 +145,19 @@ public final class DespawnService {
     private static void lifespan(Entity e, DespawnSettings s) {
         if (e instanceof ItemEntity item && !modTimed(item)) {
             long limit = limitTicks(e, s);
-            if (!s.enabled()) {
+            if (com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.DESPAWN)) {
+                item.lifespan = VANILLA_TICKS; // turned off: vanilla's five minutes (D150)
+            } else if (!s.enabled()) {
                 item.lifespan = limit < 0 ? Integer.MAX_VALUE : (int) limit;
             } else {
                 item.lifespan = limit < 0 ? Integer.MAX_VALUE : (int) Math.min(Integer.MAX_VALUE, limit + TICKS_PER_MINUTE);
             }
         }
+    }
+
+    /** Despawn times turned off or on in the setup guide: the items here go back to vanilla's clock, or to ours. */
+    public static void switched(MinecraftServer server) {
+        relife(server);
     }
 
     private static void relife(MinecraftServer server) {
@@ -170,7 +178,7 @@ public final class DespawnService {
      * disk that ran out while away or was on the ground before the last clear is turned away. Returns false to turn it away.
      */
     public static boolean onJoin(Entity e, boolean fromDisk) {
-        if (!ours(e) || !(e.level() instanceof ServerLevel level)) {
+        if (!ours(e) || !(e.level() instanceof ServerLevel level) || com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.DESPAWN)) {
             return true;
         }
         MinecraftServer server = level.getServer();
@@ -205,7 +213,7 @@ public final class DespawnService {
     /** The check: one comparison per dropped thing; returns how many went. */
     public static int check(MinecraftServer server) {
         DespawnSettings s = settings(server);
-        if (!s.enabled()) {
+        if (!s.enabled() || com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.DESPAWN)) {
             return 0;
         }
         long now = now(server);

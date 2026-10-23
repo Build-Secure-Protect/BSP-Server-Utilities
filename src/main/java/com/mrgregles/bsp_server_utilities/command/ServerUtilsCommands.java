@@ -8,6 +8,13 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.authlib.GameProfile;
 import com.mrgregles.bsp_server_utilities.access.Perms;
 import com.mrgregles.bsp_server_utilities.admin.AdminPanel;
+import com.mrgregles.bsp_server_utilities.check.ClientCheckService;
+import com.mrgregles.bsp_server_utilities.check.ClientReport;
+import com.mrgregles.bsp_server_utilities.check.TrustedSetup;
+import com.mrgregles.bsp_server_utilities.check.Verdict;
+import com.mrgregles.bsp_server_utilities.setup.Feature;
+import com.mrgregles.bsp_server_utilities.setup.SetupService;
+import com.mrgregles.bsp_server_utilities.setup.SetupState;
 import com.mrgregles.bsp_server_utilities.access.Staff;
 import com.mrgregles.bsp_server_utilities.access.StaffDirectory;
 import com.mrgregles.bsp_server_utilities.compat.BspCore;
@@ -16,6 +23,7 @@ import com.mrgregles.bsp_server_utilities.rules.RuleSet;
 import com.mrgregles.bsp_server_utilities.rules.RulesService;
 import com.mrgregles.bsp_server_utilities.storage.Storage;
 import com.mrgregles.bsp_server_utilities.storage.StorageSettings;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -31,7 +39,9 @@ import java.util.stream.Collectors;
  * {@code /serverutils} and its short form {@code /su} (owner decision D6): {@code status} (where the records are kept,
  * this server's name, LuckPerms, BSP-Core, the staff groups) and {@code rules} (list, add, remove, status, reset a player,
  * ask everyone again), for admins, and {@code /su} alone opens the admin panel; {@code /rules} for everyone (D12);
- * {@code /actionlog} for everyone, the log read only with coordinates hidden (D58); {@code /afk} for everyone (D77).
+ * {@code /actionlog} for everyone, the log read only with coordinates hidden (D58); {@code /afk} for everyone (D77);
+ * {@code client <player>} and {@code clientcheck export | reload} for admins (the client check, D130, D132); {@code setup [now |
+ * later | ignore]} for admins (the setup guide, D154).
  */
 public final class ServerUtilsCommands {
     private ServerUtilsCommands() {
@@ -57,6 +67,29 @@ public final class ServerUtilsCommands {
                                     return b.buildFuture();
                                 })
                                 .executes(c -> clearItems(c.getSource(), StringArgumentType.getString(c, "where")))))
+                .then(Commands.literal("setup").requires(Perms::canEdit)
+                        .executes(c -> setupOpen(c.getSource()))
+                        .then(Commands.literal("now").executes(c -> setupOpen(c.getSource())))
+                        .then(Commands.literal("later").executes(c -> {
+                            c.getSource().getPlayerOrException();
+                            say(c.getSource(), Component.translatable("message.bsp_server_utilities.setup.later_done"));
+                            return 1;
+                        }))
+                        .then(Commands.literal("ignore").executes(c -> {
+                            SetupService.ignore(c.getSource().getServer(), c.getSource().getPlayerOrException().getUUID());
+                            say(c.getSource(), Component.translatable("message.bsp_server_utilities.setup.ignored"));
+                            return 1;
+                        })))
+                .then(Commands.literal("client").requires(Perms::canEdit)
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests((c, b) -> {
+                                    ClientCheckService.players(c.getSource().getServer()).forEach(r -> b.suggest(r.held().name()));
+                                    return b.buildFuture();
+                                })
+                                .executes(c -> clientInfo(c.getSource(), StringArgumentType.getString(c, "player")))))
+                .then(Commands.literal("clientcheck").requires(Perms::canEdit)
+                        .then(Commands.literal("export").executes(c -> clientExport(c.getSource())))
+                        .then(Commands.literal("reload").executes(c -> clientReload(c.getSource()))))
                 .then(Commands.literal("rules").requires(Perms::canEdit)
                         .then(Commands.literal("list").executes(c -> rulesList(c.getSource())))
                         .then(Commands.literal("status").executes(c -> rulesStatus(c.getSource())))
@@ -198,6 +231,103 @@ public final class ServerUtilsCommands {
         return 1;
     }
 
+    /** {@code /su client <player>}: what a player's client reported and what the check made of it (D130). */
+    private static int clientInfo(CommandSourceStack source, String name) {
+        ClientCheckService.Row row = ClientCheckService.findByName(name);
+        if (row == null) {
+            source.sendFailure(Component.translatable("message.bsp_server_utilities.check.info.unknown", name));
+            return 0;
+        }
+        ClientCheckService.Held h = row.held();
+        Verdict v = h.verdict();
+        ClientReport r = h.report();
+        long minutes = Math.max(0, (System.currentTimeMillis() - h.atMs()) / 60_000);
+        say(source, Component.translatable("message.bsp_server_utilities.check.info.head", h.name(), row.server(), r.mods().size(), r.packs().size(), minutes));
+        if (v.exempt()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.exempt").withStyle(ChatFormatting.GRAY));
+        }
+        if (!v.refuse().isEmpty()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.blocked", ClientCheckService.describe(v.refuse())).withStyle(ChatFormatting.RED));
+        }
+        if (!v.notTrustedMods().isEmpty()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.not_trusted", String.join(", ", v.notTrustedMods())).withStyle(ChatFormatting.GOLD));
+        }
+        if (!v.fileDiffers().isEmpty()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.differs", String.join(", ", v.fileDiffers())).withStyle(ChatFormatting.GOLD));
+        }
+        if (!v.notTrustedPacks().isEmpty()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.packs_not_trusted", String.join(", ", v.notTrustedPacks())).withStyle(ChatFormatting.GOLD));
+        }
+        if (!v.hidden().isEmpty()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.hidden", String.join(", ", v.hidden())).withStyle(ChatFormatting.GOLD));
+        }
+        if (v.brightness()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.bright", Math.round(r.brightness() * 100)).withStyle(ChatFormatting.GOLD));
+        }
+        String packs = r.packs().isEmpty() ? "-" : r.packs().stream().map(ClientReport.Pack::name).collect(Collectors.joining(", "));
+        say(source, Component.translatable("message.bsp_server_utilities.check.info.packs", packs));
+        if (!r.shader().isEmpty()) {
+            say(source, Component.translatable(r.shadersOn() ? "message.bsp_server_utilities.check.info.shader_on" : "message.bsp_server_utilities.check.info.shader_off", r.shader()));
+        }
+        if (r.stonePassed()) {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.stone_ok").withStyle(ChatFormatting.GREEN));
+        } else {
+            say(source, Component.translatable("message.bsp_server_utilities.check.info.stone_failed", r.stoneBlock(), r.stonePack().isEmpty() ? "?" : r.stonePack()).withStyle(ChatFormatting.RED));
+        }
+        return 1;
+    }
+
+    /** The pages in the given states, by name, or a dash. */
+    private static Component names(java.util.Map<Feature, SetupState.Status> pages, SetupState.Status... states) {
+        java.util.List<SetupState.Status> want = java.util.List.of(states);
+        net.minecraft.network.chat.MutableComponent out = Component.empty();
+        boolean any = false;
+        for (java.util.Map.Entry<Feature, SetupState.Status> e : pages.entrySet()) {
+            if (want.contains(e.getValue())) {
+                if (any) {
+                    out.append(", ");
+                }
+                out.append(Component.translatable("message.bsp_server_utilities.setup.feature." + e.getKey().name().toLowerCase(java.util.Locale.ROOT)));
+                any = true;
+            }
+        }
+        return any ? out : Component.literal("-");
+    }
+
+    private static void say(CommandSourceStack source, Component line) {
+        source.sendSuccess(() -> line, false);
+    }
+
+    /** {@code /su setup}: the setup guide, at the first page not finished (D154). */
+    private static int setupOpen(CommandSourceStack source) throws CommandSyntaxException {
+        SetupService.openGuide(source.getPlayerOrException());
+        return 1;
+    }
+
+    /** {@code /su clientcheck export} (D132). */
+    private static int clientExport(CommandSourceStack source) {
+        java.nio.file.Path f = ClientCheckService.exportFile(source.getServer());
+        if (f == null) {
+            source.sendFailure(Component.translatable("message.bsp_server_utilities.check.no_setup"));
+            return 0;
+        }
+        say(source, Component.translatable("message.bsp_server_utilities.check.exported", f.toString()));
+        return 1;
+    }
+
+    /** {@code /su clientcheck reload} (D132). */
+    private static int clientReload(CommandSourceStack source) {
+        ClientCheckService.FileResult r = ClientCheckService.readFile(source.getServer());
+        String f = ClientCheckService.file().toString();
+        switch (r) {
+            case LOADED -> say(source, Component.translatable("message.bsp_server_utilities.check.file.loaded", f));
+            case OLDER -> say(source, Component.translatable("message.bsp_server_utilities.check.file.older", f));
+            case NONE -> source.sendFailure(Component.translatable("message.bsp_server_utilities.check.file.none", f));
+            case BAD -> source.sendFailure(Component.translatable("message.bsp_server_utilities.check.file.bad", f));
+        }
+        return r == ClientCheckService.FileResult.LOADED ? 1 : 0;
+    }
+
     private static int status(CommandSourceStack source) {
         Storage s = Storage.active();
         StorageSettings.Resolved settings = StorageSettings.current();
@@ -225,6 +355,14 @@ public final class ServerUtilsCommands {
         com.mrgregles.bsp_server_utilities.despawn.DespawnSettings drops = com.mrgregles.bsp_server_utilities.despawn.DespawnService.settings(source.getServer());
         long[] gone = com.mrgregles.bsp_server_utilities.despawn.DespawnService.removedLastHour(source.getServer());
         source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.status.drops", drops.itemMinutes(), drops.deathMinutes(), gone[0], gone[1]), false);
+        TrustedSetup setup = ClientCheckService.setup(source.getServer());
+        Component which = Component.translatable(ClientCheckService.useOwn(source.getServer()) ? "message.bsp_server_utilities.status.check_own" : "message.bsp_server_utilities.status.check_network");
+        Component taken = setup == null ? Component.translatable("message.bsp_server_utilities.status.check_no_setup")
+                : Component.translatable("message.bsp_server_utilities.status.check_setup", java.time.LocalDate.ofInstant(java.time.Instant.ofEpochMilli(setup.takenAtMs()), java.time.ZoneId.systemDefault()).toString(), setup.takenBy());
+        say(source, Component.translatable("message.bsp_server_utilities.status.check", which, ClientCheckService.rules(source.getServer()).block().size(), taken, ClientCheckService.refusedToday().size()));
+        java.util.Map<Feature, SetupState.Status> pages = SetupService.statuses(source.getServer());
+        long done = pages.values().stream().filter(st -> st == SetupState.Status.DONE).count();
+        say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
         return 1;
     }
 }

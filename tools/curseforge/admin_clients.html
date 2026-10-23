@@ -1,0 +1,140 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page of set G, look A (D135 to D138): the CLIENTS tab, the rules page
+   and the messages players see. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+<style>
+.flagc{ display:inline-flex; gap:4px; align-items:center; font-size:9px; padding:1px 5px; background:#2a2414; color:#FFD23A; white-space:nowrap; }
+.flagc.r{ background:#3a2020; color:#FF6B5C; } .flagc.ok{ background:#1a2a16; color:#8FE04A; }
+.dirt{ width:380px; height:214px; flex:none; box-sizing:border-box; padding:26px 18px; display:flex; flex-direction:column; align-items:center; gap:9px; text-align:center;
+  background:repeating-linear-gradient(45deg,#2a2018 0 6px,#251c15 6px 12px); font-family:var(--mono); font-size:11px; color:#fff; box-shadow:0 8px 22px rgba(0,0,0,.45); }
+.dirt .t{ color:#AAAAAA; } .vbtn{ width:200px; height:20px; display:grid; place-items:center; background:#6f6f6f; box-shadow:inset 0 0 0 1px #000, inset 2px 2px 0 #a0a0a0, inset -2px -2px 0 #555; color:#fff; margin-top:auto; font-size:10px; }
+.lst{ display:flex; flex-direction:column; gap:1px; }
+</style>
+
+<style>
+html, body { margin: 0; padding: 0; background: #1b2129; overflow: hidden; }
+#shot { position: absolute; left: 0; top: 0; display: inline-block; }
+.bgworld { padding: 18px; background:
+    linear-gradient(rgba(10,14,20,.58), rgba(10,14,20,.58)),
+    radial-gradient(ellipse at 20% 85%, #3d5a3a 0, transparent 45%),
+    radial-gradient(ellipse at 75% 90%, #4b6b45 0, transparent 40%),
+    radial-gradient(ellipse at 60% 20%, #6d8fb3 0, transparent 55%),
+    linear-gradient(#8fb2d6, #5f7f9e 55%, #3a5137 56%, #2d3f2b); }
+.cap { font: 600 13px "IBM Plex Sans", sans-serif; color: #e6eaf2; }
+.capm { font: 400 12px "IBM Plex Sans", sans-serif; color: #9aa3b5; }
+.vt { font-family: "VT323", monospace; -webkit-font-smoothing: none; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;600&display=swap"></head>
+<body><div id="shot"><div class="bgworld"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10px">Server utilities</span><span class="tabs"><span class="tab" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab on" style="width:44px">Clients</span></span></div><div class="hd"><span style="display:flex;gap:4px"><span class="chip on">Players · 6</span><span class="chip">Rules</span></span><span class="sm m">Network rules</span></div><div class="grow" style="display:flex;gap:8px"><div class="box" style="width:168px;padding:3px 0;display:flex;flex-direction:column;overflow:hidden">
+<div class="row lbl">Online · network</div>
+<div class="row sel"><span class="b">Kat_Miner</span><span class="srv">Stormfall</span><span class="grow"></span><span class="g b">2 ⚑</span></div>
+<div class="row"><span class="b">Tomo_42</span><span class="srv">Spawn</span><span class="grow"></span><span class="g b">1 ⚑</span></div>
+<div class="row"><span>Lumen</span><span class="srv">Moongrove</span><span class="grow"></span><span class="m sm">exempt</span></div>
+<div class="row"><span>Mrgregles</span><span class="srv">Spawn</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Pip</span><span class="srv">Frostwarf</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Steve_Builds</span><span class="srv">Spawn</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row lbl" style="margin-top:4px">Refused today · 2</div>
+<div class="row"><span class="r">xRayKid</span><span class="sm m">14:21</span><span class="grow"></span><span class="sm r">stone test</span></div>
+<div class="row"><span class="r">Bob_99</span><span class="sm m">13:05</span><span class="grow"></span><span class="sm r">freecam</span></div>
+</div><div class="box grow" style="padding:6px 8px;display:flex;flex-direction:column;gap:5px;overflow:hidden"><div class="hd"><span><b>Kat_Miner</b> <span class="srv">BSP-Stormfall</span></span><span class="sm m">checked 14:02 · again 14:20</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:3px"><span class="flagc">⚑ Brightness 500 %, told</span><span class="flagc">⚑ 2 mods not trusted</span><span class="flagc ok">Stone test passed</span><span class="pchip">Shader Bliss · on</span></div><div style="display:flex;gap:4px"><span class="chip on">Mods 283</span><span class="chip">Packs 3</span></div>
+<table class="tbl" style="font-size:8.8px"><tr><td class="b g">betterf3</td><td class="m mono" style="font-size:8px">7.0.2</td><td class="g">not trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b g">xaerominimap</td><td class="m mono" style="font-size:8px">24.3.0</td><td class="g">not trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b">advanced_ae</td><td class="m mono" style="font-size:8px">1.3.2</td><td class="m">trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b">ae2</td><td class="m mono" style="font-size:8px">15.4.10</td><td class="m">trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="m sm" colspan="4">+ 279 more A to Z, scroll</td></tr></table><div class="grow"></div>
+<div style="display:flex;gap:6px;align-items:center"><span class="inp grow">Please remove the minimap mod and join again.</span><span class="key sm warn">Kick</span></div></div></div><div class="hd"><span class="sm m">Trusted setup 23 Oct 14:02 from Mrgregles · saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div>
+<script>
+document.fonts.ready.then(() => setTimeout(() => {
+  const r = document.getElementById('shot').getBoundingClientRect();
+  document.title = Math.ceil(r.width) + 'x' + Math.ceil(r.height);
+}, 300));
+</script>
+</body></html>

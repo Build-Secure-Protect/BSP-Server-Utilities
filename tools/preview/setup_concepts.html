@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup Guide Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set H: three looks for the setup popup and three for the guide frame (owner decisions D143 to D154), the welcome page
+   and the finish page. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+<style>
+.flagc{ display:inline-flex; gap:4px; align-items:center; font-size:9px; padding:1px 5px; background:#2a2414; color:#FFD23A; white-space:nowrap; }
+.flagc.r{ background:#3a2020; color:#FF6B5C; } .flagc.ok{ background:#1a2a16; color:#8FE04A; }
+.dirt{ width:380px; height:214px; flex:none; box-sizing:border-box; padding:26px 18px; display:flex; flex-direction:column; align-items:center; gap:9px; text-align:center;
+  background:repeating-linear-gradient(45deg,#2a2018 0 6px,#251c15 6px 12px); font-family:var(--mono); font-size:11px; color:#fff; box-shadow:0 8px 22px rgba(0,0,0,.45); }
+.dirt .t{ color:#AAAAAA; } .vbtn{ width:200px; height:20px; display:grid; place-items:center; background:#6f6f6f; box-shadow:inset 0 0 0 1px #000, inset 2px 2px 0 #a0a0a0, inset -2px -2px 0 #555; color:#fff; margin-top:auto; font-size:10px; }
+.lst{ display:flex; flex-direction:column; gap:1px; }
+</style>
+</head>
+<style>
+.dirt2{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); position:relative; flex:none; border-radius:3px; overflow:hidden; }
+.dirt2::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.5); }
+.dirt2 > *{ position:relative; }
+.hotbar{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); width:182px; height:20px; background:rgba(0,0,0,.55); box-shadow:inset 0 0 0 1px #555; }
+.cross{ position:absolute; left:50%; top:50%; color:#fff; font:12px var(--mono); transform:translate(-50%,-50%); }
+.stat{ display:flex; align-items:center; gap:6px; padding:0 6px; height:16px; font-size:10px; }
+.stat + .stat{ border-top:1px solid #1c222c; }
+.pill{ font-size:8.5px; padding:1px 5px; border-radius:2px; white-space:nowrap; }
+.pill.ok{ background:#1a2a16; color:#8FE04A; } .pill.off{ background:#2A2F3A; color:#9AA3B5; } .pill.later{ background:#2a2414; color:#FFD23A; } .pill.todo{ background:#1b2230; color:#B58CFF; }
+.stepdots{ display:flex; gap:4px; align-items:center; } .stepdots i{ width:7px; height:7px; border-radius:50%; background:#2A2F3A; display:block; } .stepdots i.done{ background:#19D3B0; } .stepdots i.later{ background:#FFD23A; } .stepdots i.cur{ background:#B58CFF; box-shadow:0 0 0 2px #3d2f5c; }
+.bar2{ height:4px; background:#2A2F3A; position:relative; } .bar2 i{ position:absolute; left:0; top:0; bottom:0; background:#B58CFF; display:block; }
+.side{ display:flex; flex-direction:column; gap:1px; font-size:9.5px; }
+.side span{ height:15px; display:flex; align-items:center; gap:5px; padding:0 6px; white-space:nowrap; }
+.side span.cur{ background:#1b2230; box-shadow:inset 2px 0 0 #B58CFF; color:#E6EAF2; font-weight:600; }
+</style>
+<body><div class="wrap">
+<header><h1>The setup guide, three looks</h1>
+<p class="lede">Mock-up set H for the setup guide (D143 to D154): the popup an admin sees a few seconds after joining (after the rules popup and the inventory restore) while anything is not set up and they have not ignored it, and the guide it opens. Each page of the guide is that feature's existing <code>/su</code> tab, shown here with the RULES tab; the footer is BACK, TURN OFF FEATURE, SETUP LATER and NEXT. Pages, in order: Welcome, Staff groups, Rules, Action log, AFK, Chunk unloading, Despawn times, Client check, Display panels, Finish. Sample data.</p></header>
+<section><h2>The popup, look P-A: a card in the middle</h2><div class="card"><p>Blocks the game like the rules popup. SETUP NOW and SETUP LATER as keys; IGNORE as an underlined line under them, so it is not pressed by mistake.</p><div class="stage"><div class="dirt2" style="width:520px;height:300px;display:grid;place-items:center"><span class="cross">+</span><div class="hotbar"></div>
+<div class="scr v" style="width:300px;padding:14px 16px;gap:9px"><div class="ttl v" style="font-size:13px">Configure Server Utilities</div>
+<div style="font-size:10.5px">Server Utilities is not set up on this network yet. A page per feature; each keeps what is already set.</div>
+<div class="sm m">Not set up yet: <span class="vv">all ten pages</span></div>
+<div class="keys" style="justify-content:flex-end"><span class="key">Setup later</span><span class="key v">Setup now</span></div>
+<div style="text-align:right"><span class="sm m" style="text-decoration:underline">Ignore Server Utilities setup</span></div></div></div></div></div></section>
+<section><h2>The popup, look P-B: a card in the corner</h2><div class="card"><p>Does not block: the admin can keep moving, and the card waits in the top right until a choice is made (× is SETUP LATER).</p><div class="stage"><div class="dirt2" style="width:520px;height:300px"><span class="cross">+</span><div class="hotbar"></div>
+<div class="scr v" style="position:absolute;right:10px;top:10px;width:250px;padding:9px 10px;gap:6px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Configure Server Utilities</span><span class="sm m">×</span></div>
+<div class="sm">Not set up on this network yet. You can keep playing; this stays until you choose.</div>
+<div class="keys"><span class="key sm v">Setup now</span><span class="key sm">Later</span><span class="key sm ghost">Ignore setup</span></div></div></div></div></div></section>
+<section><h2>The popup, look P-C: the checklist</h2><div class="card"><p>Shown here as the reminder (D147): every feature with where it stands, then the three choices. On the very first join every line reads "not yet".</p><div class="stage"><div class="dirt2" style="width:520px;height:300px;display:grid;place-items:center"><div class="hotbar"></div>
+<div class="scr v" style="width:340px;height:270px"><div class="hd"><span class="ttl v" style="font-size:12px">Configure Server Utilities</span><span class="sm m">reminder · 3 left</span></div>
+<div class="sm">Some features are not finished. Pick up where you left off.</div>
+<div class="box grow" style="padding:2px 0"><div class="stat"><span class="grow">Welcome</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Staff groups</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Rules</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Action log</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">AFK</span><span class="pill later">later</span></div><div class="stat"><span class="grow">Chunk unloading</span><span class="pill off">off</span></div><div class="stat"><span class="grow">Despawn times</span><span class="pill later">later</span></div><div class="stat"><span class="grow">Client check</span><span class="pill todo">not yet</span></div><div class="stat"><span class="grow">Display panels</span><span class="pill ok">set up</span></div></div>
+<div class="hd"><span class="sm m" style="text-decoration:underline">Ignore Server Utilities setup</span><span class="keys"><span class="key">Setup later</span><span class="key v">Setup now</span></span></div></div></div></div></div></section>
+<section><h2>The guide, look G-A: step dots in the title row</h2><div class="card"><p>The tab row becomes "SETUP · STEP 3 OF 10" with a dot per page (teal done, gold later, violet here); a line names the page and what the feature does; the body is the tab as built; the footer holds the four keys.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Setup · step 3 of 10</span><span class="stepdots"><i class="done"></i><i class="done"></i><i class="cur"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span></div>
+<div class="hd"><span class="b" style="font-size:12px">Rules</span><span class="sm m">new players tick these before they can move</span></div><div class="grow" style="display:flex;gap:8px"><div class="box" style="width:150px;padding:3px 0;display:flex;flex-direction:column">
+<div class="row sel"><span class="vv b">POPUP TEXT</span></div>
+<div class="row"><span class="num">1</span><span>Be kind in chat</span></div>
+<div class="row"><span class="num">2</span><span>No griefing</span></div>
+<div class="row"><span class="num">3</span><span>No cheats</span></div>
+<div class="grow"></div><div class="row"><span class="vv b sm">+ ADD RULE</span><span class="grow"></span><span class="sm m">3/30</span></div></div>
+<div class="grow" style="display:flex;flex-direction:column;gap:4px"><span class="lbl">Heading</span><span class="inp">Welcome to Build Secure Protect</span><span class="lbl">Intro</span><span class="area" style="height:44px">Please read and tick each rule. They apply on every server.</span><span class="lbl">Leave message</span><span class="area" style="height:30px">Come back when you are ready.</span></div></div><div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key warn">Turn off feature</span><span class="key">Setup later</span><span class="key v">Next</span></span></div></div></div></div></section>
+<section><h2>The guide, look G-B: a list of pages on the left</h2><div class="card"><p>Every page named down the side with a tick when done; the tab is drawn narrower beside it.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Server Utilities setup</span><span class="sm m">3 of 10</span></div>
+<div class="grow" style="display:flex;gap:8px"><div class="box side" style="width:96px;padding:3px 0"><span class=""><span class="ok" style="font-size:9px">✓</span>Welcome</span><span class=""><span class="ok" style="font-size:9px">✓</span>Staff groups</span><span class="cur"><span class="m" style="font-size:9px">3</span>Rules</span><span class=""><span class="m" style="font-size:9px">4</span>Action log</span><span class=""><span class="m" style="font-size:9px">5</span>AFK</span><span class=""><span class="m" style="font-size:9px">6</span>Chunk unloading</span><span class=""><span class="m" style="font-size:9px">7</span>Despawn times</span><span class=""><span class="m" style="font-size:9px">8</span>Client check</span><span class=""><span class="m" style="font-size:9px">9</span>Display panels</span><span class=""><span class="m" style="font-size:9px">10</span>Finish</span></div><div class="grow" style="display:flex;flex-direction:column;gap:5px;min-width:0"><div class="grow" style="display:flex;gap:8px"><div class="box" style="width:110px;padding:3px 0;display:flex;flex-direction:column">
+<div class="row sel"><span class="vv b">POPUP TEXT</span></div>
+<div class="row"><span class="num">1</span><span>Be kind in chat</span></div>
+<div class="row"><span class="num">2</span><span>No griefing</span></div>
+<div class="row"><span class="num">3</span><span>No cheats</span></div>
+<div class="grow"></div><div class="row"><span class="vv b sm">+ ADD RULE</span><span class="grow"></span><span class="sm m">3/30</span></div></div>
+<div class="grow" style="display:flex;flex-direction:column;gap:4px"><span class="lbl">Heading</span><span class="inp">Welcome to Build Secure Protect</span><span class="lbl">Intro</span><span class="area" style="height:44px">Please read and tick each rule. They apply on every server.</span><span class="lbl">Leave message</span><span class="area" style="height:30px">Come back when you are ready.</span></div></div></div></div><div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key warn">Turn off feature</span><span class="key">Setup later</span><span class="key v">Next</span></span></div></div></div></div></section>
+<section><h2>The guide, look G-C: the normal panel with a guide strip</h2><div class="card"><p>The admin panel as it always looks (its tab row lit on the page's tab), a progress bar under it and one violet strip saying what the feature does; the footer keys replace the tab's own.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Server Utilities</span><span class="tabs"><span class="tab on" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab" style="width:44px">Clients</span></span></div>
+<div class="bar2"><i style="width:30%"></i></div>
+<div class="box" style="padding:4px 8px;display:flex;gap:8px;align-items:center"><span class="vv b up sm">Setup 3/10</span><span class="sm">Rules: new players read and tick these before they can move. One set for the network.</span></div>
+<div class="grow" style="display:flex;gap:8px"><div class="box" style="width:150px;padding:3px 0;display:flex;flex-direction:column">
+<div class="row sel"><span class="vv b">POPUP TEXT</span></div>
+<div class="row"><span class="num">1</span><span>Be kind in chat</span></div>
+<div class="row"><span class="num">2</span><span>No griefing</span></div>
+<div class="row"><span class="num">3</span><span>No cheats</span></div>
+<div class="grow"></div><div class="row"><span class="vv b sm">+ ADD RULE</span><span class="grow"></span><span class="sm m">3/30</span></div></div>
+<div class="grow" style="display:flex;flex-direction:column;gap:4px"><span class="lbl">Heading</span><span class="inp">Welcome to Build Secure Protect</span><span class="lbl">Intro</span><span class="area" style="height:44px">Please read and tick each rule. They apply on every server.</span><span class="lbl">Leave message</span><span class="area" style="height:30px">Come back when you are ready.</span></div></div><div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key warn">Turn off feature</span><span class="key">Setup later</span><span class="key v">Next</span></span></div></div></div></div></section>
+<section><h2>Welcome, the action log's TURN OFF, and Finish (every look)</h2><div class="card"><p>Welcome: what the mod does, this server's name (written to the config file, used after a restart) and the storage in use (D149); no TURN OFF there. The action log's TURN OFF FEATURE first shows the red line and SURE? (D151). Finish: every feature with set up, off or later, and DONE.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Setup · step 1 of 10</span><span class="stepdots"><i class="cur"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span></div>
+<div class="hd"><span class="b" style="font-size:12px">Welcome</span><span class="sm m"></span></div><div class="grow" style="display:flex;gap:8px"><div class="box grow" style="padding:8px 10px;display:flex;flex-direction:column;gap:6px">
+<div class="sm">Server Utilities adds the rules popup, display panels, staff online, the action log, AFK, chunk unloading, despawn times and the client check. Each page shows a feature's settings; NEXT keeps them, SETUP LATER reminds you at your next join, TURN OFF FEATURE stops it.</div>
+<span class="lbl" style="margin-top:4px">This server's name</span><div style="display:flex;gap:6px;align-items:center"><span class="inp focus" style="width:150px">BSP-Spawn</span><span class="hint">used after a restart · written to serverconfig/bsp_server_utilities-server.toml</span></div>
+<span class="lbl" style="margin-top:4px">Shared storage</span>
+<div class="sm"><span class="ok">●</span> MySQL connected · BSP-Core's settings · tables bsp_su_</div>
+<div class="sm"><span class="ok">●</span> Redis connected · notices within milliseconds</div>
+<div class="sm m">4 other servers heard from: BSP-Stormfall, BSP-Moongrove, BSP-Frostwarf, BSP-SafeRoom</div>
+<div class="hint">Storage is set in the config file and takes a restart.</div></div></div><div class="hd"><span class="keys"></span><span class="keys"><span class="key v">Next</span></span></div></div><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Setup · step 4 of 10</span><span class="stepdots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span></div>
+<div class="hd"><span class="b" style="font-size:12px">Action log</span><span class="sm m">what staff do, shared by every server</span></div><div class="grow" style="display:flex;gap:8px"><div class="box" style="width:180px;padding:4px 6px;display:flex;flex-direction:column;gap:2px"><span class="vv sm up b">What is logged</span>
+<div class="row"><span class="tick on"></span><span>/gamemode</span></div><div class="row"><span class="tick on"></span><span>/give</span></div><div class="row"><span class="tick on"></span><span>/tp</span></div><div class="row"><span class="tick"></span><span>/home</span></div><div class="row"><span class="m">/msg · never logged</span></div></div>
+<div class="box grow" style="padding:4px 6px"><div class="sm m">14:02 · Mrgregles · /gamemode creative · Spawn</div><div class="sm m">13:51 · Console · /say restart in 5 · Spawn</div></div></div>
+<div style="background:#3a2020;color:#FF6B5C;font-size:10px;padding:4px 8px">Staff actions will no longer be recorded. Press again to turn the action log off.</div><div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key sm warn" style="height:22px">Sure?</span><span class="key">Setup later</span><span class="key v">Next</span></span></div></div><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10.5px">Setup · step 10 of 10</span><span class="stepdots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="later"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i></span></div>
+<div class="hd"><span class="b" style="font-size:12px">Finish</span><span class="sm m"></span></div><div class="grow" style="display:flex;gap:8px"><div class="box grow" style="padding:2px 0"><div class="stat"><span class="grow">Welcome</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Staff groups</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Rules</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Action log</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">AFK</span><span class="pill later">later</span></div><div class="stat"><span class="grow">Chunk unloading</span><span class="pill off">off</span></div><div class="stat"><span class="grow">Despawn times</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Client check</span><span class="pill ok">set up</span></div><div class="stat"><span class="grow">Display panels</span><span class="pill ok">set up</span></div></div>
+<div class="box" style="width:170px;padding:8px;display:flex;flex-direction:column;gap:6px"><div class="sm">Done for the network. AFK is left for later: you will be reminded at your next join.</div><div class="sm m">Change anything later in its /su tab, or reopen this guide with /su setup or SETUP GUIDE in the /su footer.</div></div></div><div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key v">Done</span></span></div></div></div></div></section>
+<section><h2>Decisions</h2><div class="card"><ol>
+<li><b>H1 the popup's look:</b> P-A a card in the middle that blocks the game, P-B a card in the corner that does not, or P-C the checklist.</li>
+<li><b>H2 the guide's look:</b> G-A step dots in the title row, G-B a list of pages on the left, or G-C the normal panel with a guide strip.</li>
+<li><b>H3 BACK:</b> every page but Welcome has BACK (as drawn), or the guide only goes forward.</li>
+<li><b>H4 closing the guide part way</b> (Escape): the pages not reached count as later and the admin is reminded at their next join, or nothing is recorded and the guide starts again from Welcome.</li>
+</ol></div></section>
+</div></body></html>

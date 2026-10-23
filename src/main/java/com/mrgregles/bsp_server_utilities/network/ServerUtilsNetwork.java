@@ -3,14 +3,18 @@ package com.mrgregles.bsp_server_utilities.network;
 import com.mrgregles.bsp_server_utilities.BSPServerUtilities;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.HandshakeHandler;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
+import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "1";
+    private static final String PROTOCOL = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -85,6 +89,38 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminDropsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminDropsEditPacket::encode).decoder(AdminDropsEditPacket::decode)
                 .consumerMainThread(AdminDropsEditPacket::handle).add();
+        // The client check (D120 to D127): the question and answer in Forge's login handshake, and the report again in game.
+        CHANNEL.messageBuilder(CheckQueryPacket.class, id++, NetworkDirection.LOGIN_TO_CLIENT)
+                .loginIndex(CheckQueryPacket::getAsInt, CheckQueryPacket::setLoginIndex)
+                .encoder(CheckQueryPacket::encode).decoder(CheckQueryPacket::decode)
+                .buildLoginPacketList(local -> local ? List.of() : List.of(Pair.of("bsp_server_utilities client check", new CheckQueryPacket())))
+                .consumerNetworkThread(CheckQueryPacket::handle).add();
+        CHANNEL.messageBuilder(CheckAnswerPacket.class, id++, NetworkDirection.LOGIN_TO_SERVER)
+                .loginIndex(CheckAnswerPacket::getAsInt, CheckAnswerPacket::setLoginIndex)
+                .encoder(CheckAnswerPacket::encode).decoder(CheckAnswerPacket::decode)
+                .consumerNetworkThread(HandshakeHandler.indexFirst(CheckAnswerPacket::handle)).add();
+        CHANNEL.messageBuilder(CheckReportPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(CheckReportPacket::encode).decoder(CheckReportPacket::decode)
+                .consumerMainThread(CheckReportPacket::handle).add();
+        CHANNEL.messageBuilder(AdminClientsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminClientsPacket::encode).decoder(AdminClientsPacket::decode)
+                .consumerMainThread(AdminClientsPacket::handle).add();
+        CHANNEL.messageBuilder(AdminClientsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminClientsEditPacket::encode).decoder(AdminClientsEditPacket::decode)
+                .consumerMainThread(AdminClientsEditPacket::handle).add();
+        // The setup guide (D143 to D161).
+        CHANNEL.messageBuilder(SetupCardPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SetupCardPacket::encode).decoder(SetupCardPacket::decode)
+                .consumerMainThread(SetupCardPacket::handle).add();
+        CHANNEL.messageBuilder(SetupFlagsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SetupFlagsPacket::encode).decoder(SetupFlagsPacket::decode)
+                .consumerMainThread(SetupFlagsPacket::handle).add();
+        CHANNEL.messageBuilder(SetupViewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SetupViewPacket::encode).decoder(SetupViewPacket::decode)
+                .consumerMainThread(SetupViewPacket::handle).add();
+        CHANNEL.messageBuilder(SetupEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(SetupEditPacket::encode).decoder(SetupEditPacket::decode)
+                .consumerMainThread(SetupEditPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

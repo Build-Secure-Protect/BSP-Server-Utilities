@@ -99,6 +99,7 @@ public final class StaffDirectory {
 
     /** Replaces the staff groups for the whole network. */
     public static StaffGroups setGroups(MinecraftServer server, List<Staff.Role> roles, boolean operators) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.STAFF); // changed in its tab: set up (D152)
         StaffData data = StaffData.get(server);
         StaffGroups next = new StaffGroups(roles, operators, Math.max(System.currentTimeMillis(), data.groups().revision() + 1)).sanitised();
         data.setGroups(next);
@@ -181,7 +182,7 @@ public final class StaffDirectory {
 
     private static void publishPresence(MinecraftServer server, @Nullable UUID leaving) {
         Storage s = Storage.active();
-        if (s != null) {
+        if (s != null && !com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.STAFF)) {
             s.publish(KIND_PRESENCE, encode(s.serverId(), localOnline(server, leaving)));
         }
     }

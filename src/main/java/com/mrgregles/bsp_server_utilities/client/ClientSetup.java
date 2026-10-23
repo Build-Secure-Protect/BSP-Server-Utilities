@@ -10,11 +10,14 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** Client-only registrations on the mod bus: the Display Panel's face renderer and the boards on BSP-Core's Score Screens. */
+/** Client-only registrations on the mod bus: the Display Panel's face renderer, the boards on BSP-Core's Score Screens and the client check. */
 @Mod.EventBusSubscriber(modid = BSPServerUtilities.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
     private ClientSetup() {
@@ -26,8 +29,19 @@ public final class ClientSetup {
     }
 
     /** The STAFF ONLINE board on BSP-Core's Score Screens (D60), from the roster the server keeps sending. */
+    /** The client check (D127): a resource reload means looking at the packs again. */
+    @SubscribeEvent
+    public static void onReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) manager -> ClientCheck.onReload());
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
+        // the client check: read the mods' files in the background, and look again after reloads
+        ClientCheck.start();
+        MinecraftForge.EVENT_BUS.addListener(ClientCheck::onTick);
+        // the setup card in the corner (D155)
+        ClientSetupGuide.register();
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();
             for (StaffViewPacket.Row r : ClientStaff.rows()) {

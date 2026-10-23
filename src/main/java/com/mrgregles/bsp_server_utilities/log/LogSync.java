@@ -24,7 +24,7 @@ public final class LogSync {
     }
 
     public static LogViewPacket view(MinecraftServer server) {
-        return LogViewPacket.of(ActionLog.recent(server, LogViewPacket.SENT, true, java.util.List.of()), Storage.currentServerId(),
+        return LogViewPacket.of(ActionLog.recent(server, LogViewPacket.SENT, true, LogEntry.PUBLIC_KINDS), Storage.currentServerId(),
                 ServerUtilsConfig.getOr(ServerUtilsConfig.LOG_KEEP_DAYS, 7), System.currentTimeMillis());
     }
 

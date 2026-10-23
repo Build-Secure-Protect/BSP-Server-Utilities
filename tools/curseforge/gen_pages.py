@@ -36,8 +36,9 @@ document.fonts.ready.then(() => setTimeout(() => {
 
 
 def head_of(source):
+    """The page's head, and any styles left between it and the body (the setup guide's mock-ups keep theirs there)."""
     s = (PREVIEW / source).read_text()
-    head = s[s.index("<head>") + 6:s.index("</head>")]
+    head = s[s.index("<head>") + 6:s.index("</head>")] + s[s.index("</head>") + 7:s.index("<body")]
     return re.sub(r"<title>.*?</title>", "", head)
 
 
@@ -55,19 +56,19 @@ def element(source, start, index):
     return s[i:pos]
 
 
-TABS = ["Rules", "Staff", "Log", "AFK", "Chunks", "Drops"]
+TABS = ["Rules", "Staff", "Log", "AFK", "Chunks", "Drops", "Clients"]
 
 
-def six_tabs(html):
-    """Mock-ups drawn before the later tabs show three to five; the panel has six, with the title a little smaller to fit."""
+def seven_tabs(html):
+    """Mock-ups drawn before the later tabs show three to six; the panel has seven, narrower, with the title smaller to fit."""
     def rebuild(m):
         on = re.search(r'<span class="tab on"[^>]*>([^<]*)</span>', m.group(0))
         picked = on.group(1) if on else ""
         return '<span class="tabs">' + "".join(
-            f'<span class="tab{" on" if t == picked else ""}" style="width:46px">{t}</span>' for t in TABS) + "</span>"
+            f'<span class="tab{" on" if t == picked else ""}" style="width:{44 if t == "Clients" else 38}px">{t}</span>' for t in TABS) + "</span>"
     out = re.sub(r'<span class="tabs">(?:<span class="tab[^"]*"[^>]*>[^<]*</span>)+</span>', rebuild, html)
     if out != html:
-        out = out.replace('<span class="ttl v">Server utilities</span>', '<span class="ttl v" style="font-size:10.5px">Server utilities</span>')
+        out = re.sub(r'<span class="ttl v"( style="font-size:[0-9.]+px")?>Server utilities</span>', '<span class="ttl v" style="font-size:10px">Server utilities</span>', out)
     return out
 
 
@@ -77,7 +78,7 @@ def page(name, head, body):
 
 
 def from_mockup(name, source, start, index, wrap=True, css="", swap=()):
-    el = six_tabs(element(source, start, index))
+    el = seven_tabs(element(source, start, index))
     for old, new in swap:
         el = el.replace(old, new)
     page(name, head_of(source) + (f"<style>{css}</style>" if css else ""), f'<div class="bgworld">{el}</div>' if wrap else el)
@@ -108,6 +109,17 @@ SCREENS = [
     ("admin_drops", "drops_refined.html", '<div class="scr v"', 0, True),
     ("admin_drops_search", "drops_refined.html", '<div class="scr v"', 1, True),
     ("clear_chat", "drops_refined.html", '<div class="world"', 0, False),
+    ("check_refused", "clients_refined.html", '<div class="dirt"', 0, False),
+    ("check_kicked", "clients_refined.html", '<div class="dirt"', 1, False),
+    ("check_bright", "clients_refined.html", '<div class="world"', 0, False),
+    ("admin_clients", "clients_refined.html", '<div class="scr v"', 0, True),
+    ("admin_clients_packs", "clients_refined.html", '<div class="scr v"', 1, True),
+    ("admin_clients_rules", "clients_refined.html", '<div class="scr v"', 2, True),
+    ("setup_card", "setup_refined.html", '<div class="dirt2"', 0, False),
+    ("setup_reminder", "setup_refined.html", '<div class="dirt2"', 1, False),
+    ("setup_guide", "setup_refined.html", '<div class="scr v"', 2, True),
+    ("setup_check", "setup_refined.html", '<div class="scr v"', 3, True),
+    ("setup_finish", "setup_refined.html", '<div class="scr v"', 4, True),
 ]
 
 # ---------------------------------------------------------------- the block, drawn in CSS
@@ -188,13 +200,13 @@ def network():
         return (f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;background:#10151C;border:1.5px solid {colour};'
                 f'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center">'
                 f'<div class="cap" style="color:{colour}">{title}</div><div class="capm">{sub}</div></div>')
-    servers = [("BSP-Spawn", "Forge or Mohist"), ("BSP-Wild", "Forge or Mohist"), ("BSP-Nether", "Forge or Mohist")]
+    servers = [("BSP-Spawn", "Forge 47.4"), ("BSP-Stormfall", "Forge 47.4"), ("BSP-Moongrove", "Forge 47.4")]
     body = '<div style="position:relative;width:640px;height:250px;background:#0C0E12">'
     for i, (n, s) in enumerate(servers):
         body += box(20 + i * 210, 20, 180, 56, n, s, "#19D3B0")
         body += f'<div style="position:absolute;left:{110 + i * 210}px;top:76px;width:0;height:58px;border-left:1.5px dashed #9AA3B5"></div>'
     body += '<div style="position:absolute;left:110px;top:134px;width:420px;border-top:1.5px dashed #9AA3B5"></div>'
-    body += box(110, 150, 200, 56, "MySQL", "rules, staff groups, the log, AFK, chunk and drop settings", "#B58CFF")
+    body += box(110, 150, 200, 56, "MySQL", "rules, staff, the log, every setting, client checks", "#B58CFF")
     body += box(330, 150, 200, 56, "Redis", "changes reach every server at once", "#B58CFF")
     body += '<div class="capm" style="position:absolute;left:20px;top:222px;width:600px;text-align:center">BSP-Core\'s database and Redis are used when it is installed; without them each server keeps its own.</div>'
     body += "</div>"
@@ -204,8 +216,8 @@ def network():
 def banner():
     body = (f'<div style="position:relative;width:600px;height:150px;background:#0C0E12;overflow:hidden">'
             f'<div class="vt" style="position:absolute;left:30px;top:34px;color:#19D3B0;font-size:44px;line-height:40px">BSP SERVER UTILITIES</div>'
-            f'<div style="position:absolute;left:30px;top:84px;font:400 12.5px \'IBM Plex Sans\',sans-serif;color:#E6EAF2">Rules · display panels · staff online · action log · AFK · chunks · drops</div>'
-            f'<div class="vt" style="position:absolute;left:30px;top:106px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div>'
+            f'<div style="position:absolute;left:30px;top:80px;font:400 12px \'IBM Plex Sans\',sans-serif;color:#E6EAF2;line-height:16px">Rules · display panels · staff online · action log · AFK<br>chunk unloading · despawn times · client check · setup guide</div>'
+            f'<div class="vt" style="position:absolute;left:30px;top:118px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div>'
             f'<div style="position:absolute;right:22px;top:24px;width:150px;height:100px;background:#2A2F3A">'
             f'<div style="position:absolute;inset:3px;background:#10151C" class="vt">'
             f'<div style="position:absolute;left:7px;top:4px;color:#19D3B0;font-size:15px">STAFF ONLINE</div>'

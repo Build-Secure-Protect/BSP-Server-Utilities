@@ -237,3 +237,78 @@ In game (an operator):
 2. Left: the switch, ITEMS and DEATH DROPS − / + (1 to 60), the orbs switch; `/su status` shows the new times.
 3. CLEAR ITEMS NOW: the chips This server, All servers and the other servers heard from; CLEAR ITEMS wants a second click; while counting down it reads COUNTING DOWN · CLEAR AGAIN (pressing it twice again restarts the countdown).
 4. Right: + add an item, type `diam`: Diamond, Diamond Block, Diamond Pickaxe ... (modded items too, by name or id); pick one, − / + up to 120 or NEVER, ADD: the line appears with its time (never in gold); × removes it. Drop that item and check it lasts its own time.
+
+## 2026-10-23: SU-19, the client check: the client's report
+
+Headless: 62 GameTests pass (new: a report read back exactly over the wire and as text; bounded counts and lengths, the largest report under a login answer's 1 MB, a packet claiming too many mods refused; the latest report kept per player with Forge's mod list, a report in game replacing it at most once a second). The verdict comes in SU-20: until then every report is kept and nobody is refused. **The handshake itself has not run with a real client, through Velocity and Ambassador, or on Mohist.**
+
+In game (a client with this version, a dedicated server; the log at debug level shows the handshake):
+1. Join: the login takes no longer than before (the mods' files were read while the game started). The server's log has no "Client check failed" line.
+2. Join through the proxy, then switch servers: each server asks again (Ambassador re-runs the handshake).
+3. A client with an older version of this mod is refused by Forge's channel check (protocol 1 against 2).
+4. Turn on a resource pack in Options while on the server: after the reload the client sends its report again (no message yet; SU-20 judges it).
+5. Singleplayer: opening a world is not slowed and asks nothing.
+
+## 2026-10-23: SU-20, the client check: rules, verdict, kicks, commands
+
+Headless: 69 GameTests pass, twice (new: every rule of the verdict (a word in an id, in a display name, an exact id, allowed anyway, a pack by fingerprint whatever its name, a pack word, the stone test with its pack, a shader word, an exempt player, the flags: not trusted, file differs, brightness, left out of the report; nothing "not trusted" without a setup); rules and the setup kept to their limits and round tripping; a refusal's message, its log entry and today's list (two days ago is not today); a pack switched on in game kicking with only the new thing named, a newly blocked mod flagging and kicking nobody; TRUST MY SETUP judging everyone again and writing the file, the same file older, a newer file taken, a broken one ignored; the network's rules saved and announced, a server's own copy kept apart and the network's kept underneath; another server's player listed, a staff kick sent on as a notice, a kick from another server reaching a player here with the reason cleaned). The CLIENTS tab comes in SU-21. **Nothing of this has run with a real client, on Mohist, through the proxy, or against real MySQL and Redis.**
+
+In game (an operator; a second client to be refused helps):
+1. `/su status` ends with "Client check: the network's rules, 6 block-list entries, trusted setup not taken yet; 0 refused today."
+2. Join with a resource pack whose file name has "xray" in it (any small pack renamed): refused on the "Failed to connect to the server" screen, red "You can't join with:", the pack in gold "(resource pack)", the white line under it. The Action Log (LOG tab, kind Client check) shows "refused <name>: ...".
+3. A real xray pack renamed to something harmless: refused for see-through stone, naming the pack. Try the pack's own name too.
+4. Join clean, then switch the pack on in Options: kicked with the same message after the reload.
+5. Set the brightness past 100 % (options.txt `gamma:5.0`): joining shows the gold line once; `/su client <you>` lists "Brightness 500 %".
+6. `/su client <player>`: the mods and packs counts, the shader and the stone test line.
+7. `/su clientcheck export` before any setup: told to press TRUST MY SETUP first (the tab arrives in SU-21). Drop a `trusted_setup.json` from another server into `config/bsp_server_utilities/` and `/su clientcheck reload`: read when newer, "not newer" otherwise.
+8. Two servers: a player refused on one appears in the other's `/su status` count for today.
+
+## 2026-10-23: SU-21, the CLIENTS tab
+
+Headless: 70 GameTests pass, twice (new: a player who may not edit changes nothing; the picked player's report and everyone's rows; the tab's data and actions round trip; TRUST MY SETUP flags the other player and puts them first; BLOCK adds a mod, marks them blocked and kicks nobody; a pack without a fingerprint cannot be blocked; own rules from the tab; EXPORT writes the file; KICK with the typed reason). **The tab has not been drawn in a client.**
+
+In game (an operator, and a second player with an extra mod such as a minimap):
+1. `/su`, CLIENTS (the seventh tab; all seven fit beside the title, which shrinks): the look matches `tools/preview/clients_refined.html`.
+2. PLAYERS: both players listed, yourself with ✓. RULES, TRUST MY SETUP, a second click: the footer reads "Trusted setup <date> from <you>"; back on PLAYERS the other player has 1 ⚑ in gold and is listed first.
+3. Pick them: the flag chips (mods not trusted, stone test passed, the shader if any); MODS lists the minimap first in gold "not trusted"; PACKS shows their packs with fingerprints. The wheel scrolls the list under the mouse.
+4. BLOCK beside the minimap mod, then SURE?: the note "Added to the block list; nobody was kicked"; they show "blocked" in red and stay online; when they rejoin they are refused.
+5. Type a reason and KICK, SURE?: they see "Removed by staff" in gold and your reason; the LOG tab (kind Client check) has "kicked <name>: <reason>".
+6. RULES: switch to Its own rules (the violet line appears; the header reads "<server>'s own rules"); add a word, a mod id, an allowed name, an exempt player with a note; × removes each; type in the refusal message and watch the counter; a second server keeps the network's rules.
+7. EXPORT: the note names the file; it is in `config/bsp_server_utilities/`.
+8. With two servers: a player on the other server is listed with that server's name; KICK reaches them there.
+
+## 2026-10-23: D142, client-check entries for staff only
+
+Headless: 70 GameTests pass (the refusal test also checks that players' copy of the log leaves client-check entries out). In game: after a refusal, the LOG tab (kind Client check) shows it; `/actionlog`, a log panel and the ACTION LOG board do not; a log panel's settings offer no Client check chip.
+
+## 2026-10-23: SU-22, the setup guide: state, off switches, the offer
+
+Headless: 75 GameTests pass, twice (new `SetupGuideGameTests`: the state round trips and the newest copy wins across servers; NEXT, SETUP LATER, closing part way, a change in the AFK tab counting, an off feature staying off and TURN ON; every off switch stopping its feature (rules, the action log, despawn times, the client check, staff online, panels, AFK); an admin waiting a few seconds, the first offer listing every page, the reminder listing what was left, nothing left or ignored meaning no offer, a non-admin refused; the packets round trip; the server's name checked and written). The corner card and the guide's screens come in SU-23. **Nothing of this has run in a client.**
+
+In game (an operator, on a world that has run an earlier version):
+1. Join: about five seconds later (after the rules popup, if any) a gold chat line "Server Utilities is not set up on this network yet. [Setup now] [Later] [Ignore setup]"; a player who is not an admin gets nothing.
+2. [Later]: "You will be reminded at your next join."; rejoin: the line comes back. [Ignore setup]: rejoin, nothing; another operator still gets it.
+3. `/su status` ends with "Setup guide: 0 of 9 pages set up; off: -; left: Welcome, Staff groups, ...".
+4. Change the AFK time in the AFK tab: `/su status` shows AFK as set up.
+5. The switches (until the guide's screens exist, check them after SU-23): rules off lets a new player move at once; action log off records no commands; despawn off leaves items for vanilla's five minutes; client check off lets a blocked pack in; staff online off empties the staff panels; panels off darkens panels and refuses placing.
+
+## 2026-10-23: SU-23, the setup guide's card and screens
+
+Headless: 76 GameTests pass, twice (new: the guide opening at the first page not finished; the card's SETUP NOW, LATER and IGNORE SETUP and the guide's TURN OFF, SETUP LATER, closing part way and TURN ON as the client sends them). **The card and the guide have not been drawn in a client.**
+
+In game (an operator, every page not set up):
+1. Join: after about five seconds (after the rules popup, if any) the card in the top right (`tools/preview/setup_refined.html`), with "Press T to click, or use the line in chat."; you can still move. Open an inventory: the card hides; close it: it is back.
+2. Press T: the card's keys light on hover; LATER (or ×) removes it and says you will be reminded; rejoin: it is back. The chat line's [Setup now] does the same as the key.
+3. SETUP NOW: the admin panel opens on Welcome, a little taller, with the progress bar and the strip "SETUP 1/10"; no tab is lit and clicking tabs does nothing. Type a server name and NEXT: "This server's name is ... after the next restart."; the config file has it.
+4. Each page shows its tab under the strip (STAFF, RULES, LOG, AFK, CHUNKS, DROPS, CLIENTS on its RULES half), with the guide's footer instead of the tab's own (no REFRESH, PREVIEW or ASK AGAIN). The RULES tab's UP / DOWN / DELETE still work.
+5. On Action log, TURN OFF FEATURE: the red warning and SURE?; a second click moves on, and commands stop being logged. On a page that is off: "This feature is off." and TURN ON FEATURE.
+6. Display panels: the text and the /give line; TURN OFF darkens every panel at once (for every player) and stops placing one.
+7. Escape on AFK: rejoin, the card reads "SERVER UTILITIES: n LEFT" with AFK and the pages after it in gold; CONTINUE SETUP opens on AFK.
+8. Finish: every page with set up, off, later or not yet; DONE closes the panel. `/su` RULES tab: SETUP GUIDE reopens the guide.
+
+## 2026-10-23: the network on plain Forge 47.4.23 (no Mohist)
+
+Every server now runs Forge 1.20.1-47.4.23 with the LuckPerms Forge mod; the Mohist-only checks above (SU-11 item 1, plugin commands reaching the log; container clicks through Mohist) no longer apply: check the same things on Forge instead. Headless: 77 GameTests pass (new: a MySQL driver found in BSP-Core's full jar and registered). The Forge methods the client check uses exist unchanged in 47.4.23 (checked against the server's universal jar).
+
+In game:
+1. With BSP-Core's storage on MySQL, start a server: `/su status` shows "Shared storage: ..." with no errors; the log has no "No MySQL driver" line. With BSP-Core's -slim jar instead, the log says to install the full jar and records stay on this server.

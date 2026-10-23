@@ -160,4 +160,14 @@ public class StorageGameTests {
                 })
                 .thenSucceed();
     }
+
+    @GameTest(template = EMPTY)
+    public void a_mysql_driver_is_found_in_bsp_core_s_full_jar(GameTestHelper h) {
+        // plain Forge has no MySQL driver of its own: the dev run loads BSP-Core's full jar, as the live servers do
+        String d = com.mrgregles.bsp_server_utilities.storage.JdbcBackend.loadDriver();
+        h.assertTrue(d != null && com.mrgregles.bsp_server_utilities.storage.JdbcBackend.DRIVERS.contains(d), "a MySQL driver is loaded: " + d);
+        boolean registered = java.util.Collections.list(java.sql.DriverManager.getDrivers()).stream().anyMatch(x -> x.getClass().getName().equals(d));
+        h.assertTrue(registered, "and registered for connections");
+        h.succeed();
+    }
 }

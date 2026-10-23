@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clients Tab Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set G: three looks for the CLIENTS tab of the admin panel (owner decisions D120 to D134), the rules page
+   and the messages players see. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+<style>
+.flagc{ display:inline-flex; gap:4px; align-items:center; font-size:9px; padding:1px 5px; background:#2a2414; color:#FFD23A; white-space:nowrap; }
+.flagc.r{ background:#3a2020; color:#FF6B5C; } .flagc.ok{ background:#1a2a16; color:#8FE04A; }
+.dirt{ width:380px; height:214px; flex:none; box-sizing:border-box; padding:26px 18px; display:flex; flex-direction:column; align-items:center; gap:9px; text-align:center;
+  background:repeating-linear-gradient(45deg,#2a2018 0 6px,#251c15 6px 12px); font-family:var(--mono); font-size:11px; color:#fff; box-shadow:0 8px 22px rgba(0,0,0,.45); }
+.dirt .t{ color:#AAAAAA; } .vbtn{ width:200px; height:20px; display:grid; place-items:center; background:#6f6f6f; box-shadow:inset 0 0 0 1px #000, inset 2px 2px 0 #a0a0a0, inset -2px -2px 0 #555; color:#fff; margin-top:auto; font-size:10px; }
+.lst{ display:flex; flex-direction:column; gap:1px; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>The CLIENTS tab, three looks</h1>
+<p class="lede">Mock-up set G for the client check (D120 to D134): a seventh tab in <code>/su</code>. It lists every online player on the network with what their client reported at login (mods, resource packs, shader, the stone test, brightness), their flags, and KICK with a typed reason. It also holds the rules: the block list, the allowed-anyway list, exempt players, the refusal message, the trusted setup (TRUST MY SETUP, EXPORT) and the switch between Network rules and This server's own rules. The seven tab keys are drawn narrower to fit. Sample data.</p></header>
+
+<section><h2>A. Two pages: PLAYERS and RULES</h2><div class="card"><p>A switch under the title. PLAYERS: the network's players on the left (the flag count in gold, refusals today below), the picked player on the right with MODS / PACKS, BLOCK beside each line, and KICK at the foot. RULES: the page drawn under "The rules page".</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10px">Server utilities</span><span class="tabs"><span class="tab" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab on" style="width:44px">Clients</span></span></div>
+<div class="hd"><span style="display:flex;gap:4px"><span class="chip on">Players · 6</span><span class="chip">Rules</span></span><span class="sm m">Network rules</span></div>
+<div class="grow" style="display:flex;gap:8px"><div class="box" style="width:168px;padding:3px 0;display:flex;flex-direction:column;overflow:hidden">
+<div class="row lbl">Online · network</div>
+<div class="row sel"><span class="b">Kat_Miner</span><span class="srv">Stormfall</span><span class="grow"></span><span class="g b">2 ⚑</span></div>
+<div class="row"><span class="b">Tomo_42</span><span class="srv">Spawn</span><span class="grow"></span><span class="g b">1 ⚑</span></div>
+<div class="row"><span>Steve_Builds</span><span class="srv">Spawn</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Lumen</span><span class="srv">Moongrove</span><span class="grow"></span><span class="m sm">exempt</span></div>
+<div class="row"><span>Pip</span><span class="srv">Frostwarf</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Mrgregles</span><span class="srv">Spawn</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row lbl" style="margin-top:4px">Refused today · 2</div>
+<div class="row"><span class="r">xRayKid</span><span class="sm m">14:21</span><span class="grow"></span><span class="sm r">stone test</span></div>
+<div class="row"><span class="r">Bob_99</span><span class="sm m">13:05</span><span class="grow"></span><span class="sm r">freecam</span></div>
+</div><div class="box grow" style="padding:6px 8px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+<div class="hd"><span><b>Kat_Miner</b> <span class="srv">BSP-Stormfall</span></span><span class="sm m">checked 14:02 · again 14:20</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:3px"><span class="flagc">⚑ Brightness 500 %, told</span><span class="flagc">⚑ 2 mods not trusted</span><span class="flagc ok">Stone test passed</span><span class="pchip">Shader Bliss · on</span></div>
+<div style="display:flex;gap:4px"><span class="chip on">Mods 283</span><span class="chip">Packs 3</span></div>
+<table class="tbl" style="font-size:8.8px"><tr><td class="b g">xaerominimap</td><td class="m mono" style="font-size:8px">24.3.0</td><td class="g">not trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b g">betterf3</td><td class="m mono" style="font-size:8px">7.0.2</td><td class="g">not trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b">jei</td><td class="m mono" style="font-size:8px">15.56.0.205</td><td class="m">trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="b">mekanism</td><td class="m mono" style="font-size:8px">10.4.16</td><td class="m">trusted</td><td><span class="mini">Block</span></td></tr><tr><td class="m sm" colspan="4">+ 279 more, scroll</td></tr></table>
+<div class="grow"></div>
+<div style="display:flex;gap:6px;align-items:center"><span class="inp grow">Please remove the minimap mod and join again.</span><span class="key sm warn">Kick</span></div>
+</div></div>
+<div class="hd"><span class="sm m">Trusted setup 23 Oct 14:02 from Mrgregles · saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>B. One page, three columns</h2><div class="card"><p>The rules in short on the left (the switch, the trusted setup, the list counts with EDIT LISTS, which opens the rules page over the tab), the players in the middle, the picked player on the right.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10px">Server utilities</span><span class="tabs"><span class="tab" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab on" style="width:44px">Clients</span></span></div>
+<div class="grow" style="display:flex;gap:7px"><div class="box" style="width:118px;padding:6px;display:flex;flex-direction:column;gap:5px">
+<div class="vv sm up b">Rules</div><span class="chip on">Network rules</span><span class="chip">This server's own</span>
+<div class="lbl" style="margin-top:3px">Trusted setup</div><div class="sm">23 Oct 14:02<br><span class="m">from Mrgregles · 281 mods · 3 packs</span></div>
+<span class="key sm v">Trust my setup</span><span class="key sm ghost">Export</span>
+<div class="sm m" style="margin-top:3px">Block 7 · Allowed 0 · Exempt 1</div><span class="key sm ghost">Edit lists</span>
+</div><div class="box" style="width:132px;padding:3px 0;display:flex;flex-direction:column;overflow:hidden">
+<div class="row lbl">Online · 6</div>
+<div class="row sel"><span class="b">Kat_Miner</span><span class="grow"></span><span class="g b">2 ⚑</span></div>
+<div class="row"><span class="b">Tomo_42</span><span class="grow"></span><span class="g b">1 ⚑</span></div>
+<div class="row"><span>Steve_Builds</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Lumen</span><span class="grow"></span><span class="m sm">exempt</span></div>
+<div class="row"><span>Pip</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row"><span>Mrgregles</span><span class="grow"></span><span class="ok">✓</span></div>
+<div class="row lbl" style="margin-top:4px">Refused today · 2</div>
+<div class="row"><span class="r">xRayKid</span><span class="grow"></span><span class="sm r">stone</span></div>
+<div class="row"><span class="r">Bob_99</span><span class="grow"></span><span class="sm r">freecam</span></div>
+</div><div class="box grow" style="padding:6px 7px;display:flex;flex-direction:column;gap:4px;overflow:hidden">
+<div><b>Kat_Miner</b> <span class="srv">Stormfall</span></div><div class="sm m">checked 14:02 · again 14:20</div>
+<span class="flagc">⚑ Brightness 500 %</span><span class="flagc">⚑ 2 mods not trusted</span>
+<div class="sm"><span class="ok">Stone test passed</span> · <span class="m">Bliss on</span></div>
+<div style="display:flex;gap:3px"><span class="chip on">Mods 283</span><span class="chip">Packs 3</span></div>
+<div class="lst sm"><div class="hd"><span class="g b">xaerominimap</span><span class="mini">Block</span></div><div class="hd"><span class="g b">betterf3</span><span class="mini">Block</span></div><div class="hd"><span>jei</span><span class="mini">Block</span></div><div class="hd"><span>mekanism</span><span class="mini">Block</span></div></div>
+<div class="grow"></div>
+<span class="inp">Please remove the minimap mod…</span><span class="key sm warn">Kick</span>
+</div></div>
+<div class="hd"><span class="sm m">Saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>C. A rules strip and player rows</h2><div class="card"><p>One line of rules at the top (the switch, the trusted setup, TRUST MY SETUP, LISTS, which opens the rules page). Below, a row per player with what they reported in columns and flags as chips; the picked row opens underneath with its unusual mods and KICK.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10px">Server utilities</span><span class="tabs"><span class="tab" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab on" style="width:44px">Clients</span></span></div>
+<div class="box" style="display:flex;align-items:center;gap:6px;padding:4px 6px"><span class="chip on">Network rules ▾</span><span class="sm m grow">Trusted 23 Oct 14:02 · Mrgregles · 281 mods</span><span class="key sm v">Trust my setup</span><span class="key sm ghost">Lists</span></div>
+<div class="box grow" style="padding:3px 4px;overflow:hidden;display:flex;flex-direction:column">
+<table class="tbl" style="font-size:9px"><tr class="lbl"><td>Player</td><td>Server</td><td>Mods</td><td>Packs</td><td>Shader</td><td>Stone</td><td>Flags</td></tr>
+<tr style="background:#1b2230;box-shadow:inset 2px 0 0 #B58CFF"><td class="b">Kat_Miner</td><td><span class="srv">Stormfall</span></td><td>283</td><td>3</td><td>Bliss</td><td class="ok">✓</td><td><span class="flagc">brightness</span> <span class="flagc">+2 mods</span></td></tr>
+<tr><td colspan="7" style="padding:4px 8px 6px;background:#121821"><div style="display:flex;flex-direction:column;gap:4px;white-space:normal"><div class="sm">Not in the trusted setup: <span class="pchip"><b class="g">xaerominimap</b> <span class="mini">Block</span></span> <span class="pchip"><b class="g">betterf3</b> <span class="mini">Block</span></span> · Brightness 500 %, told at join · <span class="vv">all mods and packs ›</span></div><div style="display:flex;gap:6px;align-items:center"><span class="inp grow">Please remove the minimap mod and join again.</span><span class="key sm warn">Kick</span></div></div></td></tr>
+<tr><td class="b">Tomo_42</td><td><span class="srv">Spawn</span></td><td>281</td><td>3</td><td>off</td><td class="ok">✓</td><td><span class="flagc">jei file differs</span></td></tr>
+<tr><td>Steve_Builds</td><td><span class="srv">Spawn</span></td><td>281</td><td>2</td><td>BSL</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+<tr><td>Lumen</td><td><span class="srv">Moongrove</span></td><td>284</td><td>3</td><td>off</td><td class="ok">✓</td><td class="m">exempt</td></tr>
+<tr><td>Pip</td><td><span class="srv">Frostwarf</span></td><td>281</td><td>3</td><td>off</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+<tr><td class="r">xRayKid</td><td><span class="srv">Stormfall</span></td><td>281</td><td>4</td><td>off</td><td class="r">✗</td><td><span class="flagc r">refused 14:21</span></td></tr>
+</table></div>
+<div class="hd"><span class="sm m">6 online · 2 refused today · saved for every server</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>The rules page (every look)</h2><div class="card"><p>A's RULES page, B's EDIT LISTS and C's LISTS all open this. Left: which rules this server follows, the trusted setup and the refusal message. Right: the three lists, each with + add and ×. A pack blocked with BLOCK from a player's list appears here by its fingerprint.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:10px">Server utilities</span><span class="tabs"><span class="tab" style="width:38px">Rules</span><span class="tab" style="width:38px">Staff</span><span class="tab" style="width:38px">Log</span><span class="tab" style="width:38px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:38px">Drops</span><span class="tab on" style="width:44px">Clients</span></span></div>
+<div class="hd"><span style="display:flex;gap:4px"><span class="chip">Players · 6</span><span class="chip on">Rules</span></span><span class="sm m">BSP-Spawn</span></div>
+<div class="grow" style="display:flex;gap:8px"><div class="box" style="width:196px;padding:6px 8px;display:flex;flex-direction:column;gap:5px">
+<div class="lbl">This server follows</div><div style="display:flex;gap:3px"><span class="chip on">Network rules</span><span class="chip">Its own rules</span></div>
+<div class="lbl" style="margin-top:3px">Trusted setup</div><div class="sm">23 Oct 14:02 from <b>Mrgregles</b><br><span class="m">281 mods · 3 packs · shader Bliss</span></div>
+<div class="keys"><span class="key sm v">Trust my setup</span><span class="key sm ghost">Export</span></div>
+<div class="hint">Writes config/…/trusted_setup.json</div>
+<div class="lbl" style="margin-top:3px">Refusal message</div><div class="area" style="height:40px">You can't join with: &lt;list&gt;. Remove them and join again; ask staff if you think this is wrong.</div><div class="hint" style="text-align:right">104 / 160</div>
+</div><div class="box grow" style="padding:4px 6px;display:flex;flex-direction:column;gap:3px;overflow:hidden">
+<div class="hd"><span class="vv sm up b">Block list · 7</span><span class="vv sm b">+ add</span></div>
+<table class="tbl" style="font-size:8.8px"><tr><td class="m sm">word</td><td class="b">xray</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">word</td><td class="b">x-ray</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">word</td><td class="b">freecam</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">word</td><td class="b">baritone</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">word</td><td class="b">wurst</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">word</td><td class="b">meteor</td><td class="m">mods, packs, shaders</td><td class="r">×</td></tr><tr><td class="m sm">pack</td><td class="b">Ore Vision 32x.zip</td><td class="m mono" style="font-size:8px">3f9a…c21e</td><td class="r">×</td></tr></table>
+<div class="hd" style="margin-top:3px"><span class="vv sm up b">Allowed anyway · 0</span><span class="vv sm b">+ add</span></div><div class="sm m" style="padding:0 5px">None. A name here passes even when a word above matches it.</div>
+<div class="hd" style="margin-top:3px"><span class="vv sm up b">Exempt players · 1</span><span class="vv sm b">+ add</span></div><table class="tbl" style="font-size:8.8px"><tr><td class="b">Lumen</td><td class="m">builder, debug mods</td><td class="r">×</td></tr></table>
+</div></div>
+<div class="hd"><span class="sm m">Network rules · saved for every server · /su clientcheck export | reload</span><span class="keys"><span class="key ghost">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>What players see (every look)</h2><div class="card"><p>Refused at login: the reason on Minecraft's own "failed to connect" screen, before they are in the world. Kicked after switching on a blocked pack mid-game: the same message under "Connection Lost". Kicked by staff: the typed reason. Brightness: one gold line in chat at join.</p><div class="stage">
+<div class="dirt"><span class="t">Failed to connect to the server</span><span style="color:#FF5555">You can't join with:</span><span class="lst"><span style="color:#FFAA00">Ore Vision 32x.zip <span style="color:#AAAAAA">(resource pack: see-through stone)</span></span><span style="color:#FFAA00">freecam <span style="color:#AAAAAA">(mod)</span></span></span><span>Remove them and join again; ask staff if you think this is wrong.</span><span class="vbtn">Back to Server List</span></div>
+<div class="dirt"><span class="t">Connection Lost</span><span style="color:#FFAA00">Removed by staff</span><span>Please remove the minimap mod and join again.</span><span class="vbtn">Back to Server List</span></div>
+<div class="world" style="width:380px"><div class="chat"><span style="color:#FFAA00">Your brightness is above the game's normal maximum; staff can see this.</span></div></div>
+</div></div></section>
+
+<section><h2>Decisions</h2><div class="card"><ol>
+<li><b>G1 the tab's look:</b> A two pages (PLAYERS and RULES), B one page in three columns, or C a rules strip over player rows.</li>
+<li><b>G2 a player kicked by staff:</b> sees "Removed by staff" above the typed reason (as drawn); or sees only the typed reason; or sees the reason with the admin's name under it.</li>
+<li><b>G3 the order of a player's mods:</b> the unusual ones first (not trusted, file differs) in gold, then the rest A to Z; or A to Z only, with the unusual ones in gold where they fall.</li>
+<li><b>G4 refusals in the tab:</b> today's refusals across the network listed under the players (as drawn), also in the Action Log; or in the Action Log only.</li>
+</ol></div></section>
+</div></body></html>

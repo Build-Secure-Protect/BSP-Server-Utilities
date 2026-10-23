@@ -25,8 +25,8 @@ import java.util.concurrent.CompletableFuture;
  * are on our class path and {@code LuckPermsProvider.get()} is called directly. On a Mohist server with the
  * LuckPerms Bukkit plugin the plugin lives in its own class loader, so the bridge finds it through Bukkit's plugin
  * manager and loads the API from that loader. After that, <b>every call goes by reflection on both routes</b>,
- * through the same code: the dev runs (Forge route) then exercise exactly the code that runs on the live Mohist
- * backends (Bukkit route), instead of a second copy that no test can reach.
+ * through the same code, so the dev runs (Forge route, as the live servers use since the network moved to plain Forge)
+ * also cover the Bukkit route, instead of a second copy that no test can reach.
  *
  * <p>Reads answer at once from LuckPerms's loaded data (online players are always loaded). {@link #membersOf} asks
  * LuckPerms's storage and completes on a LuckPerms thread: callers hop back to the server thread before touching the game.

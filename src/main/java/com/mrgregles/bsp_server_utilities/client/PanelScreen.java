@@ -706,7 +706,7 @@ public class PanelScreen extends Screen {
 
     private final List<Ui.Hit> pickerHits = new ArrayList<>();
     /** The kinds in {@code LogEntry.KINDS} order, with their labels. */
-    private static final String[] LOG_KINDS = com.mrgregles.bsp_server_utilities.log.LogEntry.KINDS.toArray(String[]::new);
+    private static final String[] LOG_KINDS = com.mrgregles.bsp_server_utilities.log.LogEntry.PUBLIC_KINDS.toArray(String[]::new);
     private static final String[] LOG_KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch"};
 
     private enum KeyStyle { PLAIN, VIOLET, WARN, SURE, GHOST }

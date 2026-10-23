@@ -101,6 +101,7 @@ public final class AfkService {
 
     /** Replaces the settings for the whole network. */
     public static AfkSettings setSettings(MinecraftServer server, AfkSettings s) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.AFK); // changed in its tab: set up (D152)
         AfkData data = AfkData.get(server);
         AfkSettings next = s.withRevision(Math.max(System.currentTimeMillis(), data.settings().revision() + 1)).sanitised();
         data.setSettings(next);

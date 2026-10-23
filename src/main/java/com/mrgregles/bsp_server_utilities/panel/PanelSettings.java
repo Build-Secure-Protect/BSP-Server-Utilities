@@ -155,7 +155,7 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
         }
         Image cleanImage = new Image(img.source() == null ? Source.WEB : img.source(), url, file, img.fit() == null ? Fit.INSIDE : img.fit(), refresh);
         List<String> roles = staff.roles().stream().map(r -> clean(r, 64).toLowerCase(Locale.ROOT)).filter(r -> !r.isBlank()).distinct().limit(12).toList();
-        List<String> kinds = log.kinds().stream().map(k -> clean(k, 16).toLowerCase(Locale.ROOT)).filter(com.mrgregles.bsp_server_utilities.log.LogEntry.KINDS::contains).distinct().toList();
+        List<String> kinds = log.kinds().stream().map(k -> clean(k, 16).toLowerCase(Locale.ROOT)).filter(com.mrgregles.bsp_server_utilities.log.LogEntry.PUBLIC_KINDS::contains).distinct().toList();
         int logLines = LogView.ALL.lines();
         for (int n : LogView.LINE_CHOICES) {
             if (n == log.lines()) {

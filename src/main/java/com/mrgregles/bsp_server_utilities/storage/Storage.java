@@ -338,6 +338,11 @@ public final class Storage {
         }
     }
 
+    /** Handles a notice at once, as if it had come from another server (tests, on the server thread). */
+    public void deliverForTests(StorageBackend.Notice n) {
+        handle(n);
+    }
+
     public int delivered() {
         return delivered;
     }

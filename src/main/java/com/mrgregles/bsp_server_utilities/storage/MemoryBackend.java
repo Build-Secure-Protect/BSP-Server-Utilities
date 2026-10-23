@@ -26,6 +26,9 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.afk.AfkSettings afkSettings;
     private com.mrgregles.bsp_server_utilities.chunks.ChunkSettings chunkSettings;
     private com.mrgregles.bsp_server_utilities.despawn.DespawnSettings despawnSettings;
+    private com.mrgregles.bsp_server_utilities.check.CheckRules checkRules;
+    private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
+    private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
     private final Map<String, Boolean> switches = new HashMap<>();
@@ -132,6 +135,42 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void saveStaffGroups(StaffGroups groups) throws Exception {
         check();
         staffGroups = groups;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.setup.SetupState loadSetupState() throws Exception {
+        check();
+        return setupState;
+    }
+
+    @Override
+    public synchronized void saveSetupState(com.mrgregles.bsp_server_utilities.setup.SetupState state) throws Exception {
+        check();
+        setupState = state;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.check.CheckRules loadCheckRules() throws Exception {
+        check();
+        return checkRules;
+    }
+
+    @Override
+    public synchronized void saveCheckRules(com.mrgregles.bsp_server_utilities.check.CheckRules rules) throws Exception {
+        check();
+        checkRules = rules;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.check.TrustedSetup loadTrustedSetup() throws Exception {
+        check();
+        return trustedSetup;
+    }
+
+    @Override
+    public synchronized void saveTrustedSetup(com.mrgregles.bsp_server_utilities.check.TrustedSetup setup) throws Exception {
+        check();
+        trustedSetup = setup;
     }
 
     @Override

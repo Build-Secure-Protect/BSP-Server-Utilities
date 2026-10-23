@@ -18,6 +18,19 @@ public final class ClientAdmin {
         }
     }
 
+    /** The setup guide's data: opens the guide in the panel, or refreshes it. */
+    public static void setup(com.mrgregles.bsp_server_utilities.network.SetupViewPacket packet) {
+        if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
+            screen.acceptSetup(packet);
+        }
+    }
+
+    public static void clients(com.mrgregles.bsp_server_utilities.network.AdminClientsPacket packet) {
+        if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
+            screen.acceptClients(packet);
+        }
+    }
+
     public static void drops(com.mrgregles.bsp_server_utilities.network.AdminDropsPacket packet) {
         if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
             screen.acceptDrops(packet);

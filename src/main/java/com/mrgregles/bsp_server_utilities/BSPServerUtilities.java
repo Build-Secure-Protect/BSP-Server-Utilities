@@ -45,6 +45,9 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.despawn.DespawnService.registerNotices();
         com.mrgregles.bsp_server_utilities.despawn.DespawnService.registerEvents();
         com.mrgregles.bsp_server_utilities.despawn.ClearService.registerNotices();
+        com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerNotices();
+        com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
+        com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
             RulesService.onServerStarted(e.getServer());
@@ -54,6 +57,8 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.chunks.ChunkService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.despawn.ClearService.onServerStarted();
+            com.mrgregles.bsp_server_utilities.check.ClientCheckService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -70,12 +75,14 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.log.LogSync.sendTo(p);
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogin(p);
+                com.mrgregles.bsp_server_utilities.setup.SetupService.onLogin(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogout(p);
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogout(p);
+                com.mrgregles.bsp_server_utilities.setup.SetupService.onLogout(p);
                 StaffDirectory.onLogout(p);
             }
         });
@@ -92,6 +99,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.despawn.DespawnService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.despawn.ClearService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.check.ClientCheckService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.setup.SetupService.tick(e.getServer());
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

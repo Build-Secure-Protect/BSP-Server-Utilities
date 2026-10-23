@@ -23,6 +23,12 @@ public class DisplayPanelItem extends BlockItem {
 
     @Override
     public InteractionResult place(BlockPlaceContext ctx) {
+        if (com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.PANELS)) {
+            if (ctx.getPlayer() instanceof ServerPlayer sp) {
+                sp.displayClientMessage(Component.translatable("message.bsp_server_utilities.panel.off"), true);
+            }
+            return InteractionResult.FAIL; // turned off in the setup guide (D150)
+        }
         if (ctx.getPlayer() instanceof ServerPlayer sp && !Perms.canEdit(sp)) {
             sp.displayClientMessage(Component.translatable("message.bsp_server_utilities.panel.admins_only"), true);
             return InteractionResult.FAIL;

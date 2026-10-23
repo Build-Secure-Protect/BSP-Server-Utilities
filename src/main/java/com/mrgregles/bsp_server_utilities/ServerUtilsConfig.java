@@ -28,7 +28,7 @@ public final class ServerUtilsConfig {
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
         b.comment("Shared storage for the servers of the network: the rules and who agreed to them, the staff online and the action log.",
-                "No MySQL driver is bundled: BSP-Core's full jar provides one on Forge servers; Mohist ships its own.").push("storage");
+                "No MySQL driver is bundled: the server's own is used when it has one, else BSP-Core's full jar's (not its -slim jar).").push("storage");
         STORAGE_MODE = b.comment("auto: shared when BSP-Core's storage.mode is mysql, otherwise this server only.",
                 "mysql: always shared (with the settings below or BSP-Core's). local: this server only, kept in the world.").define("mode", "auto");
         STORAGE_USE_BSP_CORE = b.comment("Use BSP-Core's database settings (host, port, database, user, password, SSL) when BSP-Core is installed.",

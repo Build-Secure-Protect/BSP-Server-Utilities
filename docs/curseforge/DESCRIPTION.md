@@ -1,8 +1,18 @@
 ![BSP-Server Utilities](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/banner.png)
 
-**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; and things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all. Made for the Build Secure Protect network; works on any Forge 1.20.1 or Mohist server.
+**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all; players who join with a blocked mod or an xray pack are turned away with a list of what to remove; and a setup guide walks admins through all of it. Made for the Build Secure Protect network; works on any Forge 1.20.1 server.
 
-**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, and two boards for its Score Screens), LuckPerms (staff groups; the Forge mod, or the Bukkit plugin on Mohist), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
+**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server, the same version on both. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, two boards for its Score Screens; its full jar carries the MySQL driver), LuckPerms (staff groups; the LuckPerms Forge mod), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
+
+## For players: joining
+
+![Refused at login](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/check_refused.png)
+
+While you connect, your game tells the server which mods, resource packs and shader it has, how bright it is set, and whether ordinary stone, deepslate and dirt still look solid. If something is on the server's block list (an xray mod, freecam, a pack the admins blocked) or your stone looks see-through, whatever the pack is called, you are not let in and you are told exactly what to remove. Switching such a pack on while playing gets you kicked with the same message. What your game reports stays within the server's network, for its admins.
+
+![Brightness past the slider](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/check_bright.png)
+
+Brightness turned past the slider's top (a fullbright edit) does not keep you out, but you are told the staff can see it.
 
 ## For players: the rules
 
@@ -50,9 +60,23 @@ If your machines keep chunks loaded (an RFTools Builder, a Mekanism machine with
 
 Dropped items and experience orbs last 5 minutes of the server's time whether or not anyone is near, so piles left where nobody goes are gone by the time someone passes; your death drops last 15 minutes, time to run back for them. A Shatter Totem on the ground is never removed. When an admin clears the ground you are warned 60 and 30 seconds before.
 
+## For admins: setting up
+
+![The setup card](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_card.png)
+
+When an operator or BSP-Core admin joins and something is not set up yet, a card waits in the top right corner (and a line in chat): SETUP NOW, LATER or IGNORE SETUP. The game goes on; press T to click it. LATER brings it back at your next join; IGNORE stops it for you (other admins are still asked).
+
+![A page of the guide](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_guide.png)
+
+SETUP NOW opens the admin panel as a guide, one page per feature: Welcome (this server's name, written to its config file, and the storage it shares), staff groups, rules, the action log, AFK, chunk unloading, despawn times, the client check and display panels. Each page is that feature's own tab with BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot. Turning a feature off stops it on every server: no rules popup, nothing logged (asked twice), vanilla despawning, nobody checked at login, empty staff panels, or dark display panels.
+
+![Finish](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_finish.png)
+
+Finish lists every feature as set up, off or later. Anything left for later is offered again at your next join; close the guide part way and the rest waits too. Most settings are shared, so the other servers on the network only ask for their own name. **/su setup** or SETUP GUIDE on the RULES tab opens it again.
+
 ## For admins: the admin panel
 
-Operators and BSP-Core admins type **/serverutils** (or **/su**): six tabs, RULES, STAFF, LOG, AFK, CHUNKS and DROPS.
+Operators and BSP-Core admins type **/serverutils** (or **/su**): seven tabs, RULES, STAFF, LOG, AFK, CHUNKS, DROPS and CLIENTS.
 
 ![The RULES tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_rules.png)
 
@@ -122,11 +146,29 @@ Click a player for their machines: the mod, where, and how many chunks; RESTORE 
 
 **Exceptions:** + add an item opens a search over every item in the pack, by name or id; give the picked item its own time (1 to 120 minutes) or NEVER. Never items are kept by a clear too.
 
+## For admins: the client check
+
+![The CLIENTS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_clients.png)
+
+**CLIENTS:** everyone on the network with what their game reported, flagged players first. Flags never keep anyone out on their own: mods not in your trusted setup, mod files that differ from it, packs not in it, brightness past the top, mods Forge listed that the report left out. Pick a player for their mods, unusual ones first in gold, each with BLOCK (a second click), and KICK with a reason they read ("Removed by staff"). Today's refusals across the network sit under the players.
+
+![A player's packs](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_clients_packs.png)
+
+Their resource packs, with each file's fingerprint: BLOCK a pack and it is refused whatever it is renamed to. Blocking something a player already has kicks nobody; they are refused at their next join.
+
+![The client check's rules](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_clients_rules.png)
+
+**RULES:** the network's rules or this server's own (starting as a copy); TRUST MY SETUP takes your own game as the pack's setup, and EXPORT writes it to `config/bsp_server_utilities/trusted_setup.json`, which another server reads when you drop it in (`/su clientcheck reload`). The refusal message, the block list (a word matched anywhere in a mod, pack or shader name, or an exact mod id; starts with xray, x-ray, freecam, baritone, wurst and meteor), names allowed anyway, and exempt players. Refusals and kicks go to the LOG tab as Client check entries, for staff only.
+
+![Kicked by staff](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/check_kicked.png)
+
+A deterrent, not proof: a game built on purpose to lie can lie. It stops downloaded xray packs, renamed packs and cheat mods dropped into the mods folder.
+
 ## A network of servers
 
 ![Several servers, shared records](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/network.png)
 
-With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, and the AFK, chunk and drop settings are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online and who is AFK. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar or Mohist provides one.
+With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, the AFK, chunk and drop settings, the client check's rules and trusted setup, and how far the setup guide got are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online, who is AFK, and what each player's game reported. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar (not its -slim jar) provides one.
 
 ## With the other BSP mods
 
@@ -144,7 +186,10 @@ With BSP-Core installed and its storage on MySQL, nothing needs setting up: the 
 | `/afk` | everyone | AFK until your next action |
 | `/su away` | staff | show as away on the staff panels, until typed again |
 | `/serverutils`, `/su` | operators, BSP-Core admins | the admin panel |
-| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings |
+| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings, the client check, the setup guide |
+| `/su setup [now \| later \| ignore]` | operators, BSP-Core admins | the setup guide |
+| `/su client <player>` | operators, BSP-Core admins | what a player's game reported and what the check made of it |
+| `/su clientcheck export \| reload` | operators, BSP-Core admins | write or read `trusted_setup.json` |
 | `/su clearitems here \| all \| <server>` | operators, BSP-Core admins | clear dropped items after a 60-second warning |
 | `/su rules list \| add <title> [text] \| remove <n> \| status \| reset <player> \| askagain` | operators, BSP-Core admins | the rules from chat or the console |
 

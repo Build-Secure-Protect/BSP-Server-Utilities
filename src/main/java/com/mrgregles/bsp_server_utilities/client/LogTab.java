@@ -28,7 +28,7 @@ final class LogTab {
     private static final int SW_TOP = 29, KEY_W = 66;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     /** The kinds in {@code LogEntry.KINDS} order, with their labels. */
-    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch"};
+    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch", "panel.log.kind.check"};
 
     private enum Menu { NONE, SERVERS, KINDS }
 

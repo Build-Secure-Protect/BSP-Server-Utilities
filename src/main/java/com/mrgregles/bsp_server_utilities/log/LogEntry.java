@@ -8,9 +8,11 @@ import org.jetbrains.annotations.Nullable;
  * hidden, {@link LogText#masked}). {@code id} is 0 until the database numbers it; {@code uid} names it across servers.
  */
 public record LogEntry(long id, String uid, long atMs, String server, String actorId, String actor, String roleGroup, String roleLabel, int colour, String kind, String text) {
-    public static final String CMD = "cmd", ITEM = "item", MODE = "mode", GIVE = "give", SWITCH = "switch";
+    public static final String CMD = "cmd", ITEM = "item", MODE = "mode", GIVE = "give", SWITCH = "switch", CHECK = "check";
     /** Every kind, in the order the Action log pane offers them. */
-    public static final java.util.List<String> KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH);
+    public static final java.util.List<String> KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH, CHECK);
+    /** The kinds players read (on panels, {@code /actionlog}, the board): the client check's refusals and kicks are for staff only (D142). */
+    public static final java.util.List<String> PUBLIC_KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH);
     private static final String SEP = "\u001f";
 
     public String encode() {

@@ -35,8 +35,8 @@ public class PanelRenderer implements BlockEntityRenderer<DisplayPanelBlockEntit
     @Override
     public void render(DisplayPanelBlockEntity panel, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         Level level = panel.getLevel();
-        if (level == null) {
-            return;
+        if (level == null || com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.PANELS)) {
+            return; // no level yet, or panels turned off (dark, D150)
         }
         Direction facing = panel.getBlockState().getValue(DisplayPanelBlock.FACING);
         PanelShape.Rect rect = PanelShape.rectOf(level, panel.getBlockPos(), facing);

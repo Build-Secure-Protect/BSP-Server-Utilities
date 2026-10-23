@@ -80,6 +80,7 @@ public final class ChunkService {
 
     /** Replaces the settings for the whole network; a player newly always loaded gets their chunks back at once (D99). */
     public static ChunkSettings setSettings(MinecraftServer server, ChunkSettings s) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.CHUNKS); // changed in its tab: set up (D152)
         ChunkData data = ChunkData.get(server);
         ChunkSettings before = data.settings();
         ChunkSettings next = s.withRevision(Math.max(System.currentTimeMillis(), before.revision() + 1)).sanitised();

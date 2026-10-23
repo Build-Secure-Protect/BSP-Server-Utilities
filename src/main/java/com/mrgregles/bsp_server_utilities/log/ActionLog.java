@@ -67,6 +67,9 @@ public final class ActionLog {
 
     /** Records an entry here, in the shared table and on the other servers. */
     public static void record(MinecraftServer server, LogEntry e) {
+        if (com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.LOG)) {
+            return; // turned off in the setup guide (D150, D151)
+        }
         if (LogData.get(server).add(e)) {
             Storage s = Storage.active();
             if (s != null) {
@@ -79,6 +82,7 @@ public final class ActionLog {
 
     /** Turns a command's logging on or off (the LOG tab); the change itself is an entry (D29). */
     public static void setSwitch(MinecraftServer server, @Nullable ServerPlayer by, String root, boolean on) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(server, com.mrgregles.bsp_server_utilities.setup.Feature.LOG); // changed in its tab: set up (D152)
         String r = LogText.root(root);
         if (r.isEmpty() || LogText.PRIVATE.contains(r) || LogData.get(server).switches().getOrDefault(r, true) == on) {
             return;

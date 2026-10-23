@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}) and DROPS ({@link DropsTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}) and CLIENTS ({@link ClientsTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,13 +54,17 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
     private final AfkTab afk = new AfkTab(this);
     private final ChunksTab chunks = new ChunksTab(this);
     private final DropsTab drops = new DropsTab(this);
+    private final ClientsTab clients = new ClientsTab(this);
+    /** The setup guide, while the panel shows it (D156). */
+    @Nullable
+    private SetupGuide guide;
 
     public AdminScreen(AdminViewPacket view) {
         super(Component.literal(Tr.t("admin.title")));
@@ -77,8 +81,10 @@ public class AdminScreen extends Screen {
         return (width - W) / 2;
     }
 
+    /** The top of the tabs' drawing; in the guide the panel is taller and the body sits under the guide strip. */
     private int top() {
-        return (height - H) / 2;
+        int off = guide != null ? SetupGuide.OFFSET : 0;
+        return (height - H - off) / 2 + off;
     }
 
     // ------------------------------------------------------------------ data
@@ -244,6 +250,69 @@ public class AdminScreen extends Screen {
         drops.accept(p);
     }
 
+    void acceptClients(com.mrgregles.bsp_server_utilities.network.AdminClientsPacket p) {
+        clients.accept(p);
+    }
+
+    /** The setup guide's data: opens the guide at its page, or refreshes it. */
+    void acceptSetup(com.mrgregles.bsp_server_utilities.network.SetupViewPacket p) {
+        if (p.open() || guide == null) {
+            if (!p.open()) {
+                return;
+            }
+            save();
+            staff.flush();
+            afk.flush();
+            clients.flush();
+            guide = new SetupGuide(this, p);
+            guidePageChanged();
+        } else {
+            guide.accept(p);
+        }
+    }
+
+    /** The guide moved to another page: show that page's tab (or its own body). */
+    void guidePageChanged() {
+        if (guide == null) {
+            return;
+        }
+        com.mrgregles.bsp_server_utilities.setup.Feature f = guide.feature();
+        int next = tab;
+        if (f != null) {
+            switch (f) {
+                case STAFF -> next = STAFF;
+                case RULES -> next = RULES;
+                case LOG -> next = LOG;
+                case AFK -> next = AFK;
+                case CHUNKS -> next = CHUNKS;
+                case DESPAWN -> next = DROPS;
+                case CHECK -> {
+                    next = CLIENTS;
+                    clients.showRules();
+                }
+                default -> {
+                }
+            }
+        }
+        save();
+        staff.flush();
+        afk.flush();
+        clients.flush();
+        tab = next;
+        rebuild();
+        if (!guide.custom()) {
+            openTab();
+        }
+    }
+
+    /** The tab lit in the row: the page's tab, none for the guide's own pages. */
+    private int litTab() {
+        if (guide != null && guide.custom()) {
+            return -1;
+        }
+        return tab;
+    }
+
     private void openTab() {
         if (tab == STAFF) {
             staff.open();
@@ -255,6 +324,8 @@ public class AdminScreen extends Screen {
             chunks.open();
         } else if (tab == DROPS) {
             drops.open();
+        } else if (tab == CLIENTS) {
+            clients.open();
         }
     }
 
@@ -265,6 +336,7 @@ public class AdminScreen extends Screen {
         save();
         staff.flush();
         afk.flush();
+        clients.flush();
         tab = next;
         rebuild();
         openTab();
@@ -274,6 +346,10 @@ public class AdminScreen extends Screen {
         clearWidgets();
         titleBox = headingBox = null;
         textBox = introBox = leaveBox = null;
+        if (guide != null && guide.custom()) {
+            guide.addWidgets(left(), top());
+            return;
+        }
         if (tab == STAFF) {
             staff.addWidgets(left(), top());
             return;
@@ -292,6 +368,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == DROPS) {
             drops.addWidgets(left(), top());
+            return;
+        }
+        if (tab == CLIENTS) {
+            clients.addWidgets(left(), top());
             return;
         }
         int x = left() + PANE_X, y = top();
@@ -335,6 +415,9 @@ public class AdminScreen extends Screen {
 
     @Override
     public void tick() {
+        if (guide != null) {
+            guide.tick();
+        }
         staff.tick();
         if (tab == LOG) {
             log.tick();
@@ -347,6 +430,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == DROPS) {
             drops.tick();
+        }
+        if (tab == CLIENTS) {
+            clients.tick();
         }
         if (titleBox != null) {
             titleBox.tick();
@@ -369,6 +455,10 @@ public class AdminScreen extends Screen {
         save();
         staff.flush();
         afk.flush();
+        clients.flush();
+        if (guide != null) {
+            guide.closing();
+        }
         super.removed();
     }
 
@@ -379,24 +469,57 @@ public class AdminScreen extends Screen {
         renderBackground(g);
         hits.clear();
         int x = left(), y = top();
-        g.fill(x, y, x + W, y + H, Ui.PANEL);
-        Ui.frame(g, x, y, W, H, Ui.VIOLET);
-        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops")};
+        int off = guide != null ? SetupGuide.OFFSET : 0;
+        int frameTop = y - off;
+        g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
+        Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
+        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
+                Tr.t("admin.tab.clients")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(36, Ui.width(font, tabs[i], TINY) + 12);
+            int tabW = Math.max(32, Ui.width(font, tabs[i], TINY) + 8); // narrower keys, so seven fit beside the title
             tx -= tabW;
-            boolean on = i == tab;
-            g.fill(tx, y + 5, tx + tabW, y + 18, on ? Ui.VIOLET : Ui.DIM);
-            Ui.text(g, font, Component.literal(tabs[i]).withStyle(ChatFormatting.BOLD), tx + (tabW - Ui.width(font, tabs[i], TINY)) / 2, y + 9, on ? Ui.INK : Ui.MUTED, TINY);
+            boolean on = i == litTab();
+            g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
+            Ui.text(g, font, Component.literal(tabs[i]).withStyle(ChatFormatting.BOLD), tx + (tabW - Ui.width(font, tabs[i], TINY)) / 2, frameTop + 9, on ? Ui.INK : Ui.MUTED, TINY);
             int which = i;
-            hits.add(new Ui.Hit(tx, y + 5, tabW, 13, () -> showTab(which)));
-            tx -= 4;
+            if (guide == null) {
+                hits.add(new Ui.Hit(tx, y + 5, tabW, 13, () -> showTab(which))); // in the guide the row only shows where you are (D161)
+            }
+            tx -= 3;
         }
-        // the title in the room the tabs leave, smaller when six tabs need it
+        // the title in the room the tabs leave, smaller when seven tabs need it
         String title = Tr.t("admin.title");
         float titleScale = Math.min(1f, (tx - x - PAD - 2) / (float) Math.max(1, Ui.width(font, title, 1f)));
-        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), x + PAD, y + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
+        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
+        if (guide != null) {
+            renderGuide(g, x, y, mx, my, partial);
+            return;
+        }
+        renderTab(g, x, y, mx, my, partial);
+    }
+
+    /** A guide page: its own body, or the page's tab with the tab's footer hidden; then the strip and the footer keys. */
+    private void renderGuide(GuiGraphics g, int x, int y, int mx, int my, float partial) {
+        if (guide.custom()) {
+            guide.renderCustom(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial);
+        } else {
+            int before = hits.size();
+            Ui.scissor(g, x, y + 20, x + W, y + H - 24);
+            renderTab(g, x, y, mx, my, partial);
+            g.disableScissor();
+            int footer = y + H - 24;
+            for (int i = hits.size() - 1; i >= before; i--) {
+                if (hits.get(i).y() >= footer) {
+                    hits.remove(i); // the tab's own footer keys are under the guide's
+                }
+            }
+        }
+        guide.renderFrame(g, x, y, mx, my, hits);
+    }
+
+    private void renderTab(GuiGraphics g, int x, int y, int mx, int my, float partial) {
         if (tab == STAFF) {
             staff.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial);
@@ -405,6 +528,11 @@ public class AdminScreen extends Screen {
         if (tab == DROPS) {
             drops.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the search box
+            return;
+        }
+        if (tab == CLIENTS) {
+            clients.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the reason, message and add boxes
             return;
         }
         if (tab == CHUNKS) {
@@ -425,7 +553,9 @@ public class AdminScreen extends Screen {
         }
         drawList(g, x, y, mx, my);
         drawPane(g, x, y, mx, my);
-        drawFooter(g, x, y, mx, my);
+        if (guide == null) {
+            drawFooter(g, x, y, mx, my);
+        }
         super.render(g, mx, my, partial);
     }
 
@@ -514,7 +644,11 @@ public class AdminScreen extends Screen {
         int previewW = Math.max(46, Ui.width(font, preview, TINY) + 16);
         key(g, x + W - PAD - askW, fy, askW, ask, sure ? KeyStyle.SURE : KeyStyle.WARN, true, mx, my, this::askAgain, FOOTER_H);
         key(g, x + W - PAD - askW - 4 - previewW, fy, previewW, preview, KeyStyle.GHOST, !view.rules().isEmpty(), mx, my, this::preview, FOOTER_H);
-        Ui.text(g, font, Ui.fit(font, status, W - 3 * PAD - askW - previewW, TINY), x + PAD, fy + 5, Ui.MUTED, TINY);
+        String setupKey = Tr.t("admin.setup.guide_key");
+        int setupW = Ui.width(font, setupKey, TINY) + 16;
+        key(g, x + W - PAD - askW - 4 - previewW - 4 - setupW, fy, setupW, setupKey, KeyStyle.GHOST, true, mx, my,
+                () -> ServerUtilsNetwork.CHANNEL.sendToServer(com.mrgregles.bsp_server_utilities.network.SetupEditPacket.of(com.mrgregles.bsp_server_utilities.network.SetupEditPacket.Action.OPEN)), FOOTER_H);
+        Ui.text(g, font, Ui.fit(font, status, W - 4 * PAD - askW - previewW - setupW, TINY), x + PAD, fy + 5, Ui.MUTED, TINY);
     }
 
     private enum KeyStyle { PLAIN, WARN, SURE, GHOST }
@@ -632,6 +766,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == DROPS) {
             return drops.scroll(delta);
+        }
+        if (tab == CLIENTS) {
+            return clients.scroll(mx, delta);
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {

@@ -99,6 +99,28 @@ public interface StorageBackend {
 
     void saveDespawnSettings(com.mrgregles.bsp_server_utilities.despawn.DespawnSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ the client check (SU-20)
+
+    /** The network's client check rules, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.check.CheckRules loadCheckRules() throws Exception;
+
+    void saveCheckRules(com.mrgregles.bsp_server_utilities.check.CheckRules rules) throws Exception;
+
+    /** The network's trusted setup, or null when none was ever taken. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.check.TrustedSetup loadTrustedSetup() throws Exception;
+
+    void saveTrustedSetup(com.mrgregles.bsp_server_utilities.check.TrustedSetup setup) throws Exception;
+
+    // ------------------------------------------------------------------ the setup guide (SU-22)
+
+    /** The network's setup guide state, or null when none was ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.setup.SetupState loadSetupState() throws Exception;
+
+    void saveSetupState(com.mrgregles.bsp_server_utilities.setup.SetupState state) throws Exception;
+
     String describe();
 
     void close() throws Exception;

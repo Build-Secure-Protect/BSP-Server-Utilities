@@ -61,6 +61,7 @@ public final class PanelEditing {
      * source (or one that never loaded) is loaded in the background.
      */
     public static Outcome save(ServerPlayer player, BlockPos pos, CompoundTag tag) {
+        com.mrgregles.bsp_server_utilities.setup.SetupService.touched(player.server, com.mrgregles.bsp_server_utilities.setup.Feature.PANELS); // changed in its tab: set up (D152)
         Outcome check = check(player, pos);
         if (check != Outcome.SAVED) {
             return check;

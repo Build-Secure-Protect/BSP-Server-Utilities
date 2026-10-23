@@ -1,6 +1,6 @@
 # BSP-Server Utilities
 
-Server quality of life for the Build Secure Protect (BSP) network: Minecraft 1.20.1, Forge 47.4.x, Mohist backends behind a Velocity proxy. MIT.
+Server quality of life for the Build Secure Protect (BSP) network: Minecraft 1.20.1, Forge 47.4.x servers behind a Velocity proxy. MIT.
 
 Features:
 
@@ -10,6 +10,7 @@ Features:
 - **Chunk unloading**: chunks other mods keep loaded for a player's machines unload when that player has been away from the server for 5 minutes, and load again when they return; BSP-Core's totem and projector chunks never unload.
 - **Despawn times**: dropped items and experience orbs last a set time of the server's running time, counted whether or not anyone is near (5 minutes; death drops 15; exceptions per item); `/su clearitems` clears this server, one or all.
 - **AFK detection**: players idle for 5 minutes are marked AFK (staff show as away on the staff panels); admins can have players AFK too long kicked, never staff or operators.
+- **Client check**: every client says, while it logs in, which mods, resource packs and shader it has, its brightness, and whether common stone blocks still look solid; a player with a blocked mod or pack, or a see-through stone pack, is refused with a list of what to remove. Admins see everyone's setup, what differs from a trusted setup, and can kick with a reason. A deterrent, not proof: a client built to lie can lie.
 - **Action log**: every command staff run (private messages never), items they take from the creative menu or give, and game-mode changes, kept for a week and shared across the servers. Admins switch single commands off; every switch change is logged. Players read it with coordinates hidden.
 
 The mod is in development and has not yet been tried on a live server.
@@ -22,10 +23,12 @@ The mod is in development and has not yet been tried on a live server.
 - `/su away`: show as away on the staff panels (staff).
 - `/afk`: mark yourself AFK until your next action (everyone).
 - `/su clearitems here | all | <server>`: clear dropped items after a 60-second warning (operators, BSP-Core admins).
+- `/su setup`: the setup guide, a page per feature with NEXT, SETUP LATER and TURN OFF FEATURE (operators, BSP-Core admins; offered at their join until done or ignored).
+- `/su client <player>`: what a player's client reported and what the check made of it; `/su clientcheck export | reload`: write or read `config/bsp_server_utilities/trusted_setup.json` (operators, BSP-Core admins).
 
 ## Requirements
 
-- Minecraft 1.20.1 with Forge 47.4.10 or newer (Mohist 1.20.1 on the servers).
+- Minecraft 1.20.1 with Forge 47.4.10 or newer (the network runs 47.4.23). On the servers, BSP-Core's full jar (not -slim) provides the MySQL driver for shared storage.
 - Optional: BSP-Core 1.4.0 or newer (its database settings, server id and Score Screens are used when it is there), LuckPerms (staff groups).
 
 ## Configuring
