@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-24
+
+### Fixed
+- The setup card in the top right corner was hidden behind JourneyMap's minimap (and could be behind any HUD drawn at the end of the frame). It is now drawn when Forge has finished the whole HUD, over everything else, so it is always in sight and, with chat open, clickable.
+
 ## [0.4.0] - 2026-10-23
 
 ### Added

@@ -4,6 +4,7 @@ import com.mrgregles.bsp_server_utilities.network.ServerUtilsNetwork;
 import com.mrgregles.bsp_server_utilities.network.SetupCardPacket;
 import com.mrgregles.bsp_server_utilities.network.SetupEditPacket;
 import com.mrgregles.bsp_server_utilities.setup.Feature;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -11,7 +12,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.Nullable;
@@ -21,7 +21,7 @@ import java.util.List;
 
 /**
  * The setup card in the top right corner (owner decisions D155, D159, D160), as on {@code tools/preview/setup_refined.html}:
- * it does not stop the game; its keys (SETUP NOW or CONTINUE SETUP, LATER, IGNORE SETUP, and × for later) can be
+ * drawn over everything else on the HUD (minimaps included); it does not stop the game; its keys (SETUP NOW or CONTINUE SETUP, LATER, IGNORE SETUP, and × for later) can be
  * clicked whenever chat is open; it stays until a choice is made and is hidden while any other screen is open.
  */
 public final class ClientSetupGuide {
@@ -40,11 +40,6 @@ public final class ClientSetupGuide {
 
     /** Once, at client set-up. */
     public static void register() {
-        MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> {
-            if (card != null && Minecraft.getInstance().screen == null) {
-                draw(e.getGuiGraphics(), -1, -1, false);
-            }
-        });
         MinecraftForge.EVENT_BUS.addListener((ScreenEvent.Render.Post e) -> {
             if (card != null && e.getScreen() instanceof ChatScreen) {
                 draw(e.getGuiGraphics(), e.getMouseX(), e.getMouseY(), true);
@@ -62,6 +57,22 @@ public final class ClientSetupGuide {
             }
         });
         MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> card = null);
+    }
+
+    /**
+     * The card on the HUD, while no screen is open; called when Forge's HUD has finished ({@code mixin/ForgeGuiMixin}),
+     * so a minimap drawn at the end of the HUD (JourneyMap's) is under it. Depth testing is off while it draws, so
+     * nothing drawn before can cover it.
+     */
+    public static void drawHud(GuiGraphics g) {
+        if (card == null || Minecraft.getInstance().screen != null) {
+            return;
+        }
+        g.flush();
+        RenderSystem.disableDepthTest();
+        draw(g, -1, -1, false);
+        g.flush();
+        RenderSystem.enableDepthTest();
     }
 
     private static void choose(SetupEditPacket.Action a) {

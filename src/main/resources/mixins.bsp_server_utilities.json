@@ -10,7 +10,9 @@
     "ExperienceOrbAccess"
   ],
   "server": [],
-  "client": [],
+  "client": [
+    "ForgeGuiMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

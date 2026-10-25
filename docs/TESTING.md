@@ -312,3 +312,9 @@ Every server now runs Forge 1.20.1-47.4.23 with the LuckPerms Forge mod; the Moh
 
 In game:
 1. With BSP-Core's storage on MySQL, start a server: `/su status` shows "Shared storage: ..." with no errors; the log has no "No MySQL driver" line. With BSP-Core's -slim jar instead, the log says to install the full jar and records stay on this server.
+
+## 2026-10-24: the setup card under JourneyMap's minimap (owner's in-game report)
+
+Seen in game: the card was hidden behind JourneyMap's minimap in the top right. JourneyMap draws its minimap when Forge's HUD finishes, at the lowest priority, after the card. The card is now drawn by a client mixin at the end of Forge's HUD render (`ForgeGuiMixin`, RETURN), after every such listener, with depth testing off. The dev client reached its title screen with the mixin applied; 77 GameTests pass. Released as 0.4.1.
+
+In game: join as an operator with JourneyMap's minimap in the top right: the card is drawn over the minimap; open chat (T): still over it and clickable.
