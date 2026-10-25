@@ -324,3 +324,27 @@ In game: join as an operator with JourneyMap's minimap in the top right: the car
 Seen in game on the network: the guide showed no NEXT or DONE, so no page could be finished. Cause: with shared storage the admin panel opens only after the database has counted who agreed to the rules, while the guide's data was sent at once, reached the client first and was dropped; the plain panel opened instead of the guide (singleplayer and test servers without a database never showed it). Fix: the guide's data is sent after the panel's view; the client also keeps guide data that arrives early for ten seconds. Headless: 78 GameTests pass (new: with shared storage the guide's data waits for the panel). Released as 0.4.2. **Not yet seen in a client on the network.**
 
 In game (on a server with MySQL): SETUP NOW on the card, the chat line and `/su setup`: the panel opens taller with the progress bar and "SETUP n/10"; BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot; Finish has DONE. SETUP GUIDE on the RULES tab does the same from an open panel.
+
+## 2026-10-25: SU-24, the player counter, server side
+
+Headless: 85 GameTests pass (new: a player counted once across two servers sharing storage, with the welcome on the server joined and "[alpha] Welcome ..." on the other; a returning player not counted on a server of its own, and the welcome in typed words; set, add, reset and back to the real count, each in the Action Log, the commands not logged twice; the players' copy (title, number, today, this week, newest, how long ago); the newest settings winning between servers; turned off, nobody counted or welcomed and players see nothing; the guide page's actions for admins only). **Not yet run on the network's MySQL, or with real players joining.**
+
+In game (two servers of the network with shared storage, and a second account or a friend who has never joined):
+1. The new account joins server A: everyone on A reads a gold "Welcome <name>, player number N on BSP!"; everyone on server B reads "[A] Welcome <name>, player number N on BSP!" with A's name in grey. N is one more than `/su players` showed before.
+2. The same account leaves and joins B: no welcome, and `/su players` on either server shows the same number.
+3. `/su players set 1500`, `/su players add 5`, `/su players add -10`, `/su players reset`, `/su players true`: each answers with the number shown and the real count; `/actionlog` (or the LOG tab) has one entry for each ("set the player count to 1,500 (real count ...)") and none for the command itself.
+4. `/su status` has "Players: N shown (real count R), counted for the network."; on a server without shared storage "on this server only".
+5. A player refused by the client check (a blocked pack) is not counted.
+
+## 2026-10-25: SU-25, the PLAYERS board, Player count panels and the guide page
+
+Headless: 86 GameTests pass, twice (new: a Player count panel keeps its own title, cut to 32 characters, and the new-counts tick, saved by an admin). **The board, the face, the panel's pane and the guide page have not been drawn in a client.**
+
+In game:
+1. A BSP-Core Score Screen: in its settings, Show: Board, the board "Players of BSP" is listed; it shows "Have played BSP" with the number in gold, "New today", "New this week" and "Newest" with a name and how long ago (`tools/preview/counter_refined.html`, part 1).
+2. Change the title on the guide page: the board's title follows (in the board list too).
+3. A Display Panel (4 x 2): the mode keys read TEXT, IMAGE, STAFF ONLINE, ACTION LOG, PLAYER COUNT. PLAYER COUNT: the preview shows the counter's title in teal, the number in gold, "players have joined the network" and "12 new today · 58 this week"; type a title in "Title on this panel": the preview follows; untick "New today and this week": the line goes. SAVE: the panel in the world shows the same. Try 1 x 1 and 8 x 6 panels: nothing runs off the face.
+4. `/su setup`, then NEXT to page 10/11 "Player counter": the number shown and the real count at the left; type 1,500 and SET: the number becomes 1,500 and the board follows within a second; ADD with -500; RESET TO 0 asks SURE? first; REAL COUNT. At the right, the title and the welcome words, with the count against 160 and the line as it will read in gold (with your own name). Change both, then NEXT: a new player is welcomed in the new words; the board has the new title.
+5. On that page TURN OFF FEATURE: the board shows no lines, Player count panels show only their background, the panel's pane says the counter is off, and a new player is neither counted nor welcomed. TURN ON FEATURE: all back.
+6. Finish lists Player counter with the other pages.
+

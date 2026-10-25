@@ -120,6 +120,11 @@ SCREENS = [
     ("setup_guide", "setup_refined.html", '<div class="scr v"', 2, True),
     ("setup_check", "setup_refined.html", '<div class="scr v"', 3, True),
     ("setup_finish", "setup_refined.html", '<div class="scr v"', 4, True),
+    ("players_board", "counter_refined.html", '<div class="board"', 0, True, ".board .g { color: #FFD23A; }"),  # BSP-Core draws the values in gold
+    ("face_players", "counter_refined.html", '<div class="wallbg"', 0, False),
+    ("panel_players_pane", "counter_refined.html", '<div class="scr v"', 0, True),
+    ("setup_players", "counter_refined.html", '<div class="scr v"', 1, True),
+    ("players_welcome", "counter_refined.html", '<div class="world"', 0, False, ".chat { display: block; }"),  # one chat line, as in game
 ]
 
 # ---------------------------------------------------------------- the block, drawn in CSS
@@ -206,7 +211,7 @@ def network():
         body += box(20 + i * 210, 20, 180, 56, n, s, "#19D3B0")
         body += f'<div style="position:absolute;left:{110 + i * 210}px;top:76px;width:0;height:58px;border-left:1.5px dashed #9AA3B5"></div>'
     body += '<div style="position:absolute;left:110px;top:134px;width:420px;border-top:1.5px dashed #9AA3B5"></div>'
-    body += box(110, 150, 200, 56, "MySQL", "rules, staff, the log, every setting, client checks", "#B58CFF")
+    body += box(110, 150, 200, 56, "MySQL", "rules, staff, the log, players, every setting", "#B58CFF")
     body += box(330, 150, 200, 56, "Redis", "changes reach every server at once", "#B58CFF")
     body += '<div class="capm" style="position:absolute;left:20px;top:222px;width:600px;text-align:center">BSP-Core\'s database and Redis are used when it is installed; without them each server keeps its own.</div>'
     body += "</div>"
@@ -216,7 +221,7 @@ def network():
 def banner():
     body = (f'<div style="position:relative;width:600px;height:150px;background:#0C0E12;overflow:hidden">'
             f'<div class="vt" style="position:absolute;left:30px;top:34px;color:#19D3B0;font-size:44px;line-height:40px">BSP SERVER UTILITIES</div>'
-            f'<div style="position:absolute;left:30px;top:80px;font:400 12px \'IBM Plex Sans\',sans-serif;color:#E6EAF2;line-height:16px">Rules · display panels · staff online · action log · AFK<br>chunk unloading · despawn times · client check · setup guide</div>'
+            f'<div style="position:absolute;left:30px;top:80px;font:400 12px \'IBM Plex Sans\',sans-serif;color:#E6EAF2;line-height:16px">Rules · display panels · staff online · action log · AFK · chunk unloading<br>despawn times · client check · player counter · setup guide</div>'
             f'<div class="vt" style="position:absolute;left:30px;top:118px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div>'
             f'<div style="position:absolute;right:22px;top:24px;width:150px;height:100px;background:#2A2F3A">'
             f'<div style="position:absolute;inset:3px;background:#10151C" class="vt">'

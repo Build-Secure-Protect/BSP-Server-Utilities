@@ -29,7 +29,9 @@ import java.util.Locale;
  * its fit, and under it the source (a web address, or a file from the server's images folder), the fit, REFRESH NOW
  * (the saved picture again) and the refresh timer; the footer says what the last load brought. In Staff online and
  * Action log modes (D59) the face shows the live data as players see it, and under it what the panel shows: for staff,
- * offline people too and which roles; for the log, every server or this one, which kinds, and 6, 8 or 12 lines.
+ * offline people too and which roles; for the log, every server or this one, which kinds, and 6, 8 or 12 lines. In
+ * Player count mode (D172, D175, D178) the face shows the counter as players see it, and under it the panel's own title
+ * (empty: the counter's) and the tick for the new counts.
  */
 public class PanelScreen extends Screen {
     static final int W = 344, H = 230;
@@ -55,8 +57,10 @@ public class PanelScreen extends Screen {
     private boolean logAll;
     private final List<String> logKinds = new ArrayList<>();
     private int logLines;
+    private String countTitle;
+    private boolean countNew;
     @Nullable
-    private EditBox urlBox;
+    private EditBox urlBox, countBox;
     private int selected = -1;
     private final List<Ui.Hit> hits = new ArrayList<>();
     @Nullable
@@ -78,6 +82,8 @@ public class PanelScreen extends Screen {
         this.logAll = original.log().allServers();
         this.logKinds.addAll(original.log().kinds());
         this.logLines = original.log().lines();
+        this.countTitle = original.count().title();
+        this.countNew = original.count().newCounts();
         PanelSettings.Image img = original.image();
         this.source = img.source();
         this.url = img.url();
@@ -206,7 +212,8 @@ public class PanelScreen extends Screen {
 
     private PanelSettings current() {
         return new PanelSettings(mode, background, lines, image(), original.placedBy(), original.revision())
-                .withViews(new PanelSettings.StaffView(staffOffline, staffRoles), new PanelSettings.LogView(logAll, logKinds, logLines)).sanitised();
+                .withViews(new PanelSettings.StaffView(staffOffline, staffRoles), new PanelSettings.LogView(logAll, logKinds, logLines))
+                .withCount(new PanelSettings.CountView(countTitle, countNew)).sanitised();
     }
 
     private void save() {
@@ -226,7 +233,16 @@ public class PanelScreen extends Screen {
         textBox = null;
         hexBox = null;
         urlBox = null;
+        countBox = null;
         int x = left() + MAIN_X, y = top();
+        if (mode == PanelSettings.Mode.PLAYERS) {
+            countBox = new EditBox(font, x + 1, y + 141, MAIN_W - 2, 12, Component.literal(Tr.t("panel.players.title")));
+            countBox.setMaxLength(PanelSettings.CountView.MAX_TITLE);
+            countBox.setValue(countTitle);
+            countBox.setResponder(s -> countTitle = s);
+            addRenderableWidget(countBox);
+            return;
+        }
         if (mode == PanelSettings.Mode.IMAGE) {
             if (source == PanelSettings.Source.WEB) {
                 urlBox = new EditBox(font, x + 1, y + 147, MAIN_W - 2, 12, Component.literal(Tr.t("panel.web_address")));
@@ -271,6 +287,9 @@ public class PanelScreen extends Screen {
         if (urlBox != null) {
             urlBox.tick();
         }
+        if (countBox != null) {
+            countBox.tick();
+        }
         if (hexBox != null) {
             hexBox.tick();
         }
@@ -301,6 +320,9 @@ public class PanelScreen extends Screen {
         } else if (mode == PanelSettings.Mode.LOG) {
             drawLivePreview(g, x, y);
             drawLogPane(g, x, y);
+        } else if (mode == PanelSettings.Mode.PLAYERS) {
+            drawLivePreview(g, x, y);
+            drawCountPane(g, x, y);
         } else {
             drawPreview(g, x, y, mx, my);
             drawInspector(g, x, y, mx, my);
@@ -316,8 +338,8 @@ public class PanelScreen extends Screen {
     }
 
     private void drawModes(GuiGraphics g, int x, int y) {
-        String[] keys = {"panel.mode.text", "panel.mode.image", "panel.mode.staff", "panel.mode.log"};
-        PanelSettings.Mode[] modes = {PanelSettings.Mode.TEXT, PanelSettings.Mode.IMAGE, PanelSettings.Mode.STAFF, PanelSettings.Mode.LOG};
+        String[] keys = {"panel.mode.text", "panel.mode.image", "panel.mode.staff", "panel.mode.log", "panel.mode.players"};
+        PanelSettings.Mode[] modes = {PanelSettings.Mode.TEXT, PanelSettings.Mode.IMAGE, PanelSettings.Mode.STAFF, PanelSettings.Mode.LOG, PanelSettings.Mode.PLAYERS};
         for (int i = 0; i < keys.length; i++) {
             int cx = x + PAD, cy = y + 22 + i * 14;
             boolean on = modes[i] == mode;
@@ -569,6 +591,8 @@ public class PanelScreen extends Screen {
         FaceCanvas canvas = FaceCanvas.gui(g, font, px, py, k);
         if (mode == PanelSettings.Mode.LOG) {
             LogFace.draw(canvas, bw, bh, new PanelSettings.LogView(logAll, logKinds, logLines));
+        } else if (mode == PanelSettings.Mode.PLAYERS) {
+            PlayersFace.draw(canvas, bw, bh, new PanelSettings.CountView(countTitle.strip(), countNew));
         } else {
             StaffFace.draw(canvas, bw, bh, new PanelSettings.StaffView(staffOffline, staffRoles));
         }
@@ -602,6 +626,28 @@ public class PanelScreen extends Screen {
                 }
             });
             cx += w + 4;
+        }
+    }
+
+    /** Player count: the panel's own title (empty: the counter's) and the tick for the new counts (D178). */
+    private void drawCountPane(GuiGraphics g, int x, int y) {
+        int ix = x + MAIN_X, ry = y + 131;
+        Ui.text(g, font, Tr.t("panel.players.title").toUpperCase(Locale.ROOT), ix, ry, Ui.MUTED, TINY);
+        String counter = ClientPlayers.view().title().isEmpty() ? com.mrgregles.bsp_server_utilities.players.PlayersSettings.DEFAULT_TITLE : ClientPlayers.view().title();
+        Ui.text(g, font, Ui.fit(font, Tr.t("panel.players.title_hint", counter.toUpperCase(Locale.ROOT), PanelSettings.CountView.MAX_TITLE), MAIN_W, TINY), ix, ry + 25, Ui.MUTED, TINY);
+        int ty = ry + 36;
+        Ui.text(g, font, Tr.t("panel.players.under").toUpperCase(Locale.ROOT), ix, ty, Ui.MUTED, TINY);
+        int bx = ix, by = ty + 9;
+        g.fill(bx, by, bx + 9, by + 9, Ui.SLOT);
+        Ui.frame(g, bx, by, 9, 9, countNew ? Ui.VIOLET : Ui.DIM);
+        if (countNew) {
+            g.fill(bx + 2, by + 2, bx + 7, by + 7, Ui.VIOLET);
+        }
+        String label = Tr.t("panel.players.new_counts");
+        Ui.text(g, font, Ui.fit(font, label, MAIN_W - 14, SMALL), bx + 13, by + 2, Ui.TEXT, SMALL);
+        hits.add(new Ui.Hit(bx, by, 13 + Ui.width(font, label, SMALL), 9, () -> countNew = !countNew));
+        if (com.mrgregles.bsp_server_utilities.setup.Switches.off(com.mrgregles.bsp_server_utilities.setup.Feature.PLAYERS)) {
+            Ui.text(g, font, Ui.fit(font, Tr.t("panel.players.off"), MAIN_W, TINY), ix, by + 14, Ui.GOLD, TINY);
         }
     }
 

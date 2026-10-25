@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-25
+
+### Added
+- The player counter, server side: every player who joins any server of the network for the first time is counted once, by UUID, from the day the counter starts (players from before are not counted; players the client check refuses never joined). With shared storage the network keeps one list, a row per player inserted once, so two servers never count the same player twice; without it each server keeps its own. The number shown is the real list plus an adjustment: `/su players` (the number, the real count and the adjustment, new today and in the last seven days, the newest), `/su players set <n>`, `add <n>` (a negative number takes away; never below 0), `reset` (0 from now) and `true` (back to the real count); each change, and a change of the title or the welcome words, is written to the Action Log under who made it. A new player is welcomed in gold in words admins type, with `{name}` and `{number}` filled in (up to 160 characters, starting "Welcome {name}, player number {number} on BSP!"), on every server of the network: as typed on the server joined, after that server's name in grey ("[BSP-Spawn] Welcome ...") on the others, with the number as shown. Every player's copy (title, number, new today, new this week, newest and how long ago) is kept current. A Players line in `/su status`.
+- The setup guide's Player counter page, after Display panels (the guide has eleven pages): the number shown and the real count, SET and ADD with a typed number, RESET TO 0 (a second click to confirm) and REAL COUNT, the title (up to 32 characters, "Players of BSP" to start) and the welcome line's words with the line as it will read; TURN OFF FEATURE stops the counting and the welcome, and the board and panels show nothing. Existing servers are asked about this page at an admin's next join.
+- The PLAYERS board for BSP-Core's Score Screens: the counter's title, then "Have played BSP" with the number in gold, "New today", "New this week" and "Newest" with the name and how long ago.
+- The Player count mode on Display Panels, the fifth mode: the title in teal, the number large in gold, "players have joined the network" under it, and the new counts ("12 new today · 58 this week") when the panel's tick is on. Each panel can type its own title (up to 32 characters); empty, it shows the counter's.
+
+### Changed
+- The mod's network protocol is now version 3: clients and servers must both have this version to connect.
+- Built against BSP-Core 1.5.0 (any BSP-Core from 1.4.0 still works, and BSP-Core stays optional).
+
 ## [0.4.2] - 2026-10-25
 
 ### Fixed

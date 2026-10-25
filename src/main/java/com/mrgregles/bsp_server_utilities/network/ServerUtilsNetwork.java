@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "2";
+    private static final String PROTOCOL = "3";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -121,6 +121,10 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(SetupEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(SetupEditPacket::encode).decoder(SetupEditPacket::decode)
                 .consumerMainThread(SetupEditPacket::handle).add();
+        // The player counter (D166 to D181).
+        CHANNEL.messageBuilder(PlayersViewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(PlayersViewPacket::encode).decoder(PlayersViewPacket::decode)
+                .consumerMainThread(PlayersViewPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

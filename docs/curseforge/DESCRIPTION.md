@@ -1,8 +1,8 @@
 ![BSP-Server Utilities](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/banner.png)
 
-**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all; players who join with a blocked mod or an xray pack are turned away with a list of what to remove; and a setup guide walks admins through all of it. Made for the Build Secure Protect network; works on any Forge 1.20.1 server.
+**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all; players who join with a blocked mod or an xray pack are turned away with a list of what to remove; every new player is counted and welcomed by name and number on every server; and a setup guide walks admins through all of it. Made for the Build Secure Protect network; works on any Forge 1.20.1 server.
 
-**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server, the same version on both. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, two boards for its Score Screens; its full jar carries the MySQL driver), LuckPerms (staff groups; the LuckPerms Forge mod), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
+**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server, the same version on both. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, three boards for its Score Screens; its full jar carries the MySQL driver), LuckPerms (staff groups; the LuckPerms Forge mod), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
 
 ## For players: joining
 
@@ -28,7 +28,7 @@ Type **/rules** any time to read them again, with the date you agreed.
 
 ![Display Panels on a wall](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/block_world.png)
 
-Around the server you will find Display Panels: wall screens made of blocks, lit at full brightness, showing whatever the admins put on them. A welcome, the rules in short, a map of spawn, or one of the two live faces below.
+Around the server you will find Display Panels: wall screens made of blocks, lit at full brightness, showing whatever the admins put on them. A welcome, the rules in short, a map of spawn, or one of the three live faces below.
 
 ![The Staff online face](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/face_staff.png)
 
@@ -41,6 +41,20 @@ Around the server you will find Display Panels: wall screens made of blocks, lit
 ![/actionlog](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/actionlog_screen.png)
 
 Type **/actionlog** to read the newest 100 entries yourself. Every command staff run is in it (private messages never), with the items they take from the creative menu or give and every game-mode change, from every server, for a week. Nobody can edit or delete an entry, staff included.
+
+![The Player count face](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/face_players.png)
+
+**Player count:** how many players have ever joined the network, with how many are new today and this week.
+
+## For players: the player count
+
+![The welcome line](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/players_welcome.png)
+
+The first time someone joins the network, everyone on every server reads a gold welcome with their name and their number: you are player number 1,235 on BSP. On the other servers the line starts with the server they joined, in grey.
+
+![The PLAYERS board](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/players_board.png)
+
+The number is on the PLAYERS board of the Score Screens around the server (with how many are new today and this week, and the newest player) and on Player count panels. Everyone counts once, however many servers they play on.
 
 ## For players: AFK
 
@@ -68,7 +82,7 @@ When an operator or BSP-Core admin joins and something is not set up yet, a card
 
 ![A page of the guide](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_guide.png)
 
-SETUP NOW opens the admin panel as a guide, one page per feature: Welcome (this server's name, written to its config file, and the storage it shares), staff groups, rules, the action log, AFK, chunk unloading, despawn times, the client check and display panels. Each page is that feature's own tab with BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot. Turning a feature off stops it on every server: no rules popup, nothing logged (asked twice), vanilla despawning, nobody checked at login, empty staff panels, or dark display panels.
+SETUP NOW opens the admin panel as a guide, one page per feature: Welcome (this server's name, written to its config file, and the storage it shares), staff groups, rules, the action log, AFK, chunk unloading, despawn times, the client check, display panels and the player counter. Each page is that feature's own tab with BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot. Turning a feature off stops it on every server: no rules popup, nothing logged (asked twice), vanilla despawning, nobody checked at login, empty staff panels, dark display panels, or nobody counted or welcomed.
 
 ![Finish](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_finish.png)
 
@@ -103,6 +117,10 @@ The Display Panel is in the Functional Blocks tab of the creative menu (there is
 ![The Action log pane](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/panel_log_pane.png)
 
 **Action log:** every server or only this one, which kinds of entry (commands, creative items, game modes, gives, switches), and 6, 8 or 12 lines.
+
+![The Player count pane](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/panel_players_pane.png)
+
+**Player count:** a title of this panel's own (32 characters; empty shows the counter's title), and whether the new counts show under the number.
 
 ## For admins: staff
 
@@ -146,6 +164,12 @@ Click a player for their machines: the mod, where, and how many chunks; RESTORE 
 
 **Exceptions:** + add an item opens a search over every item in the pack, by name or id; give the picked item its own time (1 to 120 minutes) or NEVER. Never items are kept by a clear too.
 
+## For admins: the player counter
+
+![The guide's Player counter page](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_players.png)
+
+The setup guide's Player counter page (or **/su players** in chat) shows the number and the real count. The number shown is the real count plus an adjustment you set: SET a number, ADD to it (a minus takes away, never below 0), RESET TO 0 to count from now (a second click to confirm), or REAL COUNT to go back; the real list of who joined is never lost. Under the title (shared by the board and every panel without its own) you type the welcome line's words, with `{name}` and `{number}` filled in (160 characters), and see the line as it will read. Every change is written in the action log under your name. Counting starts the day the mod is installed; a player refused by the client check never joined, so never counts. TURN OFF FEATURE stops the counting and the welcome, and the board and panels show nothing.
+
 ## For admins: the client check
 
 ![The CLIENTS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_clients.png)
@@ -168,11 +192,11 @@ A deterrent, not proof: a game built on purpose to lie can lie. It stops downloa
 
 ![Several servers, shared records](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/network.png)
 
-With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, the AFK, chunk and drop settings, the client check's rules and trusted setup, and how far the setup guide got are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online, who is AFK, and what each player's game reported. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar (not its -slim jar) provides one.
+With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, the AFK, chunk and drop settings, the client check's rules and trusted setup, who has joined the network and the counter's settings, and how far the setup guide got are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online, who is AFK, and what each player's game reported. Without BSP-Core, fill in `serverconfig/bsp_server_utilities-server.toml` yourself, or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar (not its -slim jar) provides one.
 
 ## With the other BSP mods
 
-- **BSP-Core:** its database, Redis and server name; its admins can edit; its admin kit gives go into the action log; **STAFF ONLINE** and **ACTION LOG** are boards you can pick on its Score Screens; its totem and projector chunks are never unloaded and its items never removed from the ground.
+- **BSP-Core:** its database, Redis and server name; its admins can edit; its admin kit gives go into the action log; **STAFF ONLINE**, **ACTION LOG** and **PLAYERS** are boards you can pick on its Score Screens; its totem and projector chunks are never unloaded and its items never removed from the ground.
 - **BSP-InventorySync:** the rules popup waits until a player's inventory has arrived, so nothing is lost while they read.
 - **BSP-Region Guard:** the owner of the claim a chunk-loading machine stands in, when the machine itself does not say whose it is.
 - **LuckPerms:** staff are the members of the groups you pick in the STAFF tab.
@@ -186,8 +210,9 @@ With BSP-Core installed and its storage on MySQL, nothing needs setting up: the 
 | `/afk` | everyone | AFK until your next action |
 | `/su away` | staff | show as away on the staff panels, until typed again |
 | `/serverutils`, `/su` | operators, BSP-Core admins | the admin panel |
-| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings, the client check, the setup guide |
+| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings, the client check, the player counter, the setup guide |
 | `/su setup [now \| later \| ignore]` | operators, BSP-Core admins | the setup guide |
+| `/su players [set <n> \| add <n> \| reset \| true]` | operators, BSP-Core admins | the player count: show it, set it, add to it, reset it to 0, or go back to the real count |
 | `/su client <player>` | operators, BSP-Core admins | what a player's game reported and what the check made of it |
 | `/su clientcheck export \| reload` | operators, BSP-Core admins | write or read `trusted_setup.json` |
 | `/su clearitems here \| all \| <server>` | operators, BSP-Core admins | clear dropped items after a 60-second warning |

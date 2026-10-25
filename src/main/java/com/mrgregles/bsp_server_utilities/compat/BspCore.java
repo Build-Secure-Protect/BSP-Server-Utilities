@@ -79,12 +79,17 @@ public final class BspCore {
      * when BSP-Core is absent or has no boards.
      */
     public static void registerBoard(String path, String titleKey, java.util.function.Supplier<java.util.List<Line>> lines) {
+        registerBoard(path, net.minecraft.network.chat.Component.translatable(titleKey), lines);
+    }
+
+    /** As {@link #registerBoard(String, String, java.util.function.Supplier)} under a given title; registering the same path again replaces the board in place. */
+    public static void registerBoard(String path, net.minecraft.network.chat.Component title, java.util.function.Supplier<java.util.List<Line>> lines) {
         if (!isLoaded()) {
             return;
         }
         try {
             com.mrgregles.bsp_core.api.BspBoards.register(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, path),
-                    net.minecraft.network.chat.Component.translatable(titleKey), () -> lines.get().stream()
+                    title, () -> lines.get().stream()
                             .map(l -> new com.mrgregles.bsp_core.api.BspBoards.BoardLine(l.left(),
                                     l.value().isEmpty() ? null : net.minecraft.network.chat.Component.literal(l.value()), net.minecraft.world.item.ItemStack.EMPTY, l.colour()))
                             .toList());

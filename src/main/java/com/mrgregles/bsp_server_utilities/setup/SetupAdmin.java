@@ -3,6 +3,7 @@ package com.mrgregles.bsp_server_utilities.setup;
 import com.mrgregles.bsp_server_utilities.access.Perms;
 import com.mrgregles.bsp_server_utilities.network.ServerUtilsNetwork;
 import com.mrgregles.bsp_server_utilities.network.SetupEditPacket;
+import com.mrgregles.bsp_server_utilities.players.PlayerCounter;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -42,6 +43,22 @@ public final class SetupAdmin {
                     player.sendSystemMessage(Component.translatable("message.bsp_server_utilities.setup.name_saved", p.arg().strip()));
                 }
             }
+            case PLAYERS_SET, PLAYERS_ADD -> {
+                try {
+                    int n = Integer.parseInt(p.arg().strip().replace(",", ""));
+                    if (p.action() == SetupEditPacket.Action.PLAYERS_SET) {
+                        PlayerCounter.set(server, player, player.getGameProfile().getName(), n);
+                    } else {
+                        PlayerCounter.add(server, player, player.getGameProfile().getName(), n);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // not a number: nothing changes
+                }
+            }
+            case PLAYERS_RESET -> PlayerCounter.reset(server, player, player.getGameProfile().getName());
+            case PLAYERS_REAL -> PlayerCounter.backToReal(server, player, player.getGameProfile().getName());
+            case PLAYERS_TITLE -> PlayerCounter.setTitle(server, player, player.getGameProfile().getName(), p.arg());
+            case PLAYERS_WELCOME -> PlayerCounter.setWelcome(server, player, player.getGameProfile().getName(), p.arg());
             case REFRESH -> {
             }
         }

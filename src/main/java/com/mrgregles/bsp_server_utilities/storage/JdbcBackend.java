@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row).
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -95,6 +95,8 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_rules (id INT NOT NULL PRIMARY KEY, rules MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_setup (id INT NOT NULL PRIMARY KEY, setup MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "setup_state (id INT NOT NULL PRIMARY KEY, state MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, first_at BIGINT NOT NULL, first_server VARCHAR(64) NOT NULL, KEY first_at (first_at))");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL)");
         }
@@ -284,6 +286,70 @@ public final class JdbcBackend implements StorageBackend {
     public void saveSetupState(com.mrgregles.bsp_server_utilities.setup.SetupState s) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "setup_state (id, state, revision) VALUES (1, ?, ?)"
                 + " ON DUPLICATE KEY UPDATE state = VALUES(state), revision = VALUES(revision)")) {
+            ps.setString(1, s.encode());
+            ps.setLong(2, s.revision());
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public boolean insertPlayer(com.mrgregles.bsp_server_utilities.players.Joined j) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "players (uuid, name, first_at, first_server) VALUES (?, ?, ?, ?)")) {
+            ps.setString(1, j.id().toString());
+            ps.setString(2, j.name());
+            ps.setLong(3, j.atMs());
+            ps.setString(4, j.server());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public com.mrgregles.bsp_server_utilities.players.PlayerCounts playerCounts(long sinceMs, int limit) throws SQLException {
+        int real;
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + prefix + "players")) {
+            real = rs.next() ? rs.getInt(1) : 0;
+        }
+        List<com.mrgregles.bsp_server_utilities.players.Joined> recent = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name, first_at, first_server FROM " + prefix + "players WHERE first_at >= ? ORDER BY first_at DESC LIMIT ?")) {
+            ps.setLong(1, sinceMs);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    joined(rs).ifPresent(recent::add);
+                }
+            }
+        }
+        com.mrgregles.bsp_server_utilities.players.Joined newest = recent.isEmpty() ? null : recent.get(0);
+        if (newest == null && real > 0) {
+            try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT uuid, name, first_at, first_server FROM " + prefix + "players ORDER BY first_at DESC LIMIT 1")) {
+                if (rs.next()) {
+                    newest = joined(rs).orElse(null);
+                }
+            }
+        }
+        return new com.mrgregles.bsp_server_utilities.players.PlayerCounts(real, recent, newest);
+    }
+
+    private static java.util.Optional<com.mrgregles.bsp_server_utilities.players.Joined> joined(ResultSet rs) throws SQLException {
+        try {
+            return java.util.Optional.of(new com.mrgregles.bsp_server_utilities.players.Joined(UUID.fromString(rs.getString(1)), rs.getString(2), rs.getLong(3), rs.getString(4)));
+        } catch (IllegalArgumentException e) {
+            return java.util.Optional.empty(); // not a player id
+        }
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.players.PlayersSettings loadPlayersSettings() throws SQLException {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT settings FROM " + prefix + "players_settings WHERE id = 1")) {
+            return rs.next() ? com.mrgregles.bsp_server_utilities.players.PlayersSettings.decode(rs.getString(1)) : null;
+        }
+    }
+
+    @Override
+    public void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings s) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "players_settings (id, settings, revision) VALUES (1, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE settings = VALUES(settings), revision = VALUES(revision)")) {
             ps.setString(1, s.encode());
             ps.setLong(2, s.revision());
             ps.executeUpdate();

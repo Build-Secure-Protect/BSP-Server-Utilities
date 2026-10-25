@@ -16,10 +16,14 @@ import java.util.function.Supplier;
 /**
  * Server to client: the setup guide's data (D146 to D158): whether to open the guide and at which page, where every page
  * stands, and for the Welcome page this server's name in use and in the config file, whether storage is shared and its
- * status, and the other servers heard from.
+ * status, and the other servers heard from; for the Player counter page the number shown and the real count, the title
+ * and the welcome line's words (D173, D177 to D179).
  */
 public record SetupViewPacket(boolean open, Feature startAt, Map<Feature, SetupState.Status> statuses, String here, String named, boolean shared, String storage,
-                              List<String> servers) {
+                              List<String> servers, Players players) {
+    public record Players(int shown, int real, String title, String welcome) {
+    }
+
     public void encode(FriendlyByteBuf buf) {
         buf.writeBoolean(open);
         buf.writeEnum(startAt);
@@ -34,6 +38,10 @@ public record SetupViewPacket(boolean open, Feature startAt, Map<Feature, SetupS
         buf.writeUtf(storage.length() > 512 ? storage.substring(0, 512) : storage, 512);
         buf.writeVarInt(Math.min(servers.size(), 64));
         servers.stream().limit(64).forEach(s -> buf.writeUtf(s, 64));
+        buf.writeVarInt(players.shown());
+        buf.writeVarInt(players.real());
+        buf.writeUtf(players.title(), 64);
+        buf.writeUtf(players.welcome(), 320);
     }
 
     public static SetupViewPacket decode(FriendlyByteBuf buf) {
@@ -52,7 +60,8 @@ public record SetupViewPacket(boolean open, Feature startAt, Map<Feature, SetupS
         for (int i = 0; i < k; i++) {
             servers.add(buf.readUtf(64));
         }
-        return new SetupViewPacket(open, start, st, here, named, shared, storage, servers);
+        Players players = new Players(buf.readVarInt(), buf.readVarInt(), buf.readUtf(64), buf.readUtf(320));
+        return new SetupViewPacket(open, start, st, here, named, shared, storage, servers, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

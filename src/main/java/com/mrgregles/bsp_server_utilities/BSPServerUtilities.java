@@ -47,6 +47,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.despawn.ClearService.registerNotices();
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerNotices();
         com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
+        com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -59,6 +60,7 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.despawn.ClearService.onServerStarted();
             com.mrgregles.bsp_server_utilities.check.ClientCheckService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -76,6 +78,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogin(p);
+                com.mrgregles.bsp_server_utilities.players.PlayerCounter.onLogin(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
@@ -101,6 +104,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.despawn.ClearService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.check.ClientCheckService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.setup.SetupService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

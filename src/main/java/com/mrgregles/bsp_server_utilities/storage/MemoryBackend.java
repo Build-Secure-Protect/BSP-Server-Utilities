@@ -29,6 +29,8 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.check.CheckRules checkRules;
     private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
     private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
+    private com.mrgregles.bsp_server_utilities.players.PlayersSettings playersSettings;
+    private final Map<UUID, com.mrgregles.bsp_server_utilities.players.Joined> players = new java.util.LinkedHashMap<>();
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
     private final Map<String, Boolean> switches = new HashMap<>();
@@ -147,6 +149,32 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void saveSetupState(com.mrgregles.bsp_server_utilities.setup.SetupState state) throws Exception {
         check();
         setupState = state;
+    }
+
+    @Override
+    public synchronized boolean insertPlayer(com.mrgregles.bsp_server_utilities.players.Joined j) throws Exception {
+        check();
+        return players.putIfAbsent(j.id(), j) == null;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.players.PlayerCounts playerCounts(long sinceMs, int limit) throws Exception {
+        check();
+        List<com.mrgregles.bsp_server_utilities.players.Joined> all = new ArrayList<>(players.values());
+        all.sort((a, b) -> Long.compare(b.atMs(), a.atMs()));
+        return new com.mrgregles.bsp_server_utilities.players.PlayerCounts(all.size(), all.stream().filter(j -> j.atMs() >= sinceMs).limit(limit).toList(), all.isEmpty() ? null : all.get(0));
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.players.PlayersSettings loadPlayersSettings() throws Exception {
+        check();
+        return playersSettings;
+    }
+
+    @Override
+    public synchronized void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings settings) throws Exception {
+        check();
+        playersSettings = settings;
     }
 
     @Override

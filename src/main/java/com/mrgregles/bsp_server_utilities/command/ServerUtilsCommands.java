@@ -12,6 +12,8 @@ import com.mrgregles.bsp_server_utilities.check.ClientCheckService;
 import com.mrgregles.bsp_server_utilities.check.ClientReport;
 import com.mrgregles.bsp_server_utilities.check.TrustedSetup;
 import com.mrgregles.bsp_server_utilities.check.Verdict;
+import com.mrgregles.bsp_server_utilities.players.Joined;
+import com.mrgregles.bsp_server_utilities.players.PlayerCounter;
 import com.mrgregles.bsp_server_utilities.setup.Feature;
 import com.mrgregles.bsp_server_utilities.setup.SetupService;
 import com.mrgregles.bsp_server_utilities.setup.SetupState;
@@ -41,7 +43,8 @@ import java.util.stream.Collectors;
  * ask everyone again), for admins, and {@code /su} alone opens the admin panel; {@code /rules} for everyone (D12);
  * {@code /actionlog} for everyone, the log read only with coordinates hidden (D58); {@code /afk} for everyone (D77);
  * {@code client <player>} and {@code clientcheck export | reload} for admins (the client check, D130, D132); {@code setup [now |
- * later | ignore]} for admins (the setup guide, D154).
+ * later | ignore]} for admins (the setup guide, D154); {@code players [set <n> | add <n> | reset | true]} for admins (the
+ * player counter, D170: each change written to the Action Log).
  */
 public final class ServerUtilsCommands {
     private ServerUtilsCommands() {
@@ -80,6 +83,14 @@ public final class ServerUtilsCommands {
                             say(c.getSource(), Component.translatable("message.bsp_server_utilities.setup.ignored"));
                             return 1;
                         })))
+                .then(Commands.literal("players").requires(Perms::canEdit)
+                        .executes(c -> players(c.getSource()))
+                        .then(Commands.literal("set").then(Commands.argument("number", IntegerArgumentType.integer(0))
+                                .executes(c -> playersChanged(c.getSource(), PlayerCounter.set(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()), IntegerArgumentType.getInteger(c, "number"))))))
+                        .then(Commands.literal("add").then(Commands.argument("number", IntegerArgumentType.integer())
+                                .executes(c -> playersChanged(c.getSource(), PlayerCounter.add(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()), IntegerArgumentType.getInteger(c, "number"))))))
+                        .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
+                        .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
                 .then(Commands.literal("client").requires(Perms::canEdit)
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .suggests((c, b) -> {
@@ -304,6 +315,33 @@ public final class ServerUtilsCommands {
         return 1;
     }
 
+    /** Who changed the counter, for the Action Log when it is not a player: the console or RCON. */
+    private static String who(CommandSourceStack source) {
+        return source.getTextName().equals("Rcon") ? "RCON" : "Console";
+    }
+
+    /** {@code /su players}: the number shown, the real count and the adjustment, today's and this week's, the newest (D170). */
+    private static int players(CommandSourceStack source) {
+        if (PlayerCounter.off()) {
+            say(source, Component.translatable("message.bsp_server_utilities.players.off"));
+            return 0;
+        }
+        var server = source.getServer();
+        int offset = PlayerCounter.settings(server).offset();
+        long now = System.currentTimeMillis();
+        say(source, Component.translatable("message.bsp_server_utilities.players.shown", PlayerCounter.format(PlayerCounter.shown(server)), PlayerCounter.format(PlayerCounter.real()),
+                (offset >= 0 ? "+" : "-") + PlayerCounter.format(Math.abs(offset))));
+        Joined n = PlayerCounter.counts().newest();
+        say(source, Component.translatable("message.bsp_server_utilities.players.recent", PlayerCounter.format(PlayerCounter.counts().today(now)), PlayerCounter.format(PlayerCounter.counts().week(now)),
+                n == null ? "-" : n.name() + " (" + n.server() + ")"));
+        return 1;
+    }
+
+    private static int playersChanged(CommandSourceStack source, int shown) {
+        source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.players.changed", PlayerCounter.format(shown), PlayerCounter.format(PlayerCounter.real())), true);
+        return 1;
+    }
+
     /** {@code /su clientcheck export} (D132). */
     private static int clientExport(CommandSourceStack source) {
         java.nio.file.Path f = ClientCheckService.exportFile(source.getServer());
@@ -362,6 +400,9 @@ public final class ServerUtilsCommands {
         say(source, Component.translatable("message.bsp_server_utilities.status.check", which, ClientCheckService.rules(source.getServer()).block().size(), taken, ClientCheckService.refusedToday().size()));
         java.util.Map<Feature, SetupState.Status> pages = SetupService.statuses(source.getServer());
         long done = pages.values().stream().filter(st -> st == SetupState.Status.DONE).count();
+        say(source, PlayerCounter.off() ? Component.translatable("message.bsp_server_utilities.status.players_off")
+                : Component.translatable("message.bsp_server_utilities.status.players", PlayerCounter.format(PlayerCounter.shown(source.getServer())), PlayerCounter.format(PlayerCounter.real()),
+                Component.translatable(s == null ? "message.bsp_server_utilities.status.players_here" : "message.bsp_server_utilities.status.players_network")));
         say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
         return 1;
     }

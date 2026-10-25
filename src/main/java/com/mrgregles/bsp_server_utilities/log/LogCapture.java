@@ -34,7 +34,7 @@ public final class LogCapture {
         }
         String root = LogText.root(text);
         MinecraftServer server = source.getServer();
-        if (root.isEmpty() || server == null || !ActionLog.logged(server, root)) {
+        if (root.isEmpty() || server == null || !ActionLog.logged(server, root) || LogText.selfLogged(text)) {
             return;
         }
         String kind = LogText.MODE_COMMANDS.contains(root) ? LogEntry.MODE : LogText.GIVE_COMMANDS.contains(root) ? LogEntry.GIVE : LogEntry.CMD;

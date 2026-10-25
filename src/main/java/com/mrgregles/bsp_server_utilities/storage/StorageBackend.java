@@ -121,6 +121,20 @@ public interface StorageBackend {
 
     void saveSetupState(com.mrgregles.bsp_server_utilities.setup.SetupState state) throws Exception;
 
+    // ------------------------------------------------------------------ the player counter (SU-24)
+
+    /** Records a player's first join on the network; false when the player was already on the list (one row per UUID). */
+    boolean insertPlayer(com.mrgregles.bsp_server_utilities.players.Joined joined) throws Exception;
+
+    /** How many players the list holds, the first joins at or after {@code sinceMs} (newest first, at most {@code limit}) and the newest of all. */
+    com.mrgregles.bsp_server_utilities.players.PlayerCounts playerCounts(long sinceMs, int limit) throws Exception;
+
+    /** The network's player counter settings, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.players.PlayersSettings loadPlayersSettings() throws Exception;
+
+    void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings settings) throws Exception;
+
     String describe();
 
     void close() throws Exception;

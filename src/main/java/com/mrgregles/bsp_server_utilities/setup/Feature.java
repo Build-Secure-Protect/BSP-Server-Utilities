@@ -1,11 +1,11 @@
 package com.mrgregles.bsp_server_utilities.setup;
 
 /**
- * The setup guide's pages, in order (owner decision D148), Finish aside. WELCOME is this server's own (its name and
+ * The setup guide's pages, in order (owner decision D148; the player counter after Display panels, D173), Finish aside. WELCOME is this server's own (its name and
  * storage, D146, D149); the others are set up once for the network. Every feature but WELCOME can be turned off (D150).
  */
 public enum Feature {
-    WELCOME, STAFF, RULES, LOG, AFK, CHUNKS, DESPAWN, CHECK, PANELS;
+    WELCOME, STAFF, RULES, LOG, AFK, CHUNKS, DESPAWN, CHECK, PANELS, PLAYERS;
 
     /** Whether the page belongs to this server rather than the network. */
     public boolean perServer() {

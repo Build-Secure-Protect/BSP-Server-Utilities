@@ -68,6 +68,8 @@ public final class ClientSetup {
             }
             return out;
         }));
+        // PLAYERS (D168): the player counter, under the title admins type
+        event.enqueueWork(ClientPlayers::registerDefaultBoard);
     }
 
     /** How many entries the ACTION LOG board offers (BSP-Core shows as many as its screen holds). */

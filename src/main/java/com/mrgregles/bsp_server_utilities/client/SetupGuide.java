@@ -19,8 +19,11 @@ import java.util.Locale;
  * The setup guide inside the admin panel (owner decisions D148 to D161), look G-C of {@code tools/preview/setup_refined.html}:
  * the panel as always with its tab row showing where the page is (clicks on it do nothing, D161), a progress bar and a
  * violet strip naming the step and what the feature does, the page's own tab as the body, and BACK, TURN OFF FEATURE (or
- * TURN ON), SETUP LATER and NEXT in place of the tab's footer. Welcome, Display panels and Finish are drawn here.
- * Closing part way leaves the rest for later (D158).
+ * TURN ON), SETUP LATER and NEXT in place of the tab's footer. Welcome, Display panels, Player counter and Finish are
+ * drawn here. Closing part way leaves the rest for later (D158). The Player counter page (D170, D173, D177 to D179, as
+ * {@code tools/preview/counter_refined.html}): the number shown and the real count, SET and ADD with a typed number,
+ * RESET TO 0 (SURE? within three seconds) and REAL COUNT; the title and the welcome line's words, sent when the page is
+ * left, with the line as it will read.
  */
 final class SetupGuide {
     static final int OFFSET = 14;
@@ -37,13 +40,17 @@ final class SetupGuide {
     private long offSureUntil;
     private String name;
     @Nullable
-    private EditBox nameBox;
+    private EditBox nameBox, numberBox, titleBox, welcomeBox;
+    private String number = "", title, welcome, sentTitle, sentWelcome;
+    private long resetSureUntil;
 
     SetupGuide(AdminScreen host, SetupViewPacket view) {
         this.host = host;
         this.view = view;
         this.page = view.startAt().ordinal();
         this.name = view.named().isEmpty() ? view.here() : view.named();
+        this.title = sentTitle = view.players().title();
+        this.welcome = sentWelcome = view.players().welcome();
     }
 
     void accept(SetupViewPacket next) {
@@ -62,7 +69,7 @@ final class SetupGuide {
     /** Whether this page is drawn here rather than by a tab. */
     boolean custom() {
         Feature f = feature();
-        return f == null || f == Feature.WELCOME || f == Feature.PANELS;
+        return f == null || f == Feature.WELCOME || f == Feature.PANELS || f == Feature.PLAYERS;
     }
 
     private SetupState.Status status(Feature f) {
@@ -76,6 +83,7 @@ final class SetupGuide {
     // ------------------------------------------------------------------ moving
 
     private void go(int next) {
+        sendPlayersText();
         page = Math.max(0, Math.min(PAGES - 1, next));
         offSureUntil = 0;
         host.guidePageChanged();
@@ -115,9 +123,47 @@ final class SetupGuide {
     /** The panel closes with the guide unfinished: this page and the rest not reached are left for later (D158). */
     void closing() {
         Feature f = feature();
+        sendPlayersText();
         if (!finished && f != null) {
             send(SetupEditPacket.Action.CLOSE, f, "");
         }
+    }
+
+    /** Leaving the Player counter page: the title and the welcome words, when they changed. */
+    private void sendPlayersText() {
+        if (feature() != Feature.PLAYERS) {
+            return;
+        }
+        if (!title.strip().equals(sentTitle)) {
+            sentTitle = title.strip();
+            send(SetupEditPacket.Action.PLAYERS_TITLE, Feature.PLAYERS, sentTitle);
+        }
+        if (!welcome.strip().equals(sentWelcome)) {
+            sentWelcome = welcome.strip();
+            send(SetupEditPacket.Action.PLAYERS_WELCOME, Feature.PLAYERS, sentWelcome);
+        }
+    }
+
+    /** SET or ADD with the number typed (commas allowed); nothing when it is not a number. */
+    private void sendNumber(SetupEditPacket.Action a) {
+        String n = number.strip().replace(",", "");
+        if (n.matches("-?\\d{1,9}")) {
+            send(a, Feature.PLAYERS, n);
+            number = "";
+            if (numberBox != null) {
+                numberBox.setValue("");
+            }
+        }
+    }
+
+    private void reset() {
+        long now = System.currentTimeMillis();
+        if (now >= resetSureUntil) {
+            resetSureUntil = now + SURE_MS; // a second click (SURE?)
+            return;
+        }
+        resetSureUntil = 0;
+        send(SetupEditPacket.Action.PLAYERS_RESET, Feature.PLAYERS, "");
     }
 
     // ------------------------------------------------------------------ widgets
@@ -131,11 +177,32 @@ final class SetupGuide {
             nameBox.setResponder(s -> name = s);
             host.add(nameBox);
         }
+        numberBox = titleBox = welcomeBox = null;
+        if (feature() == Feature.PLAYERS) {
+            int bx = x + 8, by = y + 22, rx = bx + RIGHT, rw = AdminScreen.W - 16 - RIGHT - 6;
+            numberBox = new EditBox(host.font(), bx + 7, by + 58, 58, 12, Component.literal(Tr.t("admin.setup.players.set_number")));
+            numberBox.setMaxLength(12);
+            numberBox.setValue(number);
+            numberBox.setResponder(s -> number = s);
+            host.add(numberBox);
+            titleBox = new EditBox(host.font(), rx, by + 15, rw, 12, Component.literal(Tr.t("admin.setup.players.title")));
+            titleBox.setMaxLength(com.mrgregles.bsp_server_utilities.players.PlayersSettings.MAX_TITLE);
+            titleBox.setValue(title);
+            titleBox.setResponder(s -> title = s);
+            host.add(titleBox);
+            welcomeBox = new EditBox(host.font(), rx, by + 45, rw, 12, Component.literal(Tr.t("admin.setup.players.welcome")));
+            welcomeBox.setMaxLength(com.mrgregles.bsp_server_utilities.players.PlayersSettings.MAX_WELCOME);
+            welcomeBox.setValue(welcome);
+            welcomeBox.setResponder(s -> welcome = s);
+            host.add(welcomeBox);
+        }
     }
 
     void tick() {
-        if (nameBox != null) {
-            nameBox.tick();
+        for (EditBox b : new EditBox[]{nameBox, numberBox, titleBox, welcomeBox}) {
+            if (b != null) {
+                b.tick();
+            }
         }
     }
 
@@ -205,6 +272,7 @@ final class SetupGuide {
             case DESPAWN -> Tr.t("admin.setup.about.despawn");
             case CHECK -> Tr.t("admin.setup.about.check");
             case PANELS -> Tr.t("admin.setup.about.panels");
+            case PLAYERS -> Tr.t("admin.setup.about.players");
         };
     }
 
@@ -219,6 +287,7 @@ final class SetupGuide {
             case DESPAWN -> Tr.t("admin.setup.feature.despawn");
             case CHECK -> Tr.t("admin.setup.feature.check");
             case PANELS -> Tr.t("admin.setup.feature.panels");
+            case PLAYERS -> Tr.t("admin.setup.feature.players");
         };
     }
 
@@ -251,6 +320,10 @@ final class SetupGuide {
         if (f == Feature.PANELS) {
             para(g, Tr.t("admin.setup.panels.text"), bx + 6, by + 5, bw - 12, Ui.TEXT);
             Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.panels.give"), bw - 12, TINY), bx + 6, by + 60, Ui.MUTED, TINY);
+            return;
+        }
+        if (f == Feature.PLAYERS) {
+            renderPlayers(g, bx, by, bw, bh, mx, my, hits);
             return;
         }
         // Finish: every page and where it stands
@@ -296,6 +369,48 @@ final class SetupGuide {
         String note = left == 0 ? Tr.t("admin.setup.finish.all") : Tr.t("admin.setup.finish.left", left);
         int ny = para(g, note, bx + listW + 14, by + 8, bw - listW - 20, Ui.TEXT);
         para(g, Tr.t("admin.setup.finish.later"), bx + listW + 14, ny + 6, bw - listW - 20, Ui.MUTED);
+    }
+
+    /** Where the Player counter page's right column starts, from the body's left edge. */
+    private static final int RIGHT = 150;
+
+    /** The Player counter page: the number and its keys at the left, the title and the welcome line at the right. */
+    private void renderPlayers(GuiGraphics g, int bx, int by, int bw, int bh, int mx, int my, List<Ui.Hit> hits) {
+        Font font = host.font();
+        SetupViewPacket.Players p = view.players();
+        int lx = bx + 7, lw = RIGHT - 14;
+        Ui.text(g, font, Tr.t("admin.setup.players.shown").toUpperCase(Locale.ROOT), lx, by + 6, Ui.MUTED, TINY);
+        String shown = com.mrgregles.bsp_server_utilities.players.PlayerCounter.format(p.shown());
+        float big = Math.min(2f, lw / (float) Math.max(1, Ui.width(font, shown, 1f)));
+        Ui.text(g, font, Component.literal(shown).withStyle(ChatFormatting.BOLD), lx, by + 15, Ui.GOLD, big);
+        Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.players.real", com.mrgregles.bsp_server_utilities.players.PlayerCounter.format(p.real())), lw, TINY), lx, by + 35, Ui.MUTED, TINY);
+        Ui.text(g, font, Tr.t("admin.setup.players.set_number").toUpperCase(Locale.ROOT), lx, by + 49, Ui.MUTED, TINY);
+        int kx = lx + 62;
+        kx += key(g, kx, by + 57, Tr.t("admin.setup.players.set"), Style.VIOLET, mx, my, hits, () -> sendNumber(SetupEditPacket.Action.PLAYERS_SET)) + 3;
+        key(g, kx, by + 57, Tr.t("admin.setup.players.add"), Style.PLAIN, mx, my, hits, () -> sendNumber(SetupEditPacket.Action.PLAYERS_ADD));
+        boolean sure = System.currentTimeMillis() < resetSureUntil;
+        int rw = key(g, lx, by + 77, Tr.t(sure ? "rules.sure" : "admin.setup.players.reset"), sure ? Style.SURE : Style.WARN, mx, my, hits, this::reset);
+        key(g, lx + rw + 3, by + 77, Tr.t("admin.setup.players.real_key"), Style.PLAIN, mx, my, hits, () -> send(SetupEditPacket.Action.PLAYERS_REAL, Feature.PLAYERS, ""));
+        para(g, Tr.t("admin.setup.players.logged"), lx, by + 97, lw, Ui.MUTED);
+        g.fill(bx + RIGHT - 4, by + 4, bx + RIGHT - 3, by + bh - 4, Ui.ROW_LINE);
+        // the title and the welcome line
+        int rx = bx + RIGHT, rwid = bw - RIGHT - 6;
+        Ui.text(g, font, Tr.t("admin.setup.players.title").toUpperCase(Locale.ROOT), rx, by + 6, Ui.MUTED, TINY);
+        Ui.text(g, font, Tr.t("admin.setup.players.welcome").toUpperCase(Locale.ROOT), rx, by + 36, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.players.count", welcome.length(), com.mrgregles.bsp_server_utilities.players.PlayersSettings.MAX_WELCOME), rwid, TINY), rx, by + 61, Ui.MUTED, TINY);
+        String me = net.minecraft.client.Minecraft.getInstance().getUser().getName();
+        String words = welcome.strip().isEmpty() ? com.mrgregles.bsp_server_utilities.players.PlayersSettings.DEFAULT_WELCOME : welcome.strip();
+        String line = com.mrgregles.bsp_server_utilities.players.PlayerCounter.welcomeText(words, me, p.shown() + 1);
+        g.fill(rx, by + 71, rx + rwid, by + 106, Ui.SLOT);
+        int ly = by + 75;
+        for (String l : Ui.wrap(font, line, rwid - 8, SMALL)) {
+            if (ly > by + 98) {
+                break;
+            }
+            Ui.text(g, font, l, rx + 4, ly, Ui.GOLD, SMALL);
+            ly += 8;
+        }
+        para(g, Tr.t("admin.setup.players.everywhere"), rx, by + 111, rwid, Ui.MUTED);
     }
 
     private int para(GuiGraphics g, String text, int x, int y, int w, int colour) {

@@ -21,7 +21,8 @@ import org.joml.Matrix4f;
 /**
  * Draws a Display Panel's face across the whole joined panel, from its bottom-left block only (owner decisions D41,
  * D42, D44, D45, D47): the background (none when clear, so the wall shows), then the text lines placed by
- * {@link PanelLayout}, or the picture (once its bytes have arrived) in its fit, all at full brightness. The transform is BSP-Core's Score Screen's: the same block shape, the
+ * {@link PanelLayout}, the picture (once its bytes have arrived) in its fit, or a live face (staff online, the action
+ * log, the player count), all at full brightness. The transform is BSP-Core's Score Screen's: the same block shape, the
  * same bottom-left origin, 64 canvas pixels a block.
  */
 public class PanelRenderer implements BlockEntityRenderer<DisplayPanelBlockEntity> {
@@ -66,6 +67,9 @@ public class PanelRenderer implements BlockEntityRenderer<DisplayPanelBlockEntit
         }
         if (s.mode() == PanelSettings.Mode.LOG) {
             LogFace.draw(FaceCanvas.world(pose, buffers, font), rect.width(), rect.height(), s.log());
+        }
+        if (s.mode() == PanelSettings.Mode.PLAYERS) {
+            PlayersFace.draw(FaceCanvas.world(pose, buffers, font), rect.width(), rect.height(), s.count());
         }
         if (s.mode() == PanelSettings.Mode.TEXT) {
             for (PanelLayout.Placed p : PanelLayout.layout(s.lines(), rect.width(), rect.height(), font::width)) {

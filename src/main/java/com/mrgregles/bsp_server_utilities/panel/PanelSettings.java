@@ -13,9 +13,11 @@ import java.util.regex.Pattern;
  * What a Display Panel shows (owner decisions D14, D17, D41 to D51): the mode, the background (0 = clear, D47), the text
  * lines for TEXT (D44 to D46), the image settings for IMAGE (D49), who placed it, and a revision that marks every save.
  * Every block of a joined panel keeps a copy; the newest revision wins when blocks join or the bottom-left block goes.
- * {@code loaded} is what the server last made of the picture (SU-7): set by the server, never by a client.
+ * {@code loaded} is what the server last made of the picture (SU-7): set by the server, never by a client. A Player count
+ * panel (D172, D175, D178) keeps its own title (empty: the counter's) and whether it shows the new counts.
  */
-public record PanelSettings(Mode mode, int background, List<Line> lines, Image image, String placedBy, long revision, Loaded loaded, StaffView staff, LogView log) {
+public record PanelSettings(Mode mode, int background, List<Line> lines, Image image, String placedBy, long revision, Loaded loaded, StaffView staff, LogView log,
+                            CountView count) {
     public static final int MAX_LINES = 16, MAX_LINE = 80, MAX_URL = 512;
     public static final int DEFAULT_BACKGROUND = 0xFF0C0E12, CLEAR = 0;
     /** The background swatches the settings screen offers (D47); CLEAR is the last. */
@@ -24,7 +26,7 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
     public static final int[] REFRESH_MINUTES = {0, 5, 15, 60};
     private static final Pattern FILE_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._ -]{0,63}");
 
-    public enum Mode { TEXT, IMAGE, STAFF, LOG }
+    public enum Mode { TEXT, IMAGE, STAFF, LOG, PLAYERS }
 
     public enum Size { S, M, L, XL }
 
@@ -78,31 +80,46 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
         }
     }
 
+    /** What a Player count face shows (D175, D178): its own title (empty for the counter's), and the new counts under the number. */
+    public record CountView(String title, boolean newCounts) {
+        public static final int MAX_TITLE = 32;
+        public static final CountView DEFAULT = new CountView("", true);
+
+        public CountView {
+            title = title == null ? "" : title;
+        }
+    }
+
     public PanelSettings {
         lines = List.copyOf(lines);
+        count = count == null ? CountView.DEFAULT : count;
         loaded = loaded == null ? Loaded.NONE : loaded;
         staff = staff == null ? StaffView.ALL : staff;
         log = log == null ? LogView.ALL : log;
     }
 
     public PanelSettings(Mode mode, int background, List<Line> lines, Image image, String placedBy, long revision) {
-        this(mode, background, lines, image, placedBy, revision, Loaded.NONE, StaffView.ALL, LogView.ALL);
+        this(mode, background, lines, image, placedBy, revision, Loaded.NONE, StaffView.ALL, LogView.ALL, CountView.DEFAULT);
     }
 
     public PanelSettings(Mode mode, int background, List<Line> lines, Image image, String placedBy, long revision, Loaded loaded) {
-        this(mode, background, lines, image, placedBy, revision, loaded, StaffView.ALL, LogView.ALL);
+        this(mode, background, lines, image, placedBy, revision, loaded, StaffView.ALL, LogView.ALL, CountView.DEFAULT);
     }
 
     public PanelSettings withLoaded(Loaded l) {
-        return new PanelSettings(mode, background, lines, image, placedBy, revision, l, staff, log);
+        return new PanelSettings(mode, background, lines, image, placedBy, revision, l, staff, log, count);
     }
 
     public PanelSettings withImage(Image i) {
-        return new PanelSettings(mode, background, lines, i, placedBy, revision, loaded, staff, log);
+        return new PanelSettings(mode, background, lines, i, placedBy, revision, loaded, staff, log, count);
     }
 
     public PanelSettings withViews(StaffView s, LogView l) {
-        return new PanelSettings(mode, background, lines, image, placedBy, revision, loaded, s, l);
+        return new PanelSettings(mode, background, lines, image, placedBy, revision, loaded, s, l, count);
+    }
+
+    public PanelSettings withCount(CountView c) {
+        return new PanelSettings(mode, background, lines, image, placedBy, revision, loaded, staff, log, c);
     }
 
     public static PanelSettings defaults() {
@@ -110,11 +127,11 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
     }
 
     public PanelSettings withRevision(long r) {
-        return new PanelSettings(mode, background, lines, image, placedBy, r, loaded, staff, log);
+        return new PanelSettings(mode, background, lines, image, placedBy, r, loaded, staff, log, count);
     }
 
     public PanelSettings withPlacedBy(String name) {
-        return new PanelSettings(mode, background, lines, image, name, revision, loaded, staff, log);
+        return new PanelSettings(mode, background, lines, image, name, revision, loaded, staff, log, count);
     }
 
     /**
@@ -163,7 +180,7 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
             }
         }
         return new PanelSettings(mode == null ? Mode.TEXT : mode, bg, out, cleanImage, clean(placedBy, 32), revision, loaded,
-                new StaffView(staff.offline(), roles), new LogView(log.allServers(), kinds, logLines));
+                new StaffView(staff.offline(), roles), new LogView(log.allServers(), kinds, logLines), new CountView(clean(count.title().strip(), CountView.MAX_TITLE).strip(), count.newCounts()));
     }
 
     static String clean(String s, int max) {
@@ -227,6 +244,10 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
         lg.putString("kinds", String.join(",", log.kinds()));
         lg.putInt("lines", log.lines());
         tag.put("log", lg);
+        CompoundTag ct = new CompoundTag();
+        ct.putString("title", count.title());
+        ct.putBoolean("newCounts", count.newCounts());
+        tag.put("count", ct);
         return tag;
     }
 
@@ -247,10 +268,11 @@ public record PanelSettings(Mode mode, int background, List<Line> lines, Image i
         CompoundTag lt = tag.getCompound("loaded");
         Loaded loaded = lt.isEmpty() ? Loaded.NONE : new Loaded(lt.getString("hash"), lt.getString("format"), lt.getInt("sw"), lt.getInt("sh"), lt.getInt("sb"),
                 lt.getInt("w"), lt.getInt("h"), lt.getLong("at"), lt.getString("error"), lt.getString("detail"));
-        CompoundTag st = tag.getCompound("staff"), lg = tag.getCompound("log");
+        CompoundTag st = tag.getCompound("staff"), lg = tag.getCompound("log"), ct = tag.getCompound("count");
         StaffView sv = st.isEmpty() ? StaffView.ALL : new StaffView(st.getBoolean("offline"), split(st.getString("roles")));
         LogView lv = lg.isEmpty() ? LogView.ALL : new LogView(lg.getBoolean("all"), split(lg.getString("kinds")), lg.getInt("lines"));
-        return new PanelSettings(parse(Mode.class, tag.getString("mode"), Mode.TEXT), bg, lines, img, tag.getString("placedBy"), tag.getLong("revision"), loaded, sv, lv).sanitised();
+        CountView cv = ct.isEmpty() ? CountView.DEFAULT : new CountView(ct.getString("title"), ct.getBoolean("newCounts"));
+        return new PanelSettings(parse(Mode.class, tag.getString("mode"), Mode.TEXT), bg, lines, img, tag.getString("placedBy"), tag.getLong("revision"), loaded, sv, lv, cv).sanitised();
     }
 
     private static List<String> split(String csv) {

@@ -45,7 +45,7 @@ import java.util.function.LongSupplier;
  *   way leaves the pages not reached for later (D158). Changing a feature in its own tab counts as setting it up (D152).</li>
  *   <li>The shared features' progress, the off switches and the admins who ignore the guide are one state for the network
  *   (a table and notices, the newest revision winning); this server's own page (its name and storage) is kept here.</li>
- *   <li>Off switches (D150): rules, the action log, despawn times, the client check, staff online and display panels are
+ *   <li>Off switches (D150, D173): rules, the action log, despawn times, the client check, staff online, display panels and the player counter are
  *   switched here ({@link Switches}); AFK and chunk unloading use their own settings' switch.</li>
  * </ul>
  */
@@ -131,7 +131,7 @@ public final class SetupService {
 
     /** Puts the network's off switches into force here, and tells every player when they changed. */
     static void switches(MinecraftServer server) {
-        boolean rulesWere = Switches.off(Feature.RULES), staffWas = Switches.off(Feature.STAFF), despawnWas = Switches.off(Feature.DESPAWN);
+        boolean rulesWere = Switches.off(Feature.RULES), staffWas = Switches.off(Feature.STAFF), despawnWas = Switches.off(Feature.DESPAWN), playersWere = Switches.off(Feature.PLAYERS);
         if (!Switches.set(state(server).off())) {
             return;
         }
@@ -143,6 +143,9 @@ public final class SetupService {
         }
         if (Switches.off(Feature.DESPAWN) != despawnWas) {
             DespawnService.switched(server);
+        }
+        if (Switches.off(Feature.PLAYERS) != playersWere) {
+            com.mrgregles.bsp_server_utilities.players.PlayerCounter.switched(server);
         }
         ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), new SetupFlagsPacket(Switches.all()));
     }
@@ -323,7 +326,10 @@ public final class SetupService {
         Storage st = Storage.active();
         String storage = st == null ? "" : st.status();
         String named = ServerUtilsConfig.getOr(ServerUtilsConfig.STORAGE_SERVER_ID, "");
-        return new SetupViewPacket(open, startAt, statuses(server), Storage.currentServerId(), named, st != null, storage, StaffDirectory.knownServers());
+        com.mrgregles.bsp_server_utilities.players.PlayersSettings ps = com.mrgregles.bsp_server_utilities.players.PlayerCounter.settings(server);
+        SetupViewPacket.Players players = new SetupViewPacket.Players(com.mrgregles.bsp_server_utilities.players.PlayerCounter.shown(server),
+                com.mrgregles.bsp_server_utilities.players.PlayerCounter.real(), ps.title(), ps.welcome());
+        return new SetupViewPacket(open, startAt, statuses(server), Storage.currentServerId(), named, st != null, storage, StaffDirectory.knownServers(), players);
     }
 
     // ------------------------------------------------------------------ lifecycle

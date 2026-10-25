@@ -16,6 +16,19 @@ public final class LogText {
     private LogText() {
     }
 
+    /** Commands under {@code /su players} that write their own entry (the player counter's changes, D170). */
+    private static final Set<String> SELF_LOGGED = Set.of("set", "add", "reset", "true");
+
+    /** Whether a command writes its own, clearer entry when it succeeds, so the command itself is not logged. */
+    public static boolean selfLogged(String command) {
+        String r = root(command);
+        if (!r.equals("su") && !r.equals("serverutils")) {
+            return false;
+        }
+        String[] w = command.strip().split("\\s+");
+        return w.length >= 3 && w[1].equalsIgnoreCase("players") && SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT));
+    }
+
     /** The command's first word, lower-cased, without a leading slash or a namespace ("minecraft:tp" is "tp"). */
     public static String root(String command) {
         String s = command.strip();
