@@ -46,6 +46,18 @@ public final class AdminPanel {
         send(player, true, NOTE_NONE);
     }
 
+    /**
+     * Opens the panel, then runs {@code then} once the panel's view has been sent: with shared storage the view waits for
+     * the database's agreement count, and anything meant for the open panel (the setup guide) must follow it.
+     */
+    public static void open(ServerPlayer player, Runnable then) {
+        MinecraftServer server = player.server;
+        RulesService.countAgreed(server, n -> {
+            ServerUtilsNetwork.sendTo(player, AdminViewPacket.of(RulesService.rules(server), true, n, NOTE_NONE));
+            then.run();
+        });
+    }
+
     /** Sends the view, with the agreement count once it is known. */
     public static void send(ServerPlayer player, boolean open, String note) {
         MinecraftServer server = player.server;

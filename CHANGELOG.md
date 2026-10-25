@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-25
+
+### Fixed
+- On a network with shared storage, SETUP NOW (and `/su setup`) opened the plain admin panel instead of the setup guide, so there was no NEXT, SETUP LATER or DONE: the panel waits for the database's count of players who agreed to the rules, and the guide's data reached the client before the panel and was dropped. The guide's data now follows the panel, and a client that still gets it early keeps it until the panel opens.
+
 ## [0.4.1] - 2026-10-24
 
 ### Fixed

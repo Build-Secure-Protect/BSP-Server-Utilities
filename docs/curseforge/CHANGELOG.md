@@ -1,6 +1,9 @@
-# BSP-Server Utilities 0.4.1: the client check and the setup guide
+# BSP-Server Utilities 0.4.2: the client check and the setup guide
 
-For Minecraft 1.20.1, Forge 47.4 or newer. 0.4.1 is 0.4.0 with one fix; coming from 0.3.0 or earlier, everything below is new. **Clients and servers both need 0.4.0 or newer**: the network protocol changed in 0.4.0, so a client on 0.3.0 or earlier is refused by a 0.4 server (and the other way round); 0.4.0 and 0.4.1 work together. Works on its own; uses **BSP-Core 1.4.0** or newer, **LuckPerms** and **BSP-InventorySync** when they are installed.
+For Minecraft 1.20.1, Forge 47.4 or newer. 0.4.2 is 0.4.0 with two fixes; coming from 0.3.0 or earlier, everything below is new. **Clients and servers both need 0.4.0 or newer**: the network protocol changed in 0.4.0, so a client on 0.3.0 or earlier is refused by a 0.4 server (and the other way round); 0.4.0, 0.4.1 and 0.4.2 work together, but update both sides to 0.4.2 for the fixes. Works on its own; uses **BSP-Core 1.4.0** or newer, **LuckPerms** and **BSP-InventorySync** when they are installed.
+
+## Fixed in 0.4.2
+- On a network with shared storage, SETUP NOW (and `/su setup`) opened the plain admin panel instead of the setup guide, so there was no NEXT, SETUP LATER or DONE and no page could be finished: the guide's data reached the client before the panel. It now follows the panel, so the guide opens with its buttons.
 
 ## Fixed in 0.4.1
 - The setup card in the top right corner was hidden behind JourneyMap's minimap. It is now drawn after the whole HUD, over minimaps and any other overlay there, and stays clickable with chat open.

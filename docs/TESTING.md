@@ -318,3 +318,9 @@ In game:
 Seen in game: the card was hidden behind JourneyMap's minimap in the top right. JourneyMap draws its minimap when Forge's HUD finishes, at the lowest priority, after the card. The card is now drawn by a client mixin at the end of Forge's HUD render (`ForgeGuiMixin`, RETURN), after every such listener, with depth testing off. The dev client reached its title screen with the mixin applied; 77 GameTests pass. Released as 0.4.1.
 
 In game: join as an operator with JourneyMap's minimap in the top right: the card is drawn over the minimap; open chat (T): still over it and clickable.
+
+## 2026-10-25: the setup guide opened without NEXT or DONE (owner's in-game report)
+
+Seen in game on the network: the guide showed no NEXT or DONE, so no page could be finished. Cause: with shared storage the admin panel opens only after the database has counted who agreed to the rules, while the guide's data was sent at once, reached the client first and was dropped; the plain panel opened instead of the guide (singleplayer and test servers without a database never showed it). Fix: the guide's data is sent after the panel's view; the client also keeps guide data that arrives early for ten seconds. Headless: 78 GameTests pass (new: with shared storage the guide's data waits for the panel). Released as 0.4.2. **Not yet seen in a client on the network.**
+
+In game (on a server with MySQL): SETUP NOW on the card, the chat line and `/su setup`: the panel opens taller with the progress bar and "SETUP n/10"; BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot; Finish has DONE. SETUP GUIDE on the RULES tab does the same from an open panel.

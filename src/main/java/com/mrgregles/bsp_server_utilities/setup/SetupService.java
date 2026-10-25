@@ -56,6 +56,7 @@ public final class SetupService {
     private static final Map<UUID, Integer> WAITING = new HashMap<>();
     private static LongSupplier clock = System::currentTimeMillis;
     private static BiConsumer<ServerPlayer, SetupCardPacket> cardSender = SetupService::sendCard;
+    private static BiConsumer<ServerPlayer, SetupViewPacket> viewSender = ServerUtilsNetwork::sendTo;
 
     private SetupService() {
     }
@@ -311,9 +312,11 @@ public final class SetupService {
     /** Opens the admin panel in the guide, at the first page not finished (Welcome when all are). */
     public static void openGuide(ServerPlayer player) {
         ServerUtilsNetwork.sendTo(player, new SetupCardPacket(false, false, List.of()));
-        AdminPanel.open(player);
-        List<Feature> left = left(player.server);
-        ServerUtilsNetwork.sendTo(player, view(player.server, true, left.isEmpty() ? Feature.WELCOME : left.get(0)));
+        // the guide's data must reach the client after the panel has opened (with shared storage the panel waits for the database)
+        AdminPanel.open(player, () -> {
+            List<Feature> left = left(player.server);
+            viewSender.accept(player, view(player.server, true, left.isEmpty() ? Feature.WELCOME : left.get(0)));
+        });
     }
 
     public static SetupViewPacket view(MinecraftServer server, boolean open, Feature startAt) {
@@ -360,6 +363,12 @@ public final class SetupService {
     public static void useReal() {
         clock = System::currentTimeMillis;
         cardSender = SetupService::sendCard;
+        viewSender = ServerUtilsNetwork::sendTo;
+    }
+
+    /** Catches the guide's data sent on opening (tests). */
+    public static void catchViewsForTests(BiConsumer<ServerPlayer, SetupViewPacket> views) {
+        viewSender = views;
     }
 
     /** Puts the state back as it was (tests), with its off switches. */

@@ -9,12 +9,22 @@ public final class ClientAdmin {
     private ClientAdmin() {
     }
 
+    /** A setup guide that arrived before its panel opened, and when (it is used only within a few seconds). */
+    @org.jetbrains.annotations.Nullable
+    private static com.mrgregles.bsp_server_utilities.network.SetupViewPacket earlyGuide;
+    private static long earlyGuideAt;
+
     public static void view(AdminViewPacket packet) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof AdminScreen screen) {
             screen.accept(packet);
         } else if (packet.open()) {
-            mc.setScreen(new AdminScreen(packet));
+            AdminScreen screen = new AdminScreen(packet);
+            mc.setScreen(screen);
+            if (earlyGuide != null && System.currentTimeMillis() - earlyGuideAt < 10_000) {
+                screen.acceptSetup(earlyGuide);
+            }
+            earlyGuide = null;
         }
     }
 
@@ -22,6 +32,9 @@ public final class ClientAdmin {
     public static void setup(com.mrgregles.bsp_server_utilities.network.SetupViewPacket packet) {
         if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
             screen.acceptSetup(packet);
+        } else if (packet.open()) {
+            earlyGuide = packet; // the panel is still on its way: open the guide when it arrives
+            earlyGuideAt = System.currentTimeMillis();
         }
     }
 

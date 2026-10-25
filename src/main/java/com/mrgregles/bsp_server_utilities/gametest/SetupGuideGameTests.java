@@ -294,4 +294,35 @@ public class SetupGuideGameTests {
         }
         h.succeed();
     }
+
+    @GameTest(template = EMPTY, timeoutTicks = 100)
+    public void with_shared_storage_the_guide_follows_the_panel_it_opens_in(GameTestHelper h) {
+        // the owner's in-game report: on the network the guide opened as the plain panel, with no NEXT or DONE
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer admin = TestPlayers.mockServerPlayer(h);
+        server.getPlayerList().getOps().add(new ServerOpListEntry(admin.getGameProfile(), 4, false));
+        MemoryBackend db = new MemoryBackend();
+        Storage alpha = Storage.startWith(server, db, "alpha");
+        alpha.drain();
+        Storage.useForTests(alpha);
+        List<SetupViewPacket> views = new ArrayList<>();
+        SetupService.catchViewsForTests((p, v) -> views.add(v));
+        Runnable cleanup = () -> {
+            SetupService.useReal();
+            Storage.useForTests(null);
+            alpha.close();
+            server.getPlayerList().getOps().remove(admin.getGameProfile());
+        };
+        SetupService.openGuide(admin);
+        if (!views.isEmpty()) {
+            cleanup.run();
+            h.fail("the guide's data went out before the panel, which waits for the database's agreement count");
+            return;
+        }
+        h.startSequence()
+                .thenExecuteAfter(1, alpha::drain)
+                .thenWaitUntil(() -> h.assertTrue(views.size() == 1 && views.get(0).open(), "once the panel's view is sent, the guide's follows: " + views))
+                .thenExecute(cleanup)
+                .thenSucceed();
+    }
 }
