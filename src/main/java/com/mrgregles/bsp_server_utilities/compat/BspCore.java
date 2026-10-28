@@ -23,8 +23,9 @@ public final class BspCore {
     }
 
     /**
-     * A value of BSP-Core's server config by the name of its field on {@code BSPConfig} ({@code STORAGE_SERVER_ID},
-     * {@code STORAGE_HOST}, {@code REDIS_ENABLED}, ...). Empty when BSP-Core is absent, the field is missing or the
+     * A value of BSP-Core's configs by the name of its field on {@code BSPConfig} ({@code STORAGE_SERVER_ID},
+     * {@code STORAGE_HOST}, {@code REDIS_ENABLED}, ...). Since BSP-Core moved its connection settings to
+     * {@code config/bsp_core-network.toml}, the connection fields are aliases of that file's values; the names still answer. Empty when BSP-Core is absent, the field is missing or the
      * config is not loaded. Reflection, because the config is not in BSP-Core's api (BSP-InventorySync reads it the same way).
      */
     public static <T> Optional<T> setting(String field, Class<T> type) {

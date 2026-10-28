@@ -295,7 +295,8 @@ public class SetupGuideGameTests {
         h.succeed();
     }
 
-    @GameTest(template = EMPTY, timeoutTicks = 100)
+    // its own batch: it keeps test storage on for a few ticks, which other tests running beside it must not see
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "setup-guide-storage")
     public void with_shared_storage_the_guide_follows_the_panel_it_opens_in(GameTestHelper h) {
         // the owner's in-game report: on the network the guide opened as the plain panel, with no NEXT or DONE
         MinecraftServer server = h.getLevel().getServer();
@@ -306,7 +307,11 @@ public class SetupGuideGameTests {
         alpha.drain();
         Storage.useForTests(alpha);
         List<SetupViewPacket> views = new ArrayList<>();
-        SetupService.catchViewsForTests((p, v) -> views.add(v));
+        SetupService.catchViewsForTests((p, v) -> {
+            if (p == admin) {
+                views.add(v); // only this test's admin
+            }
+        });
         Runnable cleanup = () -> {
             SetupService.useReal();
             Storage.useForTests(null);

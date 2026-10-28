@@ -348,3 +348,14 @@ In game:
 5. On that page TURN OFF FEATURE: the board shows no lines, Player count panels show only their background, the panel's pane says the counter is off, and a new player is neither counted nor welcomed. TURN ON FEATURE: all back.
 6. Finish lists Player counter with the other pages.
 
+
+## 2026-10-28: network passwords out of the synced server config
+
+Headless: 88 GameTests pass, twice, against BSP-Core 1.6.2 (new `NetworkConfigGameTests`: the one-time move copies old server-config settings to `config/bsp_server_utilities-network.toml`, a value already there wins, the server config is cleared, the log line names keys and files but no value, a second start moves nothing, the old names read the new file; BSP-Core's moved settings still answer through its old field names; the notes name both files). The guide-ordering test from 0.4.2 now runs in its own batch: it kept test storage on for a few ticks and, with 1.6.2's timing, other tests running beside it saw it. Released as 0.5.1. **Not yet run on a live server.**
+
+On a server (with BSP-Core 1.6.2 or newer):
+1. Before updating, note whether `serverconfig/bsp_server_utilities-server.toml` has a `storage.password` or `storage.redis.password` set (it does only if `useBspCoreDatabase` / `useBspCoreRedis` were turned off).
+2. Start the updated server: if anything was set, one warning "BSP-Server Utilities: Moved storage.password ... to config/bsp_server_utilities-network.toml ... Change the database and Redis passwords ..." with no value in it; the new file holds the values, the server config's old keys are empty and say "Moved to ...". Nothing set: no warning, and the new file has the defaults.
+3. `/su status`: "Shared storage: ..." works as before; the notes say "database settings from BSP-Core's config/bsp_core-network.toml" (or this mod's network file when its own settings are used).
+4. Restart: no second warning.
+5. Change the database and Redis passwords if one was ever in a server config, and keep every `config/*-network.toml` out of the client pack and `defaultconfigs/`.

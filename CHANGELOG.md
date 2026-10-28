@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-28
+
+### Security
+- This mod's own database and Redis connection (host, port, database, user, password, SSL, table prefix; Redis host, port, username, password) moved from the server config, `serverconfig/bsp_server_utilities-server.toml`, which Forge sends to every player who joins, to a new `config/bsp_server_utilities-network.toml` that stays on the server. At the first start of this version, settings found in the server config are moved over (a value already set in the new file wins) and cleared there; the log gets one warning naming what moved, never a value. The old keys stay in the server config, marked as moved. If a password was ever set there, change it: it was sent to every player who joined. Keep the network file out of any client pack.
+
+### Changed
+- With BSP-Core 1.6.2 or newer, its database and Redis settings come from its `config/bsp_core-network.toml`; the log and `/su status` now say so ("database settings from BSP-Core's config/bsp_core-network.toml"), and name this mod's own network file when that is used. Older BSP-Core versions keep working as before.
+
 ## [0.5.0] - 2026-10-25
 
 ### Added

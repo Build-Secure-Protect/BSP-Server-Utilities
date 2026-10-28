@@ -5,19 +5,34 @@ import net.minecraftforge.common.ForgeConfigSpec;
 import java.util.List;
 
 /**
- * The server config: what must exist before the shared storage is up (the database, Redis and this server's name) and
- * the staff groups. With BSP-Core installed the database, Redis and server name are read from BSP-Core's own config by
- * default (owner decision D5), so a network that already runs BSP-Core needs nothing filled in here.
+ * The server config: whether and how storage is shared, this server's name, and the staff groups. With BSP-Core installed
+ * the database, Redis and server name are read from BSP-Core's configs by default (owner decision D5), so a network that
+ * already runs BSP-Core needs nothing filled in here. The connection settings themselves (addresses and passwords) are in
+ * {@link ServerUtilsNetworkConfig}: Forge sends this file to every player who joins (D183).
  */
 public final class ServerUtilsConfig {
     public static final ForgeConfigSpec SPEC;
 
-    public static final ForgeConfigSpec.ConfigValue<String> STORAGE_MODE, STORAGE_HOST, STORAGE_DATABASE, STORAGE_USER, STORAGE_PASSWORD, STORAGE_TABLE_PREFIX, STORAGE_SERVER_ID;
-    public static final ForgeConfigSpec.IntValue STORAGE_PORT, STORAGE_POLL_SECONDS;
-    public static final ForgeConfigSpec.BooleanValue STORAGE_USE_BSP_CORE, STORAGE_SSL;
+    public static final ForgeConfigSpec.ConfigValue<String> STORAGE_MODE, STORAGE_SERVER_ID;
+    public static final ForgeConfigSpec.IntValue STORAGE_POLL_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue STORAGE_USE_BSP_CORE;
     public static final ForgeConfigSpec.BooleanValue REDIS_ENABLED, REDIS_USE_BSP_CORE;
-    public static final ForgeConfigSpec.ConfigValue<String> REDIS_HOST, REDIS_USERNAME, REDIS_PASSWORD, REDIS_CHANNEL;
-    public static final ForgeConfigSpec.IntValue REDIS_PORT, REDIS_SAFETY_POLL_SECONDS;
+    public static final ForgeConfigSpec.ConfigValue<String> REDIS_CHANNEL;
+    public static final ForgeConfigSpec.IntValue REDIS_SAFETY_POLL_SECONDS;
+    /**
+     * The connection settings' old places in this file, kept so Forge does not delete them before {@link
+     * ServerUtilsNetworkConfig#moveFromServerConfig} has moved what they hold (D184). Read by nothing else.
+     */
+    public static final ForgeConfigSpec.ConfigValue<String> OLD_STORAGE_HOST, OLD_STORAGE_DATABASE, OLD_STORAGE_USER, OLD_STORAGE_PASSWORD, OLD_STORAGE_TABLE_PREFIX,
+            OLD_REDIS_HOST, OLD_REDIS_USERNAME, OLD_REDIS_PASSWORD;
+    public static final ForgeConfigSpec.IntValue OLD_STORAGE_PORT, OLD_REDIS_PORT;
+    public static final ForgeConfigSpec.BooleanValue OLD_STORAGE_SSL;
+    /** The connection settings, now in {@code config/bsp_server_utilities-network.toml}: the old names, kept as aliases. */
+    public static final ForgeConfigSpec.ConfigValue<String> STORAGE_HOST = ServerUtilsNetworkConfig.DB_HOST, STORAGE_DATABASE = ServerUtilsNetworkConfig.DB_DATABASE,
+            STORAGE_USER = ServerUtilsNetworkConfig.DB_USER, STORAGE_PASSWORD = ServerUtilsNetworkConfig.DB_PASSWORD, STORAGE_TABLE_PREFIX = ServerUtilsNetworkConfig.DB_TABLE_PREFIX,
+            REDIS_HOST = ServerUtilsNetworkConfig.REDIS_HOST, REDIS_USERNAME = ServerUtilsNetworkConfig.REDIS_USERNAME, REDIS_PASSWORD = ServerUtilsNetworkConfig.REDIS_PASSWORD;
+    public static final ForgeConfigSpec.IntValue STORAGE_PORT = ServerUtilsNetworkConfig.DB_PORT, REDIS_PORT = ServerUtilsNetworkConfig.REDIS_PORT;
+    public static final ForgeConfigSpec.BooleanValue STORAGE_SSL = ServerUtilsNetworkConfig.DB_SSL;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> STAFF_GROUPS;
     public static final ForgeConfigSpec.BooleanValue STAFF_OPERATORS;
     public static final ForgeConfigSpec.BooleanValue RULES_ENABLED;
@@ -31,28 +46,32 @@ public final class ServerUtilsConfig {
                 "No MySQL driver is bundled: the server's own is used when it has one, else BSP-Core's full jar's (not its -slim jar).").push("storage");
         STORAGE_MODE = b.comment("auto: shared when BSP-Core's storage.mode is mysql, otherwise this server only.",
                 "mysql: always shared (with the settings below or BSP-Core's). local: this server only, kept in the world.").define("mode", "auto");
-        STORAGE_USE_BSP_CORE = b.comment("Use BSP-Core's database settings (host, port, database, user, password, SSL) when BSP-Core is installed.",
-                "The tables are this mod's own either way (see tablePrefix).").define("useBspCoreDatabase", true);
-        STORAGE_HOST = b.comment("Used when useBspCoreDatabase is false or BSP-Core is not installed.").define("host", "localhost");
-        STORAGE_PORT = b.defineInRange("port", 3306, 1, 65535);
-        STORAGE_DATABASE = b.define("database", "bsp");
-        STORAGE_USER = b.define("user", "bsp");
-        STORAGE_PASSWORD = b.comment("Plain text, as BSP-Core's; keep the config file private.").define("password", "");
-        STORAGE_SSL = b.define("useSsl", false);
-        STORAGE_TABLE_PREFIX = b.comment("Prefix for this mod's table names (letters, digits and underscores).").define("tablePrefix", "bsp_su_");
+        STORAGE_USE_BSP_CORE = b.comment("Use BSP-Core's database settings (host, port, database, user, password, SSL, in BSP-Core's",
+                "config/bsp_core-network.toml) when BSP-Core is installed. Otherwise this mod's own config/bsp_server_utilities-network.toml.",
+                "The tables are this mod's own either way (tablePrefix in that file).").define("useBspCoreDatabase", true);
+        String moved = "Moved to config/bsp_server_utilities-network.toml: this file is sent to every player who joins. Leave it empty;";
+        String movedToo = "a value set here is moved there at the next start.";
+        OLD_STORAGE_HOST = b.comment(moved, movedToo).define("host", "localhost");
+        OLD_STORAGE_PORT = b.comment(moved, movedToo).defineInRange("port", 3306, 1, 65535);
+        OLD_STORAGE_DATABASE = b.comment(moved, movedToo).define("database", "bsp");
+        OLD_STORAGE_USER = b.comment(moved, movedToo).define("user", "bsp");
+        OLD_STORAGE_PASSWORD = b.comment(moved, movedToo).define("password", "");
+        OLD_STORAGE_SSL = b.comment(moved, movedToo).define("useSsl", false);
+        OLD_STORAGE_TABLE_PREFIX = b.comment(moved, movedToo).define("tablePrefix", "bsp_su_");
         STORAGE_SERVER_ID = b.comment("This server's name on the network, as the players see it on the staff panel and in the action log.",
                 "Empty: BSP-Core's storage.serverId when BSP-Core is installed, else server-1. Keep it the same as BSP-Core's.").define("serverId", "");
         STORAGE_POLL_SECONDS = b.comment("How often notices from other servers are read from the table when Redis is off.").defineInRange("pollSeconds", 5, 1, 300);
         b.comment("Redis carries notices between servers within milliseconds (needs shared storage). Every notice is also written",
                 "to the MySQL table, so nothing is lost while Redis is down. This mod has its own small Redis client; nothing is bundled.",
                 "It speaks plain TCP: keep Redis on the local network.").push("redis");
-        REDIS_USE_BSP_CORE = b.comment("Use BSP-Core's Redis settings (enabled, host, port, password) when BSP-Core is installed.",
+        REDIS_USE_BSP_CORE = b.comment("Use BSP-Core's Redis settings (enabled, and host, port, password from its config/bsp_core-network.toml) when BSP-Core is installed.",
                 "If BSP-Core connects to Redis with TLS, this mod leaves Redis off and reads the table instead.").define("useBspCoreRedis", true);
-        REDIS_ENABLED = b.comment("Used when useBspCoreRedis is false or BSP-Core is not installed.").define("enabled", false);
-        REDIS_HOST = b.define("host", "localhost");
-        REDIS_PORT = b.defineInRange("port", 6379, 1, 65535);
-        REDIS_USERNAME = b.comment("Leave empty unless Redis uses ACL users; the password alone is the usual requirepass.").define("username", "");
-        REDIS_PASSWORD = b.comment("Plain text; keep the config file private.").define("password", "");
+        REDIS_ENABLED = b.comment("Used when useBspCoreRedis is false or BSP-Core is not installed; the address and password are in",
+                "config/bsp_server_utilities-network.toml.").define("enabled", false);
+        OLD_REDIS_HOST = b.comment(moved, movedToo).define("host", "localhost");
+        OLD_REDIS_PORT = b.comment(moved, movedToo).defineInRange("port", 6379, 1, 65535);
+        OLD_REDIS_USERNAME = b.comment(moved, movedToo).define("username", "");
+        OLD_REDIS_PASSWORD = b.comment(moved, movedToo).define("password", "");
         REDIS_CHANNEL = b.comment("Servers that share notices use the same channel. The mod adds the prefix bsp_su: to it.").define("channel", "network");
         REDIS_SAFETY_POLL_SECONDS = b.comment("How often the MySQL notice table is still read while Redis is connected.").defineInRange("safetyPollSeconds", 30, 5, 600);
         b.pop();

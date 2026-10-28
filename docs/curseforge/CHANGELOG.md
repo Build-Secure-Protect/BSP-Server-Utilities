@@ -1,6 +1,12 @@
-# BSP-Server Utilities 0.5.0: the player counter
+# BSP-Server Utilities 0.5.1: network passwords kept off players' machines
 
-For Minecraft 1.20.1, Forge 47.4 or newer. **Clients and servers both need 0.5.0**: the network protocol changed, so a 0.4 client is refused by a 0.5.0 server (and the other way round). Works on its own; uses **BSP-Core 1.4.0** or newer (built against 1.5.0), **LuckPerms** and **BSP-InventorySync** when they are installed. Coming from 0.3.0 or earlier, the client check and the setup guide from 0.4 are new to you too: see the description.
+For Minecraft 1.20.1, Forge 47.4 or newer. 0.5.1 is 0.5.0 with one security fix; coming from 0.4 or earlier, the player counter below is new too. **Clients and servers both need 0.5.0 or newer**: the network protocol changed in 0.5.0, so a 0.4 client is refused by a 0.5 server (and the other way round); 0.5.0 and 0.5.1 work together, and the fix is on the server. Works on its own; uses **BSP-Core 1.4.0** or newer (tested with 1.6.2), **LuckPerms** and **BSP-InventorySync** when they are installed. Coming from 0.3.0 or earlier, the client check and the setup guide from 0.4 are new to you too: see the description.
+
+## Security fix in 0.5.1
+- Forge sends a server's SERVER config file to every player who joins, so a database or Redis password in `serverconfig/bsp_server_utilities-server.toml` could be read by any player. This mod's own connection (database host, port, name, user, password, SSL, table prefix; Redis host, port, username, password) now lives in **`config/bsp_server_utilities-network.toml`**, which stays on the server.
+- At the first start of 0.5.1, anything still set in the server config is moved there (a value already set in the new file wins) and cleared; the log gets one warning naming what moved, never a value. The old keys stay in the server config, marked as moved.
+- **If a password was ever set in the server config, change it:** it was sent to every player who joined. Keep `config/*-network.toml` files out of any client pack and `defaultconfigs/`.
+- With BSP-Core 1.6.2 or newer, which moved its own settings to `config/bsp_core-network.toml`, the log and `/su status` name that file as where the database and Redis settings came from. Nothing needs changing: this mod keeps reading BSP-Core's settings as before.
 
 ## New in 0.5.0: the player counter
 
@@ -12,5 +18,5 @@ For Minecraft 1.20.1, Forge 47.4 or newer. **Clients and servers both need 0.5.0
 - **The setup guide's Player counter page,** after Display panels (the guide has eleven pages now): the number shown and the real count, SET and ADD, RESET TO 0 (a second click to confirm) and REAL COUNT, the title ("Players of BSP" to begin with) and the welcome words with the line as it will read. TURN OFF FEATURE stops counting and welcoming, and the board and panels show nothing. Servers updating from 0.4 are offered this one page at an admin's next join.
 - A Players line in `/su status`.
 
-## Changed
+## Changed in 0.5.0
 - The mod's network protocol is version 3: update clients and servers together.

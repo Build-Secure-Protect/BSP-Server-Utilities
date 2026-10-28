@@ -30,6 +30,9 @@ public class BSPServerUtilities {
 
     public BSPServerUtilities(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.SERVER, ServerUtilsConfig.SPEC);
+        // the network connection and its passwords: a COMMON config, never sent to players (D183)
+        context.registerConfig(ModConfig.Type.COMMON, ServerUtilsNetworkConfig.SPEC, ServerUtilsNetworkConfig.FILE);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerAboutToStartEvent e) -> ServerUtilsNetworkConfig.onAboutToStart());
         ModBlocks.register(context.getModEventBus());
         ServerUtilsNetwork.register();
         // Shared storage (MySQL and Redis) when the configs say so; otherwise records stay on this server.

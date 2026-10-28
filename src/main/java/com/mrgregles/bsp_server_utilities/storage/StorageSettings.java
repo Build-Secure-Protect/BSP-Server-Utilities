@@ -11,8 +11,9 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 
 /**
- * Where the shared storage lives, worked out from this mod's config and, when BSP-Core is installed, BSP-Core's
- * (owner decision D5). Pure: {@link #resolve} takes both as values, so the rules are tested without either config.
+ * Where the shared storage lives, worked out from this mod's configs and, when BSP-Core is installed, BSP-Core's
+ * (owner decision D5): the connection from BSP-Core's {@code config/bsp_core-network.toml} or this mod's
+ * {@code config/bsp_server_utilities-network.toml}, the switches from the server configs (D183 to D185). Pure: {@link #resolve} takes both as values, so the rules are tested without either config.
  *
  * <p>The rules: {@code mode = auto} shares when BSP-Core's {@code storage.mode} is {@code mysql}; {@code mysql} always
  * shares; anything else keeps to this server. The database comes from BSP-Core when {@code useBspCoreDatabase} is on
@@ -23,6 +24,8 @@ import java.util.function.BiFunction;
  */
 public final class StorageSettings {
     public static final String DEFAULT_SERVER_ID = "server-1";
+    /** Where the connection settings are read from, as the log and {@code /su status} name them (D185). */
+    public static final String CORE_FILE = "BSP-Core's config/bsp_core-network.toml", OWN_FILE = "config/bsp_server_utilities-network.toml";
 
     /** This mod's own config values. */
     public record Own(String mode, boolean useBspCoreDatabase, String host, int port, String database, String user, String password, boolean ssl,
@@ -86,9 +89,10 @@ public final class StorageSettings {
                         string(core, "STORAGE_PASSWORD").orElse(own.password()),
                         bool(core, "STORAGE_SSL").orElse(own.ssl()),
                         own.tablePrefix());
-                notes.add("database settings from BSP-Core");
+                notes.add("database settings from " + CORE_FILE);
             } else {
                 database = new Database(own.host(), own.port(), own.database(), own.user(), own.password(), own.ssl(), own.tablePrefix());
+                notes.add("database settings from " + OWN_FILE);
             }
         }
 
@@ -96,7 +100,7 @@ public final class StorageSettings {
         if (shared) {
             Optional<Boolean> coreEnabled = bool(core, "REDIS_ENABLED");
             if (own.useBspCoreRedis() && coreEnabled.isPresent()) {
-                notes.add("Redis settings from BSP-Core");
+                notes.add("Redis settings from " + CORE_FILE);
                 if (coreEnabled.get()) {
                     if (bool(core, "REDIS_SSL").orElse(false)) {
                         notes.add("BSP-Core reaches Redis with TLS, which this mod's client does not speak: Redis left off, the table carries notices");
@@ -107,6 +111,7 @@ public final class StorageSettings {
                 }
             } else if (own.redisEnabled()) {
                 redis = new RedisLink.Settings(own.redisHost(), own.redisPort(), own.redisUsername(), own.redisPassword(), own.redisChannel());
+                notes.add("Redis settings from " + OWN_FILE);
             }
         } else if (own.redisEnabled()) {
             notes.add("redis.enabled is on but nothing is shared: Redis not used");
