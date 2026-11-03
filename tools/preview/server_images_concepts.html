@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Images Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set J (owner decisions D189 to D198): server images in chat as decided, and three looks for the SERVER IMAGES tab
+   and its setup guide page. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+/* chat at GUI scale 1.5: a line is 13.5 px, an image is one line high and at most 96 units (144 px) wide */
+.mc{ font-family:VT323, var(--mono); font-size:15px; line-height:13.5px; color:#fff; }
+.chatbox{ background:rgba(0,0,0,.5); padding:3px 4px; display:flex; flex-direction:column; gap:0; width:max-content; max-width:100%; }
+.chatbox > div{ height:13.5px; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.gray{ color:#AAAAAA; } .gold{ color:#FFAA00; } .aqua{ color:#55FFFF; } .yel{ color:#FFFF55; }
+.ti{ display:inline-grid; place-items:center; height:12px; padding:0 5px; box-sizing:border-box; font:700 10px/1 Oswald, var(--body); letter-spacing:.1em; color:#fff;
+  text-shadow:1px 1px 0 rgba(0,0,0,.55); border-radius:2px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.25), inset 0 -3px 0 rgba(0,0,0,.25); flex:none; }
+.ti.x2{ height:24px; font-size:19px; padding:0 10px; border-radius:3px; box-shadow:inset 0 0 0 2px rgba(255,255,255,.25), inset 0 -6px 0 rgba(0,0,0,.25); }
+.t-spawn{ background:linear-gradient(#FFC23A,#E07B12); } .t-safe{ background:linear-gradient(#2fe0bd,#0f8f78); } .t-sanc{ background:linear-gradient(#b58cff,#6a3fc4); }
+.t-frost{ background:linear-gradient(#bfe9ff,#4a9fd8); color:#0e2a44; text-shadow:none; } .t-boul{ background:linear-gradient(#a7c66a,#5d6f2f); } .t-storm{ background:linear-gradient(#3b4a7a,#1a2140); color:#FFD23A; }
+.rp{ font-family:VT323, var(--mono); font-size:15px; } /* the RankUp prefix image beside it, for scale */
+.rk{ display:inline-grid; place-items:center; height:12px; padding:0 4px; font:700 9px/1 Oswald; letter-spacing:.08em; background:#7a1f1f; color:#ffd6d6; border-radius:2px; }
+.tip{ position:absolute; background:rgba(16,0,16,.94); box-shadow:0 0 0 1px #100010, inset 0 0 0 1px #5000FF; padding:4px 6px; font-family:VT323, var(--mono); font-size:15px; color:#fff; white-space:nowrap; }
+.cursor{ position:absolute; width:0; height:0; border-left:6px solid #fff; border-top:4px solid transparent; border-bottom:4px solid transparent; transform:rotate(-30deg); filter:drop-shadow(1px 1px 0 #000); }
+.srow{ display:grid; grid-template-columns:84px 1fr 40px; align-items:center; gap:6px; height:22px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.srow + .srow{ border-top:1px solid #1c222c; } .srow.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.trow{ display:grid; grid-template-columns:84px 136px 1fr 48px; align-items:center; gap:8px; height:30px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.trow + .trow{ border-top:1px solid #1c222c; } .trow.hd2{ height:16px; } .trow.hd2 span{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.stage{ flex-wrap:wrap; justify-content:safe center; }
+.pill{ font-size:8.5px; padding:1px 5px; border-radius:2px; white-space:nowrap; }
+.pill.ok{ background:#1a2a16; color:#8FE04A; } .pill.off{ background:#2A2F3A; color:#9AA3B5; }
+.bar2{ height:4px; background:#2A2F3A; position:relative; } .bar2 i{ position:absolute; left:0; top:0; bottom:0; background:#B58CFF; display:block; }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.ellip{ overflow:hidden; text-overflow:ellipsis; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>Server images in chat</h1>
+<p class="lede">Mock-up set J (D189 to D198). An admin puts one PNG per server in <code>config/bsp_server_utilities/server_images/</code> on any server, named as Velocity knows it (<code>BSP-Spawn.png</code>), and presses REFRESH: that folder becomes the network's set. Staff then see each server's image in place of the grey <code>[BSP-Spawn]</code> in front of chat from other servers. The chat part is decided; the three looks below are for the SERVER IMAGES tab. Sample data and made-up images; the size is the game's at GUI scale 1.5.</p></header>
+
+<section><h2>Chat, as decided (D189, D190, D193 to D195, D197)</h2><div class="card"><p>Staff on BSP-Spawn (Pip's line is from BSP-Spawn itself): lines from other servers start with the server's image, no brackets, drawn one line high. Lines from their own server have no tag. BSP-Moongrove's file was refused and BSP-Test has none, so they read as today's grey text. Hovering an image shows the server's name. The player counter's welcome on other servers uses the same image. RankUp's prefix image is shown beside it for scale.</p>
+<div class="stage"><div class="world" style="width:520px;min-height:170px"><div class="mc chatbox" style="position:relative">
+<div><span class="ti t-safe">SAFEROOM</span><span>&lt;<span class="rk">MOD</span> Kat_Miner&gt; anyone selling iron?</span></div>
+<div><span>&lt;Pip&gt; heading to the mines</span></div>
+<div><span class="ti t-frost">FROSTWARF</span><span>&lt;Lumen&gt; the ice biome is huge</span></div>
+<div><span class="ti t-boul">BOULDERBROOK</span><span>&lt;Steve_Builds&gt; base done!</span></div>
+<div><span class="gray">[BSP-Moongrove]</span><span>&lt;Tomo_42&gt; gg</span></div>
+<div><span class="ti t-storm">STORMFALL</span><span>&lt;Rain&gt; storm totem up for grabs</span></div>
+<div><span class="gray">[BSP-Test]</span><span>&lt;Mrgregles&gt; testing</span></div>
+<div><span class="ti t-sanc">SANCTUARY</span><span class="gold">Welcome Nova, player number 1,235 on BSP!</span></div>
+<span class="cursor" style="left:60px;top:100px"></span><span class="tip" style="left:68px;top:112px">BSP-Sanctuary</span>
+</div></div>
+<div class="world" style="width:300px;min-height:170px"><div class="mc chatbox"><div><span>&lt;Pip&gt; heading to the mines</span></div><div><span>&lt;Kat_Miner&gt; anyone selling iron?</span></div><div><span>&lt;Lumen&gt; the ice biome is huge</span></div><div><span class="gold">Welcome Nova, player number 1,235 on BSP!</span></div></div><p class="note" style="color:#cfd3dc;margin:8px 0 0">A player (not staff) on the same server: no tags, as today (D189).</p></div></div></div></section>
+
+<section><h2>SERVER IMAGES tab, look A: list and detail</h2><div class="card"><p>The eighth tab. On the left every server the network knows, with its state (image, text, refused). On the right the picked server: its file, size, the image at chat size and at x2, a sample chat line, and what is wrong with a refused file. REFRESH reads this server's folder and makes it the network's set; it asks SURE? when that would remove or replace an image.</p>
+<div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs"><span class="tab" style="width:34px">Rules</span><span class="tab" style="width:34px">Staff</span><span class="tab" style="width:34px">Log</span><span class="tab" style="width:34px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:36px">Drops</span><span class="tab" style="width:40px">Clients</span><span class="tab on" style="width:42px">Servers</span></span></div>
+<div class="grow" style="display:flex;gap:8px">
+<div class="box" style="width:236px;display:flex;flex-direction:column"><div class="srow" style="height:16px"><span class="lbl">Server</span><span class="lbl">Chat</span><span class="lbl" style="text-align:right">State</span></div>
+<div class="srow"><span class="ellip">BSP-Spawn</span><span><span class="ti t-spawn">SPAWN</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-SafeRoom</span><span><span class="ti t-safe">SAFEROOM</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Sanctuary</span><span><span class="ti t-sanc">SANCTUARY</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow sel"><span class="ellip">BSP-Frostwarf</span><span><span class="ti t-frost">FROSTWARF</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Boulderbrook</span><span><span class="ti t-boul">BOULDERBROOK</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Moongrove</span><span class="sm" style="color:#AAAAAA;font-size:8.5px">[BSP-Moongrove]</span><span class="pill" style="justify-self:end;background:#3a2020;color:#FF6B5C">refused</span></div>
+<div class="srow"><span class="ellip">BSP-Stormfall</span><span><span class="ti t-storm">STORMFALL</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Test</span><span class="sm" style="color:#AAAAAA">[BSP-Test]</span><span class="pill off" style="justify-self:end">text</span></div>
+</div>
+<div class="box grow" style="padding:8px;display:flex;flex-direction:column;gap:6px">
+<span class="lbl">BSP-Frostwarf</span><div class="sm">BSP-Frostwarf.png · 384 x 64 px · 18 KB · 54 x 9 in chat</div>
+<span class="lbl" style="margin-top:2px">In chat · x2</span><div style="display:flex;gap:10px;align-items:center"><span class="ti t-frost">FROSTWARF</span><span class="ti t-frost x2">FROSTWARF</span></div>
+<span class="lbl" style="margin-top:2px">As staff see it</span><div class="mc chatbox" style="font-size:13px"><div><span class="ti t-frost">FROSTWARF</span><span>&lt;Lumen&gt; the ice biome is huge</span></div></div>
+<div class="hint" style="margin-top:auto">Hover: BSP-Frostwarf. Players see no tag; lines from a server's own players have none.</div>
+</div></div>
+<div class="hd"><span class="hint">Folder: config/bsp_server_utilities/server_images/ · on BSP-Spawn · 7 files</span><span class="keys"><span class="key ghost">Setup guide</span><span class="key v">Refresh</span></span></div></div></div>
+<div class="stage"><div class="scr v" style="width:516px;height:120px"><div class="box grow" style="padding:8px;display:flex;flex-direction:column;gap:5px"><span class="lbl">BSP-Moongrove (picked)</span><div class="sm">BSP-Moongrove.png · 640 x 64 px · 31 KB</div><div class="sm r">Refused: 640 x 64 is over 512 x 64. Chat shows [BSP-Moongrove] until a smaller file is refreshed.</div><div class="mc chatbox" style="font-size:13px"><div><span class="gray">[BSP-Moongrove]</span><span>&lt;Tomo_42&gt; gg</span></div></div></div></div></div></div></section>
+
+<section><h2>SERVER IMAGES tab, look B: one table</h2><div class="card"><p>Every server in one table: name, the image at x2, the file and its size or problem, and the state. A strip of sample chat at the bottom shows them all in a row as staff would see them. REFRESH as in A.</p>
+<div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs"><span class="tab" style="width:34px">Rules</span><span class="tab" style="width:34px">Staff</span><span class="tab" style="width:34px">Log</span><span class="tab" style="width:34px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:36px">Drops</span><span class="tab" style="width:40px">Clients</span><span class="tab on" style="width:42px">Servers</span></span></div>
+<div class="box grow" style="display:flex;flex-direction:column;overflow:hidden">
+<div class="trow hd2"><span>Server</span><span>Image x2</span><span>File</span><span style="text-align:right">State</span></div>
+<div class="trow"><span class="ellip">BSP-Spawn</span><span><span class="ti t-spawn x2">SPAWN</span></span><span class="sm m ellip">BSP-Spawn.png · 256 x 64 · 9 KB</span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="trow"><span class="ellip">BSP-SafeRoom</span><span><span class="ti t-safe x2">SAFEROOM</span></span><span class="sm m ellip">BSP-SafeRoom.png · 384 x 64 · 14 KB</span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="trow"><span class="ellip">BSP-Frostwarf</span><span><span class="ti t-frost x2">FROSTWARF</span></span><span class="sm m ellip">BSP-Frostwarf.png · 384 x 64 · 18 KB</span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="trow"><span class="ellip">BSP-Moongrove</span><span class="mc gray">[BSP-Moongrove]</span><span class="sm r ellip">640 x 64: over 512 x 64</span><span class="pill" style="justify-self:end;background:#3a2020;color:#FF6B5C">refused</span></div>
+<div class="trow"><span class="ellip">BSP-Test</span><span class="mc gray">[BSP-Test]</span><span class="sm m ellip">no file</span><span class="pill off" style="justify-self:end">text</span></div>
+<div class="trow" style="height:14px;justify-content:center;display:flex"><span class="hint">3 more · scroll</span></div>
+</div>
+<div class="mc chatbox" style="font-size:13px;width:auto"><div><span class="ti t-spawn">SPAWN</span><span class="ti t-safe">SAFEROOM</span><span class="ti t-sanc">SANCTUARY</span><span class="ti t-frost">FROSTWARF</span><span class="ti t-boul">BOULDERBROOK</span><span class="ti t-storm">STORMFALL</span></div></div>
+<div class="hd"><span class="hint">Folder on BSP-Spawn · 7 files · hover a row for its sample line</span><span class="keys"><span class="key ghost">Setup guide</span><span class="key v">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>SERVER IMAGES tab, look C: chat first</h2><div class="card"><p>A large chat box with one sample line per server, exactly as staff will read them; under it only what needs fixing (refused files, servers without a file, files named after no known server). Clicking a line shows its file's details in the strip.</p>
+<div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs"><span class="tab" style="width:34px">Rules</span><span class="tab" style="width:34px">Staff</span><span class="tab" style="width:34px">Log</span><span class="tab" style="width:34px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:36px">Drops</span><span class="tab" style="width:40px">Clients</span><span class="tab on" style="width:42px">Servers</span></span></div>
+<div style="background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a);padding:6px;position:relative"><div class="mc chatbox" style="width:auto;font-size:14px">
+<div><span class="ti t-spawn">SPAWN</span><span>&lt;Kat_Miner&gt; hello from BSP-Spawn</span></div>
+<div><span class="ti t-safe">SAFEROOM</span><span>&lt;Kat_Miner&gt; hello from BSP-SafeRoom</span></div>
+<div><span class="ti t-sanc">SANCTUARY</span><span>&lt;Kat_Miner&gt; hello from BSP-Sanctuary</span></div>
+<div style="background:rgba(181,140,255,.18)"><span class="ti t-frost">FROSTWARF</span><span>&lt;Kat_Miner&gt; hello from BSP-Frostwarf</span></div>
+<div><span class="ti t-boul">BOULDERBROOK</span><span>&lt;Kat_Miner&gt; hello from BSP-Boulderbrook</span></div>
+<div><span class="gray">[BSP-Moongrove]</span><span>&lt;Kat_Miner&gt; hello from BSP-Moongrove</span></div>
+<div><span class="ti t-storm">STORMFALL</span><span>&lt;Kat_Miner&gt; hello from BSP-Stormfall</span></div>
+<div><span class="gray">[BSP-Test]</span><span>&lt;Kat_Miner&gt; hello from BSP-Test</span></div></div></div>
+<div class="box" style="padding:4px 8px;display:flex;gap:10px;align-items:center"><span class="ti t-frost x2">FROSTWARF</span><span class="sm">BSP-Frostwarf.png · 384 x 64 px · 18 KB · 54 x 9 in chat</span></div>
+<div class="box grow" style="padding:4px 8px;display:flex;flex-direction:column;gap:2px"><span class="lbl">To fix</span><span class="sm r">BSP-Moongrove.png: 640 x 64 is over 512 x 64</span><span class="sm m">BSP-Test: no file (reads as text)</span><span class="sm g">BSP-Wild.png: no server of that name has run Server Utilities (kept anyway)</span></div>
+<div class="hd"><span class="hint">Folder on BSP-Spawn · 7 files</span><span class="keys"><span class="key ghost">Setup guide</span><span class="key v">Refresh</span></span></div></div></div></div></section>
+
+<section><h2>The setup guide page (D198)</h2><div class="card"><p>After Player counter: the picked look inside the guide frame, with its strip and the guide's keys. TURN OFF FEATURE sends no images to anyone, so every tag reads as text. Drawn here with look A's body.</p>
+<div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs"><span class="tab" style="width:34px">Rules</span><span class="tab" style="width:34px">Staff</span><span class="tab" style="width:34px">Log</span><span class="tab" style="width:34px">AFK</span><span class="tab" style="width:38px">Chunks</span><span class="tab" style="width:36px">Drops</span><span class="tab" style="width:40px">Clients</span><span class="tab on" style="width:42px">Servers</span></span></div>
+<div class="bar2"><i style="width:92%"></i></div>
+<div class="box" style="padding:4px 8px;display:flex;gap:8px;align-items:center;background:#1a1530;box-shadow:inset 0 0 0 1px #3d2f5c"><span class="vv b up sm">Setup 11/12</span><span class="sm">Server images: each server's picture in front of chat from other servers, for staff.</span></div>
+<div class="grow" style="display:flex;gap:8px">
+<div class="box" style="width:236px;display:flex;flex-direction:column">
+<div class="srow"><span class="ellip">BSP-Spawn</span><span><span class="ti t-spawn">SPAWN</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow sel"><span class="ellip">BSP-SafeRoom</span><span><span class="ti t-safe">SAFEROOM</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Sanctuary</span><span><span class="ti t-sanc">SANCTUARY</span></span><span class="pill ok" style="justify-self:end">image</span></div>
+<div class="srow"><span class="ellip">BSP-Moongrove</span><span class="sm" style="color:#AAAAAA;font-size:8.5px">[BSP-Moongrove]</span><span class="pill" style="justify-self:end;background:#3a2020;color:#FF6B5C">refused</span></div>
+<div class="srow"><span class="hint">4 more · scroll</span></div></div>
+<div class="box grow" style="padding:8px;display:flex;flex-direction:column;gap:6px"><span class="lbl">BSP-SafeRoom</span><div class="sm">BSP-SafeRoom.png · 384 x 64 px · 14 KB</div><div style="display:flex;gap:10px;align-items:center"><span class="ti t-safe">SAFEROOM</span><span class="ti t-safe x2">SAFEROOM</span></div><div class="hint" style="margin-top:auto">Put one PNG per server in config/bsp_server_utilities/server_images/, named as Velocity knows it, then REFRESH.</div><span class="keys"><span class="key sm v">Refresh</span></span></div></div>
+<div class="hd"><span class="keys"><span class="key ghost">Back</span></span><span class="keys"><span class="key warn">Turn off feature</span><span class="key">Setup later</span><span class="key v">Next</span></span></div></div></div></div></section>
+
+<section><h2>Decisions</h2><div class="card"><ol>
+<li><b>J1 the tab's look:</b> A a list of servers with the picked one's details, previews and sample line beside it; B one table of every server with its image at x2 and a strip of all images; or C a large chat box with a sample line per server and a "to fix" list under it.</li>
+<li><b>J2 the tab's name:</b> SERVERS (as drawn), IMAGES, or TAGS.</li>
+<li><b>J3 REFRESH:</b> asks SURE? only when it would remove or replace an image already in use (as described), or always asks.</li>
+</ol></div></section>
+</div></body></html>

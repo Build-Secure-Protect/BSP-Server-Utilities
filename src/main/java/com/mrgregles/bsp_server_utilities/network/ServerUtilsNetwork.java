@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "3";
+    private static final String PROTOCOL = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -125,6 +125,19 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(PlayersViewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(PlayersViewPacket::encode).decoder(PlayersViewPacket::decode)
                 .consumerMainThread(PlayersViewPacket::handle).add();
+        // Server images in chat (D189 to D204).
+        CHANNEL.messageBuilder(ServerImageListPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(ServerImageListPacket::encode).decoder(ServerImageListPacket::decode)
+                .consumerMainThread(ServerImageListPacket::handle).add();
+        CHANNEL.messageBuilder(ServerImagePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(ServerImagePacket::encode).decoder(ServerImagePacket::decode)
+                .consumerMainThread(ServerImagePacket::handle).add();
+        CHANNEL.messageBuilder(AdminServersPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminServersPacket::encode).decoder(AdminServersPacket::decode)
+                .consumerMainThread(AdminServersPacket::handle).add();
+        CHANNEL.messageBuilder(AdminServersEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminServersEditPacket::encode).decoder(AdminServersEditPacket::decode)
+                .consumerMainThread(AdminServersEditPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

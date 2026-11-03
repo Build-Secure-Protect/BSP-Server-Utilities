@@ -30,6 +30,8 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
     private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
     private com.mrgregles.bsp_server_utilities.players.PlayersSettings playersSettings;
+    private com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet serverImages;
+    private final Map<String, byte[]> serverImageBytes = new java.util.HashMap<>();
     private final Map<UUID, com.mrgregles.bsp_server_utilities.players.Joined> players = new java.util.LinkedHashMap<>();
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
@@ -163,6 +165,27 @@ public final class MemoryBackend implements StorageBackend {
         List<com.mrgregles.bsp_server_utilities.players.Joined> all = new ArrayList<>(players.values());
         all.sort((a, b) -> Long.compare(b.atMs(), a.atMs()));
         return new com.mrgregles.bsp_server_utilities.players.PlayerCounts(all.size(), all.stream().filter(j -> j.atMs() >= sinceMs).limit(limit).toList(), all.isEmpty() ? null : all.get(0));
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet loadServerImages() throws Exception {
+        check();
+        return serverImages;
+    }
+
+    @Override
+    public synchronized void saveServerImages(com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet set, Map<String, byte[]> bytes) throws Exception {
+        check();
+        bytes.forEach((id, png) -> serverImageBytes.putIfAbsent(id, png.clone()));
+        serverImageBytes.keySet().retainAll(set.ids());
+        serverImages = set;
+    }
+
+    @Override
+    public synchronized byte[] loadServerImage(String id) throws Exception {
+        check();
+        byte[] png = serverImageBytes.get(id);
+        return png == null ? null : png.clone();
     }
 
     @Override

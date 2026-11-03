@@ -118,6 +118,8 @@ public class PlayerCounterGameTests {
             beta.pollNotices();
             beta.drain();
             h.assertTrue(texts(lines).get(lines.size() - 1).equals("[alpha] Welcome " + name + ", player number 1 on BSP!"), "elsewhere the server joined comes first (D176, D180): " + texts(lines));
+            h.assertTrue(lines.get(lines.size() - 1).getSiblings().get(0).getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc
+                    && tc.getKey().equals(com.mrgregles.bsp_server_utilities.serverimages.ServerTag.key("alpha")), "as the server's tag: its image where the client has one (D197)");
             h.assertTrue(PlayerCounter.real() == 1, "and the other server reads the count again");
             // a second player on the second server
             ServerPlayer sam = TestPlayers.mockServerPlayer(h);
@@ -263,7 +265,7 @@ public class PlayerCounterGameTests {
             fresh(server);
             Storage.useForTests(null);
             PlayerCounter.useForTests(System::currentTimeMillis, (srv, line) -> lines.add(line));
-            h.assertTrue(Feature.values()[Feature.values().length - 1] == Feature.PLAYERS && Feature.PLAYERS.ordinal() == Feature.PANELS.ordinal() + 1 && Feature.PLAYERS.ownSwitch(),
+            h.assertTrue(Feature.PLAYERS.ordinal() == Feature.PANELS.ordinal() + 1 && Feature.SERVERS.ordinal() == Feature.PLAYERS.ordinal() + 1 && Feature.PLAYERS.ownSwitch(),
                     "the guide's page comes after Display panels, with its own off switch (D173)");
             SetupService.turnOff(server, Feature.PLAYERS);
             h.assertTrue(Switches.off(Feature.PLAYERS) && PlayerCounter.off(), "TURN OFF FEATURE");

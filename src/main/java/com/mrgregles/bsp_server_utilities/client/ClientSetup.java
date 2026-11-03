@@ -35,6 +35,14 @@ public final class ClientSetup {
         event.registerReloadListener((ResourceManagerReloadListener) manager -> ClientCheck.onReload());
     }
 
+    /** Server images in chat (D189): the in-memory pack that serves their font. */
+    @SubscribeEvent
+    public static void onAddPacks(net.minecraftforge.event.AddPackFindersEvent event) {
+        if (event.getPackType() == net.minecraft.server.packs.PackType.CLIENT_RESOURCES) {
+            event.addRepositorySource(add -> add.accept(ServerImagePack.pack()));
+        }
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         // the client check: read the mods' files in the background, and look again after reloads

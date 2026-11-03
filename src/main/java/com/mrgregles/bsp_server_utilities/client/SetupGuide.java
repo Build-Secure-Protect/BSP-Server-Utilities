@@ -273,6 +273,7 @@ final class SetupGuide {
             case CHECK -> Tr.t("admin.setup.about.check");
             case PANELS -> Tr.t("admin.setup.about.panels");
             case PLAYERS -> Tr.t("admin.setup.about.players");
+            case SERVERS -> Tr.t("admin.setup.about.servers");
         };
     }
 
@@ -288,6 +289,7 @@ final class SetupGuide {
             case CHECK -> Tr.t("admin.setup.feature.check");
             case PANELS -> Tr.t("admin.setup.feature.panels");
             case PLAYERS -> Tr.t("admin.setup.feature.players");
+            case SERVERS -> Tr.t("admin.setup.feature.servers");
         };
     }
 

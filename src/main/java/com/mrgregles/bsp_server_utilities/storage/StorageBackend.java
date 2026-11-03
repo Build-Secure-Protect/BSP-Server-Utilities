@@ -135,6 +135,19 @@ public interface StorageBackend {
 
     void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ server images (SU-26)
+
+    /** The network's server images, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet loadServerImages() throws Exception;
+
+    /** Saves the set with the bytes of its images (by id; images already stored are kept), and drops stored images it no longer uses. */
+    void saveServerImages(com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet set, Map<String, byte[]> bytes) throws Exception;
+
+    /** An image's PNG bytes by id, or null. */
+    @Nullable
+    byte[] loadServerImage(String id) throws Exception;
+
     String describe();
 
     void close() throws Exception;

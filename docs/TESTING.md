@@ -359,3 +359,38 @@ On a server (with BSP-Core 1.6.2 or newer):
 3. `/su status`: "Shared storage: ..." works as before; the notes say "database settings from BSP-Core's config/bsp_core-network.toml" (or this mod's network file when its own settings are used).
 4. Restart: no second warning.
 5. Change the database and Redis passwords if one was ever in a server config, and keep every `config/*-network.toml` out of the client pack and `defaultconfigs/`.
+
+## 2026-11-03: SU-26, server images, server side
+
+Headless: 94 GameTests pass, twice (new `ServerImagesGameTests`: each file checked (a 384 x 64 PNG taken and known by its hash; over 512 x 64, wider than 96 in chat, over 256 KB, not a PNG, animated and a name that cannot be a server's refused); a refresh becoming the network's set in the shared storage with its bytes, written to the Action Log, a second server taking it from the notice and fetching the bytes, a file left out removing the image and its bytes; replacing or removing waiting for the second click while adding goes through, a refused file for a server in use counting as a removal; each player sent the list and every image once a login, an empty list when the feature is off; the tag's key, grey fallback, white, font and hover; the SERVERS tab's alphabetical names and marks for admins only, with what a refresh did, would do or that nothing changed). The counter's welcome test also checks the other servers' line starts with the server's tag. **Not yet run against the network's MySQL (MemoryBackend stands in), or on a live server.**
+
+On a server with shared storage (two servers of the network):
+1. Put `BSP-Spawn.png` (for example 256 x 64) and a 640 x 64 `BSP-Test.png` in `config/bsp_server_utilities/server_images/` on server A. `/su serverimages`: "Server images in use: 0", the folder with 2 files, BSP-Test refused "640 x 64 is over 512 x 64" in red.
+2. `/su serverimages refresh`: "refreshed the server images: added BSP-Spawn". `/actionlog` has that entry and none for the command. `/su serverimages` on server B lists BSP-Spawn in use, though B's folder is empty. `/su status` on both: "Server images: 1 in use, for the network."
+3. Replace `BSP-Spawn.png` with a different picture and refresh: a red "This replaces BSP-Spawn and removes -." with [Confirm]; nothing changes until [Confirm] is clicked (or `/su serverimages refresh confirm`).
+4. Delete the file and refresh with confirm: the image is gone on both servers.
+5. With Redis on: the image reaches server B within a second of the refresh (the notice is sent only after MySQL has the bytes). If B ever logs "Server image ... is in the set but not in the shared storage", the next player to join B makes it try again.
+6. A 512 x 64 file: `/su serverimages` lists it as 256 x 32 (scaled to the game's 256-pixel font sheets), and in chat it shows as the picture, not an empty box.
+
+## 2026-11-03: SU-27, server images in the client's chat
+
+Headless: the dev client starts with the built-in pack `bsp_server_utilities_server_images` in its resources and no font errors. **The font reload, the language wrapper beside RankUp's and an image in chat have not been seen in a client.** Velocity's side (request SU-VA1) is not built yet, so relayed chat still shows the plain grey tag; until then this mod's own welcome line is the place to see an image.
+
+In game (BSP-RankUp on the server too, as on the network):
+1. With BSP-Spawn's image in use, a new account joins BSP-Spawn: on the other servers the gold "Welcome ..." line starts with the image, one chat line high, in its own colours, not grey; hovering it shows "BSP-Spawn". On a server with no image for the joined server it reads "[BSP-Test] Welcome ..." in grey as before.
+2. RankUp's prefix images still show beside names in chat, before and after the server images arrive; F3+T (reload resources) and then a new chat line: both kinds of image still show. Play for a few minutes: no growing lag (the two mods' language wrappers settle).
+3. Turn the feature off on the guide page: new lines read the grey name; on again: images at the next login.
+4. Once Velocity Additions has SU-VA1 and `chat.relayStaff = "<server_tag> <line>"` in its `messages.toml`: a staff member sees each other server's image in front of its relayed lines, players see no tag, and the proxy console still reads `[BSP-Spawn] <Name> text`.
+
+## 2026-11-03: SU-28, the SERVERS tab and the guide page
+
+Headless: the tab's data is covered by SU-26's tests. **The tab and the guide page have not been drawn in a client.**
+
+In game:
+1. `/su`: eight tab keys, SERVERS last, all readable, the title smaller beside them.
+2. SERVERS: one alphabetical list; this server marked "here", a server down for a while "off", a file named after no known server "?" (for example a misspelt `BSP-Spwan.png`, with the gold note to check the spelling against velocity.toml). Each row shows the image as chat will, or the grey name, and its state: image, text, ready (a file not refreshed yet) or refused. It opens on this server (`tools/preview/server_images_refined.html`).
+3. Click a row: the right side shows the file and its size, the image at chat size and twice that, the sample line "<Pip> heading to the mines" after the image on chat's dark backing, and a refused file's problem in red.
+4. REFRESH with only new files: they go straight in, "Images added: n" in green. With a file changed or removed: the footer turns red, "Replaces ..., removes .... Click again within 3 s." and the key reads SURE?; a second click within three seconds applies it, waiting longer does nothing.
+5. On a server without shared storage the footer says in gold "This server only: no shared storage, so each server uses its own folder."
+6. `/su setup` to page 11/12 "Server images": the same list and pane, with REFRESH in the right box (the guide's keys take the footer); TURN OFF FEATURE, SETUP LATER, NEXT; Finish lists Server images.
+

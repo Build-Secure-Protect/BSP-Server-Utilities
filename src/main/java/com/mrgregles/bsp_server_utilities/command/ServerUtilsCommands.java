@@ -26,6 +26,9 @@ import com.mrgregles.bsp_server_utilities.rules.RulesService;
 import com.mrgregles.bsp_server_utilities.storage.Storage;
 import com.mrgregles.bsp_server_utilities.storage.StorageSettings;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -91,6 +94,11 @@ public final class ServerUtilsCommands {
                                 .executes(c -> playersChanged(c.getSource(), PlayerCounter.add(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()), IntegerArgumentType.getInteger(c, "number"))))))
                         .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
                         .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
+                .then(Commands.literal("serverimages").requires(Perms::canEdit)
+                        .executes(c -> serverImages(c.getSource()))
+                        .then(Commands.literal("list").executes(c -> serverImages(c.getSource())))
+                        .then(Commands.literal("refresh").executes(c -> serverImagesRefresh(c.getSource(), false))
+                                .then(Commands.literal("confirm").executes(c -> serverImagesRefresh(c.getSource(), true)))))
                 .then(Commands.literal("client").requires(Perms::canEdit)
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .suggests((c, b) -> {
@@ -342,6 +350,47 @@ public final class ServerUtilsCommands {
         return 1;
     }
 
+    /** {@code /su serverimages}: each server's image in use and each file in the folder, with what is wrong with it (D191). */
+    private static int serverImages(CommandSourceStack source) {
+        var server = source.getServer();
+        com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet set = com.mrgregles.bsp_server_utilities.serverimages.ServerImages.set(server);
+        if (com.mrgregles.bsp_server_utilities.serverimages.ServerImages.off()) {
+            say(source, Component.translatable("message.bsp_server_utilities.serverimages.off"));
+        }
+        say(source, Component.translatable(set.entries().isEmpty() ? "message.bsp_server_utilities.serverimages.none" : "message.bsp_server_utilities.serverimages.in_use", set.entries().size(),
+                Component.translatable(Storage.active() == null ? "message.bsp_server_utilities.serverimages.here" : "message.bsp_server_utilities.serverimages.network")));
+        for (com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet.Entry e : set.entries()) {
+            say(source, Component.translatable("message.bsp_server_utilities.serverimages.entry", com.mrgregles.bsp_server_utilities.serverimages.ServerTag.of(e.name()), e.name(), e.file(), e.width(), e.height()));
+        }
+        List<com.mrgregles.bsp_server_utilities.serverimages.ServerImages.Read> files = com.mrgregles.bsp_server_utilities.serverimages.ServerImages.scan();
+        say(source, Component.translatable("message.bsp_server_utilities.serverimages.folder", com.mrgregles.bsp_server_utilities.serverimages.ServerImages.FOLDER, files.size()));
+        for (com.mrgregles.bsp_server_utilities.serverimages.ServerImages.Read r : files) {
+            var i = r.info();
+            say(source, i.usable() ? Component.translatable("message.bsp_server_utilities.serverimages.file", i.file(), i.width(), i.height())
+                    : Component.translatable("message.bsp_server_utilities.serverimages.refused", i.file(), i.problem()).withStyle(ChatFormatting.RED));
+        }
+        return 1;
+    }
+
+    /** {@code /su serverimages refresh [confirm]}: the folder becomes the set; replacing or removing an image in use needs confirm (D196, D201). */
+    private static int serverImagesRefresh(CommandSourceStack source, boolean confirmed) {
+        var plan = com.mrgregles.bsp_server_utilities.serverimages.ServerImages.refresh(source.getServer(), source.getPlayer(), who(source), confirmed);
+        if (plan.applied()) {
+            source.sendSuccess(() -> Component.literal(com.mrgregles.bsp_server_utilities.serverimages.ServerImages.describe(plan)), true);
+            return 1;
+        }
+        if (!plan.changes()) {
+            say(source, Component.translatable("message.bsp_server_utilities.serverimages.nothing"));
+            return 0;
+        }
+        MutableComponent line = Component.translatable("message.bsp_server_utilities.serverimages.confirm", String.join(", ", plan.replaced().isEmpty() ? List.of("-") : plan.replaced()),
+                String.join(", ", plan.removed().isEmpty() ? List.of("-") : plan.removed())).withStyle(ChatFormatting.RED);
+        line.append(" ").append(Component.translatable("message.bsp_server_utilities.serverimages.confirm_link").withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withUnderlined(true)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/su serverimages refresh confirm"))));
+        say(source, line);
+        return 0;
+    }
+
     /** {@code /su clientcheck export} (D132). */
     private static int clientExport(CommandSourceStack source) {
         java.nio.file.Path f = ClientCheckService.exportFile(source.getServer());
@@ -403,6 +452,10 @@ public final class ServerUtilsCommands {
         say(source, PlayerCounter.off() ? Component.translatable("message.bsp_server_utilities.status.players_off")
                 : Component.translatable("message.bsp_server_utilities.status.players", PlayerCounter.format(PlayerCounter.shown(source.getServer())), PlayerCounter.format(PlayerCounter.real()),
                 Component.translatable(s == null ? "message.bsp_server_utilities.status.players_here" : "message.bsp_server_utilities.status.players_network")));
+        int images = com.mrgregles.bsp_server_utilities.serverimages.ServerImages.set(source.getServer()).entries().size();
+        say(source, com.mrgregles.bsp_server_utilities.serverimages.ServerImages.off() ? Component.translatable("message.bsp_server_utilities.status.servers_off")
+                : Component.translatable("message.bsp_server_utilities.status.servers", images,
+                Component.translatable(s == null ? "message.bsp_server_utilities.serverimages.here" : "message.bsp_server_utilities.serverimages.network")));
         say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
         return 1;
     }

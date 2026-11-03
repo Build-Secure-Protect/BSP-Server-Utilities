@@ -51,6 +51,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerNotices();
         com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
+        com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -64,6 +65,7 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.check.ClientCheckService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -82,6 +84,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.onLogin(p);
+                com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogin(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
@@ -90,6 +93,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogout(p);
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogout(p);
                 StaffDirectory.onLogout(p);
+                com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogout(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> ImageService.forget(e.getEntity().getUUID()));

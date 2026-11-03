@@ -38,6 +38,8 @@ STATUS = {
     "players_network": "for the network",
     "players_here": "on this server only",
     "players_off": "Players: the counter is off.",
+    "servers": "Server images: %s in use, %s.",
+    "servers_off": "Server images: off; every server's tag reads as its name.",
     "setup": "Setup guide: %s of %s pages set up; off: %s; left: %s.",
 }
 KEYS.update({"message.bsp_server_utilities.status." + k: v for k, v in STATUS.items()})
@@ -49,6 +51,22 @@ PLAYERS = {
     "off": "The player counter is off. Turn it on in the setup guide (/su setup).",
 }
 KEYS.update({"message.bsp_server_utilities.players." + k: v for k, v in PLAYERS.items()})
+# /su serverimages (server images in chat)
+SERVER_IMAGES = {
+    "in_use": "Server images in use: %s, %s.",
+    "none": "No server images in use (%s); every server's tag reads as its name.",
+    "network": "for the network",
+    "here": "on this server only",
+    "entry": "%s %s: %s, %s x %s px",
+    "folder": "Folder config/%s: %s files.",
+    "file": "  %s: %s x %s px, ready",
+    "refused": "  %s: refused, %s",
+    "nothing": "The folder matches the images in use; nothing changed.",
+    "confirm": "This replaces %s and removes %s.",
+    "confirm_link": "[Confirm]",
+    "off": "Server images are off: players get none until they are turned on in the setup guide (/su setup).",
+}
+KEYS.update({"message.bsp_server_utilities.serverimages." + k: v for k, v in SERVER_IMAGES.items()})
 # The rules popup and /su rules
 RULES = {
     "agreed": "Thank you for agreeing to the rules. Have fun!",
@@ -102,6 +120,7 @@ KEYS.update({
     "message.bsp_server_utilities.setup.feature.check": "Client check",
     "message.bsp_server_utilities.setup.feature.panels": "Display panels",
     "message.bsp_server_utilities.setup.feature.players": "Player counter",
+    "message.bsp_server_utilities.setup.feature.servers": "Server images",
     "message.bsp_server_utilities.panel.off": "Display panels are turned off on this server.",
     "message.bsp_server_utilities.check.bright": "Your brightness is above the game's normal maximum; staff can see this.",
     "message.bsp_server_utilities.check.kind.mod": "mod",
@@ -379,6 +398,7 @@ GUI = {
     "admin.tab.chunks": "CHUNKS",
     "admin.tab.drops": "DROPS",
     "admin.tab.clients": "CLIENTS",
+    "admin.tab.servers": "SERVERS",
     # the setup guide and its card
     "admin.setup.card.title": "CONFIGURE SERVER UTILITIES",
     "admin.setup.card.text": "Not set up on this network yet. You can keep playing; this stays until you choose.",
@@ -409,6 +429,7 @@ GUI = {
     "admin.setup.feature.check": "Client check",
     "admin.setup.feature.panels": "Display panels",
     "admin.setup.feature.players": "Player counter",
+    "admin.setup.feature.servers": "Server images",
     "admin.setup.about.welcome": "Welcome: this server's name and the storage it shares with the network.",
     "admin.setup.about.staff": "Staff groups: the LuckPerms groups shown as staff, for the network.",
     "admin.setup.about.rules": "Rules: new players read and tick these before they can move. One set for the network.",
@@ -419,6 +440,7 @@ GUI = {
     "admin.setup.about.check": "Client check: blocked mods and packs are refused at login. Press TRUST MY SETUP with your own game.",
     "admin.setup.about.panels": "Display panels: admin wall blocks showing text, a picture, the staff, the log or the player count.",
     "admin.setup.about.players": "Player counter: every new player on the network, on the PLAYERS board and Display Panels.",
+    "admin.setup.about.servers": "Server images: each server's picture in front of chat from other servers, for staff.",
     "admin.setup.about.finish": "Finish: what you set up, turned off and left for later.",
     "admin.setup.welcome.intro": "Server Utilities adds the rules popup, display panels, staff online, the action log, AFK, chunk unloading, despawn times, the client check and the player counter. Each page shows a feature's settings: NEXT keeps them, SETUP LATER reminds you at your next join, TURN OFF FEATURE stops it.",
     "admin.setup.name": "This server's name",
@@ -533,6 +555,37 @@ GUI = {
     "ago.minutes": "%s min",
     "ago.hours": "%s h",
     "ago.days": "%s d",
+    "servers.server": "Server",
+    "servers.chat": "Chat",
+    "servers.state": "State",
+    "servers.loading": "Reading the folder\u2026",
+    "servers.mark.here": "here",
+    "servers.mark.off": "off",
+    "servers.state.image": "image",
+    "servers.state.text": "text",
+    "servers.state.refused": "refused",
+    "servers.state.ready": "ready",
+    "servers.where.here": "this server",
+    "servers.where.off": "not running now",
+    "servers.file": "%s \u00b7 %s x %s px \u00b7 %s \u00b7 %s x 9 in chat",
+    "servers.file_refused": "Refused: %s, %s. Chat shows the name until a usable file is refreshed.",
+    "servers.file_ready": "%s \u00b7 %s x %s px \u00b7 ready: REFRESH to use it",
+    "servers.file_new": "%s \u00b7 %s x %s px \u00b7 a different picture: REFRESH to use it",
+    "servers.no_file": "No file: put %s.png in the folder to give it an image.",
+    "servers.unknown": "No server called %s is running now, and none has been heard from since this server started. The image is kept and used as soon as a server of that name sends chat; check the spelling against velocity.toml.",
+    "servers.in_chat": "In chat \u00b7 x2",
+    "servers.as_staff": "As staff on other servers see it",
+    "servers.sample": "<Pip> heading to the mines",
+    "servers.hover_note": "Hover: %s. Players see no tag; lines from a server's own players have none.",
+    "servers.refresh": "REFRESH",
+    "servers.replaces": "Replaces %s",
+    "servers.removes": "Removes %s",
+    "servers.click_again": "Click again within 3 s.",
+    "servers.added": "Images added: %s",
+    "servers.changed": "Images changed: %s",
+    "servers.nothing": "Nothing changed",
+    "servers.local": "This server only: no shared storage, so each server uses its own folder.",
+    "servers.folder": "Folder: config/%s/ \u00b7 %s files \u00b7 the network's set",
 }
 KEYS.update({"gui.bsp_server_utilities." + k: v for k, v in GUI.items()})
 

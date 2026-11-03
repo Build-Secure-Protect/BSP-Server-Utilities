@@ -238,6 +238,11 @@ public final class StaffDirectory {
         return out;
     }
 
+    /** Every other server heard from since this one started, however long ago (the SERVERS tab marks the quiet ones, D202). */
+    public static java.util.Set<String> heardServers() {
+        return java.util.Set.copyOf(REMOTE.keySet());
+    }
+
     /** A staff member left this server: the last-seen record, shared, and the new list of online staff. */
     public static void onLogout(ServerPlayer player) {
         AWAY.remove(player.getUUID());

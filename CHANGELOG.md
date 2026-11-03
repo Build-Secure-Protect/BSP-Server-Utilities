@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
+
+### Added
+- Server images in chat: an admin puts one PNG per server in `config/bsp_server_utilities/server_images/` on any server, named as Velocity knows the server (`BSP-Spawn.png`), and presses REFRESH on the new SERVERS tab or types `/su serverimages refresh`. The folder becomes the network's set (kept in the world and, with shared storage, in the new tables `server_images` and `server_image_bytes` with a notice to the other servers; without shared storage each server has its own). A file left out removes that server's image. Each file must be a PNG, not animated, at most 512 x 64 pixels and 256 KB, and at most 96 pixels wide once drawn one chat line high; a refused file says why. A file wider than 256 pixels is kept scaled down to 256 wide (the game puts font characters on 256-pixel sheets and would draw a wider one as an empty box). A refresh that would replace or remove an image in use asks first (SURE? on the tab, `/su serverimages refresh confirm` in chat); one that only adds goes straight through. Each refresh is written to the Action Log. `/su serverimages` lists the images in use and the folder's files; `/su status` has a Server images line.
+- Every player is sent the list of servers with images and each image once a login, and again when the set changes. On the client each image becomes a character of a built-in font, `bsp_server_utilities:server_tags`, drawn one chat line high in its own colours; the key `bsp_server_utilities.server_image.<server name in lower case>` reads as that image. Any chat piece sent as that key with that font shows the image, and its fallback text (`[BSP-Spawn]` in grey) everywhere else: the console, the logs, a server without an image. Velocity Additions sends relayed chat's server tag this way once its side is built (request SU-VA1).
+- The player counter's welcome on the other servers shows the server's image in place of the grey `[BSP-Spawn]`, with the server's name on hover.
+- The SERVERS tab, the eighth in `/su`: every server the network knows and every name with a file, in one alphabetical list (this server marked "here", one not heard from lately "off", a file named after a server never heard from "?"), each with its image as chat shows it, or its grey name, and its state (image, text, ready, refused). The picked server shows its file, the image at chat size and twice that, a sample chat line, and what is wrong with a refused file. REFRESH and SETUP GUIDE in the footer; the footer names in red what a refresh would replace or remove, says what it did, or says "This server only" without shared storage.
+- The setup guide's Server images page, after Player counter (the guide has twelve pages): the SERVERS tab with REFRESH; TURN OFF FEATURE sends no images, so every server's tag reads as its name. Existing servers are asked about this page at an admin's next join.
+
+### Changed
+- The mod's network protocol is now version 4: clients and servers must both have this version to connect.
+- The tab keys of `/su` are narrower so eight fit beside the title.
+
 ## [0.5.1] - 2026-10-28
 
 ### Security

@@ -33,7 +33,8 @@ import java.util.function.LongSupplier;
  *   <li>The number shown is the real list plus an adjustment admins set, add to, reset (0 from now) or take back to the
  *   real count (D170); the real list is never changed. Each change is written to the Action Log.</li>
  *   <li>A new player is welcomed in gold, in words admins type with {name} and {number} filled in (D171, D177, D179), on
- *   every server of the network (D176): on the server joined as typed, elsewhere after the server's name in grey (D180);
+ *   every server of the network (D176): on the server joined as typed, elsewhere after the server's tag, its image or
+ *   its name in grey (D180, D197);
  *   the number is the one shown (D181).</li>
  *   <li>Every player's copy (for the PLAYERS board and Player count panels) is kept current: sent to everyone at most
  *   once a second when it changes, to a player at login, and again when the day's or week's counts move.</li>
@@ -134,14 +135,14 @@ public final class PlayerCounter {
         }
     }
 
-    /** The gold welcome line to everyone here; after the server's name in grey when the player joined another server. */
+    /** The gold welcome line to everyone here; after the server's tag (its image, or its name in grey) when the player joined another server. */
     private static void welcome(MinecraftServer server, Joined j, int number, boolean elsewhere) {
         if (off()) {
             return;
         }
         MutableComponent line = Component.empty();
         if (elsewhere) {
-            line.append(Component.literal("[" + j.server() + "] ").withStyle(ChatFormatting.GRAY));
+            line.append(com.mrgregles.bsp_server_utilities.serverimages.ServerTag.of(j.server())).append(" ");
         }
         line.append(Component.literal(welcomeText(settings(server).welcome(), j.name(), number)).withStyle(ChatFormatting.GOLD));
         broadcaster.accept(server, line);

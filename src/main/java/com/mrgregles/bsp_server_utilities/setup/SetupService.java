@@ -131,7 +131,7 @@ public final class SetupService {
 
     /** Puts the network's off switches into force here, and tells every player when they changed. */
     static void switches(MinecraftServer server) {
-        boolean rulesWere = Switches.off(Feature.RULES), staffWas = Switches.off(Feature.STAFF), despawnWas = Switches.off(Feature.DESPAWN), playersWere = Switches.off(Feature.PLAYERS);
+        boolean rulesWere = Switches.off(Feature.RULES), staffWas = Switches.off(Feature.STAFF), despawnWas = Switches.off(Feature.DESPAWN), playersWere = Switches.off(Feature.PLAYERS), serversWere = Switches.off(Feature.SERVERS);
         if (!Switches.set(state(server).off())) {
             return;
         }
@@ -146,6 +146,9 @@ public final class SetupService {
         }
         if (Switches.off(Feature.PLAYERS) != playersWere) {
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.switched(server);
+        }
+        if (Switches.off(Feature.SERVERS) != serversWere) {
+            com.mrgregles.bsp_server_utilities.serverimages.ServerImages.switched(server);
         }
         ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), new SetupFlagsPacket(Switches.all()));
     }

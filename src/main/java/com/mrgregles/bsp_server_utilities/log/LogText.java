@@ -26,6 +26,9 @@ public final class LogText {
             return false;
         }
         String[] w = command.strip().split("\\s+");
+        if (w.length >= 3 && w[1].equalsIgnoreCase("serverimages") && w[2].equalsIgnoreCase("refresh")) {
+            return true; // the refresh writes what it changed (D196)
+        }
         return w.length >= 3 && w[1].equalsIgnoreCase("players") && SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT));
     }
 

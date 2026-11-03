@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}.
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -97,6 +97,8 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "setup_state (id INT NOT NULL PRIMARY KEY, state MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, first_at BIGINT NOT NULL, first_server VARCHAR(64) NOT NULL, KEY first_at (first_at))");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL)");
         }
@@ -335,6 +337,69 @@ public final class JdbcBackend implements StorageBackend {
             return java.util.Optional.of(new com.mrgregles.bsp_server_utilities.players.Joined(UUID.fromString(rs.getString(1)), rs.getString(2), rs.getLong(3), rs.getString(4)));
         } catch (IllegalArgumentException e) {
             return java.util.Optional.empty(); // not a player id
+        }
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet loadServerImages() throws SQLException {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT images FROM " + prefix + "server_images WHERE id = 1")) {
+            return rs.next() ? com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet.decode(rs.getString(1)) : null;
+        }
+    }
+
+    @Override
+    public void saveServerImages(com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet set, Map<String, byte[]> bytes) throws SQLException {
+        Connection c = conn();
+        boolean auto = c.getAutoCommit();
+        c.setAutoCommit(false);
+        try {
+            try (PreparedStatement ps = c.prepareStatement("INSERT IGNORE INTO " + prefix + "server_image_bytes (id, png) VALUES (?, ?)")) {
+                for (Map.Entry<String, byte[]> e : bytes.entrySet()) {
+                    ps.setString(1, e.getKey());
+                    ps.setBytes(2, e.getValue());
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "server_images (id, images, revision) VALUES (1, ?, ?)"
+                    + " ON DUPLICATE KEY UPDATE images = VALUES(images), revision = VALUES(revision)")) {
+                ps.setString(1, set.encode());
+                ps.setLong(2, set.revision());
+                ps.executeUpdate();
+            }
+            java.util.Set<String> ids = set.ids();
+            if (ids.isEmpty()) {
+                try (Statement st = c.createStatement()) {
+                    st.executeUpdate("DELETE FROM " + prefix + "server_image_bytes");
+                }
+            } else {
+                String marks = String.join(", ", java.util.Collections.nCopies(ids.size(), "?"));
+                try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + prefix + "server_image_bytes WHERE id NOT IN (" + marks + ")")) {
+                    int i = 1;
+                    for (String id : ids) {
+                        ps.setString(i++, id);
+                    }
+                    ps.executeUpdate();
+                }
+            }
+            c.commit();
+        } catch (SQLException e) {
+            c.rollback();
+            throw e;
+        } finally {
+            c.setAutoCommit(auto);
+        }
+    }
+
+    @Override
+    @Nullable
+    public byte[] loadServerImage(String id) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT png FROM " + prefix + "server_image_bytes WHERE id = ?")) {
+            ps.setString(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getBytes(1) : null;
+            }
         }
     }
 
