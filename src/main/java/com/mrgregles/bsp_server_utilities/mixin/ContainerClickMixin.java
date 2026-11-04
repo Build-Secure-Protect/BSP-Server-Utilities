@@ -11,8 +11,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * A click in a container counts as active for AFK detection (owner decision D70); Forge has no event for it. HEAD only
- * (never a redirect: Mohist rewrites some vanilla calls); {@link AfkService#active} ignores the network thread's run.
+ * A click in a container counts as active for AFK detection (owner decision D70), as an input on its slot for the
+ * macro watch (D208); Forge has no event for it. HEAD only (never a redirect: Mohist rewrites some vanilla calls);
+ * {@link AfkService#input} ignores the network thread's run.
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class ContainerClickMixin {
@@ -21,6 +22,6 @@ public abstract class ContainerClickMixin {
 
     @Inject(method = "handleContainerClick", at = @At("HEAD"))
     private void bspSu$click(ServerboundContainerClickPacket packet, CallbackInfo ci) {
-        AfkService.active(player);
+        AfkService.input(player, "click", Integer.toString(packet.getSlotNum()));
     }
 }

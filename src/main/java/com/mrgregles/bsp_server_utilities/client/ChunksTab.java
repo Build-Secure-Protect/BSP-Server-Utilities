@@ -229,14 +229,20 @@ final class ChunksTab {
         if (settings.alwaysLoaded(p.id())) {
             return Tr.t("chunks.always_loaded");
         }
-        return p.online() ? Tr.t("chunks.here") : Tr.t("chunks.away", StaffFace.ago(p.awayMs()));
+        if (p.online()) {
+            return p.awayMs() > 0 ? Tr.t("chunks.afk", StaffFace.ago(p.awayMs())) : Tr.t("chunks.here");
+        }
+        return Tr.t("chunks.away", StaffFace.ago(p.awayMs()));
     }
 
     private int whereColour(AdminChunksPacket.PlayerRow p) {
         if (settings.alwaysLoaded(p.id())) {
             return Ui.GOLD;
         }
-        return p.online() ? GREEN : p.awayMs() < settings.awayMs() ? AMBER : GREY;
+        if (p.online() && p.awayMs() == 0) {
+            return GREEN;
+        }
+        return p.awayMs() < settings.awayMs() ? AMBER : GREY;
     }
 
     private void drawEveryone(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {

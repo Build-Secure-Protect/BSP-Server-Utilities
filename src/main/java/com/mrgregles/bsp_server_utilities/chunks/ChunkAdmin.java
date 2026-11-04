@@ -152,7 +152,7 @@ public final class ChunkAdmin {
             StringBuilder m = new StringBuilder();
             byMod.getOrDefault(id, new TreeMap<>()).forEach((mod, n) -> m.append(m.length() == 0 ? "" : " · ").append(mod).append(' ').append(n));
             long away = ChunkService.awayMs(server, id);
-            players.add(new AdminChunksPacket.PlayerRow(id, name, away == 0, away, c[0], c[1], m.length() > 250 ? m.substring(0, 250) : m.toString()));
+            players.add(new AdminChunksPacket.PlayerRow(id, name, ChunkService.online(server, id), away, c[0], c[1], m.length() > 250 ? m.substring(0, 250) : m.toString()));
         });
         players.sort(java.util.Comparator.comparing((AdminChunksPacket.PlayerRow p) -> !p.online()).thenComparing(p -> p.name().toLowerCase(java.util.Locale.ROOT)));
         return new AdminChunksPacket(settings, List.copyOf(mods).subList(0, Math.min(mods.size(), AdminChunksPacket.MAX_ROWS)),

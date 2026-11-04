@@ -11,14 +11,15 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Server to client: the AFK tab's data (owner decisions D76, D79 to D85): the network's AFK settings and everyone AFK
- * now on any server (how long, whether they can never be kicked, their role colour when staff), plus staff away by
- * {@code /su away} (marked {@code typedAway}).
+ * Server to client: the AFK tab's data (owner decisions D76, D79 to D85, D221, D224): the network's AFK settings and
+ * everyone AFK now on any server (how long, whether they can never be kicked, their role colour when staff, whether a
+ * macro pattern holds and what was seen, how long is left of a check under way), plus staff away by {@code /su away}
+ * (marked {@code typedAway}).
  */
 public record AdminAfkPacket(AfkSettings settings, List<Row> rows) {
     public static final int MAX_ROWS = 200;
 
-    public record Row(String name, String server, long afkForMs, boolean exempt, int colour, boolean typedAway) {
+    public record Row(String name, String server, long afkForMs, boolean exempt, int colour, boolean typedAway, boolean macro, long checkLeftMs, String seen) {
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -31,6 +32,9 @@ public record AdminAfkPacket(AfkSettings settings, List<Row> rows) {
             buf.writeBoolean(r.exempt());
             buf.writeInt(r.colour());
             buf.writeBoolean(r.typedAway());
+            buf.writeBoolean(r.macro());
+            buf.writeVarLong(r.checkLeftMs());
+            buf.writeUtf(r.seen(), 512);
         }
     }
 
@@ -39,7 +43,7 @@ public record AdminAfkPacket(AfkSettings settings, List<Row> rows) {
         int n = Math.min(buf.readVarInt(), MAX_ROWS);
         List<Row> rows = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
-            rows.add(new Row(buf.readUtf(64), buf.readUtf(64), buf.readVarLong(), buf.readBoolean(), buf.readInt(), buf.readBoolean()));
+            rows.add(new Row(buf.readUtf(64), buf.readUtf(64), buf.readVarLong(), buf.readBoolean(), buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarLong(), buf.readUtf(512)));
         }
         return new AdminAfkPacket(s == null ? AfkSettings.DEFAULTS : s, rows);
     }

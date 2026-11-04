@@ -50,6 +50,8 @@ public final class ClientSetup {
         MinecraftForge.EVENT_BUS.addListener(ClientCheck::onTick);
         // the setup card in the corner (D155)
         ClientSetupGuide.register();
+        // the presence check's card (D220, D222)
+        ClientAfkCheck.register();
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();
             for (StaffViewPacket.Row r : ClientStaff.rows()) {

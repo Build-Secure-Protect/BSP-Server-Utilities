@@ -33,8 +33,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Chunk unloading (owner decisions D86 to D99): a machine's Forge ticket is taken away once its owner has been away for
- * the set minutes and given back when they join, never BSP-Core's or an exempt mod's, again when a mod adds it back,
+ * Chunk unloading (owner decisions D86 to D99, D210): a machine's Forge ticket is taken away once its owner has been
+ * away (or AFK) for the set minutes and given back when they join (or are active again), never BSP-Core's or an exempt mod's, again when a mod adds it back,
  * not when the machine is gone; always loaded players, RESTORE NOW holding, UNLOAD NOW; owners read from saved data;
  * machines with no owner listed and unloaded by hand; the settings within their limits. Tickets are made under this
  * mod's own id (Forge accepts only loaded mods' ids), with a chest as the machine.
@@ -113,6 +113,38 @@ public class ChunkGameTests {
             ChunkService.sweep(r.server());
             h.assertTrue(r.live(), "and kept while they are here");
         } finally {
+            r.close();
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void an_afk_players_chunks_unload_while_they_stay_online_and_come_back_when_they_are_active(GameTestHelper h) {
+        ServerPlayer owner = TestPlayers.mockServerPlayer(h);
+        Rig r = rig(h, BSPServerUtilities.MODID, new BlockPos(4, 2, 2), owner);
+        r.online().add(owner);
+        com.mrgregles.bsp_server_utilities.afk.AfkService.useForTests(r.now()::get, r::online, (p, why) -> { });
+        com.mrgregles.bsp_server_utilities.afk.AfkService.sendChecksForTests((p, packet) -> { });
+        try {
+            com.mrgregles.bsp_server_utilities.afk.AfkService.onLogin(owner);
+            r.now().addAndGet(30 * MIN);
+            ChunkService.sweep(r.server());
+            h.assertTrue(r.live() && ChunkService.awayMs(r.server(), owner.getUUID()) == 0, "online and not AFK: never away, however long");
+            com.mrgregles.bsp_server_utilities.afk.AfkService.markAfk(owner);
+            r.now().addAndGet(4 * MIN);
+            ChunkService.sweep(r.server());
+            h.assertTrue(r.live() && ChunkService.awayMs(r.server(), owner.getUUID()) == 4 * MIN, "AFK four minutes: away four minutes, still loaded");
+            r.now().addAndGet(MIN);
+            ChunkService.sweep(r.server());
+            h.assertTrue(!r.live() && r.suspended(), "AFK for the chunk minutes, online: the ticket is taken (D210)");
+            com.mrgregles.bsp_server_utilities.afk.AfkService.active(owner);
+            ChunkService.drainRestores(r.server(), 1000);
+            h.assertTrue(r.live() && !r.suspended(), "active again: the ticket comes back at once, as on joining");
+            ChunkService.sweep(r.server());
+            h.assertTrue(r.live(), "and stays while they are active");
+        } finally {
+            com.mrgregles.bsp_server_utilities.afk.AfkService.forget(owner.getUUID());
+            com.mrgregles.bsp_server_utilities.afk.AfkService.useReal();
             r.close();
         }
         h.succeed();

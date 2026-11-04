@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03
+
+### Added
+- The presence check: with AFK kicking on, a player AFK for the kick time ("Check after ... min AFK" on the AFK tab) gets a card in place of the kick: "STILL THERE?", two minutes counting down, "Click SPRUCE to stay, or you are kicked." and three keys in a random order, the word to click one of the eight woods (Oak, Spruce, Birch, Jungle, Acacia, Dark oak, Mangrove, Cherry) and new for each check. A red chat line says the card is there. The right key brings them back ("Thanks, you are back." in green); a wrong one gives a new word and order with "Not that one: here is a new word.", the time running on; no answer kicks them with the kick message. The server picks the word and the order and takes only the right word from that player in time. The warning a minute before reads "You will be checked for being idle in 1 minute."
+- The card sits at a random place for each check, at least 8 pixels from the edges and never over the hotbar or the crosshair, and is drawn over everything: chat, other mods' HUDs (JourneyMap's minimap included) and any open screen, where it is clicked directly. With no screen open, T opens chat to use the mouse ("Press T to use the mouse." on the card).
+- Admins and operators are never checked. Other staff are checked, and not answering leaves them AFK (away on the staff panels) but never kicked; they are not checked again until they are back.
+- Macros: per player, the last ten minutes of input (what was done and to what, the head's angles, where they stood). When the same 1 to 3 inputs make 90 % or more of it, with at least one of even timing (the gaps vary less than 20 %), the same exact head angles again and again, or staying within 8 blocks, those inputs no longer count as activity: the player goes AFK after the AFK minutes, their machines unload after the chunk minutes, and they are checked at the kick time like anyone idle. Anything else they do still counts. A correct answer makes their input count again for 60 minutes. The AFK tab's switch "Repeated input does not count" (on to start, saved for the network) turns this off.
+- Each unanswered check is an Action Log entry, by "AFK check", saying what was seen ("Kat_Miner did not answer the presence check: the same click on a zombie every 1.0 s at one spot, for 18 min", or "no input for 37 min"). These entries are for staff only (the LOG tab's kind "AFK checks"), never on panels, `/actionlog` or the board.
+- The AFK tab: the kicking switch reads "Check, then kick, players AFK too long" with "Check after ... min AFK"; a MACROS group with the switch and what counts; in the list, a gold "macro?" mark (hovered, what was seen, as in the Action Log), "checked, 1:42 left" in red during a check, "checked in ..." near the time, and "never kicked" for staff. `/su status` says whether repeated input counts.
+
+### Changed
+- A player AFK counts as away for chunk unloading: after the chunk minutes their machines' tickets are suspended while they stay online, and come back the moment they are active, as on joining. The CHUNKS tab shows them as "AFK 12 min".
+- With kicking on, nobody is kicked without a check first.
+- The AFK tab no longer lists what counts as active (the MACROS group took its room); it is in the mod's documentation.
+- The mod's network protocol is now version 5: clients and servers must both have this version to connect. The AFK settings table gets a `macros` column (added on start, on for the network).
+
 ## [0.6.0] - 2026-11-03
 
 ### Added

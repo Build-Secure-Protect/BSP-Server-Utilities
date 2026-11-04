@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "4";
+    private static final String PROTOCOL = "5";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -138,6 +138,13 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminServersEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminServersEditPacket::encode).decoder(AdminServersEditPacket::decode)
                 .consumerMainThread(AdminServersEditPacket::handle).add();
+        // The presence check (D207 to D224).
+        CHANNEL.messageBuilder(AfkCheckPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AfkCheckPacket::encode).decoder(AfkCheckPacket::decode)
+                .consumerMainThread(AfkCheckPacket::handle).add();
+        CHANNEL.messageBuilder(AfkAnswerPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AfkAnswerPacket::encode).decoder(AfkAnswerPacket::decode)
+                .consumerMainThread(AfkAnswerPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

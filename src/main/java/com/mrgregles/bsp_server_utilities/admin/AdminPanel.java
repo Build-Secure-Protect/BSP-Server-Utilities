@@ -230,12 +230,13 @@ public final class AdminPanel {
         for (com.mrgregles.bsp_server_utilities.afk.AfkService.Row r : com.mrgregles.bsp_server_utilities.afk.AfkService.afkNow(server)) {
             afk.add(r.id());
             StaffDirectory.Member m = staff.get(r.id());
+            String seen = r.seen().length() > 500 ? r.seen().substring(0, 500) : r.seen();
             rows.add(new com.mrgregles.bsp_server_utilities.network.AdminAfkPacket.Row(r.name(), r.server(), r.afkForMs(), r.exempt() || m != null,
-                    m == null ? 0x9AA3B5 : m.role().colour(), false));
+                    m == null ? 0x9AA3B5 : m.role().colour(), false, r.macro(), r.checkLeftMs(), seen));
         }
         for (StaffDirectory.Member m : staff.values()) {
             if (m.state() == StaffDirectory.State.AWAY && !afk.contains(m.id())) {
-                rows.add(new com.mrgregles.bsp_server_utilities.network.AdminAfkPacket.Row(m.name(), m.server(), 0, true, m.role().colour(), true));
+                rows.add(new com.mrgregles.bsp_server_utilities.network.AdminAfkPacket.Row(m.name(), m.server(), 0, true, m.role().colour(), true, false, 0, ""));
             }
         }
         if (rows.size() > com.mrgregles.bsp_server_utilities.network.AdminAfkPacket.MAX_ROWS) {

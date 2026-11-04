@@ -100,7 +100,17 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE)");
+            if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
+                st.executeUpdate("ALTER TABLE " + prefix + "afk_settings ADD COLUMN macros BOOLEAN NOT NULL DEFAULT TRUE");
+            }
+        }
+    }
+
+    private boolean hasColumn(String table, String column) throws SQLException {
+        java.sql.DatabaseMetaData meta = conn().getMetaData();
+        try (ResultSet rs = meta.getColumns(conn().getCatalog(), null, table, column)) {
+            return rs.next();
         }
     }
 
@@ -254,24 +264,25 @@ public final class JdbcBackend implements StorageBackend {
     @Override
     @Nullable
     public com.mrgregles.bsp_server_utilities.afk.AfkSettings loadAfkSettings() throws SQLException {
-        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT enabled, afk_minutes, kick, kick_minutes, message, revision FROM " + prefix + "afk_settings WHERE id = 1")) {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT enabled, afk_minutes, kick, kick_minutes, message, revision, macros FROM " + prefix + "afk_settings WHERE id = 1")) {
             if (!rs.next()) {
                 return null;
             }
-            return new com.mrgregles.bsp_server_utilities.afk.AfkSettings(rs.getBoolean(1), rs.getInt(2), rs.getBoolean(3), rs.getInt(4), rs.getString(5), rs.getLong(6)).sanitised();
+            return new com.mrgregles.bsp_server_utilities.afk.AfkSettings(rs.getBoolean(1), rs.getInt(2), rs.getBoolean(3), rs.getInt(4), rs.getString(5), rs.getBoolean(7), rs.getLong(6)).sanitised();
         }
     }
 
     @Override
     public void saveAfkSettings(com.mrgregles.bsp_server_utilities.afk.AfkSettings s) throws SQLException {
-        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "afk_settings (id, enabled, afk_minutes, kick, kick_minutes, message, revision) VALUES (1, ?, ?, ?, ?, ?, ?)"
-                + " ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), afk_minutes = VALUES(afk_minutes), kick = VALUES(kick), kick_minutes = VALUES(kick_minutes), message = VALUES(message), revision = VALUES(revision)")) {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "afk_settings (id, enabled, afk_minutes, kick, kick_minutes, message, revision, macros) VALUES (1, ?, ?, ?, ?, ?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), afk_minutes = VALUES(afk_minutes), kick = VALUES(kick), kick_minutes = VALUES(kick_minutes), message = VALUES(message), revision = VALUES(revision), macros = VALUES(macros)")) {
             ps.setBoolean(1, s.enabled());
             ps.setInt(2, s.afkMinutes());
             ps.setBoolean(3, s.kick());
             ps.setInt(4, s.kickMinutes());
             ps.setString(5, s.message());
             ps.setLong(6, s.revision());
+            ps.setBoolean(7, s.macros());
             ps.executeUpdate();
         }
     }

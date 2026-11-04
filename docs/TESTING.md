@@ -394,3 +394,30 @@ In game:
 5. On a server without shared storage the footer says in gold "This server only: no shared storage, so each server uses its own folder."
 6. `/su setup` to page 11/12 "Server images": the same list and pane, with REFRESH in the right box (the guide's keys take the footer); TURN OFF FEATURE, SETUP LATER, NEXT; Finish lists Server images.
 
+## 2026-11-03: SU-29, the presence check and macros, server side
+
+Headless: GameTests in `AfkGameTests` (the settings, their 0.6.0 encoding and world save read with the macros switch on; the check at the kick time for players and staff, never admins or operators, the warning a minute before; silence kicking players with the message and leaving staff AFK, never checked again until back, both in the Action Log with what was seen, for staff only; kicking off sending nothing, turned off mid-check taking the card away; the right word bringing a player back, a wrong one giving a new word and order with the time running on, an old word or another player's answer not taken, any other activity ending the check; a simulated auto-clicker (the same use every 1.000 s, one spot) and a mouse jiggle (two exact angles) not counting after ten minutes and AFK five minutes later, while a person's varied input and the same use with uneven timing, changing angles and walking a long row still count; a real head turn still bringing the clicker back; the switch off making repeated input count; a correct answer clearing a macro for 60 minutes, then counting against it again; the macro watch needing the whole ten minutes and 90 % from three keys; the network list and the AFK tab's data with "macro?", what was seen and the time left) and `ChunkGameTests` (an AFK player's ticket suspended after the chunk minutes while online and back when active). **Not yet run with real players, a real auto-clicker or jiggler, on the network, or against MySQL** (the `macros` column is added by `ALTER TABLE` on the first start).
+
+On a test server (AFK after 1 min, kicking on, Check after 5 min AFK, macros on):
+1. A player stands still: "You are now AFK." after 1 minute; at 5 min AFK minus a minute "You will be checked for being idle in 1 minute." in red; at 5 min the red line "Still there? Click the box on your screen within 2 minutes or you will be kicked." and the card.
+2. Click the right word: "Thanks, you are back." in green, the card goes. Next time click a wrong key: a new word and order, the red line on the card, the clock still running; then let it run out: kicked with the kick message; `/su` LOG, kind "AFK checks": "<name> did not answer the presence check: no input for 7 min" by "AFK check". `/actionlog` and panels do not show it.
+3. An operator idles: AFK, never warned or checked. A staff member (in a staff group, not an operator): checked with "or you will stay AFK"; no answer: stays AFK and away on the staff panels, not kicked, the log entry ends "Left AFK: staff are never kicked", and no second check until they move.
+4. An auto-clicker on a zombie or a held item at one spot, every second, without touching the mouse: after 10 minutes the AFK tab shows the player with "macro?" once they go AFK (1 minute later); hovering it reads "the same click on a zombie every 1.0 s at the same head angle at one spot, for 11 min." Checked at the kick time; answer it: their clicks count for an hour.
+5. A mouse jiggler (two positions): the same, "the same head turns between 2 exact angles ...". Moving the mouse by hand brings the player back at once.
+6. Turn "Repeated input does not count" off: the macro player is active again on their next click; on another server of the network the switch is off too.
+7. Chunks (CHUNKS tab, 1 minute): a player with a machine goes AFK: after a minute the CHUNKS tab shows them "AFK 1 min" and the machine's chunks unload while they are online; they move: "Non-totem chunks were unloaded while you were away; they are loaded again now." and the machine runs again.
+8. Kicking off: idle and macro players are still marked AFK and their chunks unload, but no warning, card or kick.
+9. With MySQL: the first start adds the `macros` column to `<prefix>afk_settings` (no error in the log); changing the switch on one server changes it on the others.
+
+## 2026-11-03: SU-30, the presence check's card and the AFK tab
+
+Headless: the dev client starts with the mixin applied (see below for what was checked). **The card and the tab have not been seen in a client.**
+
+In game:
+1. The card at the check: "STILL THERE?" in teal with the time counting down, "Click SPRUCE to stay, or you are kicked. Press T to use the mouse." with the word in gold, three keys (`tools/preview/afk_check_refined.html`). Each check puts it somewhere new, at least 8 pixels from the edges, never over the hotbar or the crosshair, and it stays there for that check (also after a wrong click).
+2. JourneyMap's minimap on: the card is over the minimap where they meet; also over chat, the setup card and other HUDs.
+3. Without a screen: the keys cannot be clicked; T opens chat, the "Press T" words go and the keys can be clicked. Open the inventory or a chest: the card is still on top and its keys click without touching the slots under them.
+4. A wrong key: the red "Not that one: here is a new word." and new keys; clicking twice fast sends only one answer.
+5. `/su` AFK tab: AFK DETECTION, KICKING with "Check, then kick, players AFK too long" and CHECK AFTER, the kick message box, MACROS with "Repeated input does not count" and its line; footer "Saved for every server · admins and operators are never checked · other staff never kicked" on two lines. The list: "macro?" in gold beside a macro player (hover: what was seen; during a check "... Checked at 30 min AFK."), "checked, 1:42 left" in red during a check, "never kicked" for staff.
+6. LOG tab: the kind menu has "AFK checks".
+

@@ -33,7 +33,8 @@ import java.util.function.Supplier;
  *   ({@link ChunkOwners}). A ticket whose owner has been away from this server for the set minutes is suspended: taken
  *   from Forge and kept in {@link ChunkData}, so its chunks unload; suspended tickets survive restarts. A ticket a mod
  *   adds back while its owner is still away is suspended again at the next check.</li>
- *   <li>When the owner joins again their tickets come back a few a tick, each only if its machine is still there (D98);
+ *   <li>A player online but AFK counts as away since they went AFK (D210).</li>
+ *   <li>When the owner joins again, or an AFK owner is active again, their tickets come back a few a tick, each only if its machine is still there (D98);
  *   if any were suspended they are told so (D91).</li>
  *   <li>Players marked always loaded are never suspended, and marking one gives theirs back at once (D99). An admin's
  *   RESTORE NOW holds until the player next joins and leaves (D97); UNLOAD NOW suspends at once (D94). Tickets with no
@@ -119,17 +120,20 @@ public final class ChunkService {
 
     // ------------------------------------------------------------------ who is where
 
-    private static boolean online(MinecraftServer server, UUID player) {
+    public static boolean online(MinecraftServer server, UUID player) {
         if (playersOverride != null) {
             return playersOverride.get().stream().anyMatch(p -> p.getUUID().equals(player));
         }
         return server.getPlayerList().getPlayer(player) != null;
     }
 
-    /** How long the player has been away from this server (since this server started, when they never left it). */
+    /**
+     * How long the player has been away from this server (since this server started, when they never left it); online,
+     * how long they have been AFK, 0 when they are not (D210).
+     */
     public static long awayMs(MinecraftServer server, UUID player) {
         if (online(server, player)) {
-            return 0;
+            return com.mrgregles.bsp_server_utilities.afk.AfkService.afkForMs(player);
         }
         Long left = ChunkData.get(server).lastLeft(player);
         return Math.max(0, clock.getAsLong() - (left == null ? startedMs : left));
@@ -258,15 +262,22 @@ public final class ChunkService {
         }
     }
 
+    /** An AFK player is active again: their tickets come back as on joining (D210). */
+    public static void onActive(ServerPlayer player) {
+        if (queueRestore(player.server, player.getUUID()) > 0) {
+            player.sendSystemMessage(Component.translatable("message.bsp_server_utilities.chunks.back").withStyle(ChatFormatting.GOLD));
+        }
+    }
+
     public static void onLogout(ServerPlayer player) {
         ChunkData.get(player.server).setLastLeft(player.getUUID(), clock.getAsLong());
     }
 
     // ------------------------------------------------------------------ the admin's keys
 
-    /** RESTORE NOW: the player's chunks come back and stay until they next join and leave (D97). */
+    /** RESTORE NOW: the player's chunks come back and stay until they next join and leave (D97), an AFK player's too (D210). */
     public static int restoreNow(MinecraftServer server, UUID player) {
-        if (!online(server, player)) {
+        if (!online(server, player) || com.mrgregles.bsp_server_utilities.afk.AfkService.isAfk(player)) {
             ChunkData.get(server).hold(player, true);
         }
         int n = queueRestore(server, player);

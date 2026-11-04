@@ -23,7 +23,7 @@ def main():
     for a, b in re.findall(r'Tr\.t\([^"]*?\?\s*"([a-z0-9_.]+)"\s*:\s*"([a-z0-9_.]+)"', every):
         needed |= {a, b}
     # keys kept in arrays and passed on to Tr.t later: any string literal shaped like a screen key
-    needed |= set(re.findall(r'"((?:panel|rules|admin|note)\.[a-z0-9_.]+)"', every))
+    needed |= set(re.findall(r'"((?:panel|rules|admin|note|afk\.card)\.[a-z0-9_.]+)"', every))
     missing = sorted(k for k in needed if P + k not in lang)
     unused = sorted(k[len(P):] for k in lang if k.startswith(P) and k[len(P):] not in needed)
     bad = 0

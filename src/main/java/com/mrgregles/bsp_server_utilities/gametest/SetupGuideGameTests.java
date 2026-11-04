@@ -75,7 +75,7 @@ public class SetupGuideGameTests {
     private static void fresh(MinecraftServer server) {
         SetupService.restoreForTests(server, SetupState.EMPTY, SetupState.Status.NOT_YET);
         AfkSettings a = AfkService.settings(server);
-        AfkData.get(server).setSettings(new AfkSettings(true, a.afkMinutes(), a.kick(), a.kickMinutes(), a.message(), a.revision()));
+        AfkData.get(server).setSettings(a.withEnabled(true));
         ChunkSettings c = ChunkService.settings(server);
         ChunkData.get(server).setSettings(new ChunkSettings(true, c.minutes(), c.exemptMods(), c.alwaysLoaded(), c.revision()));
     }
@@ -127,7 +127,7 @@ public class SetupGuideGameTests {
             h.assertTrue(SetupService.status(server, Feature.LOG) == SetupState.Status.NOT_YET && SetupService.status(server, Feature.AFK) == SetupState.Status.LATER
                     && SetupService.status(server, Feature.PANELS) == SetupState.Status.LATER, "closing on AFK leaves it and the pages after it for later (D158), not those before");
             AfkSettings a = AfkService.settings(server);
-            AfkService.setSettings(server, new AfkSettings(true, a.afkMinutes() == 5 ? 6 : 5, a.kick(), a.kickMinutes(), a.message(), a.revision()));
+            AfkService.setSettings(server, a.withEnabled(true).withAfkMinutes(a.afkMinutes() == 5 ? 6 : 5));
             h.assertTrue(SetupService.status(server, Feature.AFK) == SetupState.Status.DONE, "a change in the AFK tab counts as set up (D152)");
             SetupService.turnOff(server, Feature.CHUNKS);
             SetupService.next(server, Feature.CHUNKS);

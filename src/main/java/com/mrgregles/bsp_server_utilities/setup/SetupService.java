@@ -184,7 +184,7 @@ public final class SetupService {
         }
         if (f == Feature.AFK) {
             AfkSettings a = AfkService.settings(server);
-            AfkService.setSettings(server, new AfkSettings(false, a.afkMinutes(), a.kick(), a.kickMinutes(), a.message(), a.revision()));
+            AfkService.setSettings(server, a.withEnabled(false));
         } else if (f == Feature.CHUNKS) {
             ChunkSettings c = ChunkService.settings(server);
             ChunkService.setSettings(server, new ChunkSettings(false, c.minutes(), c.exemptMods(), c.alwaysLoaded(), c.revision()));
@@ -197,7 +197,7 @@ public final class SetupService {
     public static void turnOn(MinecraftServer server, Feature f) {
         if (f == Feature.AFK) {
             AfkSettings a = AfkService.settings(server);
-            AfkService.setSettings(server, new AfkSettings(true, a.afkMinutes(), a.kick(), a.kickMinutes(), a.message(), a.revision()));
+            AfkService.setSettings(server, a.withEnabled(true));
         } else if (f == Feature.CHUNKS) {
             ChunkSettings c = ChunkService.settings(server);
             ChunkService.setSettings(server, new ChunkSettings(true, c.minutes(), c.exemptMods(), c.alwaysLoaded(), c.revision()));
