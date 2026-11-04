@@ -1,8 +1,8 @@
 ![BSP-Server Utilities](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/banner.png)
 
-**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK, and kicked if you want; the chunks other mods keep loaded for a player's machines unload while that player is away; things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all; players who join with a blocked mod or an xray pack are turned away with a list of what to remove; every new player is counted and welcomed by name and number on every server; and a setup guide walks admins through all of it. Made for the Build Secure Protect network; works on any Forge 1.20.1 server.
+**BSP-Server Utilities** is the server's own toolkit: the things a network needs that a gameplay mod or a single-player world never does. New players read and tick the rules before they can move; Display Panels join into big wall screens that show text, pictures, who of the staff is online, or a live log of what staff do; every command staff run is logged and shared across the network, so players can see nobody abuses their powers; idle players are marked AFK and, if you want, asked "Still there?" before they are kicked, macros included; the chunks other mods keep loaded for a player's machines unload while that player is away or AFK; things dropped on the ground go after a set time even where nobody is near, with a clear for one server or all; players who join with a blocked mod or an xray pack are turned away with a list of what to remove; every new player is counted and welcomed by name and number on every server; each server can have a small picture in chat in place of its name; and a setup guide walks admins through all of it. Made for the Build Secure Protect network; works on any Forge 1.20.1 server.
 
-**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server, the same version on both. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, three boards for its Score Screens; its full jar carries the MySQL driver), LuckPerms (staff groups; the LuckPerms Forge mod), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading).
+**Requires:** Minecraft 1.20.1, Forge 47 or newer, Java 17. Needed on the client and the server, the same version on both. **Optional:** [BSP-Core](https://www.curseforge.com/minecraft/mc-mods/bsp-core) 1.4.0 or newer (its database, Redis and server name, three boards for its Score Screens; its full jar carries the MySQL driver), LuckPerms (staff groups; the LuckPerms Forge mod), BSP-InventorySync (the rules popup waits for your inventory), BSP-Region Guard (claim owners for chunk unloading), BSP-Velocity Additions on the proxy (server images in relayed chat).
 
 ## For players: joining
 
@@ -60,13 +60,21 @@ The number is on the PLAYERS board of the Score Screens around the server (with 
 
 ![Going AFK](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/afk_player.png)
 
-Stand idle for 5 minutes and you are marked AFK; turn your head or do anything and you are back. Floating in water or riding a minecart in a loop does not count as doing something. Type **/afk** to be AFK at once. If the server kicks idle players, you are warned a minute before.
+Stand idle for 5 minutes and you are marked AFK; turn your head or do anything and you are back. Floating in water or riding a minecart in a loop does not count as doing something, and neither does a macro: the same click or two over and over, with even timing, the same head angle or in one spot, stops counting after ten minutes. Type **/afk** to be AFK at once.
+
+![Still there?](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/afk_check.png)
+
+If the server kicks idle players, you are warned a minute before, then asked: a "Still there?" card appears somewhere on your screen, over everything, with two minutes to click the named wood. Press T to use the mouse (or click it straight away if a screen is open). The right word and you are back; if you were caught by the macro check, your input counts again for an hour.
+
+![A wrong click](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/afk_check_wrong.png)
+
+Click the wrong key and you get a new word in a new order, the clock still running. No answer in two minutes, and you are kicked with the server's message.
 
 ## For players: your machines while you are away
 
 ![Back online](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/chunks_return.png)
 
-If your machines keep chunks loaded (an RFTools Builder, a Mekanism machine with an Anchor upgrade, an AE2 spatial anchor, a Flux point and the like), those chunks unload once you have been away from the server for 5 minutes, so the server runs smoothly for whoever is on. Moving to another server on the network counts as away. Your Shatter Totem and projector chunks always stay loaded. When you come back your machines' chunks load again within a few seconds, and you are told so.
+If your machines keep chunks loaded (an RFTools Builder, a Mekanism machine with an Anchor upgrade, an AE2 spatial anchor, a Flux point and the like), those chunks unload once you have been away from the server for 5 minutes, so the server runs smoothly for whoever is on. Moving to another server on the network counts as away, and so does being AFK: your machines unload after 5 minutes AFK even while you stay online. Your Shatter Totem and projector chunks always stay loaded. When you come back (or move again) your machines' chunks load again within a few seconds, and you are told so.
 
 ## For players: things on the ground
 
@@ -82,7 +90,7 @@ When an operator or BSP-Core admin joins and something is not set up yet, a card
 
 ![A page of the guide](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_guide.png)
 
-SETUP NOW opens the admin panel as a guide, one page per feature: Welcome (this server's name, written to its config file, and the storage it shares), staff groups, rules, the action log, AFK, chunk unloading, despawn times, the client check, display panels and the player counter. Each page is that feature's own tab with BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot. Turning a feature off stops it on every server: no rules popup, nothing logged (asked twice), vanilla despawning, nobody checked at login, empty staff panels, dark display panels, or nobody counted or welcomed.
+SETUP NOW opens the admin panel as a guide, one page per feature: Welcome (this server's name, written to its config file, and the storage it shares), staff groups, rules, the action log, AFK, chunk unloading, despawn times, the client check, display panels, the player counter and server images. Each page is that feature's own tab with BACK, TURN OFF FEATURE, SETUP LATER and NEXT at the foot. Turning a feature off stops it on every server: no rules popup, nothing logged (asked twice), vanilla despawning, nobody checked at login, empty staff panels, dark display panels, nobody counted or welcomed, or server names in chat as plain text.
 
 ![Finish](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_finish.png)
 
@@ -90,7 +98,7 @@ Finish lists every feature as set up, off or later. Anything left for later is o
 
 ## For admins: the admin panel
 
-Operators and BSP-Core admins type **/serverutils** (or **/su**): seven tabs, RULES, STAFF, LOG, AFK, CHUNKS, DROPS and CLIENTS.
+Operators and BSP-Core admins type **/serverutils** (or **/su**): eight tabs, RULES, STAFF, LOG, AFK, CHUNKS, DROPS, CLIENTS and SERVERS.
 
 ![The RULES tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_rules.png)
 
@@ -142,13 +150,17 @@ Pick a group (or **+ Add a LuckPerms group**) to choose its LuckPerms group, the
 
 ![The AFK tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_afk.png)
 
-**AFK:** whether idle players are marked AFK and after how many minutes (1 to 60); whether players AFK too long are kicked (off to begin with), after how many minutes AFK (5 to 240), and the message they see. Staff and operators are never kicked. On the right, everyone AFK on any server, how long, where, and a red countdown beside anyone close to a kick.
+**AFK:** whether idle players are marked AFK and after how many minutes (1 to 60); whether players AFK too long are checked and then kicked (off to begin with), after how many minutes AFK (5 to 240), and the message they see if they do not answer. Admins and operators are never checked; other staff are checked, and left AFK but never kicked if they do not answer.
+
+**Macros:** with "Repeated input does not count" on (as it starts), the server watches each player's last ten minutes of input. When the same 1 to 3 inputs make 90 % or more of it, with even timing (a person's gaps vary 20 % or more), the same exact head angles again and again, or never more than 8 blocks from one spot, those inputs stop counting as activity: an auto-clicker at a mob farm or a mouse jiggler goes AFK, unloads its chunks and gets the check like anyone idle, while anything else the player does still counts. A correct answer clears them for an hour.
+
+On the right, everyone AFK on any server, how long and where, a gold **macro?** beside suspected macros (hover it for what was seen: "the same click on a zombie every 1.0 s at one spot, for 18 min"), "checked, 1:42 left" during a check, and a red countdown beside anyone close to one. Every unanswered check goes into the LOG tab as an AFK checks entry with what was seen, for staff only.
 
 ## For admins: chunk loading
 
 ![The CHUNKS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_chunks.png)
 
-**CHUNKS:** the chunks other mods keep loaded through Forge, by whose machine holds them. Each machine's owner is found from the machine's own saved owner (most chunk-loading mods keep one), else from who placed it (recorded from the day this mod is installed), else from the BSP-Region Guard claim it stands in. On the left: the switch, how many minutes away before a player's chunks unload (1 to 60, 5 to begin with), mods never unloaded (click a chip; BSP-Core's always), and players always loaded (a server farm account, say). On the right: everyone with machines here, where they are, and how many chunks are on and off; below, machines whose owner could not be found, with UNLOAD and RESTORE. Every minute the server checks; a mod that puts its ticket back is caught at the next check, and unloaded chunks stay unloaded across restarts until their owner returns. Temporary loads (teleports, trains, world generation), `/forceload` and plugin chunks are left alone.
+**CHUNKS:** the chunks other mods keep loaded through Forge, by whose machine holds them. Each machine's owner is found from the machine's own saved owner (most chunk-loading mods keep one), else from who placed it (recorded from the day this mod is installed), else from the BSP-Region Guard claim it stands in. On the left: the switch, how many minutes away before a player's chunks unload (1 to 60, 5 to begin with), mods never unloaded (click a chip; BSP-Core's always), and players always loaded (a server farm account, say). On the right: everyone with machines here, where they are, and how many chunks are on and off; below, machines whose owner could not be found, with UNLOAD and RESTORE. Players AFK count as away from the moment they went AFK, and are shown as "AFK 12 min". Every minute the server checks; a mod that puts its ticket back is caught at the next check, and unloaded chunks stay unloaded across restarts until their owner returns. Temporary loads (teleports, trains, world generation), `/forceload` and plugin chunks are left alone.
 
 ![A player's machines](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_chunks_player.png)
 
@@ -169,6 +181,16 @@ Click a player for their machines: the mod, where, and how many chunks; RESTORE 
 ![The guide's Player counter page](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_players.png)
 
 The setup guide's Player counter page (or **/su players** in chat) shows the number and the real count. The number shown is the real count plus an adjustment you set: SET a number, ADD to it (a minus takes away, never below 0), RESET TO 0 to count from now (a second click to confirm), or REAL COUNT to go back; the real list of who joined is never lost. Under the title (shared by the board and every panel without its own) you type the welcome line's words, with `{name}` and `{number}` filled in (160 characters), and see the line as it will read. Every change is written in the action log under your name. Counting starts the day the mod is installed; a player refused by the client check never joined, so never counts. TURN OFF FEATURE stops the counting and the welcome, and the board and panels show nothing.
+
+## For admins: server images in chat
+
+![Server images in chat](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/servers_chat.png)
+
+Give each server a small picture and it takes the place of the grey `[BSP-Spawn]` tag in chat, one line high, in its own colours; hovering it shows the server's name. It shows in the player counter's welcome on the other servers, and, with BSP-Velocity Additions on the proxy (`chat.relayStaff = "<server_tag> <line>"` in its `messages.toml`), in front of every line staff read from another server. Players see relayed lines as before. A server without a picture keeps its grey name.
+
+![The SERVERS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_servers.png)
+
+**SERVERS:** put one PNG per server in `config/bsp_server_utilities/server_images/` on any one server, named as Velocity knows the server (`BSP-Spawn.png`), and press REFRESH: that folder becomes the network's set, sent to every player. A file left out removes that server's picture; REFRESH asks SURE? before it replaces or removes one in use, and every refresh goes in the action log. The list shows every server the network knows, this one marked "here", one not heard from lately "off", and a file named after no server "?" (check the spelling against velocity.toml); pick one for its file, the picture at chat size and twice that, and a sample line. Files must be PNGs, not animated, at most 512 x 64 pixels and 256 KB, and at most 96 pixels wide in chat; a refused file says why. `/su serverimages` lists them and `/su serverimages refresh` does the same from chat.
 
 ## For admins: the client check
 
@@ -192,13 +214,14 @@ A deterrent, not proof: a game built on purpose to lie can lie. It stops downloa
 
 ![Several servers, shared records](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/network.png)
 
-With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, the AFK, chunk and drop settings, the client check's rules and trusted setup, who has joined the network and the counter's settings, and how far the setup guide got are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online, who is AFK, and what each player's game reported. Without BSP-Core, set the connection in `config/bsp_server_utilities-network.toml` (it stays on the server; the server config, which Forge sends to every player, holds no passwords), or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar (not its -slim jar) provides one.
+With BSP-Core installed and its storage on MySQL, nothing needs setting up: the mod uses BSP-Core's database, Redis and server name, with tables of its own (prefix `bsp_su_`). The rules and who agreed to them, the staff groups, when staff were last seen, the action log and its switches, the AFK settings (macros included), the chunk and drop settings, the client check's rules and trusted setup, who has joined the network and the counter's settings, the server images, and how far the setup guide got are shared; changes reach every server within a second or two through Redis, and within seconds through the database when Redis is off. Each server tells the others who of the staff is online, who is AFK, and what each player's game reported. Without BSP-Core, set the connection in `config/bsp_server_utilities-network.toml` (it stays on the server; the server config, which Forge sends to every player, holds no passwords), or leave storage local and every server keeps its own. No database driver is bundled: BSP-Core's full jar (not its -slim jar) provides one.
 
 ## With the other BSP mods
 
 - **BSP-Core:** its database, Redis and server name; its admins can edit; its admin kit gives go into the action log; **STAFF ONLINE**, **ACTION LOG** and **PLAYERS** are boards you can pick on its Score Screens; its totem and projector chunks are never unloaded and its items never removed from the ground.
 - **BSP-InventorySync:** the rules popup waits until a player's inventory has arrived, so nothing is lost while they read.
 - **BSP-Region Guard:** the owner of the claim a chunk-loading machine stands in, when the machine itself does not say whose it is.
+- **BSP-Velocity Additions:** its relayed chat shows each server's picture to staff, through its `<server_tag>` placeholder.
 - **LuckPerms:** staff are the members of the groups you pick in the STAFF tab.
 
 ## Commands
@@ -210,11 +233,12 @@ With BSP-Core installed and its storage on MySQL, nothing needs setting up: the 
 | `/afk` | everyone | AFK until your next action |
 | `/su away` | staff | show as away on the staff panels, until typed again |
 | `/serverutils`, `/su` | operators, BSP-Core admins | the admin panel |
-| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK, chunk and drop settings, the client check, the player counter, the setup guide |
+| `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK (and whether macros count), chunk and drop settings, the client check, the player counter, server images, the setup guide |
 | `/su setup [now \| later \| ignore]` | operators, BSP-Core admins | the setup guide |
 | `/su players [set <n> \| add <n> \| reset \| true]` | operators, BSP-Core admins | the player count: show it, set it, add to it, reset it to 0, or go back to the real count |
 | `/su client <player>` | operators, BSP-Core admins | what a player's game reported and what the check made of it |
 | `/su clientcheck export \| reload` | operators, BSP-Core admins | write or read `trusted_setup.json` |
+| `/su serverimages [list] \| refresh [confirm]` | operators, BSP-Core admins | the server images in use and the folder's files; make the folder the network's set |
 | `/su clearitems here \| all \| <server>` | operators, BSP-Core admins | clear dropped items after a 60-second warning |
 | `/su rules list \| add <title> [text] \| remove <n> \| status \| reset <player> \| askagain` | operators, BSP-Core admins | the rules from chat or the console |
 

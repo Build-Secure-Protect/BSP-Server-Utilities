@@ -56,20 +56,38 @@ def element(source, start, index):
     return s[i:pos]
 
 
-TABS = ["Rules", "Staff", "Log", "AFK", "Chunks", "Drops", "Clients"]
+TABS = [("Rules", 34), ("Staff", 34), ("Log", 34), ("AFK", 34), ("Chunks", 38), ("Drops", 36), ("Clients", 40), ("Servers", 42)]
 
 
-def seven_tabs(html):
-    """Mock-ups drawn before the later tabs show three to six; the panel has seven, narrower, with the title smaller to fit."""
+def eight_tabs(html):
+    """Mock-ups drawn before the later tabs show three to seven; the panel has eight, narrower, with the title smaller to fit."""
     def rebuild(m):
         on = re.search(r'<span class="tab on"[^>]*>([^<]*)</span>', m.group(0))
         picked = on.group(1) if on else ""
         return '<span class="tabs">' + "".join(
-            f'<span class="tab{" on" if t == picked else ""}" style="width:{44 if t == "Clients" else 38}px">{t}</span>' for t in TABS) + "</span>"
+            f'<span class="tab{" on" if t == picked else ""}" style="width:{w}px">{t}</span>' for t, w in TABS) + "</span>"
     out = re.sub(r'<span class="tabs">(?:<span class="tab[^"]*"[^>]*>[^<]*</span>)+</span>', rebuild, html)
     if out != html:
-        out = re.sub(r'<span class="ttl v"( style="font-size:[0-9.]+px")?>Server utilities</span>', '<span class="ttl v" style="font-size:10px">Server utilities</span>', out)
+        out = re.sub(r'<span class="ttl v"( style="font-size:[0-9.]+px")?>Server utilities</span>', '<span class="ttl v" style="font-size:9px">Server utilities</span>', out)
     return out
+
+
+# The server images as the network has them (tools/server_icons/a_plain, look A of set K): the mock-ups drew text tags.
+ICONS = {"t-boul": "BSP-Boulderbrook", "t-frost": "BSP-Frostwarf", "t-safe": "BSP-SafeRoom", "t-sanc": "BSP-Sanctuary",
+         "t-spawn": "BSP-Spawn", "t-storm": "BSP-Stormfall"}
+
+
+def icons(html):
+    """Each mock-up tag becomes its server's 9 x 9 image, one chat line high (twice that where the mock-up shows x2)."""
+    def one(m):
+        big = "x2" in m.group(1).split()
+        name = next((v for k, v in ICONS.items() if k in m.group(1).split()), None)
+        if name is None:
+            return m.group(0)
+        size = 22 if big else 11
+        return (f'<img src="../server_icons/a_plain/{name}.png" alt="{name}" style="width:{size}px;height:{size}px;image-rendering:pixelated;'
+                f'vertical-align:middle;margin-right:4px">')
+    return re.sub(r'<span class="ti ([^"]*)">[^<]*</span>', one, html)
 
 
 def page(name, head, body):
@@ -78,13 +96,20 @@ def page(name, head, body):
 
 
 def from_mockup(name, source, start, index, wrap=True, css="", swap=()):
-    el = seven_tabs(element(source, start, index))
+    el = icons(eight_tabs(element(source, start, index)))
     for old, new in swap:
         el = el.replace(old, new)
     page(name, head_of(source) + (f"<style>{css}</style>" if css else ""), f'<div class="bgworld">{el}</div>' if wrap else el)
 
 
 # ---------------------------------------------------------------- the screens and faces, from the confirmed mock-ups
+
+# The kick message box, which the built AFK tab keeps under CHECK AFTER (the refined page left it out).
+AFK_MESSAGE = ('<span class="sm m">min AFK</span></span></div><div class="vv sm up b" style="margin-top:3px">Macros</div>',
+               '<span class="sm m">min AFK</span></span></div><div style="display:flex;justify-content:space-between"><span class="lbl">Kick message</span>'
+               '<span class="sm m">47/160</span></div><div style="height:15px;background:#0C0E12;box-shadow:inset 0 0 0 1px #2A2F3A;color:#E6EAF2;font-size:9px;'
+               'padding:0 5px;display:flex;align-items:center;white-space:nowrap;overflow:hidden">You were idle for too long. Come back any time!</div>'
+               '<div class="vv sm up b" style="margin-top:3px">Macros</div>')
 
 SCREENS = [
     ("rules_popup", "rules_refined.html", '<div class="world"', 0, False),
@@ -100,8 +125,17 @@ SCREENS = [
     ("actionlog_screen", "staff_log_refined.html", '<div class="world"', 0, False),
     ("panel_staff_pane", "staff_log_refined.html", '<div class="scr v"', 3, True),
     ("panel_log_pane", "staff_log_refined.html", '<div class="scr v"', 4, True),
-    ("admin_afk", "afk_refined.html", '<div class="scr v"', 0, True, "", [("AFK now · 5", "AFK now · 4")]),  # the built tab counts staff typed away apart
-    ("afk_player", "afk_refined.html", '<div class="world"', 0, False),
+    ("admin_afk", "afk_check_refined.html", '<div class="scr v"', 0, True, ".tbl td { padding: 2px 3px; } .tbl { font-size: 9px; }",
+     [AFK_MESSAGE, ('width:210px;padding:6px 8px;display:flex;flex-direction:column;gap:6px', 'width:210px;padding:5px 8px;display:flex;flex-direction:column;gap:4px')]),
+    ("afk_player", "afk_refined.html", '<div class="world"', 0, False, "", [("You will be kicked for being idle in 1 minute.", "You will be checked for being idle in 1 minute.")]),
+    ("afk_check", "afk_check_refined.html", '<div class="world"', 0, False),
+    ("afk_check_wrong", "afk_check_refined.html", '<div class="world"', 3, False),
+    ("servers_chat", "server_images_concepts.html", '<div class="world"', 0, False, "",
+     [('width:520px;min-height:170px', 'width:330px;min-height:150px'), ('left:60px;top:100px', 'left:8px;top:100px'), ('left:68px;top:112px', 'left:16px;top:112px')]),
+    ("admin_servers", "server_images_refined.html", '<div class="scr v"', 0, True, "", [
+        ("256 x 64 px · 9 KB · 36 x 9 in chat", "9 x 9 px · 1 KB · 9 x 9 in chat"),
+        ('BSP-Wild <span class="m" style="font-size:8px">?</span></span><span><span class="ti" style="background:linear-gradient(#e86a4a,#8a2a1a)">WILD</span></span>',
+         'BSP-Spwan <span class="m" style="font-size:8px">?</span></span><span><img src="../server_icons/a_plain/BSP-Spawn.png" alt="" style="width:11px;height:11px;image-rendering:pixelated;vertical-align:middle"></span>')]),
     ("admin_chunks", "chunks_refined.html", '<div class="scr v"', 0, True, ".tbl td:nth-child(5) { display: none; }",
      [("on BSP-Wild 20 min", "away 20 min"), ("<td>Loaded</td><td>Unloaded</td>", "<td>On</td><td>Off</td>")]),  # as built: mods are in a player's view
     ("admin_chunks_player", "chunks_refined.html", '<div class="scr v"', 1, True),
@@ -221,7 +255,7 @@ def network():
 def banner():
     body = (f'<div style="position:relative;width:600px;height:150px;background:#0C0E12;overflow:hidden">'
             f'<div class="vt" style="position:absolute;left:30px;top:34px;color:#19D3B0;font-size:44px;line-height:40px">BSP SERVER UTILITIES</div>'
-            f'<div style="position:absolute;left:30px;top:80px;font:400 12px \'IBM Plex Sans\',sans-serif;color:#E6EAF2;line-height:16px">Rules · display panels · staff online · action log · AFK · chunk unloading<br>despawn times · client check · player counter · setup guide</div>'
+            f'<div style="position:absolute;left:30px;top:80px;font:400 12px \'IBM Plex Sans\',sans-serif;color:#E6EAF2;line-height:16px">Rules · display panels · staff online · action log · AFK checks · chunk unloading<br>despawn times · client check · player counter · server images · setup guide</div>'
             f'<div class="vt" style="position:absolute;left:30px;top:118px;color:#9AA3B5;font-size:13px">Forge 1.20.1 · for the Build Secure Protect network</div>'
             f'<div style="position:absolute;right:22px;top:24px;width:150px;height:100px;background:#2A2F3A">'
             f'<div style="position:absolute;inset:3px;background:#10151C" class="vt">'

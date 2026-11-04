@@ -1,22 +1,46 @@
-# BSP-Server Utilities 0.5.1: network passwords kept off players' machines
+# BSP-Server Utilities 0.7.0: still there? The presence check, and macros caught
 
-For Minecraft 1.20.1, Forge 47.4 or newer. 0.5.1 is 0.5.0 with one security fix; coming from 0.4 or earlier, the player counter below is new too. **Clients and servers both need 0.5.0 or newer**: the network protocol changed in 0.5.0, so a 0.4 client is refused by a 0.5 server (and the other way round); 0.5.0 and 0.5.1 work together, and the fix is on the server. Works on its own; uses **BSP-Core 1.4.0** or newer (tested with 1.6.2), **LuckPerms** and **BSP-InventorySync** when they are installed. Coming from 0.3.0 or earlier, the client check and the setup guide from 0.4 are new to you too: see the description.
+For Minecraft 1.20.1, Forge 47.4 or newer. **Clients and servers both need 0.7.0**: the network protocol changed, so a 0.6 client is refused by a 0.7 server (and the other way round). Works on its own; uses **BSP-Core 1.4.0** or newer (tested with 1.6.2), **LuckPerms**, **BSP-InventorySync** and **BSP-Velocity Additions** when they are installed. Coming from 0.5.x, server images in chat from 0.6.0 are new to you too: see below and the description.
 
-## Security fix in 0.5.1
-- Forge sends a server's SERVER config file to every player who joins, so a database or Redis password in `serverconfig/bsp_server_utilities-server.toml` could be read by any player. This mod's own connection (database host, port, name, user, password, SSL, table prefix; Redis host, port, username, password) now lives in **`config/bsp_server_utilities-network.toml`**, which stays on the server.
-- At the first start of 0.5.1, anything still set in the server config is moved there (a value already set in the new file wins) and cleared; the log gets one warning naming what moved, never a value. The old keys stay in the server config, marked as moved.
-- **If a password was ever set in the server config, change it:** it was sent to every player who joined. Keep `config/*-network.toml` files out of any client pack and `defaultconfigs/`.
-- With BSP-Core 1.6.2 or newer, which moved its own settings to `config/bsp_core-network.toml`, the log and `/su status` name that file as where the database and Redis settings came from. Nothing needs changing: this mod keeps reading BSP-Core's settings as before.
+## New in 0.7.0: the presence check
 
-## New in 0.5.0: the player counter
+![The presence check](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/afk_check.png)
 
-- **Who counts:** everyone who joins any server of the network for the first time, once each (by account, so alts count separately), from the day 0.5.0 is installed. Players the client check refuses never joined, so they never count. With shared storage the whole network keeps one list, so two servers never count the same player twice; without it each server counts its own.
-- **The welcome line:** a new player is welcomed in gold, in words the admins type with `{name}` and `{number}` filled in (up to 160 characters; to begin with "Welcome {name}, player number {number} on BSP!"). Everyone on every server of the network sees it; on the servers the player did not join, the server's name comes first in grey ("[BSP-Spawn] Welcome ...").
-- **The PLAYERS board** for BSP-Core's Score Screens: the counter's title, then "Have played BSP" with the number in gold, "New today", "New this week" and "Newest" with the name and how long ago.
-- **Player count on Display Panels,** the fifth mode: the title in teal, the number large in gold, "players have joined the network", and the new counts underneath when the panel's tick is on. Each panel can type its own title (32 characters); left empty it shows the counter's.
-- **Adjusting:** the number shown is the real count plus an adjustment, and the real list is never lost. `/su players` shows the number, the real count and the adjustment, new today and this week, and the newest player; `/su players set <n>`, `add <n>` (a minus takes away, never below 0), `reset` (0 from now) and `true` (back to the real count). Each change, and a change of the title or the welcome words, is written to the action log under who made it.
-- **The setup guide's Player counter page,** after Display panels (the guide has eleven pages now): the number shown and the real count, SET and ADD, RESET TO 0 (a second click to confirm) and REAL COUNT, the title ("Players of BSP" to begin with) and the welcome words with the line as it will read. TURN OFF FEATURE stops counting and welcoming, and the board and panels show nothing. Servers updating from 0.4 are offered this one page at an admin's next join.
-- A Players line in `/su status`.
+- **No kick without a check:** with AFK kicking on, a player AFK for the kick time (30 minutes to begin with) gets a "STILL THERE?" card instead of a kick: two minutes on the clock, "Click SPRUCE to stay, or you are kicked." and three keys in a random order. The word is one of the eight woods (Oak, Spruce, Birch, Jungle, Acacia, Dark oak, Mangrove, Cherry), new each check. A red chat line says the card is there, and the warning a minute before now reads "You will be checked for being idle in 1 minute."
+- **Answering:** the right key brings them back ("Thanks, you are back."). A wrong one gives a new word and a new order ("Not that one: here is a new word."), with the clock still running. No answer in two minutes kicks them with the kick message, as before. The server picks the word and checks the answer, so a client cannot answer for itself.
+- **Where it shows:** somewhere new on the screen each check, never over the hotbar or the crosshair, and drawn over everything: chat, other mods' HUDs (JourneyMap's minimap included) and any open screen, where it is clicked directly. With no screen open, T opens chat to use the mouse.
+- **Who is checked:** everyone except admins and operators. Other staff are checked but never kicked: not answering leaves them AFK (away on the staff panels) until they are back.
+- **Kicking off:** no checks and no kicks, as before.
 
-## Changed in 0.5.0
-- The mod's network protocol is version 3: update clients and servers together.
+## New in 0.7.0: macros do not count
+
+![The AFK tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_afk.png)
+
+- The server watches each player's last ten minutes of input: what they did and to what, their head's angles, and where they stood. When the same 1 to 3 inputs make 90 % or more of it, and at least one of these holds, it is taken for a macro:
+  - even timing: the gaps hardly vary, where a person's vary 20 % or more;
+  - the same exact head angles again and again;
+  - staying within 8 blocks.
+- While that holds, the macro's own clicks and head turns no longer count as activity. The player goes AFK after the AFK minutes and gets the check at the kick time like anyone idle. Anything else they do (chat, a real look around, walking off) still counts.
+- A correct answer makes their input count again for an hour.
+- The AFK tab's new **MACROS** switch, "Repeated input does not count", is on to begin with and saved for every server.
+- In the AFK list a gold **macro?** mark sits beside such players; hovering it shows what was seen ("the same click on a zombie every 1.0 s at one spot, for 18 min"). During a check the row counts down ("checked, 1:42 left").
+- Every unanswered check is written to the action log by "AFK check", with what was seen. These entries are for staff only (the LOG tab's kind "AFK checks"), never on panels, `/actionlog` or the board.
+
+## New in 0.7.0: AFK players' chunks unload
+
+- A player who is AFK counts as away for chunk unloading: their machines' chunks unload after the chunk minutes (5 to begin with) even while they stay online, and load again the moment they are active. The CHUNKS tab shows them as "AFK 12 min". So AFK pools and macros no longer keep a base's chunks loaded all night.
+
+## Changed in 0.7.0
+- The network protocol is version 5: update clients and servers together.
+- The AFK settings in shared storage get a `macros` column, added at the first start (on for the network).
+- `/su status` says whether repeated input counts.
+
+## New in 0.6.0: server images in chat
+
+![The SERVERS tab](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/admin_servers.png)
+
+- One small PNG per server (in `config/bsp_server_utilities/server_images/`, named as Velocity knows the server, `BSP-Spawn.png`) takes the place of the grey `[BSP-Spawn]` tag in chat, one line high.
+- They show in the player counter's welcome on the other servers, and in relayed chat for staff with BSP-Velocity Additions (`<server_tag>` in its `messages.toml`).
+- REFRESH on the new SERVERS tab, the eighth, makes one server's folder the network's set. It asks SURE? before it replaces or removes an image in use, and each refresh goes in the action log. `/su serverimages` does the same from chat.
+- Files must be PNGs, not animated, at most 512 x 64 pixels and 256 KB, and at most 96 pixels wide in chat. A server without an image keeps its grey name.
+- The setup guide has a Server images page.
