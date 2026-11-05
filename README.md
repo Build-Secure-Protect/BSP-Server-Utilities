@@ -25,6 +25,7 @@ The mod is in development and has not yet been tried on a live server.
 - `/su clearitems here | all | <server>`: clear dropped items after a 60-second warning (operators, BSP-Core admins).
 - `/su setup`: the setup guide, a page per feature with NEXT, SETUP LATER and TURN OFF FEATURE (operators, BSP-Core admins; offered at their join until done or ignored).
 - `/su client <player>`: what a player's client reported and what the check made of it; `/su clientcheck export | reload`: write or read `config/bsp_server_utilities/trusted_setup.json` (operators, BSP-Core admins).
+- `/broadcast <chat|title> <colour> <player|all> <server|network> <message>`: an announcement in chat, or as a title in the middle of the screen (a `|` splits off a smaller subtitle), in a colour (red, gold, grey, `"#FF8800"` and so on, `&` codes allowed), for everyone or one player, on this server or every server of the network, with a short chime (operators, BSP-Core admins, the console and RCON).
 
 ## Requirements
 

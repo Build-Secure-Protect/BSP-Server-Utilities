@@ -421,3 +421,14 @@ In game:
 5. `/su` AFK tab: AFK DETECTION, KICKING with "Check, then kick, players AFK too long" and CHECK AFTER, the kick message box, MACROS with "Repeated input does not count" and its line; footer "Saved for every server · admins and operators are never checked · other staff never kicked" on two lines. The list: "macro?" in gold beside a macro player (hover: what was seen; during a check "... Checked at 30 min AFK."), "checked, 1:42 left" in red during a check, "never kicked" for staff.
 6. LOG tab: the kind menu has "AFK checks".
 
+## 2026-11-05: SU-31, /broadcast
+
+Headless: `BroadcastGameTests` (4: colours by name, everyday name and hex, the title's split, the text kept clean; chat and title to everyone here or one named player, the gold prefix, the colour, `&` codes, the title written in chat too; a player not here, an unknown colour and an empty title refused; without shared storage `network` stays here; with it a notice for the other servers, shown there, a named player on another server reached by name and nobody here shown it, one online nowhere refused unless the client check is off; only admins and the console may use it, `"#RRGGBB"` in quotes). 103/103, twice. **Not yet seen in a client or across real servers.**
+
+In game, two servers sharing storage:
+1. From A's console: `broadcast chat red all server Restart in 5 minutes`. Everyone on A sees "[Announcement]" in gold, then the message in red, and hears a short chime; B's players see nothing. The console says "Sent to n players on A."
+2. `broadcast title gold all network Restart | in 5 minutes`: on both servers "Restart" large and gold in the middle of the screen, "in 5 minutes" smaller under it, for about 5 seconds, and the same words in chat; the console says "... and to the other servers."; B's console logs "[Announcement] Restart in 5 minutes".
+3. `broadcast chat green <a player on B> network Your build won!` from A: only that player sees it; the console names B. A name nobody has: "... is not online on the network." in red. With `server` and a player on B: "... is not online on this server."
+4. Colours: `grey`, `orange`, `pink`, `1E90FF`, `"#FF8800"` work; `plaid` lists the colours. `&lbold&r` and `&cred` inside the message show as bold and red.
+5. As a player who is not an operator: `/broadcast` is not offered and does not run. `/su` LOG tab: the command is there, by Console or the admin.
+

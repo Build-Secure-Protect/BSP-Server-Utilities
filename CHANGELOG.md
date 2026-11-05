@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-05
+
+### Added
+- `/broadcast <chat|title> <colour> <player|all> <server|network> <message>`, for operators, BSP-Core admins, the console and RCON, with the message in plain words (no JSON). `chat` puts a gold "[Announcement]" before the message; `title` shows it in the middle of the screen for about 5 seconds, a `|` splitting off a smaller subtitle (`Restart | in 5 minutes`), and writes it in chat too. Every announcement plays a short chime. The colour is one of Minecraft's 16 names, an everyday name (grey, orange, purple, pink, cyan, lime and others) or `RRGGBB` / `"#RRGGBB"`; `&` codes work inside the message. `all` reaches everyone, a player name only that player; `server` this server, `network` every server (through shared storage; a named player is found on whichever server they are on, and one online nowhere is refused). The sender is told how many players saw it; players see only the message, while the action log keeps who sent it and every server writes it to its console. Chat, titles and sounds are vanilla, so this needs no new client.
+
 ## [0.7.0] - 2026-11-03
 
 ### Added

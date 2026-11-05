@@ -47,7 +47,8 @@ import java.util.stream.Collectors;
  * {@code /actionlog} for everyone, the log read only with coordinates hidden (D58); {@code /afk} for everyone (D77);
  * {@code client <player>} and {@code clientcheck export | reload} for admins (the client check, D130, D132); {@code setup [now |
  * later | ignore]} for admins (the setup guide, D154); {@code players [set <n> | add <n> | reset | true]} for admins (the
- * player counter, D170: each change written to the Action Log).
+ * player counter, D170: each change written to the Action Log); {@code /broadcast} for admins and the console
+ * ({@link com.mrgregles.bsp_server_utilities.announce.Broadcast}).
  */
 public final class ServerUtilsCommands {
     private ServerUtilsCommands() {
@@ -127,6 +128,7 @@ public final class ServerUtilsCommands {
         d.register(Commands.literal("su").requires(ServerUtilsCommands::editorOrStaff)
                 .executes(ServerUtilsCommands::openPanel)
                 .redirect(root));
+        com.mrgregles.bsp_server_utilities.announce.Broadcast.register(d); // /broadcast (D233 to D245)
         d.register(Commands.literal("rules").executes(c -> {
             RulesService.showReadOnly(c.getSource().getPlayerOrException());
             return 1;

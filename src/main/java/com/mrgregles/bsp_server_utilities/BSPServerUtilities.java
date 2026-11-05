@@ -52,6 +52,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
+        com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
