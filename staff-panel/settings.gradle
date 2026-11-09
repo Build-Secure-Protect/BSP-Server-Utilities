@@ -1,0 +1,2 @@
+// The BSP staff web panel: a program of its own, built apart from the mod (./gradlew -p staff-panel build).
+rootProject.name = 'bsp-staff-panel'

@@ -148,6 +148,17 @@ public interface StorageBackend {
     @Nullable
     byte[] loadServerImage(String id) throws Exception;
 
+    // ------------------------------------------------------------------ the staff web panel (SU-32)
+
+    /** A server's newest snapshot for the staff web panel: the JSON documented in docs/API.md, and when it was sent. */
+    record WebServer(String server, long atMs, String snapshot) {
+    }
+
+    /** Replaces this server's row (one row per server). */
+    void saveWebServer(String server, long atMs, String snapshot) throws Exception;
+
+    List<WebServer> loadWebServers() throws Exception;
+
     String describe();
 
     void close() throws Exception;

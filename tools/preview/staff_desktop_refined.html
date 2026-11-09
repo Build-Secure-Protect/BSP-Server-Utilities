@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Panel Desktop Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page for set O: layout O-C with the owner's changes (D287): the chat wider and full height on the right,
+   staff online on the left under the menu. R1 to R3 to confirm. Sample data; names are made up. The frames use the BSP website's own tokens
+   (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1200px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.disp{ font-family:Silkscreen,var(--mono); letter-spacing:.02em; }
+.mono{ font-family:var(--mono); }
+.mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); } .vi{ color:var(--vio); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); } .brand b{ color:var(--tx); font-weight:400; }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.scroll{ flex:1; overflow:hidden; position:relative; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip i{ width:7px; height:7px; border-radius:50%; background:var(--teal); display:block; } .chip i.off{ background:var(--dim); }
+.chip b{ font-family:var(--mono); font-weight:600; }
+.seg2{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; font-size:11.5px; }
+.seg2 span{ padding:3px 10px; border-radius:6px; color:var(--mu); } .seg2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.row{ display:flex; align-items:center; gap:10px; padding:8px 12px; }
+.row + .row{ border-top:1px solid #20242d; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub{ font-size:11px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tag{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; }
+.afk{ font:600 9.5px var(--body); padding:1px 6px; border-radius:4px; background:#2b2f3a; color:var(--mu); }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.px{ display:block; image-rendering:pixelated; flex:none; }
+.stats{ display:flex; gap:1px; align-items:center; }
+.bar{ height:5px; border-radius:3px; background:#262a33; overflow:hidden; } .bar i{ display:block; height:100%; border-radius:3px; }
+.act{ display:grid; place-items:center; gap:4px; padding:9px 4px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:11px; font-weight:600; }
+.act svg{ width:18px; height:18px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.act.dg{ border-color:#5a2a2a; color:var(--coral); } .act.dg svg{ stroke:var(--coral); }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.6); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:10px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.eff{ font-size:10.5px; padding:2px 7px; border-radius:6px; background:#1f2a2a; color:#7fe0cf; border:1px solid #24443f; white-space:nowrap; }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:11.5px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+/* B: board look */
+.bd-h{ font:11px Silkscreen,var(--mono); color:var(--teal); padding:7px 12px 5px; display:flex; justify-content:space-between; align-items:center; background:#12151b; border-top:1px solid var(--ln); border-bottom:1px solid var(--ln); }
+.bd-row{ display:grid; grid-template-columns:20px 1fr 54px 92px; gap:8px; align-items:center; padding:5px 12px; font-size:12px; }
+.bd-row:nth-child(even){ background:#13161c; }
+.srv{ font:10px var(--mono); color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:0 12px 10px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:6px; padding:5px 6px; font-size:10px; color:var(--mu); line-height:1.2; }
+.tile b{ display:block; font:15px Silkscreen,var(--mono); color:var(--tx); font-weight:400; }
+.tile.off b{ color:var(--dim); }
+.ptabs{ display:flex; gap:0; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12px; }
+.ptabs span{ padding:8px 10px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 -2px 0 var(--teal); }
+.abar{ flex:none; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:10px 12px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+
+/* C: map first */
+.map{ position:absolute; inset:0; }
+.mhead{ position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; }
+.mhead canvas{ box-shadow:0 0 0 2px #0f1115, 0 0 0 3.5px var(--c,#fff); border-radius:2px; }
+.mhead span{ font:600 9.5px var(--body); background:rgba(15,17,21,.8); padding:0 4px; border-radius:3px; white-space:nowrap; }
+.pill{ position:absolute; background:rgba(20,23,29,.92); border:1px solid var(--ln); border-radius:999px; padding:5px 10px; font-size:11.5px; display:flex; gap:6px; align-items:center; }
+.float{ position:absolute; background:rgba(20,23,29,.96); border:1px solid var(--ln); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+.float .bar-t{ display:flex; align-items:center; gap:8px; cursor:move; }
+.handle{ display:grid; grid-template-columns:repeat(3,3px); gap:2px; } .handle i{ width:3px; height:3px; background:var(--dim); border-radius:50%; display:block; }
+.csheet{ position:absolute; left:0; right:0; bottom:0; height:52%; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 0 0; display:flex; flex-direction:column; }
+.tgrp{ padding:6px 14px 2px; font:600 11px var(--body); display:flex; gap:7px; align-items:center; }
+.tgrp i{ width:9px; height:9px; border-radius:2px; display:block; }
+.mini{ display:flex; gap:6px; padding:4px 14px 8px; overflow:hidden; }
+.mp{ flex:none; display:flex; align-items:center; gap:6px; background:var(--pn); border:1px solid var(--ln); border-radius:10px; padding:5px 8px 5px 5px; }
+.mp .nm{ font-size:11.5px; } .mp .sub{ font-size:10px; }
+
+/* stat styles */
+.sty{ width:300px; background:#0f1115; color:#e8eaf0; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px; font:12px var(--body); border:1px solid #2a2f3a; }
+.sty h4{ margin:0; font:11px Silkscreen,var(--mono); color:#19d3b0; font-weight:400; }
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:1100px; height:690px; flex:none; box-sizing:border-box; border:1px solid #2a2f3a; border-radius:10px; background:var(--bg); color:var(--tx);
+  font:13px/1.35 var(--body); overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+.dk *{ box-sizing:border-box; }
+.chrome{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; background:#1b1e25; border-bottom:1px solid #2a2f3a; }
+.chrome .lights{ display:flex; gap:6px; } .chrome .lights i{ width:10px; height:10px; border-radius:50%; display:block; background:#3a3f4b; }
+.chrome .url{ flex:1; max-width:440px; margin:0 auto; height:22px; border-radius:6px; background:#0f1115; color:#9aa3b5; font-size:11.5px; display:flex; align-items:center; gap:6px; padding:0 10px; }
+.dbody{ flex:1; display:flex; min-height:0; position:relative; }
+.dtop{ height:52px; flex:none; display:flex; align-items:center; gap:14px; padding:0 18px; border-bottom:1px solid var(--ln); background:var(--bg2); }
+.dtabs{ display:flex; gap:4px; } .dtabs > span{ padding:6px 12px; border-radius:8px; color:var(--mu); font-size:13px; display:flex; gap:6px; align-items:center; position:relative; }
+.dtabs > span.on{ background:#19d3b01a; color:var(--teal); } .dtabs svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.dtabs .badge{ position:static; margin-left:2px; }
+.searchbox{ height:32px; width:240px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; gap:8px; padding:0 10px; color:var(--dim); font-size:12.5px; }
+.searchbox svg{ width:14px; height:14px; stroke:var(--dim); fill:none; stroke-width:2; }
+.me{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
+.rail{ width:64px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 0; }
+.rail div{ width:44px; height:44px; border-radius:10px; display:grid; place-items:center; color:var(--mu); position:relative; } .rail div.on{ background:#19d3b01a; color:var(--teal); }
+.rail svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.side{ width:200px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; gap:2px; padding:14px 10px; }
+.side .it{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--mu); font-size:13px; position:relative; }
+.side .it.on{ background:#19d3b01a; color:var(--teal); } .side svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.side .badge{ position:static; margin-left:auto; }
+.pane{ min-width:0; overflow:hidden; display:flex; flex-direction:column; }
+.drawer{ width:380px; flex:none; border-left:1px solid var(--ln); background:var(--bg2); padding:14px 16px; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+.tcard{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; overflow:hidden; }
+.tcard .th{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:#1d2129; }
+.row.sel{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.chatl{ font-size:12px; line-height:1.4; } .chatl .sv{ color:var(--dim); font-size:10.5px; }
+.dtable{ width:100%; border-collapse:collapse; font-size:12.5px; } .dtable th{ text-align:left; font-weight:500; color:var(--mu); font-size:11.5px; padding:8px 12px; border-bottom:1px solid var(--ln); }
+.dtable td{ padding:9px 12px; border-bottom:1px solid #20242d; vertical-align:middle; }
+.slot{ width:30px; height:30px; background:#0c0e12; box-shadow:inset 0 0 0 1px #2a2f3a; display:grid; place-items:center; position:relative; }
+.slot .ct{ position:absolute; right:2px; bottom:0; font:600 9px var(--mono); color:#fff; text-shadow:1px 1px 0 #000; }
+.inv{ display:grid; grid-template-columns:repeat(9,30px); gap:2px; }
+.sect{ font:11px Silkscreen,var(--mono); color:var(--teal); display:flex; justify-content:space-between; align-items:center; }
+.minirow{ display:flex; align-items:center; gap:4px; font:600 10px var(--mono); color:var(--soft); }
+.low{ font:700 9px var(--body); color:#10151c; background:var(--coral); border-radius:3px; padding:0 4px; }
+.in{ height:40px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:14px; color:var(--tx); }
+.in.focus{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.btn{ height:42px; border-radius:10px; display:grid; place-items:center; font-weight:600; font-size:14px; background:var(--teal); color:#0f1115; }
+.btn.sm{ height:32px; font-size:12px; padding:0 12px; border-radius:8px; }
+.note{ font-size:11.5px; color:var(--mu); line-height:1.45; }
+.err{ font-size:12px; color:#ff8f86; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:8px 10px; }
+.rk{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; white-space:nowrap; }
+.rk.mod{ background:#7fb2ff22; color:#7fb2ff; border:1px solid #7fb2ff55; } .rk.adm{ background:#b58cff22; color:#b58cff; border:1px solid #b58cff55; } .rk.own{ background:#ffd23a22; color:#ffd23a; border:1px solid #ffd23a55; }
+.wide{ max-width:none; }
+.lockd{ color:#ff8f86; } .pend{ color:#ffd23a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel on a computer: refined dashboard</h1>
+    <p class="lede">Layout O-C as picked (D287), with your changes: the network chat on the right is wider (360 pixels instead of 290) and runs the full height of the page, with the box to speak at its foot; the staff online sit on the left under the menu. The teams take two columns here, as the chat is wider. From 900 pixels wide (D288); below that the phone page. Made-up names and numbers.</p>
+  </header>
+  <section><div class="stage"><div class="dk" id="rc" style="height:720px"></div></div></section>
+  <section>
+    <h2>To confirm</h2>
+    <div class="card">
+      <ol>
+        <li><b>R1. The chat column.</b> 360 pixels, the page's full height; newest lines at the bottom with their time; a server filter at the top ("All servers"); at the foot the box to speak, as yourself with [Staff] or as [Server], to one server or the network (D262). It stays open on every tab of the panel, not only Players.</li>
+        <li><b>R2. Staff online on the left.</b> Every staff member in game, with the server they are on (away or AFK greyed), and a small ▣ for those also on the panel now; the Owner on the panel only shows "on the panel". The other way: staff in game only.</li>
+        <li><b>R3. Narrower and wider screens.</b> 900 to 1300 pixels: the chat folds into a CHAT button at the right edge that opens it over the page, and the teams take one column. 1300 to 1700: as drawn. Over 1700: the teams take three columns.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SERVERS=[["BSP-Spawn",9],["Frostwarf",8],["Boulderbrook",6],["Moongrove",7],["Stormfall",4],["Sanctuary",2],["SafeRoom",0]];
+const T={wolves:{n:"Iron Wolves",c:"#FFAA00"},shade:{n:"Nightshade",c:"#AA00AA"},core:{n:"Deepcore",c:"#55FFFF"},none:{n:"No team",c:"#6b7180"}};
+const P=[
+ {n:"Kestrel_88",t:"wolves",s:"Frostwarf",d:"overworld",x:1412,y:71,z:-388,hp:20,ar:15,fd:18,xp:31,pg:42,ef:["Speed II 2:10"]},
+ {n:"BrickLayerTom",t:"wolves",s:"Frostwarf",d:"overworld",x:1440,y:64,z:-402,hp:9,ar:12,fd:6,xp:12,pg:88,tg:[["Supporter","#ffd23a"]]},
+ {n:"Mossy_Fen",t:"wolves",s:"Frostwarf",d:"nether",x:176,y:33,z:-49,hp:20,ar:20,fd:20,xp:44,pg:51,afk:14},
+ {n:"Vexa",t:"shade",s:"Moongrove",d:"overworld",x:-2210,y:12,z:905,hp:10,ar:8,fd:7,xp:7,pg:120,air:5,tg:[["Suspected cheater","#ff6b5c"]],notes:2,ef:["Night Vision 4:40","Haste II 0:55"]},
+ {n:"ObsidianOtter",t:"shade",s:"Moongrove",d:"overworld",x:-2190,y:64,z:880,hp:20,ar:18,fd:17,xp:23,pg:37},
+ {n:"Pixl",t:"shade",s:"Stormfall",d:"overworld",x:530,y:-41,z:1210,hp:4,ar:0,fd:3,xp:2,pg:64},
+ {n:"RuneSmith",t:"core",s:"BSP-Spawn",d:"overworld",x:12,y:80,z:-6,hp:20,ar:9,fd:20,xp:15,pg:29},
+ {n:"TallyHo",t:"core",s:"Boulderbrook",d:"overworld",x:-640,y:70,z:-1502,hp:18,ar:14,fd:12,xp:19,pg:45},
+ {n:"Juniper_K",t:"core",s:"Boulderbrook",d:"overworld",x:-655,y:58,z:-1490,hp:20,ar:16,fd:19,xp:27,pg:40,ef:["Night Vision 1:12"]},
+ {n:"Newbie_Sam",t:"none",s:"BSP-Spawn",d:"overworld",x:3,y:80,z:14,hp:20,ar:0,fd:20,xp:0,pg:71,tg:[["New","#7fb2ff"]]},
+ {n:"Glimmer",t:"none",s:"BSP-Spawn",d:"overworld",x:-20,y:79,z:2,hp:20,ar:4,fd:15,xp:3,pg:33,afk:6},
+ {n:"Ash_Tree",t:"none",s:"Sanctuary",d:"overworld",x:88,y:65,z:120,hp:16,ar:10,fd:14,xp:9,pg:58},
+];
+const by=k=>P.filter(p=>p.t===k);
+
+/* ---------- pixel art ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+const ART={
+ heart:[".XX.XX.","XRRXRRX","XRWRRRX","XRRRRRX",".XRRRX.","..XRX..","...X..."],
+ armor:["XX...XX","XGXXXGX","XGGGGGX",".XGGGX.",".XGGGX.",".XGGGX.",".XXXXX."],
+ food:["...XXX.","..XBBBX",".XBBBBX",".XBBBX.","XWXXX..","WX.....","X......"],
+ air:[".XXXX.","XWBBBX","XBWBBX","XBBBBX","XBBBBX",".XXXX."]};
+const COL={X:"#1d0b0b",R:"#e23b3b",W:"#ffd9d9",G:"#c9ced8",B:"#b5651d"},AIRC={X:"#0c2a4a",W:"#e8f6ff",B:"#3a8ee0"};
+function px(kind,state,size){/* state: 1 full, .5 half, 0 empty */const a=ART[kind],h=a.length,w=a[0].length,c=document.createElement("canvas");c.width=w;c.height=h;c.className="px";c.style.width=size+"px";c.style.height=Math.round(size*h/w)+"px";
+  const g=c.getContext("2d");for(let y=0;y<h;y++)for(let x=0;x<w;x++){const ch=a[y][x];if(ch===".")continue;let col=(kind==="air"?AIRC:COL)[ch];
+    if(ch!=="X"&&(state===0||(state===.5&&x>=w/2)))col=kind==="heart"?"#3a1414":kind==="armor"?"#2c3038":kind==="food"?"#2e2218":"#16263a";
+    if(kind==="food"&&ch==="B")col=state===0||(state===.5&&x>=w/2)?"#2e2218":"#b5651d";
+    if(kind==="armor"&&ch==="G"&&state===0)col="#2c3038";g.fillStyle=col;g.fillRect(x,y,1,1);}return c;}
+function icons(kind,val,max,size,count){const d=document.createElement("div");d.className="stats";const n=count||10;
+  for(let i=0;i<n;i++){const v=val/ (max/n) - i;d.appendChild(px(kind,v>=1?1:v>=.5?.5:0,size));}return d;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ bell:'<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+ menu:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ tp:'<svg viewBox="0 0 24 24"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="3"/></svg>',
+ inv:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+ eye:'<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ kick:'<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17-5-5 5-5M5 12h11"/></svg>',
+ ban:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>',
+ back:'<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>',
+ x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+ loc:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:47</span><span>●●● 5G 82%</span></div>');
+function tabbar(on){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",3],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const total=SERVERS.reduce((a,s)=>a+s[1],0);
+function tags(p){return (p.tg||[]).map(([t,c])=>`<span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("")+(p.afk?`<span class="afk">AFK ${p.afk}m</span>`:"");}
+const where=p=>`${p.s} · ${p.d==="overworld"?"":p.d+" · "}${p.x}, ${p.y}, ${p.z}`;
+function bars(p,w){const hp=p.hp/20*100,ar=p.ar/20*100,fd=p.fd/20*100;const c=hp<=25?"#ff6b5c":"#e23b3b";
+  return h(`<div style="display:flex;flex-direction:column;gap:3px;width:${w}px"><div class="bar"><i style="width:${hp}%;background:${c}"></i></div><div class="bar"><i style="width:${ar}%;background:#c9ced8"></i></div><div class="bar"><i style="width:${fd}%;background:#b5651d"></i></div></div>`);}
+
+const V=P[3];
+function rowStats(p){const d=h('<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"></div>');d.appendChild(icons("heart",p.hp,20,7.5));
+  const m=h(`<div class="minirow"></div>`);m.appendChild(px("armor",1,8));m.appendChild(h(`<span style="margin-right:6px">${p.ar}</span>`));m.appendChild(px("food",1,8));m.appendChild(h(`<span>${p.fd}</span>`));
+  if(p.hp<=6)m.prepend(h('<span class="low" style="margin-right:6px">LOW</span>'));d.appendChild(m);return d;}
+function teamCards(keys,opts){const out=[];keys.forEach(k=>{const t=T[k];const c=h(`<div class="tcard"><div class="th" style="border-left:4px solid ${t.c}"><span style="font-weight:600">${t.n}</span><span class="mu" style="font-size:11.5px">${by(k).length} online</span></div></div>`);
+  by(k).forEach(p=>{const r=h(`<div class="row ${p===V&&opts.sel?"sel":""}"><div class="grow" style="min-width:0"><div style="display:flex;gap:6px;align-items:center"><span class="nm">${p.n}</span>${opts.mini?"":tags(p)}</div><div class="sub mono">${opts.short?p.s:where(p)}</div></div></div>`);
+    r.prepend(headCanvas(p.n,opts.head||30));if(opts.mini){const m=h('<div class="minirow"></div>');if(p.hp<=6)m.appendChild(h('<span class="low" style="margin-right:4px">LOW</span>'));m.appendChild(px("heart",1,9));m.appendChild(h(`<span>${p.hp/2}</span>`));r.appendChild(m);}else if(!opts.nostats)r.appendChild(rowStats(p));c.appendChild(r);});out.push(c);});return out;}
+function chrome(f){f.appendChild(h(`<div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url"><span style="color:#19d3b0">🔒</span>staff.buildsecureprotect.com</div></div>`));}
+function playerHead(size){const hd=h(`<div style="display:flex;gap:12px;align-items:center"><div class="grow" style="min-width:0"><div style="font-size:17px;font-weight:600">${V.n}</div><div class="sub"><span style="color:${T[V.t].c}">■</span> ${T[V.t].n} · ${V.s} · ping ${V.pg} ms</div><div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">${tags(V)}<span class="tag" style="background:#2b2f3a;color:var(--soft)">2 notes</span></div></div></div>`);hd.prepend(headCanvas(V.n,size||48));return hd;}
+function statBox(sz){const st=h('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:10px"></div>');
+  st.appendChild(icons("heart",V.hp,20,sz));st.appendChild(icons("food",V.fd,20,sz));st.appendChild(icons("armor",V.ar,20,sz));st.appendChild(icons("air",V.air,10,sz));
+  st.appendChild(h(`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:11px"><span style="color:#80ff20;font-family:var(--mono);font-weight:600">${V.xp}</span><div class="bar grow"><i style="width:40%;background:#80ff20"></i></div></div>`));return st;}
+const effects=()=>h(`<div style="display:flex;gap:5px;flex-wrap:wrap">${V.ef.map(e=>`<span class="eff">${e}</span>`).join("")}</div>`);
+function actions(cols){const ac=h(`<div style="display:grid;grid-template-columns:repeat(${cols||3},1fr);gap:6px"></div>`);[["tp","Teleport"],["inv","Inventory"],["map","Track"],["note","Notes"],["kick","Kick",1],["ban","Ban",1]].forEach(([i,l,d])=>ac.appendChild(h(`<div class="act ${d?"dg":""}">${SV[i]}${l}</div>`)));return ac;}
+function itemIcon(seed){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="px";c.style.width=c.style.height="22px";const g=c.getContext("2d"),r=rnd(seed);
+  const pal=[["#8a5a2b","#6b4420"],["#9aa3b5","#6b7180"],["#5fd3e0","#2a8a96"],["#e0c050","#a88a2a"],["#5aa04a","#3a7030"],["#c04040","#802a2a"],["#7a5ad0","#4a3a90"]][Math.floor(r()*7)];
+  const kind=Math.floor(r()*3);if(kind===0){g.fillStyle=pal[0];g.fillRect(1,1,6,6);g.fillStyle=pal[1];g.fillRect(1,5,6,2);g.fillRect(5,1,2,6);}
+  else if(kind===1){g.fillStyle="#6b4420";for(let i=0;i<5;i++)g.fillRect(1+i,6-i,1,1);g.fillStyle=pal[0];g.fillRect(4,1,3,3);g.fillStyle=pal[1];g.fillRect(5,2,2,1);}
+  else{g.fillStyle=pal[0];g.fillRect(2,2,4,5);g.fillRect(3,1,2,1);g.fillStyle=pal[1];g.fillRect(2,5,4,2);}return c;}
+function grid(n,seed,fill){const d=h('<div class="inv"></div>');const r=rnd(seed);for(let i=0;i<n;i++){const s=h('<div class="slot"></div>');if(r()<fill){s.appendChild(itemIcon(seed*100+i));const ct=[1,1,16,32,64,7][Math.floor(r()*6)];if(ct>1)s.appendChild(h(`<span class="ct">${ct}</span>`));}d.appendChild(s);}return d;}
+const NAV=[["users","Players"],["chat","Chat",3],["map","Map"],["shield","Staff",1],["more","More"]];
+const srvChips=()=>{const ch=h('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');SERVERS.forEach(([n,c])=>ch.appendChild(h(`<div class="chip"><i class="${c?"":"off"}"></i>${n}<b>${c}</b></div>`)));return ch;};
+const CHAT=[["Moongrove","Vexa","anyone selling diamonds?"],["Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["BSP-Spawn","Newbie_Sam","how do i get to the market"],["[Staff] Ana_Mod","","the market is the big hall north of spawn"],["Boulderbrook","TallyHo","lol"],["Stormfall","Pixl","help im stuck in a hole"]];
+
+/* ---------- O-C refined ---------- */
+const CHAT2=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+const STAFFON=[["Mrgregles","Owner","own","panel","on the panel"],["Ana_Mod","Moderator","mod","Frostwarf","in game · on the panel"],["Big_Admin","Admin","adm","Moongrove","in game"],["Helper_Jo","Moderator","mod","BSP-Spawn","in game · AFK 6 min",1]];
+(function(){const f=document.getElementById("rc");chrome(f);const body=h('<div class="dbody"></div>');
+  const side=h('<div class="side" style="width:220px"></div>');side.appendChild(h(`<div class="brand" style="padding:2px 10px 12px">BSP <b>STAFF</b></div>`));
+  NAV.forEach(([i,l,b])=>side.appendChild(h(`<div class="it ${l==="Players"?"on":""}">${SV[i]}${l}${b?`<span class="badge">${b}</span>`:""}</div>`)));
+  side.appendChild(h(`<div class="sect" style="margin:16px 10px 6px"><span>STAFF ONLINE</span><span class="mu" style="font-family:var(--body);font-size:11px">4</span></div>`));
+  STAFFON.forEach(([n,r,c,where,st,dim])=>{const d=h(`<div style="display:flex;gap:8px;align-items:center;padding:5px 10px;${dim?"opacity:.55":""}"><div class="grow" style="min-width:0"><div style="display:flex;gap:5px;align-items:center"><span class="nm" style="font-size:12px">${n}</span><span class="rk ${c}">${r}</span></div><div class="sub" style="font-size:10.5px">${where==="panel"?"":where+" · "}${st.replace("in game · ","")}</div></div>${st.includes("panel")?'<span title="on the panel" style="color:var(--teal);font-size:11px">▣</span>':""}</div>`);d.prepend(headCanvas(n,22));side.appendChild(d);});
+  side.appendChild(h('<div style="flex:1"></div>'));const me=h('<div class="it"></div>');me.appendChild(headCanvas("Ana_Mod",22));me.appendChild(h('<span>Ana_Mod <span class="rk mod">Moderator</span></span>'));side.appendChild(me);body.appendChild(side);
+  const main=h('<div class="pane" style="flex:1;padding:14px 16px;gap:12px"></div>');
+  const tiles=h('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>');SERVERS.forEach(([n,c])=>tiles.appendChild(h(`<div style="background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--mu)"><b style="display:block;font:17px Silkscreen,var(--mono);color:${c?"var(--tx)":"var(--dim)"}">${c}</b>${n.replace("BSP-","")}</div>`)));
+  tiles.appendChild(h(`<div style="background:var(--pn);border:1px solid #19d3b055;border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--mu)"><b style="display:block;font:17px Silkscreen,var(--mono);color:var(--teal)">${total}</b>Network</div>`));main.appendChild(tiles);
+  const g=h('<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:start"></div>');teamCards(["shade","wolves","core","none"],{sel:1,head:24,mini:1,short:1}).forEach(c=>g.appendChild(c));main.appendChild(g);
+  body.appendChild(main);
+  const rc=h('<div class="pane" style="width:360px;flex:none;border-left:1px solid var(--ln);background:var(--bg2);"></div>');
+  rc.appendChild(h(`<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--ln)"><span class="sect grow"><span>NETWORK CHAT</span></span><span class="chip" style="padding:3px 8px">All servers ▾</span></div>`));
+  const lines=h('<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;padding:10px 14px"></div>');
+  CHAT2.forEach(([t,s,n,x])=>{let who=s==="staff"?`<b class="vi">[Staff] ${n}</b>`:s==="server"?`<b class="gd">[Server]</b>`:`<span class="sv">${s}</span> <b>${n}</b>`;lines.appendChild(h(`<div class="chatl"><span style="color:var(--dim);font:10px var(--mono)">${t}</span> ${who} ${x}</div>`));});
+  rc.appendChild(lines);
+  rc.appendChild(h(`<div style="border-top:1px solid var(--ln);padding:10px 14px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:6px;font-size:11px"><span class="chip" style="padding:3px 8px">As <b class="vi" style="font-family:var(--body)">[Staff] Ana_Mod</b> ▾</span><span class="chip" style="padding:3px 8px">To the network ▾</span></div><div style="display:flex;gap:6px"><div class="in" style="flex:1;height:36px;font-size:12.5px;color:var(--dim)">Say something…</div><div class="btn sm" style="height:36px">Send</div></div></div>`));
+  body.appendChild(rc);
+  const fl=h(`<div class="float" style="left:470px;top:250px;width:300px"></div>`);
+  const bt=h(`<div class="bar-t"><div class="handle"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="grow" style="min-width:0"><div class="nm">${V.n}</div><div class="sub"><span style="color:${T[V.t].c}">■</span> ${T[V.t].n} · ${V.s} · ${V.pg} ms</div></div><span class="mu" style="font-size:16px">✕</span></div>`);bt.insertBefore(headCanvas(V.n,34),bt.children[1]);fl.appendChild(bt);
+  fl.appendChild(h(`<div style="display:flex;gap:5px;flex-wrap:wrap">${tags(V)}<span class="tag" style="background:#2b2f3a;color:var(--soft)">2 notes</span></div>`));fl.appendChild(h(`<div class="mono" style="font-size:11px;color:var(--soft)">${V.x}, ${V.y}, ${V.z}</div>`));
+  fl.appendChild(statBox(10));fl.appendChild(actions(3));body.appendChild(fl);f.appendChild(body);})();
+</script>
+</body>
+</html>

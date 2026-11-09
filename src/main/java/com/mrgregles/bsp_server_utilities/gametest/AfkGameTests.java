@@ -373,6 +373,9 @@ public class AfkGameTests {
             clicker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
             walker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
             Random rnd = new Random(20261103L);
+            // new players start at a random spot near spawn: the walker starts beside the clicker, or its walk (turning
+            // 15 blocks either side of the clicker) would turn at every step and keep it on one spot
+            walker.setPos(clicker.getX(), clicker.getY(), clicker.getZ());
             float base = jiggler.getYRot();
             long nextPerson = 0, nextWalker = 0;
             double walk = 0.4;

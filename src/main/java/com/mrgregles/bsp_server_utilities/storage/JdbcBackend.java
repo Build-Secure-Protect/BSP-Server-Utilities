@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}.
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots).
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -99,6 +99,7 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, snapshot MEDIUMTEXT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE)");
             if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
@@ -312,8 +313,18 @@ public final class JdbcBackend implements StorageBackend {
             ps.setString(2, j.name());
             ps.setLong(3, j.atMs());
             ps.setString(4, j.server());
-            return ps.executeUpdate() > 0;
+            if (ps.executeUpdate() > 0) {
+                return true;
+            }
         }
+        // known already: the name as of this join, so the staff panel finds players by the name they use now (audit)
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "players SET name = ? WHERE uuid = ? AND name <> ?")) {
+            ps.setString(1, j.name());
+            ps.setString(2, j.id().toString());
+            ps.setString(3, j.name());
+            ps.executeUpdate();
+        }
+        return false;
     }
 
     @Override
@@ -401,6 +412,28 @@ public final class JdbcBackend implements StorageBackend {
         } finally {
             c.setAutoCommit(auto);
         }
+    }
+
+    @Override
+    public void saveWebServer(String server, long atMs, String snapshot) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "web_servers (server, at_ms, snapshot) VALUES (?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE at_ms = VALUES(at_ms), snapshot = VALUES(snapshot)")) {
+            ps.setString(1, server);
+            ps.setLong(2, atMs);
+            ps.setString(3, snapshot);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<WebServer> loadWebServers() throws SQLException {
+        List<WebServer> out = new ArrayList<>();
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT server, at_ms, snapshot FROM " + prefix + "web_servers")) {
+            while (rs.next()) {
+                out.add(new WebServer(rs.getString(1), rs.getLong(2), rs.getString(3)));
+            }
+        }
+        return out;
     }
 
     @Override

@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  * MySQL message table carries them, and receivers drop whichever copy arrives second.
  */
 public final class RedisLink {
-    public static final String CHANNEL_PREFIX = "bsp_su:";
+    public static final String CHANNEL_PREFIX = "bsp_su:", WEB_SUFFIX = ":web";
     private static final int CONNECT_TIMEOUT_MS = 3000, READ_TIMEOUT_MS = 15_000, MAX_QUEUE = 10_000;
     private static final long FIRST_RETRY_MS = 500, MAX_RETRY_MS = 30_000, KEEPALIVE_MS = 30_000, CLOSE_WAIT_MS = 2000;
 
@@ -37,6 +37,11 @@ public final class RedisLink {
             return CHANNEL_PREFIX + channel;
         }
 
+        /** The staff web panel's channel: the game servers publish on it and never subscribe, so they never receive its traffic. */
+        public String webChannel() {
+            return fullChannel() + WEB_SUFFIX;
+        }
+
         public String describe() {
             return "redis " + host + ":" + port + ", channel " + fullChannel();
         }
@@ -44,7 +49,8 @@ public final class RedisLink {
 
     private final Settings settings;
     private final Consumer<String> onMessage;
-    private final LinkedBlockingQueue<String> outbox = new LinkedBlockingQueue<>(MAX_QUEUE);
+    /** Each entry is {channel, message}. */
+    private final LinkedBlockingQueue<String[]> outbox = new LinkedBlockingQueue<>(MAX_QUEUE);
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final Thread publisher, subscriber;
     private final AtomicLong sent = new AtomicLong(), received = new AtomicLong(), dropped = new AtomicLong();
@@ -66,7 +72,16 @@ public final class RedisLink {
 
     /** Sends a message to every server on the channel, unless the publishing connection is down (MySQL carries it then). */
     public void publish(String message) {
-        if (!running.get() || !publishing || !outbox.offer(message)) {
+        send(settings.fullChannel(), message);
+    }
+
+    /** Sends a message to the staff web panel's channel ({@link Settings#webChannel()}); dropped while the connection is down. */
+    public void publishWeb(String message) {
+        send(settings.webChannel(), message);
+    }
+
+    private void send(String channel, String message) {
+        if (!running.get() || !publishing || !outbox.offer(new String[]{channel, message})) {
             dropped.incrementAndGet();
         }
     }
@@ -161,7 +176,7 @@ public final class RedisLink {
                 retry = FIRST_RETRY_MS;
                 long lastUse = System.currentTimeMillis();
                 while (true) {
-                    String message = outbox.poll(1, TimeUnit.SECONDS);
+                    String[] message = outbox.poll(1, TimeUnit.SECONDS);
                     if (message == null) {
                         if (!running.get()) {
                             return; // closing and everything queued is sent
@@ -174,7 +189,7 @@ public final class RedisLink {
                         }
                         continue;
                     }
-                    Resp.command(out, "PUBLISH", settings.fullChannel(), message);
+                    Resp.command(out, "PUBLISH", message[0], message[1]);
                     check(Resp.read(in));
                     sent.incrementAndGet();
                     lastUse = System.currentTimeMillis();

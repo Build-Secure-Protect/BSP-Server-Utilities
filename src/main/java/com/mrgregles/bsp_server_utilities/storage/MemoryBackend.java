@@ -30,6 +30,7 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
     private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
     private com.mrgregles.bsp_server_utilities.players.PlayersSettings playersSettings;
+    private final Map<String, WebServer> webServers = new HashMap<>();
     private com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet serverImages;
     private final Map<String, byte[]> serverImageBytes = new java.util.HashMap<>();
     private final Map<UUID, com.mrgregles.bsp_server_utilities.players.Joined> players = new java.util.LinkedHashMap<>();
@@ -156,7 +157,11 @@ public final class MemoryBackend implements StorageBackend {
     @Override
     public synchronized boolean insertPlayer(com.mrgregles.bsp_server_utilities.players.Joined j) throws Exception {
         check();
-        return players.putIfAbsent(j.id(), j) == null;
+        com.mrgregles.bsp_server_utilities.players.Joined old = players.putIfAbsent(j.id(), j);
+        if (old != null && !old.name().equals(j.name())) {
+            players.put(j.id(), new com.mrgregles.bsp_server_utilities.players.Joined(old.id(), j.name(), old.atMs(), old.server()));
+        }
+        return old == null;
     }
 
     @Override
@@ -179,6 +184,18 @@ public final class MemoryBackend implements StorageBackend {
         bytes.forEach((id, png) -> serverImageBytes.putIfAbsent(id, png.clone()));
         serverImageBytes.keySet().retainAll(set.ids());
         serverImages = set;
+    }
+
+    @Override
+    public synchronized void saveWebServer(String server, long atMs, String snapshot) throws Exception {
+        check();
+        webServers.put(server, new WebServer(server, atMs, snapshot));
+    }
+
+    @Override
+    public synchronized List<WebServer> loadWebServers() throws Exception {
+        check();
+        return new ArrayList<>(webServers.values());
     }
 
     @Override

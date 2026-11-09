@@ -127,7 +127,7 @@ public final class AfkService {
     private static LongSupplier clock = System::currentTimeMillis;
     @Nullable
     private static Supplier<Collection<ServerPlayer>> playersOverride;
-    private static BiConsumer<ServerPlayer, Component> kicker = (p, why) -> p.connection.disconnect(why);
+    private static BiConsumer<ServerPlayer, Component> kicker = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick; // off the network (D254)
     private static BiConsumer<ServerPlayer, AfkCheckPacket> sender = ServerUtilsNetwork::sendTo;
     private static Predicate<ServerPlayer> staff = Staff::isStaff;
 
@@ -643,6 +643,11 @@ public final class AfkService {
         }
     }
 
+    /** The kick as an unanswered check makes it (tests). */
+    public static void kickForTests(ServerPlayer p, Component why) {
+        kicker.accept(p, why);
+    }
+
     /** Where check cards go instead of the player's connection (tests). */
     public static void sendChecksForTests(BiConsumer<ServerPlayer, AfkCheckPacket> to) {
         sender = to;
@@ -657,7 +662,7 @@ public final class AfkService {
         staff = Staff::isStaff;
         clock = System::currentTimeMillis;
         playersOverride = null;
-        kicker = (p, why) -> p.connection.disconnect(why);
+        kicker = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick;
         sender = ServerUtilsNetwork::sendTo;
     }
 

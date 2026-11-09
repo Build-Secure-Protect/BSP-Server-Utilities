@@ -462,6 +462,27 @@ public final class ServerUtilsCommands {
                 : Component.translatable("message.bsp_server_utilities.status.servers", images,
                 Component.translatable(s == null ? "message.bsp_server_utilities.serverimages.here" : "message.bsp_server_utilities.serverimages.network")));
         say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
+        say(source, webStatus(s));
+        if (com.mrgregles.bsp_server_utilities.web.WebAgent.enabled()) {
+            say(source, Component.translatable(com.mrgregles.bsp_server_utilities.web.WebActions.ready()
+                    ? "message.bsp_server_utilities.status.web_actions_on" : "message.bsp_server_utilities.status.web_actions_off"));
+        }
         return 1;
+    }
+
+    /** The staff web panel's line (SU-32). */
+    private static Component webStatus(@org.jetbrains.annotations.Nullable Storage s) {
+        if (!com.mrgregles.bsp_server_utilities.web.WebAgent.enabled()) {
+            return Component.translatable("message.bsp_server_utilities.status.web_off");
+        }
+        if (s == null) {
+            return Component.translatable("message.bsp_server_utilities.status.web_no_storage");
+        }
+        long last = com.mrgregles.bsp_server_utilities.web.WebAgent.lastSentMs();
+        if (last == 0) {
+            return Component.translatable("message.bsp_server_utilities.status.web_waiting", com.mrgregles.bsp_server_utilities.web.WebAgent.seconds());
+        }
+        return Component.translatable("message.bsp_server_utilities.status.web", com.mrgregles.bsp_server_utilities.web.WebAgent.seconds(),
+                Math.max(0, (System.currentTimeMillis() - last) / 1000), com.mrgregles.bsp_server_utilities.web.WebAgent.lastCount());
     }
 }

@@ -16,9 +16,11 @@ public final class ServerUtilsNetworkConfig {
     public static final String FILE = "bsp_server_utilities-network.toml";
 
     public static final ForgeConfigSpec SPEC;
+    public static final ForgeConfigSpec.ConfigValue<String> WEB_ACTION_KEY;
     public static final ForgeConfigSpec.ConfigValue<String> DB_HOST, DB_DATABASE, DB_USER, DB_PASSWORD, DB_TABLE_PREFIX, REDIS_HOST, REDIS_USERNAME, REDIS_PASSWORD;
     public static final ForgeConfigSpec.IntValue DB_PORT, REDIS_PORT;
-    public static final ForgeConfigSpec.BooleanValue DB_SSL;
+    public static final ForgeConfigSpec.BooleanValue DB_SSL, WEB_ENABLED;
+    public static final ForgeConfigSpec.IntValue WEB_SNAPSHOT_SECONDS;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -42,6 +44,15 @@ public final class ServerUtilsNetworkConfig {
         REDIS_PORT = b.defineInRange("port", 6379, 1, 65535);
         REDIS_USERNAME = b.comment("Leave empty unless Redis uses ACL users; the password alone is the usual requirepass.").define("username", "");
         REDIS_PASSWORD = b.comment("Password, if Redis has one.").define("password", "");
+        b.pop();
+        b.comment("The staff web panel: this server sends what the panel shows (its players, where they are, their stats)",
+                        "to the panel over the shared Redis and database. Nothing is sent while this is off. Needs shared storage.")
+                .push("webPanel");
+        WEB_ENABLED = b.comment("Send this server's players to the staff web panel.").define("enabled", false);
+        WEB_SNAPSHOT_SECONDS = b.comment("How often, in seconds.").defineInRange("snapshotSeconds", 5, 2, 30);
+        WEB_ACTION_KEY = b.comment("The panel's action key (actionKey in its panel.properties; its console's action-key prints it).",
+                "Without it this server refuses every action from the panel (kicks, announcements). Keep it secret: anyone with it can kick players.")
+                .define("actionKey", "");
         b.pop();
         SPEC = b.build();
     }

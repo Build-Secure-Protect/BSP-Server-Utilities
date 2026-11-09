@@ -81,7 +81,7 @@ public final class RulesService {
     private static final Map<UUID, Hold> HELD = new HashMap<>();
     private static boolean restoreHooked;
     /** How LEAVE SERVER disconnects; tests swap it (a mock player's connection cannot be closed). */
-    private static BiConsumer<ServerPlayer, Component> disconnector = (p, message) -> p.connection.disconnect(message);
+    private static BiConsumer<ServerPlayer, Component> disconnector = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick; // off the network, not to another server (D272)
 
     private RulesService() {
     }
@@ -241,13 +241,14 @@ public final class RulesService {
 
     public static Outcome answer(ServerPlayer player, RulesAnswerPacket packet) {
         UUID id = player.getUUID();
-        if (!isHeld(id)) {
+        if (!isHeld(id) || LEFT.contains(id)) {
             return Outcome.NOT_HELD;
         }
         RuleSet set = rules(player.server);
         if (packet.action() == RulesAnswerPacket.Action.LEAVE) {
             String message = set.leaveMessage().isEmpty() ? RuleSet.DEFAULT_LEAVE : set.leaveMessage();
-            release(id);
+            // still held (frozen) until they are gone: the network kick may take up to 3 s (audit); logout forgets them
+            LEFT.add(id);
             disconnector.accept(player, Component.literal(message));
             return Outcome.LEFT;
         }
@@ -335,7 +336,11 @@ public final class RulesService {
     public static void forget(UUID player) {
         GATES.remove(player);
         HELD.remove(player);
+        LEFT.remove(player);
     }
+
+    /** Players who answered LEAVE SERVER: held until they are gone, and nothing more they send counts (audit). */
+    private static final java.util.Set<UUID> LEFT = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /** Every server tick: gates count down, and held players are kept where they are. */
     public static void tick(MinecraftServer server) {
@@ -465,7 +470,7 @@ public final class RulesService {
     }
 
     public static void useRealDisconnector() {
-        disconnector = (p, message) -> p.connection.disconnect(message);
+        disconnector = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick;
     }
 
     /** Tests: the players held now. */

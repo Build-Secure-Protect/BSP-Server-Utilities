@@ -158,6 +158,8 @@ public class RulesGameTests {
             RuleSet set = RulesService.rules(server);
             h.assertTrue(RulesService.answer(player, new RulesAnswerPacket(RulesAnswerPacket.Action.LEAVE, set.version(), set.revision(), List.of())) == RulesService.Outcome.LEFT, "LEAVE SERVER is taken");
             h.assertTrue(said.get() != null && said.get().getString().equals("Come back when you are ready."), "with the admin's message: " + said.get());
+            h.assertTrue(RulesService.isHeld(player.getUUID()), "still held while the kick lands (the network kick can take 3 s)");
+            RulesService.forget(player.getUUID()); // what their logout does
             h.assertFalse(RulesService.isHeld(player.getUUID()), "the hold ends with the connection");
             h.assertTrue(RulesService.needsAgreement(server, player.getUUID()), "and they will be asked again next time (D10)");
         } finally {

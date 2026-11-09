@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.mrgregles.bsp_staff_panel'
+version = '0.1.0'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'io.nayuki:qrcodegen:1.8.0'
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
+
+// One runnable jar with its libraries inside: java -jar bsp-staff-panel-<version>.jar
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.mrgregles.bsp_staff_panel.Main', 'Implementation-Version': project.version
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'module-info.class'
+}

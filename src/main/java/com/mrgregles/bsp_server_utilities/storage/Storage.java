@@ -285,7 +285,32 @@ public final class Storage {
         noticeListeners.add(listener);
     }
 
-    static String encode(StorageBackend.Notice n) {
+    /**
+     * Sends a message to the staff web panel (SU-32): on Redis's web channel at once, never to the other game servers.
+     * {@code keep} also writes the payload as this server's row in {@code <prefix>web_servers}, where the panel finds
+     * every server's newest snapshot when it starts or while Redis is down.
+     */
+    public void publishWeb(String kind, String payload, boolean keep) {
+        long now = System.currentTimeMillis();
+        RedisLink r = redis;
+        if (r != null) {
+            r.publishWeb(encode(new StorageBackend.Notice(0, UUID.randomUUID().toString(), now, serverId, kind, payload)));
+        }
+        if (keep && webRow.getAndSet(new Object[]{now, payload}) == null) {
+            // one write waiting at most: while the database is slow or away, newer snapshots replace the waiting one (audit)
+            submit(() -> {
+                Object[] row = webRow.getAndSet(null);
+                if (row != null) {
+                    backend.saveWebServer(serverId, (Long) row[0], (String) row[1]);
+                }
+            });
+        }
+    }
+
+    private final java.util.concurrent.atomic.AtomicReference<Object[]> webRow = new java.util.concurrent.atomic.AtomicReference<>();
+
+    /** One message as it travels on Redis: id, time, source server, kind and payload on their own lines (the panel reads the same). */
+    public static String encode(StorageBackend.Notice n) {
         return n.uid() + "\n" + n.createdAt() + "\n" + n.source() + "\n" + n.kind() + "\n" + n.payload();
     }
 

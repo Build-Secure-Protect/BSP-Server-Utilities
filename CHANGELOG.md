@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-09
+
+### Added
+- The staff web panel's feed: with `webPanel.enabled = true` in `config/bsp_server_utilities-network.toml` (off by default) and shared storage, each server sends its players every 5 seconds (`webPanel.snapshotSeconds`, 2 to 30) to the staff web panel: where they are, their health, armour, hunger, XP, air, potion effects, game mode, ping, AFK time, staff role and BSP-Core team. It goes on Redis's own web channel, which the other game servers never receive, and as the server's row in the new `<prefix>web_servers` table. The shape is in `docs/API.md`. `/su status` has a line for it. A snapshot of 50 players takes under a millisecond on the server thread. Each player's skin address (Mojang's only) goes with them, for the panel to show their head.
+- Actions from the staff web panel: a kick and an announcement, signed with the panel's key (`webPanel.actionKey` in the network config; without it every action is refused and nothing is sent to the panel), at most 30 seconds old and used once, for this server only, and only while `webPanel.enabled` is on. Snapshots and answers are signed with the same key. Warnings about refused actions come at most once a minute. Each is an Action Log entry by "<name> (panel)", and the server's answer goes back to the panel. `/su status` says whether actions are taken.
+- Graves for the staff web panel: a player's graves on the whole network and the return of one that was not placed or was put away, through BSP-InventorySync's api (0.7.0 and newer; without it the panel is told so). Each return is an Action Log entry.
+
+### Changed
+- The player counter's list keeps each player's name as of their last join (the staff panel finds offline players by it).
+- After LEAVE SERVER, nothing more the player sends counts while the network kick lands.
+- Kicks leave the network: the AFK kick (after an unanswered presence check), LEAVE SERVER on the rules popup and the panel's kick ask BSP-Velocity Additions (0.2.0 with the network kick) to disconnect the player from the proxy, so they are not moved to another server. A proxy without it, or with `[networkKick]` off, ignores the request, and the server kicks the player itself 3 seconds later.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

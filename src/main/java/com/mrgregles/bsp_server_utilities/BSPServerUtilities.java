@@ -53,6 +53,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
+        com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -98,6 +99,7 @@ public class BSPServerUtilities {
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> ImageService.forget(e.getEntity().getUUID()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> com.mrgregles.bsp_server_utilities.web.ProxyKick.forget(e.getEntity().getUUID()));
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e) -> {
             if (e.phase == TickEvent.Phase.END) {
                 RulesService.tick(e.getServer());
@@ -113,6 +115,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.check.ClientCheckService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.setup.SetupService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.web.WebAgent.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

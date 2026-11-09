@@ -44,6 +44,26 @@ public final class BspCore {
         return Optional.empty();
     }
 
+    /** A player's BSP-Core team as the staff web panel shows it: its id, name and colour (0xRRGGBB). */
+    public record TeamInfo(java.util.UUID id, String name, int colour) {
+    }
+
+    /** The player's team, through BSP-Core's api (network-wide); empty without BSP-Core, without a team, or on any failure. */
+    public static Optional<TeamInfo> team(net.minecraft.server.MinecraftServer server, java.util.UUID player) {
+        if (!isLoaded()) {
+            return Optional.empty();
+        }
+        try {
+            return com.mrgregles.bsp_core.api.BspTeams.teamOf(server, player).map(t -> {
+                Integer rgb = t.colour() == null ? null : t.colour().getColor();
+                return new TeamInfo(t.id(), t.name(), rgb == null ? 0xFFFFFF : rgb);
+            });
+        } catch (LinkageError | RuntimeException e) {
+            BSPServerUtilities.LOGGER.debug("BSP-Core team lookup failed: {}", e.toString());
+            return Optional.empty();
+        }
+    }
+
     /** Whether BSP-Core counts the player as an admin ({@code admin.admins}, or operators when that list is empty). */
     public static boolean isAdmin(Player player) {
         if (!isLoaded()) {

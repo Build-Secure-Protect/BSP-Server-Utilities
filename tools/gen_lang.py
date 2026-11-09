@@ -43,6 +43,12 @@ STATUS = {
     "servers": "Server images: %s in use, %s.",
     "servers_off": "Server images: off; every server's tag reads as its name.",
     "setup": "Setup guide: %s of %s pages set up; off: %s; left: %s.",
+    "web": "Staff web panel: this server's players are sent every %s s; last sent %s s ago (%s players).",
+    "web_waiting": "Staff web panel: on, sending this server's players every %s s; nothing sent yet.",
+    "web_no_storage": "Staff web panel: on, but it needs shared storage, so nothing is sent.",
+    "web_off": "Staff web panel: off (webPanel.enabled in config/bsp_server_utilities-network.toml).",
+    "web_actions_on": "Staff web panel: what this server sends is signed, and kicks and announcements from the panel are taken (webPanel.actionKey).",
+    "web_actions_off": "Staff web panel: nothing is sent and no action is taken until webPanel.actionKey is set.",
 }
 KEYS.update({"message.bsp_server_utilities.status." + k: v for k, v in STATUS.items()})
 # /su players (the player counter)

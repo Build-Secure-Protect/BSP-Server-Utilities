@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>BSP Staff: set up your login</title>
+<link rel="stylesheet" href="/static/panel.css">
+<script src="/static/common.js" defer></script>
+<script src="/static/setup.js" defer></script>
+</head>
+<body>
+<div class="centre">
+  <div class="card" id="card">
+    <div class="brand">BSP <b>STAFF</b></div>
+    <h1 id="title">Set up your login</h1>
+    <div class="err hidden" id="err"></div>
+    <form id="form" class="hidden">
+      <div class="okm" id="welcome"></div>
+      <div id="pwpart">
+        <div class="step"><i>1</i>Choose a password</div>
+        <label>Password, at least 12 characters
+          <input type="password" id="password" autocomplete="new-password">
+        </label>
+        <label>The same again
+          <input type="password" id="again" autocomplete="new-password">
+        </label>
+      </div>
+      <div class="step"><i id="n2">2</i>Scan this with an authenticator app</div>
+      <div class="note">Google Authenticator, Microsoft Authenticator, Authy, 1Password or any other. On this phone? Tap "Add to app" instead.</div>
+      <div class="qrrow">
+        <img class="qr" id="qr" alt="QR code for your authenticator app">
+        <div class="row2" id="addcol">
+          <a class="btn sm ghost" id="addapp" href="#">Add to app</a>
+        </div>
+      </div>
+      <div class="secret" id="secret"></div>
+      <div class="step"><i id="n3">3</i>Type the code it shows</div>
+      <input type="text" class="code" id="code" autocomplete="one-time-code" inputmode="numeric" maxlength="7">
+      <button class="btn" id="go" type="submit">Finish</button>
+    </form>
+    <div id="done" class="hidden">
+      <div class="note">Keep these somewhere safe, away from your phone. Each one logs you in once if you lose your authenticator. They will not be shown again.</div>
+      <ol class="codes" id="codes"></ol>
+      <div class="row2">
+        <button class="btn sm ghost" id="copy" type="button">Copy all</button>
+        <button class="btn sm ghost" id="save" type="button">Save as file</button>
+      </div>
+      <label class="tick"><input type="checkbox" id="saved">I have saved these somewhere safe</label>
+      <button class="btn" id="enter" type="button" disabled>Go to the panel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
