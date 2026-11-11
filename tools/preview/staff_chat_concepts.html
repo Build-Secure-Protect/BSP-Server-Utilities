@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Chat Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set Q: three looks for the Chat tab of the staff web panel on a phone (D261 to D263, D292), and three looks for
+   a line sent from the panel as it shows in game. Sample data; names are made up. The frames use the BSP website's own
+   tokens (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.mu{ color:var(--mu); } .dm{ color:var(--dim); } .vtx{ color:var(--vio); } .gtx{ color:var(--gold); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip.on{ background:var(--teal); color:#0f1115; border-color:var(--teal); font-weight:600; }
+.chip i{ width:7px; height:7px; border-radius:2px; display:block; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.tag{ font:600 9px var(--body); padding:0 5px; border-radius:999px; white-space:nowrap; vertical-align:1px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.62); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:8px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); margin-top:4px; }
+.opt{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:12.5px; }
+.opt.on{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.opt .rb{ width:14px; height:14px; border-radius:50%; border:2px solid var(--dim); flex:none; } .opt.on .rb{ border-color:var(--teal); background:radial-gradient(var(--teal) 45%, transparent 50%); }
+.opt .sub{ font-size:10.5px; color:var(--mu); }
+.opt.lock{ opacity:.5; }
+.in{ flex:1; min-width:0; height:38px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.in.typed{ color:var(--tx); }
+.send{ height:38px; padding:0 14px; border-radius:10px; background:var(--teal); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; }
+.pill{ position:absolute; left:50%; transform:translateX(-50%); background:var(--teal); color:#0f1115; font:600 11px var(--body); border-radius:999px; padding:4px 10px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+
+/* A: the stream, as the computer's column */
+.ascroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 14px 6px; gap:5px; position:relative; }
+.al{ font-size:12.5px; line-height:1.4; word-break:break-word; }
+.al .t{ font:10px var(--mono); color:var(--dim); }
+.al .sv{ font-size:10.5px; color:var(--mu); }
+.al .sv i{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:3px; vertical-align:0; }
+.al b{ font-weight:600; }
+.aspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
+.aspeak .chip{ padding:3px 8px; font-size:11px; }
+
+/* B: the game's own chat */
+.bscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; position:relative;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 38%,#33507a 72%,#6c8fbf 100%); padding:8px 0 6px; }
+.bl{ background:rgba(0,0,0,.52); color:#fff; font:12px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; word-break:break-word; margin-right:24px; }
+.gi{ display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px; color:#0f1115; font:700 8px/11px var(--body); text-align:center; text-shadow:none; }
+.bbar{ flex:none; background:#000; padding:7px 10px 9px; display:flex; flex-direction:column; gap:6px; border-top:1px solid #333; }
+.bbar .bin{ height:30px; background:rgba(255,255,255,.08); border:1px solid #555; color:#fff; font:12.5px var(--mono); display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+.bbar .bto{ display:flex; gap:6px; font:600 11px var(--body); }
+.bbar .bto span{ padding:3px 8px; border:1px solid #555; color:#ddd; border-radius:4px; }
+.bseg{ display:flex; gap:0; padding:0 14px 8px; flex:none; overflow:hidden; }
+.bseg span{ flex:none; padding:4px 8px; font:11px Silkscreen,var(--mono); color:var(--mu); border-bottom:2px solid transparent; }
+.bseg span.on{ color:var(--teal); border-bottom-color:var(--teal); }
+.prevbox{ background:#14171d; border:1px solid #2a2f3a; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.prevbox .lab{ font:600 10px var(--body); color:#9aa3b5; }
+
+/* C: conversation */
+.cscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:8px; position:relative; }
+.cg{ display:flex; gap:8px; align-items:flex-start; }
+.cg .cb{ display:flex; flex-direction:column; gap:3px; min-width:0; max-width:250px; }
+.cg .who{ font-size:11px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.cg .who b{ font-weight:600; }
+.cg .who .svn{ font-size:10px; padding:0 5px; border-radius:4px; }
+.cg .who .t{ font:10px var(--mono); color:var(--dim); }
+.bub{ background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:5px 9px; font-size:12.5px; line-height:1.35; word-break:break-word; align-self:flex-start; }
+.bub + .bub{ border-radius:12px; }
+.cg.me{ flex-direction:row-reverse; } .cg.me .cb{ align-items:flex-end; } .cg.me .who{ flex-direction:row-reverse; }
+.cg.me .bub{ background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; align-self:flex-end; }
+.sysl{ align-self:center; font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #4a4220; border-radius:999px; padding:3px 10px; }
+.cspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; gap:8px; align-items:center; background:var(--bg2); }
+.voice{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; box-shadow:0 0 0 2px var(--vio); background:#2a2240; }
+.menu{ position:absolute; left:28px; right:28px; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); }
+.menu div{ padding:11px 14px; font-size:13px; display:flex; gap:10px; align-items:center; }
+.menu div + div{ border-top:1px solid #23272f; }
+.menu svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* in game */
+.scene{ width:520px; max-width:100%; height:230px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ margin-right:0; width:max-content; max-width:440px; font-size:13px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.scene .hot i.sel{ box-shadow:inset 0 0 0 2px #fff; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; outline:1px solid #100010; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: mock-up set Q, chat</h1>
+    <p class="lede">Three looks for the Chat tab on a phone (D261 to D263): public chat from every server, live, the server on each line, kept 30 days; speaking as yourself with [Staff] or as [Server], to one server or the network (D262). On a computer the chat stays the 360-pixel column on the right (D292); the look picked here also sets how lines are drawn in that column. Below them, three looks for a line sent from the panel as players see it in game. Made-up names and lines.</p>
+  </header>
+  <section><h2>A. A plain stream, like the computer's column</h2>
+    <div class="card"><p>One line per message: time, the server with its colour, the name with any tags (D267), the text. Server chips along the top filter the stream. At the foot two choosers, AS and TO, then the box and SEND. Tapping a name opens that player's sheet.</p></div>
+    <div class="stage"><div><div class="ph" id="a1"></div><div class="cap">A1, the stream (Vexa's tag shows beside her name)</div></div><div><div class="ph" id="a2"></div><div class="cap">A2, the AS / TO chooser open (a Moderator: [Server] dimmed)</div></div></div></section>
+  <section><h2>B. The game's own chat</h2>
+    <div class="card"><p>Lines drawn as the game draws them, on a game-like background, with each server's small image in front; the densest look, most lines on screen. The box at the foot looks like the game's chat box, and while typing a strip shows exactly what players will see before SEND.</p></div>
+    <div class="stage"><div><div class="ph" id="b1"></div><div class="cap">B1, the chat (the server tabs filter it)</div></div><div><div class="ph" id="b2"></div><div class="cap">B2, typing: "Players will see" above the box</div></div></div></section>
+  <section><h2>C. A conversation, with heads</h2>
+    <div class="card"><p>Each player's lines grouped under their head, name, server and time, as in a messaging app; your own lines on the right in violet, [Server] lines in the middle in gold. The round key at the foot is the voice you speak with (your head ringed violet, or the server's mark). A long press on a line opens a menu: the player's sheet, a note about them, copy, only that server.</p></div>
+    <div class="stage"><div><div class="ph" id="c1"></div><div class="cap">C1, the conversation (scrolled up: "3 new lines" to jump down)</div></div><div><div class="ph" id="c2"></div><div class="cap">C2, a long press on one of Vexa's lines</div></div></div></section>
+  <section><h2>In game: a line sent from the panel</h2>
+    <div class="card"><p>What players see when Ana_Mod speaks from the panel, among ordinary chat, then a [Server] line. In every look, hovering the line shows who and where it came from. G3's mark is a small picture from this mod's font, like the server images, so it needs the new client that the notes count (D266) needs anyway; an old client would show the plain words instead.</p></div>
+    <div class="stage"><div><div class="scene" id="g1"></div><div class="cap" style="max-width:520px">G1, a tag then a colon: "[Staff] Ana_Mod: …", "[Server] …"</div></div>
+      <div><div class="scene" id="g2"></div><div class="cap" style="max-width:520px">G2, inside the usual brackets: "&lt;[Staff] Ana_Mod&gt; …", the same shape as players' lines</div></div>
+      <div><div class="scene" id="g3"></div><div class="cap" style="max-width:520px">G3, a small staff mark and "»", the line in soft violet, the hover drawn</div></div></div></section>
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>Q1. The Chat tab's look.</b> A: a plain stream, the same as the computer's column, one line per message with the server's colour. B: the game's own chat on a game background, the most lines on screen, with a strip showing what players will see. C: a conversation with heads and grouped lines, your own on the right, a long press for the player's sheet or a note.</li>
+      <li><b>Q2. A panel line in game.</b> G1: "[Staff] Ana_Mod: text" with [Staff] in violet, and "[Server] text" with [Server] in gold. G2: "&lt;[Staff] Ana_Mod&gt; text", inside the brackets players' own lines use. G3: a small staff mark, then "Ana_Mod » text" in soft violet, and a server mark with gold text for [Server] (needs the new client).</li>
+      <li><b>Q3. Sending.</b> SEND puts the line out at once, and every line goes into the Action Log with your name. Or SEND asks SURE? only for [Server] lines to the whole network. Or SEND always asks SURE?.</li>
+      <li><b>Q4. Who may speak as [Server].</b> Admins and Owners only, as with Broadcast (D250); Moderators see it dimmed with "Admin" (D278), and every rank speaks as themselves. Or every rank may speak as [Server].</li>
+      <li><b>Q5. The Chat tab's badge.</b> A red number for lines that name you or ask for staff ("staff", "admin", "mod", "help"), and a plain dot for any other new line. Or a number for every line since you last looked (99+). Or no badge at all.</li>
+      <li><b>Q6. Older lines.</b> Scrolling up loads older lines, back to 30 days, and a search key finds lines by words, player, server or day. Or scrolling up only, with no search.</li>
+      <li><b>Q7. What the hover says in game.</b> "Ana_Mod, staff, from the staff panel" on a [Staff] line, and "From the staff" on a [Server] line (who sent it stays in the Action Log, as with announcements, D241). Or the sender's name on [Server] lines too.</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SV_COL={"BSP-Spawn":"#19d3b0","Frostwarf":"#7fb2ff","Boulderbrook":"#d9a066","Moongrove":"#b58cff","Stormfall":"#9aa3b5","Sanctuary":"#7fe08a","SafeRoom":"#ffd23a"};
+const SHORT={"BSP-Spawn":"Spawn","Frostwarf":"Frostwarf","Boulderbrook":"Boulder","Moongrove":"Moongrove","Stormfall":"Stormfall","Sanctuary":"Sanctuary","SafeRoom":"SafeRoom"};
+const TAGS={"Vexa":[["Suspected cheater","#ff6b5c"]],"Newbie_Sam":[["New","#7fb2ff"]],"BrickLayerTom":[["Supporter","#ffd23a"]]};
+const CHAT=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole, can a mod help"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:36","Moongrove","Vexa","in like 5 minutes lol"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+
+/* ---------- pixel heads ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+ person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+ filter:'<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:38</span><span>●●● 5G 82%</span></div>');
+function tabbar(on,chatBadge){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",chatBadge],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const tagHtml=n=>(TAGS[n]||[]).map(([t,c])=>` <span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("");
+const topBar=(f,extra)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">CHAT</div>${extra||""}<div class="ico">${SV.search}</div></div>`));};
+function serverChips(f,on){const d=h('<div class="chips"></div>');d.appendChild(h(`<span class="chip ${on==="All"?"on":""}">All servers</span>`));
+  Object.keys(SV_COL).slice(0,5).forEach(s=>d.appendChild(h(`<span class="chip ${on===s?"on":""}"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span>`)));f.appendChild(d);}
+
+/* ---------- A ---------- */
+function aLine([t,s,n,x]){let who;
+  if(s==="staff")who=`<b class="vtx">[Staff] ${n}</b>`;
+  else if(s==="server")who=`<b class="gtx">[Server]</b>`;
+  else who=`<span class="sv"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span> <b>${n}</b>${tagHtml(n)}`;
+  return h(`<div class="al"><span class="t">${t}</span> ${who} ${x}</div>`);}
+function aFrame(id){const f=document.getElementById(id);topBar(f);serverChips(f,"All");
+  const s=h('<div class="ascroll"></div>');CHAT.forEach(l=>s.appendChild(aLine(l)));f.appendChild(s);
+  f.appendChild(h(`<div class="aspeak"><div style="display:flex;gap:6px"><span class="chip">As <b class="vtx">[Staff] Ana_Mod</b> ▾</span><span class="chip">To the network ▾</span></div><div style="display:flex;gap:6px"><div class="in">Say something…</div><div class="send">Send</div></div></div>`));
+  f.appendChild(tabbar("Chat"));return f;}
+aFrame("a1");
+(function(){const f=aFrame("a2");f.appendChild(h('<div class="dimmer"></div>'));
+  const sh=h('<div class="sheet"><div class="grab"></div></div>');
+  sh.appendChild(h('<div class="sect">SPEAK AS</div>'));
+  sh.appendChild(h('<div class="opt on"><span class="rb"></span><div class="grow"><b class="vtx">[Staff] Ana_Mod</b><div class="sub">Your own name with the staff tag</div></div></div>'));
+  sh.appendChild(h('<div class="opt lock"><span class="rb"></span><div class="grow"><b class="gtx">[Server]</b><div class="sub">The server\'s voice · Admin</div></div></div>'));
+  sh.appendChild(h('<div class="sect">TO</div>'));
+  sh.appendChild(h('<div class="opt on"><span class="rb"></span><div class="grow">The network<div class="sub">Every server, 36 players</div></div></div>'));
+  [["BSP-Spawn",9],["Frostwarf",8],["Moongrove",7]].forEach(([s,c])=>sh.appendChild(h(`<div class="opt"><span class="rb"></span><div class="grow"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${SV_COL[s]};margin-right:6px"></span>${s}<div class="sub">${c} players</div></div></div>`)));
+  sh.appendChild(h('<div class="sub" style="font-size:10.5px;color:#9aa3b5;text-align:center">and 4 more servers</div>'));
+  f.appendChild(sh);})();
+
+/* ---------- B ---------- */
+function gi(s){const c=SV_COL[s];return `<span class="gi" style="background:${c}">${SHORT[s][0]}</span>`;}
+function bLine([t,s,n,x]){let body;
+  if(s==="staff")body=`<span style="color:#B58CFF">[Staff] ${n}:</span> ${x}`;
+  else if(s==="server")body=`<span style="color:#FFAA00">[Server]</span> ${x}`;
+  else body=`${gi(s)}&lt;${n}&gt; ${x}`;
+  return h(`<div class="bl">${body}</div>`);}
+function bFrame(id,typing){const f=document.getElementById(id);topBar(f);
+  const seg=h('<div class="bseg"></div>');["ALL","SPAWN","FROST","BOULDER","MOON","STORM"].forEach((x,i)=>seg.appendChild(h(`<span class="${i===0?"on":""}">${x}</span>`)));f.appendChild(seg);
+  const s=h('<div class="bscroll"></div>');CHAT.forEach(l=>s.appendChild(bLine(l)));f.appendChild(s);
+  const bar=h('<div class="bbar"></div>');
+  if(typing){const p=h('<div class="prevbox"><div class="lab">PLAYERS ON EVERY SERVER WILL SEE</div></div>');
+    p.appendChild(h('<div class="bl" style="margin:0"><span style="color:#B58CFF">[Staff] Ana_Mod:</span> stay put Pixl, coming to you</div>'));bar.appendChild(p);}
+  bar.appendChild(h(`<div class="bto"><span>As <b style="color:#B58CFF">[Staff] Ana_Mod</b> ▾</span><span>To the network ▾</span><span style="margin-left:auto;border-color:${typing?"#19d3b0":"#555"};color:${typing?"#19d3b0":"#ddd"}">SEND</span></div>`));
+  bar.appendChild(h(`<div class="bin">${typing?'stay put Pixl, coming to you<span style="color:#19d3b0">_</span>':'<span style="color:#888">Say something…</span>'}</div>`));
+  f.appendChild(bar);f.appendChild(tabbar("Chat"));return f;}
+bFrame("b1",false);bFrame("b2",true);
+
+/* ---------- C ---------- */
+function cGroups(lines){const out=[];lines.forEach(l=>{const last=out[out.length-1];if(last&&last.n===l[2]&&last.s===l[1]&&l[1]!=="server")last.x.push(l[3]);else out.push({t:l[0],s:l[1],n:l[2],x:[l[3]]});});return out;}
+function cGroup(g,hl){if(g.s==="server")return h(`<div class="sysl">[Server] ${g.x[0]}</div>`);
+  const me=g.s==="staff";const el=h(`<div class="cg ${me?"me":""}"><div class="cb"></div></div>`);
+  const head=me?headCanvas(g.n,26):headCanvas(g.n,26);el.prepend(head);
+  const cb=el.querySelector(".cb");
+  const svn=me?`<span class="svn" style="background:#b58cff22;color:#b58cff">staff</span>`:`<span class="svn" style="background:${SV_COL[g.s]}22;color:${SV_COL[g.s]}">${SHORT[g.s]}</span>`;
+  cb.appendChild(h(`<div class="who"><b class="${me?"vtx":""}">${me?"You":g.n}</b>${tagHtml(g.n)}${svn}<span class="t">${g.t}</span></div>`));
+  g.x.forEach((x,i)=>{const b=h(`<div class="bub">${x}</div>`);if(hl&&hl(g,i)){b.style.boxShadow="0 0 0 2px #19d3b0";b.style.position="relative";b.style.zIndex="3";}cb.appendChild(b);});
+  return el;}
+function cFrame(id,scrolledUp,hl){const f=document.getElementById(id);
+  topBar(f,`<span class="chip">All servers ▾</span>`);
+  const s=h('<div class="cscroll"></div>');const lines=scrolledUp?CHAT.slice(0,15):CHAT.slice(4);
+  cGroups(lines).forEach(g=>s.appendChild(cGroup(g,hl)));f.appendChild(s);
+  if(scrolledUp)s.appendChild(h('<div class="pill" style="bottom:10px">3 new lines ↓</div>'));
+  const sp=h('<div class="cspeak"></div>');const v=h('<div class="voice"></div>');v.appendChild(headCanvas("Ana_Mod",24));sp.appendChild(v);
+  sp.appendChild(h('<div class="in">Say something as yourself…</div>'));sp.appendChild(h('<span class="chip" style="padding:4px 8px">Network ▾</span>'));f.appendChild(sp);
+  f.appendChild(tabbar("Chat",2));return f;}
+cFrame("c1",true);
+(function(){const f=cFrame("c2",false,(g,i)=>g.n==="Vexa"&&i===0);f.appendChild(h('<div class="dimmer" style="z-index:2"></div>'));
+  const m=h(`<div class="menu" style="bottom:150px;z-index:4"><div>${SV.person}Open Vexa's sheet</div><div>${SV.note}Add a note about Vexa</div><div>${SV.copy}Copy the line</div><div>${SV.filter}Only Moongrove</div></div>`);f.appendChild(m);
+  /* lift Vexa's group above the dimmer */
+  f.querySelectorAll(".cg").forEach(g=>{if(g.textContent.includes("Vexa")&&g.textContent.includes("found 12")){g.style.position="relative";g.style.zIndex="3";}});})();
+
+/* ---------- in game ---------- */
+const GAME=[["Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["BSP-Spawn","Newbie_Sam","how do i get to the market"]];
+function scene(id,staffLine,serverLine,tip){const s=document.getElementById(id);
+  GAME.forEach(([sv,n,x])=>s.appendChild(h(`<div class="bl">&lt;${n}&gt; ${x}</div>`)));
+  s.appendChild(h(`<div class="bl">${staffLine}</div>`));
+  s.appendChild(h(`<div class="bl">&lt;Newbie_Sam&gt; thanks!</div>`));
+  s.appendChild(h(`<div class="bl">${serverLine}</div>`));
+  const hot=h('<div class="hot"></div>');for(let i=0;i<9;i++)hot.appendChild(h(`<i class="${i===2?"sel":""}"></i>`));s.appendChild(hot);
+  if(tip)s.appendChild(h(`<div class="tip" style="left:230px;top:62px">${tip}</div>`));}
+const TEXT="the market is the big hall north of spawn";
+scene("g1",`<span style="color:#B58CFF">[Staff] Ana_Mod:</span> ${TEXT}`,`<span style="color:#FFAA00">[Server]</span> Restart in 30 minutes`);
+scene("g2",`&lt;<span style="color:#B58CFF">[Staff]</span> Ana_Mod&gt; ${TEXT}`,`&lt;<span style="color:#FFAA00">Server</span>&gt; Restart in 30 minutes`);
+scene("g3",`<span class="gi" style="background:#B58CFF;font-size:8px">✦</span><span style="color:#B58CFF">Ana_Mod »</span> <span style="color:#E3D4FF">${TEXT}</span>`,
+  `<span class="gi" style="background:#FFAA00">B</span><span style="color:#FFAA00">Server » Restart in 30 minutes</span>`,
+  `<span style="color:#B58CFF">Ana_Mod</span>, staff<br><span style="color:#AAAAAA">from the staff panel</span>`);
+</script>
+</body>
+</html>

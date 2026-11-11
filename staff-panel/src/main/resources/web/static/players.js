@@ -80,7 +80,7 @@ const Players = (() => {
   function row(p) {
     const r = el("button", "prow" + (p.id === openId ? " sel" : "")); r.type = "button";
     r.appendChild(head(p, 30));
-    const g = el("div", "grow"); const top = el("div", "pname"); top.appendChild(el("span", "nm", p.name));
+    const g = el("div", "grow"); const top = el("div", "pname"); top.appendChild(el("span", "nm", p.name)); top.appendChild(Tags.chips(p.id, 2)); // D331
     if (p.role) top.appendChild(el("span", "chip role", p.role));
     if (p.afkMs > 0) top.appendChild(el("span", "chip afk", "AFK " + minutes(p.afkMs)));
     if (p.mode && p.mode !== "survival") top.appendChild(el("span", "chip mode", p.mode));
@@ -143,7 +143,9 @@ const Players = (() => {
   }
 
   // ---------------------------------------------------------------- one player: the sheet (phone) or card (computer)
+  let lastLive = { servers: [], players: [] };
   function detail(live) {
+    lastLive = live;
     let box = $("pdetail");
     if (!openId) { if (box) box.remove(); const d = $("pdim"); if (d) d.remove(); return; }
     const p = live.players.find((x) => x.id === openId);
@@ -152,6 +154,7 @@ const Players = (() => {
       box = el("div", "pdetail"); box.id = "pdetail"; document.body.appendChild(box);
       if (cardPos) { box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; }
     }
+    const scrolled = box.scrollTop; // kept through the redraw every few seconds
     box.textContent = "";
     const top = el("div", "dtop"); const grip = el("div", "grip"); grip.title = "Drag"; top.appendChild(grip);
     const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close"; x.addEventListener("click", close);
@@ -166,20 +169,35 @@ const Players = (() => {
     if (p.team) { const sq = el("span", "sq", "■"); sq.style.color = p.team.colour; sub.appendChild(sq); sub.appendChild(document.createTextNode(" " + p.team.name + " · ")); }
     sub.appendChild(document.createTextNode("ping " + p.ping + " ms" + (p.role ? " · " + p.role : "") + (p.mode !== "survival" ? " · " + p.mode : "")));
     who.appendChild(sub);
+    const tags = el("div", "tagline"); tags.appendChild(Tags.chips(p.id)); // every tag in the sheet, + TAG to change them (D320)
+    const add = el("button", "tg addt", "+ Tag"); add.type = "button"; add.addEventListener("click", () => Tags.open(p)); tags.appendChild(add);
+    who.appendChild(tags);
     top.appendChild(head(p, 48)); top.appendChild(who); top.appendChild(x); box.appendChild(top);
     const loc = el("div", "loc mono"); loc.appendChild(el("span", "tl", "● ")); loc.appendChild(document.createTextNode(where(p) + (p.afkMs > 0 ? " · AFK " + minutes(p.afkMs) : "")));
     box.appendChild(loc);
+    box.appendChild(stats(p));
+    box.appendChild(actionsFor(p));
+    const ml = Market.line(p); // D405: their lots and orders, when they have any
+    if (ml) box.appendChild(ml);
+    box.appendChild(Items.section({ id: p.id, name: p.name, skin: p.skin }, { live: true, redraw: () => App.refresh() })); // D279, D337
+    box.appendChild(Notes.section(p));
+    drag(grip, box);
+    box.scrollTop = scrolled;
+  }
+
+  // the stats as the game's icons, the numbers and the effects (the card here and the map's card, SU-47)
+  function stats(p) {
+    const f = document.createDocumentFragment();
     const st = el("div", "statbox");
     st.appendChild(icons("heart", p.hp, p.maxHp || 20, 11)); st.appendChild(icons("food", p.food, 20, 11));
     st.appendChild(icons("armor", Math.min(p.armor, 20), 20, 11));
     if (p.air < p.maxAir) st.appendChild(icons("air", p.air, p.maxAir, 11)); else st.appendChild(el("div"));
     const xp = el("div", "xprow"); xp.appendChild(el("span", "lvl", String(p.level))); const bar = el("div", "bar"); const fill = el("i"); fill.style.width = Math.round(p.xp * 100) + "%"; bar.appendChild(fill); xp.appendChild(bar);
-    st.appendChild(xp); box.appendChild(st);
+    st.appendChild(xp); f.appendChild(st);
     const nums = el("div", "nums mono"); nums.textContent = "health " + p.hp + "/" + p.maxHp + " · hunger " + p.food + "/20 · armour " + p.armor + (p.air < p.maxAir ? " · air " + Math.round(p.air / 30) + "/10" : "");
-    box.appendChild(nums);
-    if (p.effects && p.effects.length) { const fx = el("div", "effects"); p.effects.forEach((e) => fx.appendChild(el("span", "eff", effectName(e)))); box.appendChild(fx); }
-    box.appendChild(actionsFor(p));
-    drag(grip, box);
+    f.appendChild(nums);
+    if (p.effects && p.effects.length) { const fx = el("div", "effects"); p.effects.forEach((e) => fx.appendChild(el("span", "eff", effectName(e)))); f.appendChild(fx); }
+    return f;
   }
 
   // ---------------------------------------------------------------- actions (D278): Kick for every rank; more as they are built
@@ -191,7 +209,9 @@ const Players = (() => {
     kick.addEventListener("click", () => { kickOpen = kickOpen === p.id ? null : p.id; result = null; App.refresh(); });
     const graves = el("button", "key", "Graves"); graves.type = "button";
     graves.addEventListener("click", () => { openId = null; kickOpen = null; result = null; Players.leave(); openGraves(p.name); });
-    keys.appendChild(graves); keys.appendChild(kick); wrap.appendChild(keys);
+    keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
+    const tp = Teleport.box(p, lastLive); if (tp) wrap.appendChild(tp); // SU-43
+    const bn = Bans.box(p); if (bn) wrap.appendChild(bn); // SU-44
     if (kickOpen === p.id) {
       const f = el("div", "kickform");
       const why = el("input", "reason"); why.type = "text"; why.maxLength = 160; why.placeholder = "Why (they read it)"; why.value = kickReason;
@@ -222,8 +242,11 @@ const Players = (() => {
     });
   }
 
-  function close() { openId = null; kickOpen = null; result = null; App.refresh(); }
+  function close() { openId = null; kickOpen = null; result = null; Teleport.close(); Bans.close(); App.refresh(); }
   function leave() { openId = null; detail({ players: [] }); }
 
-  return { view, detail, leave };
+  // a name tapped in chat (D304) opens that player's sheet or card
+  function open(id) { openId = id; kickOpen = null; result = null; }
+  function closeKeys() { kickOpen = null; result = null; Teleport.close(); Bans.close(); }
+  return { view, detail, leave, open, face: head, stats, actions: (p, l) => { lastLive = l; return actionsFor(p); }, closeKeys };
 })();

@@ -95,4 +95,25 @@ class ActionsTest {
         assertTrue(quick.ask("S", "Busy_Bee", "MODERATOR", new JsonObject()).message().contains("in a minute"), "ten a minute for one staff member");
         assertFalse(quick.ask("S", "Other", "MODERATOR", new JsonObject()).message().contains("in a minute"), "others are not held up");
     }
+
+    @Test
+    void reads_have_their_own_allowance_apart_from_actions() {
+        java.util.concurrent.atomic.AtomicLong now = new java.util.concurrent.atomic.AtomicLong(1_000_000L);
+        Actions[] a = new Actions[1];
+        a[0] = new Actions(KEY, (uid, at, kind, payload) -> new Thread(() -> a[0].acceptMessage(Actions.line("x", at, "answer",
+                com.mrgregles.bsp_staff_panel.crypto.Signed.seal(KEY, "{\"id\":\"" + uid + "\",\"ok\":true,\"message\":\"done\"}")))).start(), now::get, 2);
+        com.google.gson.JsonObject f = new com.google.gson.JsonObject();
+        f.addProperty("action", "inv_read");
+        for (int i = 0; i < Actions.READS_PER_MINUTE; i++) {
+            assertTrue(a[0].read("Moongrove", "Ana_Mod", "MODERATOR", f).ok(), "read " + i);
+        }
+        Actions.Answer over = a[0].read("Moongrove", "Ana_Mod", "MODERATOR", f);
+        assertFalse(over.ok());
+        assertTrue(over.message().contains(Actions.READS_PER_MINUTE + " reads in a minute"), over.message());
+        f.addProperty("action", "kick");
+        assertTrue(a[0].ask("Moongrove", "Ana_Mod", "MODERATOR", f).ok(), "actions are counted apart: still allowed");
+        now.addAndGet(61_000L);
+        f.addProperty("action", "inv_read");
+        assertTrue(a[0].read("Moongrove", "Ana_Mod", "MODERATOR", f).ok(), "a minute later, reads again");
+    }
 }

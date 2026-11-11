@@ -37,6 +37,13 @@ public final class WebSnapshot {
         o.addProperty("mspt", round1(server.getAverageTickTime()));
         o.addProperty("max", server.getMaxPlayers());
         o.addProperty("graves", com.mrgregles.bsp_server_utilities.compat.InventorySync.graves() != null); // where the panel asks about graves (audit)
+        o.addProperty("items", com.mrgregles.bsp_server_utilities.compat.InventorySync.items() != null); // where the panel reads items (SU-39)
+        com.mrgregles.bsp_server_utilities.compat.BspTeleport.Api tp = com.mrgregles.bsp_server_utilities.compat.BspTeleport.api();
+        o.addProperty("tp", tp != null); // where the panel moves players (SU-43)
+        if (tp != null) {
+            o.addProperty("tpName", tp.serverName()); // the name BSP-Teleport and the proxy know this server by
+        }
+        WebMarket.addTo(o); // the market and the lottery's phase (SU-50)
         JsonArray list = new JsonArray();
         for (ServerPlayer p : players) {
             list.add(player(server, p));
@@ -78,6 +85,9 @@ public final class WebSnapshot {
         o.addProperty("skin", skinUrl(p.getGameProfile()));
         o.addProperty("afkMs", AfkService.afkForMs(p.getUUID()));
         o.addProperty("ping", p.latency);
+        if (com.mrgregles.bsp_server_utilities.compat.InventorySync.isSyncing(p.getUUID())) {
+            o.addProperty("arriving", true); // their data is still arriving here: no teleport yet (D366)
+        }
         Staff.roleOf(p).ifPresentOrElse(r -> o.addProperty("role", r.label()), () -> o.add("role", null));
         BspCore.team(server, p.getUUID()).ifPresentOrElse(t -> {
             JsonObject team = new JsonObject();

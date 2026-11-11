@@ -32,7 +32,7 @@ public final class WebAgent {
     private static BooleanSupplier enabled = WebAgent::configEnabled;
     private static IntSupplier seconds = WebAgent::configSeconds;
     private static Function<MinecraftServer, Collection<ServerPlayer>> players = s -> List.copyOf(s.getPlayerList().getPlayers());
-    private static int ticks;
+    private static int ticks, watchTicks;
     private static volatile long lastSentMs;
     private static volatile int lastCount;
 
@@ -69,6 +69,14 @@ public final class WebAgent {
         if (!enabled() || s == null) {
             ticks = 0;
             return;
+        }
+        if (++watchTicks >= 20) {
+            watchTicks = 0;
+            if (WebMarket.watch()) {
+                ticks = 0;
+                send(server, s); // a draw began or ended: every panel sees it at once (D411)
+                return;
+            }
         }
         if (++ticks < seconds() * 20) {
             return;

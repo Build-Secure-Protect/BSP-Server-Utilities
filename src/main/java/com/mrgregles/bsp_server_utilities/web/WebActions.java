@@ -261,6 +261,20 @@ public final class WebActions {
             case "broadcast" -> broadcast(server, a, id, by);
             case "graves" -> graves(a, id);
             case "grave_return" -> graveReturn(server, a, id, by);
+            case "grave_items" -> graveItems(a, id);
+            case "tp_places" -> WebTeleports.places(a, id);
+            case "tp" -> WebTeleports.move(server, a, id, by);
+            case "ban" -> WebBanActions.ban(server, a, id, by);
+            case "unban" -> WebBanActions.unban(server, a, id, by);
+            case "ban_edit" -> WebBanActions.edit(server, a, id, by);
+            case "say" -> WebChat.say(server, a, id, by);
+            case "inv_read" -> itemsRead(a, id);
+            case "inv_add" -> WebItemEdits.add(server, a, id, by);
+            case "inv_remove" -> WebItemEdits.remove(server, a, id, by);
+            case "inv_take" -> WebItemEdits.take(server, a, id, by);
+            case "market_read" -> WebMarket.read(server, a, id);
+            case "lottery_read" -> WebMarket.lottery(server, id);
+            case "lottery_draw" -> WebMarket.draw(server, a, id, by);
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
     }
@@ -363,6 +377,59 @@ public final class WebActions {
         }));
     }
 
+    // ------------------------------------------------------------------ a player's items (SU-39, D256, D336)
+
+    static final String NO_ITEMS = "Items need BSP-InventorySync 0.7.0 or newer on this server.";
+
+    /**
+     * A player's items, live when they are on this server, else from their newest snapshot (read only; nothing logged).
+     * Every rank may look (D335); the panel asks the server holding the player, or any server for one offline.
+     */
+    private static Answer itemsRead(JsonObject a, String id) {
+        com.mrgregles.bsp_server_utilities.compat.InventorySync.Items items = com.mrgregles.bsp_server_utilities.compat.InventorySync.items();
+        UUID who = uuid(str(a, "player"));
+        if (items == null || who == null) {
+            return new Answer(id, false, items == null ? NO_ITEMS : "No such player.");
+        }
+        return new Answer(id, true, "", null, items.read(who).handle((r, t) -> {
+            if (t != null) {
+                return new Answer(id, false, "The items could not be read: " + cause(t));
+            }
+            if (r.isEmpty()) {
+                return new Answer(id, false, "Nothing has been saved for that player yet.");
+            }
+            com.google.gson.JsonObject data = WebItems.toJson(who, r.get());
+            return new Answer(id, true, r.get().live() ? "live" : "saved", data, null);
+        }));
+    }
+
+    /**
+     * What one grave holds (D298, BSP-InventorySync's SU-IS3), read only, for every rank; nothing logged. The answer's data:
+     * {@code xp} and {@code areas} as {@code inv_read}'s (the area {@code grave}, then backpacks and danks inside it).
+     */
+    private static Answer graveItems(JsonObject a, String id) {
+        com.mrgregles.bsp_server_utilities.compat.InventorySync.Graves g = com.mrgregles.bsp_server_utilities.compat.InventorySync.graves();
+        UUID who = uuid(str(a, "player"));
+        String grave = str(a, "grave");
+        if (g == null || who == null || !grave.matches("[0-9a-fA-F-]{8,36}")) {
+            return new Answer(id, false, g == null ? NO_GRAVES : "No such grave.");
+        }
+        return new Answer(id, true, "", null, g.graveItems(who, grave).handle((r, t) -> {
+            if (t != null) {
+                return new Answer(id, false, "The grave's items could not be read: " + cause(t));
+            }
+            if (r.isEmpty()) {
+                return new Answer(id, false, "That grave is empty, or not theirs.");
+            }
+            JsonObject data = new JsonObject();
+            data.addProperty("xp", r.get().xp());
+            com.google.gson.JsonArray areas = new com.google.gson.JsonArray();
+            r.get().areas().forEach(ar -> areas.add(WebItems.area(ar)));
+            data.add("areas", areas);
+            return new Answer(id, true, "", data, null);
+        }));
+    }
+
     @Nullable
     private static UUID uuid(String s) {
         try {
@@ -372,7 +439,7 @@ public final class WebActions {
         }
     }
 
-    private static String cause(Throwable t) {
+    static String cause(Throwable t) {
         Throwable c = t instanceof java.util.concurrent.CompletionException && t.getCause() != null ? t.getCause() : t;
         return String.valueOf(c.getMessage());
     }

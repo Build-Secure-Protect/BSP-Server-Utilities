@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots), {@code <prefix>web_chat} (public chat for the panel, 30 days).
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -100,6 +100,15 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, snapshot MEDIUMTEXT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate(WEB_CHAT_TABLE.replace("<prefix>", prefix)); // the staff web panel's chat (SU-36); the panel makes the same table
+            // network bans (SU-44): kept for good, read by every server at start, every minute and on a notice; the panel lists them
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "bans (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uuid CHAR(36) NOT NULL, name VARCHAR(32) NOT NULL,"
+                    + " reason VARCHAR(200) NOT NULL, note VARCHAR(600) NOT NULL, by_name VARCHAR(32) NOT NULL, at_ms BIGINT NOT NULL, until_ms BIGINT NOT NULL,"
+                    + " lifted_at BIGINT NOT NULL DEFAULT 0, lifted_by VARCHAR(32) NOT NULL DEFAULT '', edited_at BIGINT NOT NULL DEFAULT 0, KEY uuid (uuid), KEY at (at_ms)) DEFAULT CHARSET=utf8mb4");
+            // the staff web panel's item pictures (SU-41): one row per export, the newest one's zip in parts
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_items (id BIGINT NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, made_by VARCHAR(32) NOT NULL,"
+                    + " server VARCHAR(64) NOT NULL, items INT NOT NULL, tabs INT NOT NULL, mods INT NOT NULL, size INT NOT NULL, parts INT NOT NULL, sha256 CHAR(64) NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_item_parts (export BIGINT NOT NULL, part INT NOT NULL, data MEDIUMBLOB NOT NULL, PRIMARY KEY (export, part))");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE)");
             if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
@@ -183,6 +192,108 @@ public final class JdbcBackend implements StorageBackend {
             }
         }
         return new RuleSet(heading, intro, leave, rules, version, revision).sanitised();
+    }
+
+    private static final String BAN_COLS = "id, uuid, name, reason, note, by_name, at_ms, until_ms, lifted_at, lifted_by, edited_at";
+
+    private static Ban readBan(ResultSet rs) throws SQLException {
+        return new Ban(rs.getLong(1), java.util.UUID.fromString(rs.getString(2)), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getLong(7), rs.getLong(8),
+                rs.getLong(9), rs.getString(10), rs.getLong(11));
+    }
+
+    @Override
+    public List<Ban> loadActiveBans(long now) throws SQLException {
+        List<Ban> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + BAN_COLS + " FROM " + prefix + "bans WHERE lifted_at = 0 AND (until_ms = 0 OR until_ms > ?)")) {
+            ps.setLong(1, now);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(readBan(rs));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public long insertBan(Ban b) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "bans (uuid, name, reason, note, by_name, at_ms, until_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, b.player().toString());
+            ps.setString(2, b.name());
+            ps.setString(3, b.reason());
+            ps.setString(4, b.note());
+            ps.setString(5, b.by());
+            ps.setLong(6, b.atMs());
+            ps.setLong(7, b.untilMs());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                return keys.next() ? keys.getLong(1) : 0;
+            }
+        }
+    }
+
+    @Override
+    public boolean liftBan(long id, String by, long at) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "bans SET lifted_at = ?, lifted_by = ? WHERE id = ? AND lifted_at = 0")) {
+            ps.setLong(1, at);
+            ps.setString(2, by);
+            ps.setLong(3, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean editBan(long id, long untilMs, String reason, String note, long at) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "bans SET until_ms = ?, reason = ?, note = ?, edited_at = ? WHERE id = ? AND lifted_at = 0")) {
+            ps.setLong(1, untilMs);
+            ps.setString(2, reason);
+            ps.setString(3, note);
+            ps.setLong(4, at);
+            ps.setLong(5, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public Ban ban(long id) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + BAN_COLS + " FROM " + prefix + "bans WHERE id = ?")) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? readBan(rs) : null;
+            }
+        }
+    }
+
+    @Override
+    public void saveWebItems(WebItemsExport e, List<byte[]> parts) throws SQLException {
+        Connection c = conn();
+        // the parts first, one statement each (each up to 512 KB, under MySQL's packet limit), then the row that points at them
+        try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "web_item_parts (export, part, data) VALUES (?, ?, ?)")) {
+            for (int i = 0; i < parts.size(); i++) {
+                ps.setLong(1, e.id());
+                ps.setInt(2, i);
+                ps.setBytes(3, parts.get(i));
+                ps.executeUpdate();
+            }
+        }
+        try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "web_items (id, at_ms, made_by, server, items, tabs, mods, size, parts, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+            ps.setLong(1, e.id());
+            ps.setLong(2, e.atMs());
+            ps.setString(3, e.by());
+            ps.setString(4, e.server());
+            ps.setInt(5, e.items());
+            ps.setInt(6, e.tabs());
+            ps.setInt(7, e.mods());
+            ps.setInt(8, e.size());
+            ps.setInt(9, e.parts());
+            ps.setString(10, e.sha256());
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + prefix + "web_item_parts WHERE export < ?")) {
+            ps.setLong(1, e.id()); // older exports' pictures are not needed any more
+            ps.executeUpdate();
+        }
     }
 
     @Override
@@ -422,6 +533,30 @@ public final class JdbcBackend implements StorageBackend {
             ps.setLong(2, atMs);
             ps.setString(3, snapshot);
             ps.executeUpdate();
+        }
+    }
+
+    /** The chat table, word for word as the staff panel's JdbcStore makes it. */
+    public static final String WEB_CHAT_TABLE = "CREATE TABLE IF NOT EXISTS <prefix>web_chat (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid CHAR(36) NOT NULL,"
+            + " at_ms BIGINT NOT NULL, server VARCHAR(64) NOT NULL, name VARCHAR(32) NOT NULL, text VARCHAR(512) NOT NULL, line TEXT NOT NULL,"
+            + " UNIQUE KEY uid (uid), KEY at (at_ms), KEY name (name)) DEFAULT CHARSET=utf8mb4";
+
+    @Override
+    public void saveWebChat(List<WebChat> lines) throws SQLException {
+        if (lines.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "web_chat (uid, at_ms, server, name, text, line) VALUES (?, ?, ?, ?, ?, ?)")) {
+            for (WebChat l : lines) {
+                ps.setString(1, l.uid());
+                ps.setLong(2, l.atMs());
+                ps.setString(3, l.server());
+                ps.setString(4, l.name());
+                ps.setString(5, l.text());
+                ps.setString(6, l.line());
+                ps.addBatch();
+            }
+            ps.executeBatch();
         }
     }
 

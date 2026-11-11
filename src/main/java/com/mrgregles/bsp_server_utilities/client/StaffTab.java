@@ -179,9 +179,13 @@ final class StaffTab {
         }
         int visible = (LIST_H - 4) / 10;
         scroll = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - visible)));
+        StaffViewPacket.Row hovered = null;
         for (int i = 0; i < visible && scroll + i < rows.size(); i++) {
             StaffViewPacket.Row r = rows.get(scroll + i);
             int ry = py + 3 + i * 10;
+            if (mx >= px && mx < px + PANE_W && my >= ry && my < ry + 10) {
+                hovered = r;
+            }
             int dot = switch (r.state()) {
                 case ONLINE -> 0xFF8FE04A;
                 case AWAY -> 0xFFF2B544;
@@ -196,6 +200,9 @@ final class StaffTab {
                 case OFFLINE -> ClientStaff.agoMs(r) > 0 ? Tr.t("staff.seen", StaffFace.ago(ClientStaff.agoMs(r))) : "";
             };
             Ui.text(g, font, Ui.fit(font, where, 70, TINY), px + 138, ry + 2, r.state() == StaffDirectory.State.AWAY ? 0xFFF2B544 : Ui.MUTED, TINY);
+        }
+        if (hovered != null) {
+            ClientNotes.hover(g, font, null, hovered.name(), mx, my); // the staff web panel's notes, by name (D321)
         }
     }
 

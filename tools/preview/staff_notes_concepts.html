@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Notes Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set T: three looks for player notes and tags in a player's sheet (D266, D267), the admins' tag list, and the
+   notes count when staff hover a player in game (D266). Sample data; names are made up. */
+/* Mock-up set Q: three looks for the Chat tab of the staff web panel on a phone (D261 to D263, D292), and three looks for
+   a line sent from the panel as it shows in game. Sample data; names are made up. The frames use the BSP website's own
+   tokens (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.mu{ color:var(--mu); } .dm{ color:var(--dim); } .vtx{ color:var(--vio); } .gtx{ color:var(--gold); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip.on{ background:var(--teal); color:#0f1115; border-color:var(--teal); font-weight:600; }
+.chip i{ width:7px; height:7px; border-radius:2px; display:block; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.tag{ font:600 9px var(--body); padding:0 5px; border-radius:999px; white-space:nowrap; vertical-align:1px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.62); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:8px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); margin-top:4px; }
+.opt{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:12.5px; }
+.opt.on{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.opt .rb{ width:14px; height:14px; border-radius:50%; border:2px solid var(--dim); flex:none; } .opt.on .rb{ border-color:var(--teal); background:radial-gradient(var(--teal) 45%, transparent 50%); }
+.opt .sub{ font-size:10.5px; color:var(--mu); }
+.opt.lock{ opacity:.5; }
+.in{ flex:1; min-width:0; height:38px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.in.typed{ color:var(--tx); }
+.send{ height:38px; padding:0 14px; border-radius:10px; background:var(--teal); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; }
+.pill{ position:absolute; left:50%; transform:translateX(-50%); background:var(--teal); color:#0f1115; font:600 11px var(--body); border-radius:999px; padding:4px 10px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+
+/* A: the stream, as the computer's column */
+.ascroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 14px 6px; gap:5px; position:relative; }
+.al{ font-size:12.5px; line-height:1.4; word-break:break-word; }
+.al .t{ font:10px var(--mono); color:var(--dim); }
+.al .sv{ font-size:10.5px; color:var(--mu); }
+.al .sv i{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:3px; vertical-align:0; }
+.al b{ font-weight:600; }
+.aspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
+.aspeak .chip{ padding:3px 8px; font-size:11px; }
+
+/* B: the game's own chat */
+.bscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; position:relative;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 38%,#33507a 72%,#6c8fbf 100%); padding:8px 0 6px; }
+.bl{ background:rgba(0,0,0,.52); color:#fff; font:12px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; word-break:break-word; margin-right:24px; }
+.gi{ display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px; color:#0f1115; font:700 8px/11px var(--body); text-align:center; text-shadow:none; }
+.bbar{ flex:none; background:#000; padding:7px 10px 9px; display:flex; flex-direction:column; gap:6px; border-top:1px solid #333; }
+.bbar .bin{ height:30px; background:rgba(255,255,255,.08); border:1px solid #555; color:#fff; font:12.5px var(--mono); display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+.bbar .bto{ display:flex; gap:6px; font:600 11px var(--body); }
+.bbar .bto span{ padding:3px 8px; border:1px solid #555; color:#ddd; border-radius:4px; }
+.bseg{ display:flex; gap:0; padding:0 14px 8px; flex:none; overflow:hidden; }
+.bseg span{ flex:none; padding:4px 8px; font:11px Silkscreen,var(--mono); color:var(--mu); border-bottom:2px solid transparent; }
+.bseg span.on{ color:var(--teal); border-bottom-color:var(--teal); }
+.prevbox{ background:#14171d; border:1px solid #2a2f3a; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.prevbox .lab{ font:600 10px var(--body); color:#9aa3b5; }
+
+/* C: conversation */
+.cscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:8px; position:relative; }
+.cg{ display:flex; gap:8px; align-items:flex-start; }
+.cg .cb{ display:flex; flex-direction:column; gap:3px; min-width:0; max-width:250px; }
+.cg .who{ font-size:11px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.cg .who b{ font-weight:600; }
+.cg .who .svn{ font-size:10px; padding:0 5px; border-radius:4px; }
+.cg .who .t{ font:10px var(--mono); color:var(--dim); }
+.bub{ background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:5px 9px; font-size:12.5px; line-height:1.35; word-break:break-word; align-self:flex-start; }
+.bub + .bub{ border-radius:12px; }
+.cg.me{ flex-direction:row-reverse; } .cg.me .cb{ align-items:flex-end; } .cg.me .who{ flex-direction:row-reverse; }
+.cg.me .bub{ background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; align-self:flex-end; }
+.sysl{ align-self:center; font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #4a4220; border-radius:999px; padding:3px 10px; }
+.cspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; gap:8px; align-items:center; background:var(--bg2); }
+.voice{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; box-shadow:0 0 0 2px var(--vio); background:#2a2240; }
+.menu{ position:absolute; left:28px; right:28px; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); }
+.menu div{ padding:11px 14px; font-size:13px; display:flex; gap:10px; align-items:center; }
+.menu div + div{ border-top:1px solid #23272f; }
+.menu svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* in game */
+.scene{ width:520px; max-width:100%; height:230px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ margin-right:0; width:max-content; max-width:440px; font-size:13px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.scene .hot i.sel{ box-shadow:inset 0 0 0 2px #fff; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; outline:1px solid #100010; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+.sh2{ position:absolute; left:0; right:0; bottom:0; top:92px; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 0 0; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.pad{ padding:0 14px; }
+.eff{ font-size:10.5px; padding:2px 7px; border-radius:6px; background:#1f2a2a; color:#7fe0cf; border:1px solid #24443f; white-space:nowrap; }
+.sect2{ font:10.5px Silkscreen,var(--mono); color:var(--mu); display:flex; justify-content:space-between; align-items:center; padding:0 14px; }
+.sect2 .add{ font:600 11px var(--body); color:var(--teal); }
+.tg{ font:600 10.5px var(--body); padding:2px 8px; border-radius:999px; white-space:nowrap; display:inline-flex; gap:5px; align-items:center; }
+.tg.addt{ background:transparent; border:1px dashed var(--ln); color:var(--mu); }
+.tg .x{ opacity:.7; }
+.nt{ margin:0 12px; background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.nt .hd{ display:flex; gap:7px; align-items:center; font-size:11.5px; } .nt .hd .t{ font:10px var(--mono); color:var(--dim); }
+.nt .hd .dots{ margin-left:auto; color:var(--mu); font-weight:700; letter-spacing:1px; }
+.nt .tx{ font-size:12.5px; line-height:1.42; }
+.nt .ed{ font-size:10px; color:var(--dim); }
+.rk{ font:600 9px var(--body); padding:0 5px; border-radius:4px; } .rk.o{ background:#ffd23a22; color:#ffd23a; } .rk.a{ background:#b58cff22; color:#b58cff; } .rk.m{ background:#19d3b022; color:#19d3b0; }
+.addn{ margin:0 12px; display:flex; gap:6px; }
+.bg-list{ position:absolute; inset:0; opacity:.35; pointer-events:none; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12px; flex:none; }
+.ptabs span{ padding:8px 10px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 0 0 0 transparent, inset 0 -2px 0 var(--teal); }
+.tl{ display:grid; grid-template-columns:56px 12px 1fr; gap:0 8px; padding:0 14px; }
+.tl .t{ font:600 10.5px var(--mono); color:var(--mu); text-align:right; padding-top:9px; line-height:1.25; }
+.tl .line{ position:relative; } .tl .line::before{ content:""; position:absolute; left:5px; top:0; bottom:0; width:2px; background:#2a2f3a; }
+.tl .line i{ position:absolute; left:1px; top:11px; width:10px; height:10px; border-radius:50%; box-shadow:0 0 0 3px #14171d; }
+.tl .body{ padding:6px 0 12px; font-size:12.5px; line-height:1.42; border-bottom:1px solid #20242d; }
+.sticky{ margin:0 12px; background:#2a2614; border:1px solid #4a4220; border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.sticky .lab{ font:10.5px Silkscreen,var(--mono); color:var(--gold); display:flex; justify-content:space-between; }
+.sticky .tx{ font-size:12.5px; line-height:1.42; color:#f3ead0; }
+.trow{ display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid #20242d; font-size:12.5px; }
+.sw{ width:18px; height:18px; border-radius:5px; flex:none; }
+.trow .ct{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.trow.pending{ background:#1b1e25; }
+.pal{ display:grid; grid-template-columns:repeat(8,1fr); gap:6px; padding:4px 14px 6px; }
+.pal i{ aspect-ratio:1; border-radius:6px; display:block; } .pal i.on{ box-shadow:0 0 0 2px #e8eaf0; }
+.tgrid{ display:flex; flex-wrap:wrap; gap:8px; padding:0 14px; }
+.tcard{ border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:2px; min-width:92px; }
+.tcard b{ font-size:12.5px; } .tcard span{ font-size:10.5px; opacity:.8; }
+.k{ height:34px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:12px; background:var(--pn); border:1px solid var(--ln); flex:1; }
+.k.p{ background:var(--teal); color:#0f1115; border-color:var(--teal); } .k.d{ color:var(--coral); border-color:#5a2a2a; } .k.sure{ background:#ffd23a; color:#0f1115; border-color:#ffd23a; }
+.chk{ width:18px; height:18px; border-radius:5px; border:2px solid var(--dim); flex:none; display:grid; place-items:center; font:700 11px var(--body); color:#0f1115; }
+.chk.on{ background:var(--teal); border-color:var(--teal); }
+.ta{ border-radius:10px; background:var(--pn); border:1px solid var(--ln); padding:9px 11px; font-size:13px; line-height:1.45; }
+
+/* in game (the admin panel's CLIENTS tab, drawn at about 1.6 times) */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:17px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:14px 16px; gap:10px; width:440px; height:290px; box-shadow:0 0 0 2px var(--V); }
+.scr .lbl{ font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.scr .row{ height:28px; display:flex; align-items:center; gap:9px; padding:0 9px; white-space:nowrap; overflow:hidden; font-size:15px; }
+.scr .row.hov{ background:#1b2230; }
+.scr .srv{ font-size:13px; padding:0 6px; border-radius:2px; background:#1b2230; color:#9AA3B5; }
+.scr .g{ color:var(--G); } .scr .ok{ color:var(--OK); } .scr .m{ color:var(--M); }
+.scr .box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:4px 0; display:flex; flex-direction:column; }
+.scr .ttl{ font:600 14px var(--body); letter-spacing:.12em; text-transform:uppercase; color:var(--V); }
+.mctip{ position:absolute; background:#100010f2; border:2px solid #2d0a63; color:#fff; font:13px/1.45 var(--mono); padding:5px 8px; border-radius:3px; width:max-content; max-width:290px; z-index:2; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+.mark{ font:700 13px var(--body); color:var(--G); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: mock-up set T, notes and tags</h1>
+    <p class="lede">Three looks for a player's notes and tags in their sheet (D266, D267, D279): notes seen by all staff with author and time, edited or deleted only by their author or an admin; tags from a list admins keep with colours, beside the name everywhere in the panel, and any staff member may type a new one on the spot. Each look also draws the admins' tag list (under More). Below, three looks for the notes count in game when staff hover a player. Made-up names.</p>
+  </header>
+  <section><h2>A. A section in the sheet</h2>
+    <div class="card"><p>Tags sit under the name at the top of the sheet with a dashed + TAG; notes are a section of cards further down (where D279 placed them), each with its author, rank and time, a ⋯ for its author or an admin, and a box to add one at the foot. + TAG opens a picker: tick tags from the list, or type a new one. Under More, admins see the tags as a list with a colour, how many players carry each, and the new tags typed by staff waiting for a colour.</p></div>
+    <div class="stage"><div><div class="ph" id="a1"></div><div class="cap">A1, Vexa's sheet scrolled to the notes</div></div><div><div class="ph" id="a2"></div><div class="cap">A2, + TAG: the picker, "watch" typed</div></div><div><div class="ph" id="a3"></div><div class="cap">A3, More › Tags for an Admin, one opened</div></div></div></section>
+  <section><h2>B. A Notes page in the sheet</h2>
+    <div class="card"><p>The sheet's own switch (All, Items, Notes, Log) gets the notes as a page: a timeline of notes and tag changes, newest first, so "who tagged her and why" reads in one place. Writing a note fills the sheet, with the tags to add underneath. Admins' tag list as coloured cards.</p></div>
+    <div class="stage"><div><div class="ph" id="b1"></div><div class="cap">B1, the Notes page: notes and tag changes</div></div><div><div class="ph" id="b2"></div><div class="cap">B2, writing a note, adding a tag with it</div></div><div><div class="ph" id="b3"></div><div class="cap">B3, More › Tags as cards</div></div></div></section>
+  <section><h2>C. The newest note pinned on top</h2>
+    <div class="card"><p>The newest note sits in a gold box at the very top of the sheet, above the stats, so nobody misses it; tap it for every note. Tags under the name carry a small ✕ to take them off. Admins' tag list as a table with a colour picker under the opened tag.</p></div>
+    <div class="stage"><div><div class="ph" id="c1"></div><div class="cap">C1, the sheet as it opens</div></div><div><div class="ph" id="c2"></div><div class="cap">C2, every note; DELETE on your own, tapped once</div></div><div><div class="ph" id="c3"></div><div class="cap">C3, More › Tags as a table</div></div></div></section>
+  <section><h2>In game: the notes count on hover</h2>
+    <div class="card"><p>The admin panel's CLIENTS tab, its list of players on the network, with the pointer on Vexa (drawn about 1.6 times bigger than in game). The same on the STAFF tab's list of staff. This needs the new client (protocol 6), as decided (D266).</p></div>
+    <div class="stage"><div><div class="scr" id="h1"></div><div class="cap">H1, the count, who wrote the newest and when</div></div><div><div class="scr" id="h2"></div><div class="cap">H2, the newest note's words as well</div></div><div><div class="scr" id="h3"></div><div class="cap">H3, a small mark on every row with notes, and the tags in the hover</div></div></div></section>
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>T1. The look in the sheet.</b> A: tags under the name and a notes section of cards further down, a picker for tags, the admins' list as rows. B: a Notes page in the sheet's switch, a timeline of notes and tag changes, the admins' list as coloured cards. C: the newest note pinned in a gold box at the top of the sheet, tags with a ✕, the admins' list as a table.</li>
+      <li><b>T2. The hover in game.</b> H1: "2 notes", then who wrote the newest and how long ago. H2: the same plus the newest note's words, cut to three lines. H3: a small gold ✎ with the count on every row that has notes, and the player's tags in colour in the hover.</li>
+      <li><b>T3. A tag typed on the spot.</b> It joins the list for everyone at once, grey, until an admin gives it a colour (or removes it). Or it stays on that one player only, until an admin adds it to the list.</li>
+      <li><b>T4. A note's length.</b> Up to 1000 characters of plain text. Or up to 300.</li>
+      <li><b>T5. Editing a note.</b> An "edited 21:40" mark under it, and the earlier words kept in the panel's own log. Or the note is simply replaced, with no mark.</li>
+      <li><b>T6. Taking a tag off a player.</b> Any staff member. Or only whoever put it on, and admins.</li>
+      <li><b>T7. Where notes and tag changes are recorded.</b> In the panel's own log only (they are about players, not done to them). Or in the game's Action Log as well, with "web" as every panel action.</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SV_COL={"BSP-Spawn":"#19d3b0","Frostwarf":"#7fb2ff","Boulderbrook":"#d9a066","Moongrove":"#b58cff","Stormfall":"#9aa3b5","Sanctuary":"#7fe08a","SafeRoom":"#ffd23a"};
+const SHORT={"BSP-Spawn":"Spawn","Frostwarf":"Frostwarf","Boulderbrook":"Boulder","Moongrove":"Moongrove","Stormfall":"Stormfall","Sanctuary":"Sanctuary","SafeRoom":"SafeRoom"};
+const TAGS={"Vexa":[["Suspected cheater","#ff6b5c"]],"Newbie_Sam":[["New","#7fb2ff"]],"BrickLayerTom":[["Supporter","#ffd23a"]]};
+const CHAT=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole, can a mod help"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:36","Moongrove","Vexa","in like 5 minutes lol"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+
+/* ---------- pixel heads ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+ person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+ filter:'<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:38</span><span>●●● 5G 82%</span></div>');
+function tabbar(on,chatBadge){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",chatBadge],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const tagHtml=n=>(TAGS[n]||[]).map(([t,c])=>` <span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("");
+const topBar=(f,extra)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">CHAT</div>${extra||""}<div class="ico">${SV.search}</div></div>`));};
+function serverChips(f,on){const d=h('<div class="chips"></div>');d.appendChild(h(`<span class="chip ${on==="All"?"on":""}">All servers</span>`));
+  Object.keys(SV_COL).slice(0,5).forEach(s=>d.appendChild(h(`<span class="chip ${on===s?"on":""}"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span>`)));f.appendChild(d);}
+
+/* ---------- A ---------- */
+function aLine([t,s,n,x]){let who;
+  if(s==="staff")who=`<b class="vtx">[Staff] ${n}</b>`;
+  else if(s==="server")who=`<b class="gtx">[Server]</b>`;
+  else who=`<span class="sv"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span> <b>${n}</b>${tagHtml(n)}`;
+  return h(`<div class="al"><span class="t">${t}</span> ${who} ${x}</div>`);}
+const TAGLIST=[["Suspected cheater","#ff6b5c",3],["Watch","#ffd23a",5],["New","#7fb2ff",11],["Supporter","#ffd23a",7],["Builder","#8fe04a",4],["Helpful","#19d3b0",6],["Muted before","#b58cff",2]];
+const RKS={Rook:["m","Moderator"],Mrgregles:["o","Owner"],Ana_Mod:["m","Moderator"],Saffi:["a","Admin"],Kip:["m","Moderator"]};
+const rk=n=>`<span class="rk ${RKS[n][0]}">${RKS[n][1]}</span>`;
+const tg=(t,c,x)=>`<span class="tg" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}${x?'<span class="x">✕</span>':""}</span>`;
+const NOTES=[["Rook","2 h ago","Found 12 diamonds in 5 minutes at y -58 on Moongrove. Watching her tonight; screenshots in the staff drive.",""],["Ana_Mod","1 h ago","Asked in chat if x-ray is allowed. Told her no and pointed her to /rules.","edited 21:40"]];
+function bgList(f){const l=h('<div class="bg-list"></div>');l.appendChild(status());l.appendChild(h('<div class="top"><div class="brand grow">PLAYERS</div></div>'));f.appendChild(l);}
+function sheetHead(sh,x,extraTags){const d=h(`<div class="pad" style="display:flex;gap:12px;align-items:center"><div class="grow"><div style="font-size:17px;font-weight:600">Vexa</div><div style="font-size:11px;color:#9aa3b5"><span style="color:#AA00AA">■</span> Nightshade · Moongrove · ping 120 ms</div><div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">${tg("Suspected cheater","#ff6b5c",x)}${extraTags||""}</div></div></div>`);d.prepend(headCanvas("Vexa",48));sh.appendChild(d);}
+function note(n,t,x,ed,mine){const c=h(`<div class="nt"><div class="hd"><b>${n}</b>${rk(n)}<span class="t">${t}</span><span class="dots">${mine?"⋯":""}</span></div><div class="tx">${x}</div>${ed?`<div class="ed">${ed}</div>`:""}</div>`);c.querySelector(".hd").prepend(headCanvas(n,18));return c;}
+function sheetFrame(id){const f=document.getElementById(id);bgList(f);f.appendChild(h('<div class="dimmer"></div>'));const sh=h('<div class="sh2"><div class="grab"></div></div>');f.appendChild(sh);return [f,sh];}
+/* A */
+(function(){const [f,sh]=sheetFrame("a1");sheetHead(sh,false,`<span class="tg addt">+ Tag</span>`);
+  sh.appendChild(h('<div class="pad" style="font-size:11px;color:#9aa3b5">… stats, inventory, ender chest, backpacks above …</div>'));
+  sh.appendChild(h('<div class="sect2"><span>NOTES · 2</span></div>'));
+  NOTES.forEach(([n,t,x,e])=>sh.appendChild(note(n,t,x,e,n==="Ana_Mod")));
+  sh.appendChild(h('<div class="addn"><div class="in">Add a note about Vexa…</div><div class="send">Add</div></div>'));
+  sh.appendChild(h('<div class="sect2" style="margin-top:6px"><span>RECENT ACTION LOG</span></div>'));
+  sh.appendChild(h('<div class="pad" style="font-size:11.5px;color:#9aa3b5;display:flex;flex-direction:column;gap:3px"><span>21:40 Ana_Mod (web) chat to Moongrove</span><span>Sat 22:15 Kip kicked her: spawn camping</span><span>19:58 joined Moongrove</span></div>'));})();
+(function(){const [f,sh]=sheetFrame("a2");sheetHead(sh,false,`<span class="tg addt">+ Tag</span>`);
+  f.appendChild(h('<div class="dimmer" style="background:rgba(5,6,8,.5)"></div>'));
+  const p=h('<div class="sheet" style="top:170px"><div class="grab"></div><div class="sect">TAGS FOR VEXA</div><div style="display:flex;gap:6px"><div class="in typed">watch</div></div></div>');
+  const opt=(t,c,on,sub)=>h(`<div class="opt ${on?"on":""}" style="padding:8px 10px"><span class="chk ${on?"on":""}">${on?"✓":""}</span><div class="grow">${tg(t,c)}${sub?`<div class="sub">${sub}</div>`:""}</div></div>`);
+  p.appendChild(opt("Watch","#ffd23a",true,"5 players"));
+  p.appendChild(h('<div class="opt" style="padding:8px 10px;border-style:dashed"><span class="chk"></span><div class="grow">Create <b>"watch list"</b><div class="sub">A new tag, grey until an admin gives it a colour</div></div></div>'));
+  p.appendChild(h('<div class="sect">ON VEXA</div>'));p.appendChild(opt("Suspected cheater","#ff6b5c",true,"added by Rook, 2 h ago"));
+  p.appendChild(h('<div class="sect">THE LIST</div>'));
+  TAGLIST.slice(2,4).forEach(([t,c,n])=>p.appendChild(opt(t,c,false,n+" players")));
+  p.appendChild(h('<div style="display:flex;gap:6px;margin-top:2px"><div class="k">Cancel</div><div class="k p">Done</div></div>'));f.appendChild(p);})();
+(function(){const f=document.getElementById("a3");f.appendChild(status());f.appendChild(h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="brand grow">TAGS</div></div>`));
+  const s=h('<div style="flex:1;overflow:hidden"></div>');
+  s.appendChild(h('<div class="sect2" style="padding-bottom:6px"><span>TYPED BY STAFF · 1</span></div>'));
+  s.appendChild(h('<div class="trow pending"><span class="sw" style="background:#6b7180"></span><div><b>x-ray?</b><div style="font-size:10.5px;color:#9aa3b5">typed by Kip on Pixl, today 20:10</div></div><span class="ct">1</span></div>'));
+  s.appendChild(h('<div class="pal">'+["#ff6b5c","#ffd23a","#8fe04a","#19d3b0","#7fb2ff","#b58cff","#ff55ff","#9aa3b5"].map((c,i)=>`<i style="background:${c}" class="${i===1?"on":""}"></i>`).join("")+'</div>'));
+  s.appendChild(h('<div style="display:flex;gap:6px;padding:0 14px 8px"><div class="k">Rename</div><div class="k d">Remove</div><div class="k p">Keep</div></div>'));
+  s.appendChild(h('<div class="sect2" style="padding:6px 14px"><span>THE LIST · 7</span><span class="add">+ New tag</span></div>'));
+  TAGLIST.forEach(([t,c,n])=>s.appendChild(h(`<div class="trow"><span class="sw" style="background:${c}"></span>${tg(t,c)}<span class="ct">${n} players</span><span style="color:#9aa3b5;font-weight:700">⋯</span></div>`)));
+  f.appendChild(s);f.appendChild(tabbar("More"));})();
+/* B */
+(function(){const [f,sh]=sheetFrame("b1");sheetHead(sh,false,`<span class="tg addt">+ Tag</span>`);
+  sh.appendChild(h('<div class="ptabs"><span>All</span><span>Items</span><span class="on">Notes 2</span><span>Log</span></div>'));
+  const t=h('<div class="tl"></div>');
+  [["21:40<br>today","#b58cff",`<b>Ana_Mod</b> ${rk("Ana_Mod")}<br>Asked in chat if x-ray is allowed. Told her no and pointed her to /rules.<div style="font-size:10px;color:#6b7180;margin-top:2px">edited 21:40 · ⋯</div>`],
+   ["20:12<br>today","#ff6b5c",`<b>Rook</b> tagged ${tg("Suspected cheater","#ff6b5c")}`],
+   ["20:10<br>today","#19d3b0",`<b>Rook</b> ${rk("Rook")}<br>Found 12 diamonds in 5 minutes at y -58 on Moongrove. Watching her tonight; screenshots in the staff drive.`],
+   ["Sat<br>14:02","#7fb2ff",`<b>Kip</b> took off ${tg("New","#7fb2ff")}`]].forEach(([w,c,b])=>{t.appendChild(h(`<div class="t">${w}</div>`));t.appendChild(h(`<div class="line"><i style="background:${c}"></i></div>`));t.appendChild(h(`<div class="body">${b}</div>`));});
+  sh.appendChild(t);
+  sh.appendChild(h('<div style="position:absolute;right:16px;bottom:16px" class="send">+ Note</div>'));})();
+(function(){const f=document.getElementById("b2");f.appendChild(status());
+  f.appendChild(h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></div><div class="grow" style="font-weight:600">A note about Vexa</div><div class="send" style="height:32px">Save</div></div>`));
+  const s=h('<div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:0 14px"></div>');
+  s.appendChild(h('<div class="ta" style="min-height:190px">Logged off the moment Rook teleported near her. Came back 10 minutes later on Frostwarf instead and went straight down to y -58 again.<span style="color:#19d3b0">|</span></div>'));
+  s.appendChild(h('<div style="font:600 10.5px var(--mono);color:#9aa3b5;text-align:right">164 / 1000</div>'));
+  s.appendChild(h('<div class="sect" style="margin:0">ADD A TAG WITH IT</div>'));
+  s.appendChild(h(`<div style="display:flex;gap:6px;flex-wrap:wrap">${tg("Watch","#ffd23a")}<span class="tg" style="background:#19d3b0;color:#0f1115;font-weight:700">✓ Suspected cheater</span>${tg("Muted before","#b58cff")}<span class="tg addt">+ Type a tag</span></div>`));
+  s.appendChild(h('<div style="font-size:11px;color:#9aa3b5">Every staff member sees this note, with your name and the time. You or an admin can change or delete it.</div>'));
+  f.appendChild(s);})();
+(function(){const f=document.getElementById("b3");f.appendChild(status());f.appendChild(h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="brand grow">TAGS</div><div class="send" style="height:32px">+ New</div></div>`));
+  const g=h('<div class="tgrid"></div>');
+  TAGLIST.forEach(([t,c,n])=>g.appendChild(h(`<div class="tcard" style="background:${c}1c;border:1px solid ${c}55;color:${c}"><b>${t}</b><span>${n} players</span></div>`)));
+  g.appendChild(h('<div class="tcard" style="background:#2b2f3a;border:1px dashed #6b7180;color:#cfd4de"><b>x-ray?</b><span>typed by Kip · needs a colour</span></div>'));
+  f.appendChild(g);f.appendChild(h('<div style="flex:1"></div>'));f.appendChild(tabbar("More"));})();
+/* C */
+(function(){const [f,sh]=sheetFrame("c1");sheetHead(sh,true,`<span class="tg addt">+ Tag</span>`);
+  sh.appendChild(h(`<div class="sticky"><div class="lab"><span>NEWEST OF 2 NOTES</span><span style="font-family:var(--body);font-size:11px">All ›</span></div><div class="tx">Asked in chat if x-ray is allowed. Told her no and pointed her to /rules.</div><div style="font-size:10.5px;color:#c9b77a">Ana_Mod · 1 h ago · edited</div></div>`));
+  sh.appendChild(h('<div class="pad" style="display:flex;gap:6px;flex-wrap:wrap"><span class="eff">Night Vision 4:40</span><span class="eff">Haste II 0:55</span></div>'));
+  sh.appendChild(h('<div class="pad" style="font-size:12px;color:#cfd4de">Health 10 / 20 · Armour 8 · Food 7 · XP 7 · Air 5</div>'));
+  sh.appendChild(h('<div class="pad" style="font-size:11px;color:#9aa3b5">… inventory, ender chest, backpacks below …</div>'));})();
+(function(){const f=document.getElementById("c2");f.appendChild(status());
+  f.appendChild(h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="grow" style="font-weight:600">Notes about Vexa</div></div>`));
+  const s=h('<div style="flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden"></div>');
+  const n1=note("Ana_Mod","1 h ago",NOTES[1][2],"edited 21:40",false);n1.appendChild(h('<div style="display:flex;gap:6px"><div class="k">Edit</div><div class="k sure">Sure? Delete it</div></div>'));s.appendChild(n1);
+  s.appendChild(note("Rook","2 h ago",NOTES[0][2],"",false));
+  s.appendChild(note("Mrgregles","Sat","Joined from a friend's invite (Kestrel_88). Fine so far.","",false));
+  s.appendChild(h('<div class="addn"><div class="in">Add a note about Vexa…</div><div class="send">Add</div></div>'));
+  f.appendChild(s);f.appendChild(tabbar("Players"));})();
+(function(){const f=document.getElementById("c3");f.appendChild(status());f.appendChild(h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="brand grow">TAGS</div><div class="send" style="height:32px">+ New</div></div>`));
+  const s=h('<div style="flex:1;overflow:hidden"></div>');
+  s.appendChild(h('<div style="display:grid;grid-template-columns:1fr 70px 50px;padding:4px 14px;font:10px Silkscreen,var(--mono);color:#9aa3b5"><span>TAG</span><span>PLAYERS</span><span></span></div>'));
+  const all=[...TAGLIST,["x-ray?","#6b7180",1]];
+  all.forEach(([t,c,n],i)=>{s.appendChild(h(`<div class="trow" style="display:grid;grid-template-columns:1fr 70px 50px;${i===1?"background:#1b1e25":""}"><span>${tg(t,c)}${t==="x-ray?"?' <span style="font-size:10px;color:#ffd23a">new</span>':""}</span><span class="mu" style="font:600 11px var(--mono)">${n}</span><span style="text-align:right;color:#9aa3b5">${i===1?"▴":"▾"}</span></div>`));
+    if(i===1){s.appendChild(h('<div class="pal" style="background:#1b1e25;padding-top:8px">'+["#ff6b5c","#ffd23a","#8fe04a","#19d3b0","#7fb2ff","#b58cff","#ff55ff","#9aa3b5"].map((c,j)=>`<i style="background:${c}" class="${j===1?"on":""}"></i>`).join("")+'</div>'));
+      s.appendChild(h('<div style="display:flex;gap:6px;padding:4px 14px 10px;background:#1b1e25"><div class="k">Rename</div><div class="k d">Remove</div></div>'));}});
+  f.appendChild(s);f.appendChild(tabbar("More"));})();
+/* in game */
+function clients(id,tip,marks){const s=document.getElementById(id);
+  s.appendChild(h('<div style="display:flex;justify-content:space-between;align-items:center"><span class="ttl">Clients</span><span class="m" style="font-size:13px">Players · 6</span></div>'));
+  const b=h('<div class="box"></div>');b.appendChild(h('<div class="row lbl">Online · network</div>'));
+  [["Kat_Miner","Stormfall",'<span class="g">2 ⚑</span>',0],["Vexa","Moongrove",'<span class="ok">✓</span>',2],["Tomo_42","Spawn",'<span class="g">1 ⚑</span>',1],["Pip","Frostwarf",'<span class="ok">✓</span>',0],["Steve_Builds","Spawn",'<span class="ok">✓</span>',0],["Lumen","Moongrove",'<span class="m" style="font-size:13px">exempt</span>',0]].forEach(([n,sv,st,nn])=>{
+    b.appendChild(h(`<div class="row ${n==="Vexa"?"hov":""}"><span style="font-weight:600">${n}</span><span class="srv">${sv}</span>${marks&&nn?`<span class="mark">✎${nn}</span>`:""}<span style="flex:1"></span>${st}</div>`));});
+  s.appendChild(b);
+  s.appendChild(h('<div style="position:absolute;left:116px;top:104px;width:0;height:0;border-left:7px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent;transform:rotate(-45deg);z-index:3"></div>'));
+  s.appendChild(h(`<div class="mctip" style="left:130px;top:118px">${tip}</div>`));}
+clients("h1",'<span style="color:#FFD23A">2 notes</span><br><span style="color:#AAAAAA">newest by Ana_Mod, 1 h ago</span><br><span style="color:#AAAAAA">read them on the staff panel</span>');
+clients("h2",'<span style="color:#FFD23A">2 notes</span> <span style="color:#AAAAAA">· Ana_Mod, 1 h ago</span><br>Asked in chat if x-ray is allowed. Told her no and pointed her to /rules.<br><span style="color:#AAAAAA">1 more on the staff panel</span>');
+clients("h3",'<span style="color:#FF6B5C">Suspected cheater</span><br><span style="color:#FFD23A">2 notes</span> <span style="color:#AAAAAA">· newest by Ana_Mod, 1 h ago</span>',true);
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Bans Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set W: three looks for network bans on the staff web panel (decisions D255, D350 to D359). Sample data; names are made up. The frames use the BSP website's own tokens
+   (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.disp{ font-family:Silkscreen,var(--mono); letter-spacing:.02em; }
+.mono{ font-family:var(--mono); }
+.mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); } .vi{ color:var(--vio); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); } .brand b{ color:var(--tx); font-weight:400; }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.scroll{ flex:1; overflow:hidden; position:relative; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip i{ width:7px; height:7px; border-radius:50%; background:var(--teal); display:block; } .chip i.off{ background:var(--dim); }
+.chip b{ font-family:var(--mono); font-weight:600; }
+.seg2{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; font-size:11.5px; }
+.seg2 span{ padding:3px 10px; border-radius:6px; color:var(--mu); } .seg2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.row{ display:flex; align-items:center; gap:10px; padding:8px 12px; }
+.row + .row{ border-top:1px solid #20242d; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub{ font-size:11px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tag{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; }
+.afk{ font:600 9.5px var(--body); padding:1px 6px; border-radius:4px; background:#2b2f3a; color:var(--mu); }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.px{ display:block; image-rendering:pixelated; flex:none; }
+.stats{ display:flex; gap:1px; align-items:center; }
+.bar{ height:5px; border-radius:3px; background:#262a33; overflow:hidden; } .bar i{ display:block; height:100%; border-radius:3px; }
+.act{ display:grid; place-items:center; gap:4px; padding:9px 4px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:11px; font-weight:600; }
+.act svg{ width:18px; height:18px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.act.dg{ border-color:#5a2a2a; color:var(--coral); } .act.dg svg{ stroke:var(--coral); }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.6); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:10px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.eff{ font-size:10.5px; padding:2px 7px; border-radius:6px; background:#1f2a2a; color:#7fe0cf; border:1px solid #24443f; white-space:nowrap; }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:11.5px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+
+/* ---------- set W: bans ---------- */
+.page{ flex:1; overflow:hidden; padding:0 14px; display:flex; flex-direction:column; gap:8px; }
+.who2{ display:flex; gap:10px; align-items:center; padding:2px 14px 8px; flex:none; }
+.sect{ display:flex; justify-content:space-between; align-items:center; font:11px Silkscreen,var(--mono); color:var(--teal); padding:4px 2px 0; }
+.sect .r{ font:500 11px var(--body); color:var(--mu); }
+.lens{ display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+.lens span{ text-align:center; padding:7px 0; border-radius:8px; background:var(--pn); border:1px solid var(--ln); font-size:12px; color:var(--soft); }
+.lens span.on{ background:#ff6b5c22; border-color:#ff6b5c; color:#ff8a7e; font-weight:600; }
+.ta{ border-radius:9px; background:#0c0e12; border:1px solid var(--ln); padding:8px 10px; font-size:12.5px; min-height:58px; position:relative; }
+.ta .n{ position:absolute; right:8px; bottom:4px; font:10px var(--mono); color:var(--dim); }
+.ta.note{ border-style:dashed; min-height:40px; color:var(--mu); }
+.lbl{ font-size:10.5px; color:var(--mu); display:flex; justify-content:space-between; }
+.btn{ height:40px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; background:var(--teal); color:#0f1115; position:relative; overflow:hidden; }
+.btn.red{ background:#ff3b3b; color:#fff; } .btn.redo{ background:transparent; color:#ff6b5c; border:1.5px solid #ff6b5c; } .btn.sure{ background:#ffd23a; color:#1a1400; }
+.btn.ghost{ background:var(--pn); color:var(--soft); border:1px solid var(--ln); }
+.btn .fill{ position:absolute; left:0; top:0; bottom:0; background:#ff3b3b; }
+.btn span{ position:relative; }
+.hist{ font-size:11.5px; color:var(--gold); background:#ffd23a12; border:1px solid #ffd23a44; border-radius:8px; padding:6px 9px; }
+.dlg{ position:absolute; left:16px; right:16px; top:170px; background:#1d2129; border:1px solid #5a2a2a; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:9px; box-shadow:0 20px 40px rgba(0,0,0,.6); }
+.dlg h3{ margin:0; font:14px Silkscreen,var(--mono); color:#ff8a7e; font-weight:400; }
+.in2{ height:38px; border-radius:9px; background:#0c0e12; border:1px solid var(--ln); display:flex; align-items:center; padding:0 10px; font:600 13px var(--mono); }
+.bcard{ display:flex; flex-direction:column; gap:5px; padding:10px; background:var(--pn); border:1px solid var(--ln); border-radius:11px; }
+.bcard .t{ display:flex; gap:8px; align-items:center; }
+.ends{ font:600 10px var(--body); padding:1px 7px; border-radius:999px; background:#ff6b5c1f; color:#ff8a7e; border:1px solid #ff6b5c55; white-space:nowrap; }
+.ends.perm{ background:#ff3b3b; color:#fff; border-color:#ff3b3b; }
+.kk{ display:flex; gap:6px; }
+.kk span{ flex:1; text-align:center; padding:6px 0; border-radius:8px; font:600 11.5px var(--body); background:#0c0e12; border:1px solid var(--ln); color:var(--soft); }
+.kk span.u{ color:var(--teal); border-color:#19d3b055; }
+.seg2{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; font-size:11.5px; }
+.seg2 span{ flex:1; text-align:center; padding:5px 0; border-radius:6px; color:var(--mu); } .seg2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.srch{ height:36px; border-radius:9px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 10px; gap:8px; font-size:12.5px; color:var(--mu); }
+.srch svg{ width:14px; height:14px; stroke:var(--mu); fill:none; stroke-width:2; }
+.steps{ display:flex; gap:4px; } .steps i{ flex:1; height:4px; border-radius:2px; background:#2a2f3a; display:block; } .steps i.on{ background:#ff6b5c; }
+.disc{ background:#2b2118 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23392a1e'/%3E%3Crect x='3' y='4' width='3' height='3' fill='%23463325'/%3E%3Crect x='10' y='9' width='4' height='3' fill='%23302217'/%3E%3C/svg%3E"); background-size:24px; border-radius:8px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center; font:600 11px/1.45 var(--mono); color:#fff; text-shadow:1px 1px 0 #3f3f3f; box-shadow:inset 0 0 0 999px rgba(0,0,0,.45); }
+.disc .gy{ color:#aaaaaa; } .disc .rd2{ color:#ff5555; } .disc .mb{ margin-top:6px; width:80%; height:22px; background:#6b6b6b; border:1px solid #000; box-shadow:inset 0 1px 0 #a0a0a0; display:grid; place-items:center; font-size:10px; }
+.trow{ display:grid; grid-template-columns:24px 1fr auto; gap:8px; align-items:center; padding:7px 2px; border-top:1px solid #20242d; font-size:12px; }
+.tbar{ height:3px; border-radius:2px; background:#2a2f3a; overflow:hidden; margin-top:3px; } .tbar i{ display:block; height:100%; background:#ff6b5c; }
+.grp{ font:600 10.5px var(--body); color:var(--mu); padding:4px 2px 0; }
+.sum{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; padding:10px; border-radius:10px; background:#ff3b3b10; border:1px solid #ff3b3b55; }
+.sum span:nth-child(odd){ color:var(--mu); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: mock-up set W, network bans</h1>
+    <p class="lede">Three looks for banning a player and the bans list (D255, D350 to D359): 1 hour, 1 day, 7 days, 30 days, custom or permanent; a reason the player sees (up to 160 characters) and an optional note only staff see; BAN asks twice (D357); the More › Bans page with ACTIVE and PAST, UNBAN with SURE? and EDIT. Admins and Owners ban; only the Owner bans staff. Opened from BAN in a player's sheet or card, or + BAN on the Bans page. Made-up names.</p>
+  </header>
+  <section><h2>A. A form, then type their name</h2>
+    <div class="card"><p>One sheet: length chips, the reason, the staff note, earlier bans in gold. BAN turns into SURE?; the second check asks for the player's name typed out before the red BAN key wakes up. The list is cards with the time left, UNBAN and EDIT.</p></div>
+    <div class="stage"><div><div class="ph" id="a1"></div><div class="cap">A1, the form, BAN tapped once (SURE?)</div></div><div><div class="ph" id="a2"></div><div class="cap">A2, the second check: type the name</div></div><div><div class="ph" id="a3"></div><div class="cap">A3, More › Bans</div></div></div></section>
+  <section><h2>B. Steps, a preview, hold to ban</h2>
+    <div class="card"><p>Three short steps (how long, why, check). The check page shows the screen the player will get when they try to join. BAN asks SURE?, then the key must be held down for two seconds. The list is compact rows with a bar for the time left.</p></div>
+    <div class="stage"><div><div class="ph" id="b1"></div><div class="cap">B1, step 2: the reason</div></div><div><div class="ph" id="b2"></div><div class="cap">B2, step 3: the preview, held halfway</div></div><div><div class="ph" id="b3"></div><div class="cap">B3, More › Bans</div></div></div></section>
+  <section><h2>C. One page, a summary to confirm</h2>
+    <div class="card"><p>The player's screen previewed live at the top while you fill the form under it. The first BAN (outlined) brings up a red summary (who, how long, when it ends, the reason) with YES, BAN VEXA: the second check is a different key in a different place, so a double tap cannot do both. The list is grouped by when bans end.</p></div>
+    <div class="stage"><div><div class="ph" id="c1"></div><div class="cap">C1, the form with the live preview</div></div><div><div class="ph" id="c2"></div><div class="cap">C2, the summary: the second check</div></div><div><div class="ph" id="c3"></div><div class="cap">C3, More › Bans, grouped</div></div></div></section>
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>W1. The look.</b> A: one form sheet and cards. B: three steps with a preview of the player's screen, and compact rows. C: one page with the live preview, and a list grouped by when bans end.</li>
+      <li><b>W2. The two checks</b> (any look can take any of these). First SURE?, then typing the player's name (A). First SURE?, then holding the key for two seconds (B). The outlined BAN, then a red summary with a different YES key (C).</li>
+      <li><b>W3. The preview of the player's screen.</b> Shown on the form, as in B and C. Or not shown (the text is fixed: D354).</li>
+    </ol></div></section>
+</div>
+<script>
+
+/* ---------- sample data ---------- */
+const SERVERS=[["BSP-Spawn",9],["Frostwarf",8],["Boulderbrook",6],["Moongrove",7],["Stormfall",4],["Sanctuary",2],["SafeRoom",0]];
+const T={wolves:{n:"Iron Wolves",c:"#FFAA00"},shade:{n:"Nightshade",c:"#AA00AA"},core:{n:"Deepcore",c:"#55FFFF"},none:{n:"No team",c:"#6b7180"}};
+const P=[
+ {n:"Kestrel_88",t:"wolves",s:"Frostwarf",d:"overworld",x:1412,y:71,z:-388,hp:20,ar:15,fd:18,xp:31,pg:42,ef:["Speed II 2:10"]},
+ {n:"BrickLayerTom",t:"wolves",s:"Frostwarf",d:"overworld",x:1440,y:64,z:-402,hp:9,ar:12,fd:6,xp:12,pg:88,tg:[["Supporter","#ffd23a"]]},
+ {n:"Mossy_Fen",t:"wolves",s:"Frostwarf",d:"nether",x:176,y:33,z:-49,hp:20,ar:20,fd:20,xp:44,pg:51,afk:14},
+ {n:"Vexa",t:"shade",s:"Moongrove",d:"overworld",x:-2210,y:12,z:905,hp:10,ar:8,fd:7,xp:7,pg:120,air:5,tg:[["Suspected cheater","#ff6b5c"]],notes:2,ef:["Night Vision 4:40","Haste II 0:55"]},
+ {n:"ObsidianOtter",t:"shade",s:"Moongrove",d:"overworld",x:-2190,y:64,z:880,hp:20,ar:18,fd:17,xp:23,pg:37},
+ {n:"Pixl",t:"shade",s:"Stormfall",d:"overworld",x:530,y:-41,z:1210,hp:4,ar:0,fd:3,xp:2,pg:64},
+ {n:"RuneSmith",t:"core",s:"BSP-Spawn",d:"overworld",x:12,y:80,z:-6,hp:20,ar:9,fd:20,xp:15,pg:29},
+ {n:"TallyHo",t:"core",s:"Boulderbrook",d:"overworld",x:-640,y:70,z:-1502,hp:18,ar:14,fd:12,xp:19,pg:45},
+ {n:"Juniper_K",t:"core",s:"Boulderbrook",d:"overworld",x:-655,y:58,z:-1490,hp:20,ar:16,fd:19,xp:27,pg:40,ef:["Night Vision 1:12"]},
+ {n:"Newbie_Sam",t:"none",s:"BSP-Spawn",d:"overworld",x:3,y:80,z:14,hp:20,ar:0,fd:20,xp:0,pg:71,tg:[["New","#7fb2ff"]]},
+ {n:"Glimmer",t:"none",s:"BSP-Spawn",d:"overworld",x:-20,y:79,z:2,hp:20,ar:4,fd:15,xp:3,pg:33,afk:6},
+ {n:"Ash_Tree",t:"none",s:"Sanctuary",d:"overworld",x:88,y:65,z:120,hp:16,ar:10,fd:14,xp:9,pg:58},
+];
+const by=k=>P.filter(p=>p.t===k);
+
+/* ---------- pixel art ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+const ART={
+ heart:[".XX.XX.","XRRXRRX","XRWRRRX","XRRRRRX",".XRRRX.","..XRX..","...X..."],
+ armor:["XX...XX","XGXXXGX","XGGGGGX",".XGGGX.",".XGGGX.",".XGGGX.",".XXXXX."],
+ food:["...XXX.","..XBBBX",".XBBBBX",".XBBBX.","XWXXX..","WX.....","X......"],
+ air:[".XXXX.","XWBBBX","XBWBBX","XBBBBX","XBBBBX",".XXXX."]};
+const COL={X:"#1d0b0b",R:"#e23b3b",W:"#ffd9d9",G:"#c9ced8",B:"#b5651d"},AIRC={X:"#0c2a4a",W:"#e8f6ff",B:"#3a8ee0"};
+function px(kind,state,size){/* state: 1 full, .5 half, 0 empty */const a=ART[kind],h=a.length,w=a[0].length,c=document.createElement("canvas");c.width=w;c.height=h;c.className="px";c.style.width=size+"px";c.style.height=Math.round(size*h/w)+"px";
+  const g=c.getContext("2d");for(let y=0;y<h;y++)for(let x=0;x<w;x++){const ch=a[y][x];if(ch===".")continue;let col=(kind==="air"?AIRC:COL)[ch];
+    if(ch!=="X"&&(state===0||(state===.5&&x>=w/2)))col=kind==="heart"?"#3a1414":kind==="armor"?"#2c3038":kind==="food"?"#2e2218":"#16263a";
+    if(kind==="food"&&ch==="B")col=state===0||(state===.5&&x>=w/2)?"#2e2218":"#b5651d";
+    if(kind==="armor"&&ch==="G"&&state===0)col="#2c3038";g.fillStyle=col;g.fillRect(x,y,1,1);}return c;}
+function icons(kind,val,max,size,count){const d=document.createElement("div");d.className="stats";const n=count||10;
+  for(let i=0;i<n;i++){const v=val/ (max/n) - i;d.appendChild(px(kind,v>=1?1:v>=.5?.5:0,size));}return d;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ bell:'<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+ menu:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ tp:'<svg viewBox="0 0 24 24"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="3"/></svg>',
+ inv:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+ eye:'<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ kick:'<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17-5-5 5-5M5 12h11"/></svg>',
+ ban:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>',
+ back:'<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>',
+ x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+ loc:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:47</span><span>●●● 5G 82%</span></div>');
+function tabbar(on){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",3],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const total=SERVERS.reduce((a,s)=>a+s[1],0);
+function tags(p){return (p.tg||[]).map(([t,c])=>`<span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("")+(p.afk?`<span class="afk">AFK ${p.afk}m</span>`:"");}
+const where=p=>`${p.s} · ${p.d==="overworld"?"":p.d+" · "}${p.x}, ${p.y}, ${p.z}`;
+function bars(p,w){const hp=p.hp/20*100,ar=p.ar/20*100,fd=p.fd/20*100;const c=hp<=25?"#ff6b5c":"#e23b3b";
+  return h(`<div style="display:flex;flex-direction:column;gap:3px;width:${w}px"><div class="bar"><i style="width:${hp}%;background:${c}"></i></div><div class="bar"><i style="width:${ar}%;background:#c9ced8"></i></div><div class="bar"><i style="width:${fd}%;background:#b5651d"></i></div></div>`);}
+
+const V=P[3];
+function itemIcon(seed,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="px";c.style.width=c.style.height=(size||20)+"px";const g=c.getContext("2d"),r=rnd(seed);
+  const pal=[["#8a5a2b","#6b4420"],["#9aa3b5","#6b7180"],["#5fd3e0","#2a8a96"],["#e0c050","#a88a2a"],["#5aa04a","#3a7030"],["#c04040","#802a2a"],["#7a5ad0","#4a3a90"]][Math.floor(r()*7)];
+  const k=Math.floor(r()*3);if(k===0){g.fillStyle=pal[0];g.fillRect(1,1,6,6);g.fillStyle=pal[1];g.fillRect(1,5,6,2);g.fillRect(5,1,2,6);}
+  else if(k===1){g.fillStyle="#6b4420";for(let i=0;i<5;i++)g.fillRect(1+i,6-i,1,1);g.fillStyle=pal[0];g.fillRect(4,1,3,3);g.fillStyle=pal[1];g.fillRect(5,2,2,1);}
+  else{g.fillStyle=pal[0];g.fillRect(2,2,4,5);g.fillRect(3,1,2,1);g.fillStyle=pal[1];g.fillRect(2,5,4,2);}return c;}
+
+/* ---------- set W ---------- */
+function topW(f,title,who){f.appendChild(status());f.appendChild(h(`<div class="top"><div class="ico">${who?SV.x:SV.back}</div><div class="brand grow">${title}</div></div>`));
+  if(who){const w=h(`<div class="who2"><div class="grow"><div class="nm">Ban Vexa <span class="tag" style="background:#ff6b5c22;color:#ff6b5c;border:1px solid #ff6b5c55">Suspected cheater</span></div><div class="sub">online on Moongrove · 2 notes</div></div></div>`);w.prepend(headCanvas("Vexa",34));f.appendChild(w);}}
+const LENS=(on)=>h(`<div class="lens">${["1 hour","1 day","7 days","30 days","Custom","Permanent"].map(l=>`<span class="${l===on?"on":""}">${l}</span>`).join("")}</div>`);
+const REASON="X-ray: ore trails on Moongrove, three reports";
+function reason(){return h(`<div style="display:flex;flex-direction:column;gap:4px"><div class="lbl"><span>Reason (they see it)</span></div><div class="ta">${REASON}<span class="n">46/160</span></div></div>`);}
+function note(t){return h(`<div style="display:flex;flex-direction:column;gap:4px"><div class="lbl"><span>Note for staff (optional, never shown to them)</span></div><div class="ta note">${t||"Checked with Juniper_K; screenshots in the staff room 9 Nov."}</div></div>`);}
+const HIST=()=>h('<div class="hist">Banned 2 times before: 1 day (Sep, griefing), 7 days (Oct, x-ray).</div>');
+function disc(len){return h(`<div class="disc"><span class="gy">Failed to connect to the server</span><span style="margin-top:4px">Unable to connect to BSP-Spawn:</span><span class="rd2">You are banned from the Build Secure Protect network.</span><span>${REASON}</span><span class="gy">${len==="perm"?"This ban is permanent.":"Ends 17 Nov 2026 21:40 UTC (in 7 days)"}</span><div class="mb">Back to server list</div></div>`);}
+const BANS=[["Vexa","X-ray: ore trails on Moongrove, three reports","6 d 23 h",.98,"Juniper_K"],["GriefLord22","Burning the Frostwarf market","23 h",.95,"RuneSmith"],["Spamz","Advertising another server","2 h",.1,"Juniper_K"],["Dupe_Wizard","Duplicating items with a dank","permanent",1,"Mrgregles"]];
+(function(){const f=document.getElementById("a1");topW(f,"BAN",1);const pg=h('<div class="page"></div>');pg.appendChild(h('<div class="lbl"><span>How long</span></div>'));pg.appendChild(LENS("7 days"));
+  pg.appendChild(reason());pg.appendChild(note());pg.appendChild(HIST());pg.appendChild(h('<div class="btn sure">Sure? Ban Vexa for 7 days</div>'));pg.appendChild(h('<div class="sub" style="text-align:center">Tap again for the last check.</div>'));f.appendChild(pg);
+  const g=document.getElementById("a2");topW(g,"BAN",1);const p2=h('<div class="page"></div>');p2.appendChild(LENS("7 days"));p2.appendChild(reason());p2.appendChild(note());g.appendChild(p2);g.appendChild(h('<div class="dimmer"></div>'));
+  g.appendChild(h(`<div class="dlg"><h3>LAST CHECK</h3><div style="font-size:12.5px">Ban <b>Vexa</b> from the whole network for <b>7 days</b>? They leave the network now.</div><div class="lbl"><span>Type their name to go on</span></div><div class="in2">Vexa<span class="tl" style="margin-left:auto">✓</span></div><div class="btn red">Ban Vexa</div><div class="btn ghost">Cancel</div></div>`));
+  const p=document.getElementById("a3");topW(p,"BANS");const p3=h('<div class="page"></div>');p3.appendChild(h('<div class="seg2"><span class="on">Active 4</span><span>Past 31</span></div>'));
+  p3.appendChild(h(`<div style="display:flex;gap:6px"><div class="srch grow">${SV.search}Find a ban</div><div class="btn" style="width:76px;height:36px;font-size:12px;background:#ff3b3b;color:#fff">+ BAN</div></div>`));
+  BANS.forEach(([n,r,left,_,by])=>{const c=h(`<div class="bcard"><div class="t"><div class="grow"><div class="nm">${n}</div></div><span class="ends ${left==="permanent"?"perm":""}">${left==="permanent"?"permanent":"ends in "+left}</span></div><div style="font-size:12px">${r}</div><div class="sub">by ${by} · 10 Nov 21:40</div><div class="kk"><span class="u">Unban</span><span>Edit</span></div></div>`);c.querySelector(".t").prepend(headCanvas(n,26));p3.appendChild(c);});p.appendChild(p3);p.appendChild(tabbar("More"));})();
+(function(){const f=document.getElementById("b1");topW(f,"BAN · 2 OF 3",1);const pg=h('<div class="page"></div>');pg.appendChild(h('<div class="steps"><i class="on"></i><i class="on"></i><i></i></div>'));
+  pg.appendChild(h('<div class="sub">1. How long: <b class="rd">7 days</b> · change</div>'));pg.appendChild(reason());pg.appendChild(note());pg.appendChild(HIST());
+  pg.appendChild(h('<div style="display:flex;gap:6px;margin-top:auto;margin-bottom:12px"><div class="btn ghost" style="width:90px">Back</div><div class="btn grow">Next: check</div></div>'));f.appendChild(pg);
+  const g=document.getElementById("b2");topW(g,"BAN · 3 OF 3",1);const p2=h('<div class="page"></div>');p2.appendChild(h('<div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>'));
+  p2.appendChild(h('<div class="lbl"><span>What Vexa sees when they try to join</span></div>'));p2.appendChild(disc());
+  p2.appendChild(h('<div class="sub">Staff note: Checked with Juniper_K; screenshots in the staff room 9 Nov.</div>'));
+  p2.appendChild(h('<div class="btn" style="background:#3a1a1a;color:#fff;margin-top:6px"><i class="fill" style="width:55%"></i><span>Hold to ban Vexa · 1.1 s</span></div>'));p2.appendChild(h('<div class="sub" style="text-align:center">SURE? was tapped; now hold for two seconds.</div>'));g.appendChild(p2);
+  const p=document.getElementById("b3");topW(p,"BANS");const p3=h('<div class="page"></div>');p3.appendChild(h('<div class="seg2"><span class="on">Active 4</span><span>Past 31</span></div>'));
+  p3.appendChild(h(`<div style="display:flex;gap:6px"><div class="srch grow">${SV.search}Find a ban</div><div class="btn" style="width:76px;height:36px;font-size:12px;background:#ff3b3b;color:#fff">+ BAN</div></div>`));
+  const box=h('<div></div>');BANS.forEach(([n,r,left,frac,by])=>{const row=h(`<div class="trow"><div></div><div style="min-width:0"><div class="nm" style="font-size:12.5px">${n} <span class="sub" style="display:inline">· ${by}</span></div><div class="sub">${r}</div><div class="tbar"><i style="width:${frac*100}%;${left==="permanent"?"background:#ff3b3b":""}"></i></div></div><div style="text-align:right"><div class="mono" style="font-size:11px;${left==="permanent"?"color:#ff6b5c":""}">${left}</div><div class="tl" style="font-size:11px;font-weight:600">UNBAN</div></div></div>`);row.firstChild.appendChild(headCanvas(n,24));box.appendChild(row);});
+  p3.appendChild(box);p.appendChild(p3);p.appendChild(tabbar("More"));})();
+(function(){const f=document.getElementById("c1");topW(f,"BAN",1);const pg=h('<div class="page"></div>');pg.appendChild(disc("perm"));pg.appendChild(LENS("Permanent"));pg.appendChild(reason());pg.appendChild(note(" "));
+  pg.appendChild(h('<div class="btn redo">Ban Vexa</div>'));f.appendChild(pg);
+  const g=document.getElementById("c2");topW(g,"BAN",1);const p2=h('<div class="page"></div>');p2.appendChild(disc("perm"));p2.appendChild(LENS("Permanent"));p2.appendChild(HIST());
+  p2.appendChild(h(`<div class="sum"><span>Who</span><span><b>Vexa</b> (online on Moongrove: leaves now)</span><span>How long</span><span class="rd">Permanent</span><span>Reason</span><span>${REASON}</span><span>Note</span><span class="mu">none</span></div>`));
+  p2.appendChild(h('<div style="display:flex;gap:6px"><div class="btn ghost" style="width:96px">Cancel</div><div class="btn red grow">Yes, ban Vexa</div></div>'));g.appendChild(p2);
+  const p=document.getElementById("c3");topW(p,"BANS");const p3=h('<div class="page"></div>');p3.appendChild(h('<div class="seg2"><span class="on">Active 4</span><span>Past 31</span></div>'));
+  [["ENDING TODAY",[BANS[2]]],["THIS WEEK",[BANS[1],BANS[0]]],["PERMANENT",[BANS[3]]]].forEach(([g2,list])=>{p3.appendChild(h(`<div class="sect"><span>${g2}</span><span class="r">${list.length}</span></div>`));
+    list.forEach(([n,r,left,_,by])=>{const c=h(`<div class="bcard" style="padding:8px 10px"><div class="t"><div class="grow" style="min-width:0"><div class="nm" style="font-size:12.5px">${n}</div><div class="sub">${r}</div></div><span class="ends ${left==="permanent"?"perm":""}">${left==="permanent"?"for good":left}</span><span class="tl" style="font:600 11px var(--body)">⋯</span></div></div>`);c.querySelector(".t").prepend(headCanvas(n,24));p3.appendChild(c);});});
+  p.appendChild(p3);p.appendChild(tabbar("More"));})();
+</script>
+</body>
+</html>

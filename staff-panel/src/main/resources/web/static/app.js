@@ -16,6 +16,9 @@ function nav() {
     s.innerHTML = ICONS[t]; s.appendChild(el("span", null, t));
     s.addEventListener("click", () => { tab = t; render(); });
     side.appendChild(s);
+    // new chat while it is not on screen (D308): a red number for lines naming you or asking for staff, else a dot
+    const bd = t === "Chat" && typeof ChatView !== "undefined" ? ChatView.badge() : t === "Staff" && typeof StaffView !== "undefined" ? StaffView.badge() : null;
+    if (bd) { b.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); s.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); }
   }
 }
 
@@ -45,6 +48,28 @@ async function more(main) {
     const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); Graves.view(main, me); return;
   }
+  if (moreView === "find") {
+    const chosen = FindPlayer.chosen(); // an offline player open: back to the search, else back to More
+    const back = el("button", "btn sm ghost back", chosen ? "‹ Find a player" : "‹ More"); back.type = "button";
+    back.addEventListener("click", () => { if (chosen) FindPlayer.reset(); else moreView = "home"; render(); });
+    main.appendChild(back); FindPlayer.view(main); return;
+  }
+  if (moreView === "bans") {
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); Bans.view(main); return;
+  }
+  if (moreView === "pictures") {
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); await ItemsPage.view(main); return;
+  }
+  if (moreView === "tags") {
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); TagsPage.view(main); return;
+  }
+  if (moreView === "market" || moreView === "lottery") { // SU-52
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); if (moreView === "market") Market.view(main); else Lottery.view(main); return;
+  }
   if (moreView === "broadcast") {
     const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); Announce.view(main, live, me); return;
@@ -66,11 +91,41 @@ async function more(main) {
     moreView = "broadcast"; render();
   });
   menu.appendChild(b);
+  const fp = el("button", "item menuitem"); fp.type = "button";
+  const fg = el("div", "grow"); fg.appendChild(el("div", "nm", "Find a player")); fg.appendChild(el("div", "sub", "Anyone who has joined, online or not: items, graves, notes"));
+  fp.appendChild(fg); fp.appendChild(el("span", "mu", "›"));
+  fp.addEventListener("click", () => { moreView = "find"; render(); });
+  menu.appendChild(fp);
   const gr = el("button", "item menuitem"); gr.type = "button";
   const gg = el("div", "grow"); gg.appendChild(el("div", "nm", "Graves")); gg.appendChild(el("div", "sub", "A player's graves, online or not; Admins return them"));
   gr.appendChild(gg); gr.appendChild(el("span", "mu", "›"));
   gr.addEventListener("click", () => { moreView = "graves"; render(); });
-  menu.appendChild(gr); main.appendChild(menu);
+  menu.appendChild(gr);
+  const bn = el("button", "item menuitem"); bn.type = "button";
+  const bng = el("div", "grow"); bng.appendChild(el("div", "nm", "Bans")); bng.appendChild(el("div", "sub", "Who is banned from the network, past bans; Admins ban and lift"));
+  bn.appendChild(bng); bn.appendChild(el("span", "mu", "›"));
+  bn.addEventListener("click", () => { moreView = "bans"; Bans.reset(); render(); });
+  menu.appendChild(bn);
+  const ip = el("button", "item menuitem"); ip.type = "button";
+  const ipg = el("div", "grow"); ipg.appendChild(el("div", "nm", "Items")); ipg.appendChild(el("div", "sub", "The item pictures from an admin's game (/su icons)"));
+  ip.appendChild(ipg); ip.appendChild(el("span", "mu", "›"));
+  ip.addEventListener("click", () => { moreView = "pictures"; ItemsPage.reset(); render(); });
+  menu.appendChild(ip);
+  const tg = el("button", "item menuitem"); tg.type = "button";
+  const tgg = el("div", "grow"); tgg.appendChild(el("div", "nm", "Tags")); tgg.appendChild(el("div", "sub", me.rank === "MODERATOR" ? "The list of tags and who carries them" : "The list of tags: colours, names, typed by staff"));
+  tg.appendChild(tgg); if (me.rank === "MODERATOR") tg.appendChild(el("span", "rk ADMIN", "Admin edits")); tg.appendChild(el("span", "mu", "›"));
+  tg.addEventListener("click", () => { moreView = "tags"; render(); });
+  menu.appendChild(tg);
+  const mk = el("button", "item menuitem"); mk.type = "button";
+  const mkg = el("div", "grow"); mkg.appendChild(el("div", "nm", "Market")); mkg.appendChild(el("div", "sub", "The Market Board's lots and the Wanted Board's buy orders"));
+  mk.appendChild(mkg); mk.appendChild(el("span", "mu", "›"));
+  mk.addEventListener("click", () => { moreView = "market"; Market.reset(); render(); });
+  menu.appendChild(mk);
+  const lt = el("button", "item menuitem"); lt.type = "button";
+  const ltg = el("div", "grow"); ltg.appendChild(el("div", "nm", "Lottery")); ltg.appendChild(el("div", "sub", "The pot, who is in, the last wins" + (me.rank === "MODERATOR" ? "" : "; DRAW")));
+  lt.appendChild(ltg); if (me.rank === "MODERATOR") lt.appendChild(el("span", "rk ADMIN", "Admin draws")); lt.appendChild(el("span", "mu", "›"));
+  lt.addEventListener("click", () => { moreView = "lottery"; Lottery.reset(); render(); });
+  menu.appendChild(lt); main.appendChild(menu);
   if (me.rank !== "OWNER") return;
   main.appendChild(el("h2", null, "Staff accounts"));
   if (me.lockouts && me.lockouts.length) {
@@ -103,10 +158,10 @@ async function staffAccounts(area) {
     const [st, cls] = status(s, r.now);
     const last = s.lastLogin ? new Date(s.lastLogin).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "never";
     const tr = el("tr");
-    tr.appendChild(el("td", "nm", s.mcName)); const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); tr.appendChild(rk);
+    tr.appendChild(el("td", "nm", s.mcName)); const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) rk.appendChild(el("span", "pw", "ITEMS")); tr.appendChild(rk);
     tr.appendChild(el("td", "mu", s.email)); tr.appendChild(el("td", cls, st)); tr.appendChild(el("td", "mu", last));
     const m = el("td"); m.appendChild(menu(s, area)); tr.appendChild(m); table.appendChild(tr);
-    const it = el("div", "item"); const g = el("div", "grow"); const n = el("div", "nm", s.mcName + " "); n.appendChild(el("span", "rk " + s.rank, s.rankLabel));
+    const it = el("div", "item"); const g = el("div", "grow"); const n = el("div", "nm", s.mcName + " "); n.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) n.appendChild(el("span", "pw", "ITEMS"));
     g.appendChild(n); g.appendChild(el("div", "sub", s.email)); g.appendChild(el("div", "sub " + cls, st)); it.appendChild(g); it.appendChild(menu(s, area)); list.appendChild(it);
   });
   area.appendChild(table); area.appendChild(list);
@@ -119,13 +174,15 @@ function menu(s, area) {
   const b = el("button", null, "⋯"); b.type = "button"; b.title = "Actions"; const pop = el("div", "pop hidden");
   const acts = [];
   if (s.lockedUntil) acts.push(["Unlock now", "unlock"]);
-  acts.push([s.rank === "ADMIN" ? "Make Moderator" : "Make Admin", "rank"], ["Reset authenticator", "reset-code"], ["Reset whole login", "reset-login"], ["Remove", "remove", 1]);
+  acts.push([s.rank === "ADMIN" ? "Make Moderator" : "Make Admin", "rank"]);
+  if (s.rank === "MODERATOR") acts.push([s.itemsPower ? "May add and remove items ✓ (tap to take back)" : "May add and remove items", "items"]); // D335, D363
+  acts.push(["Reset authenticator", "reset-code"], ["Reset whole login", "reset-login"], ["Remove", "remove", 1]);
   acts.forEach(([label, action, danger]) => {
     const x = el("button", danger ? "danger" : "", label); x.type = "button";
     let armed = 0;
     x.addEventListener("click", async () => {
       if (Date.now() - armed > 3000) { armed = Date.now(); x.textContent = label + ": sure?"; return; } // two taps within 3 s
-      const r = await api("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN" });
+      const r = await api("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN", on: !s.itemsPower });
       if (!r.ok) { alert(r.message); return; }
       if (r.link) showLink(area, "New setup link for " + s.mcName + ", valid 15 minutes and once:", r.link);
       else await staffAccounts(area);
@@ -166,22 +223,55 @@ function showLink(area, text, link) {
 }
 
 async function render() {
-  nav();
-  const main = $("main"); main.textContent = "";
+  const main = $("main");
+  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); main.textContent = "";
+  main.classList.toggle("chatmain", tab === "Chat");
+  main.classList.toggle("staffmain", tab === "Staff");
   if (tab !== "More") moreView = "home";
+  placeChat();
+  nav();
   if (tab === "Players") { Players.view(main, live); Players.detail(live); }
-  else { Players.leave(); if (tab === "More") await more(main); else main.appendChild(el("div", "note", tab + " is not part of the panel yet.")); }
+  else {
+    Players.leave();
+    if (tab === "More") await more(main);
+    else if (tab === "Staff") StaffView.mount(main);
+    else if (tab === "Map") MapView.mount(main); // SU-47
+    else if (tab !== "Chat") main.appendChild(el("div", "note", tab + " is not part of the panel yet."));
+  }
 }
+
+// Where the chat is drawn (D292, D294): the Chat tab itself; else, on a computer, the column on the right (over 1300 px
+// always, 900 to 1300 px behind the CHAT button); on a phone nowhere (the tab's badge counts new lines).
+let chatOpen = false;
+function placeChat() {
+  const col = $("chatcol"), wide = matchMedia("(min-width: 1300px)").matches, mid = matchMedia("(min-width: 900px)").matches;
+  document.body.classList.toggle("chattab", tab === "Chat");
+  col.classList.toggle("open", mid && !wide && chatOpen && tab !== "Chat");
+  $("chatbtn").classList.toggle("on", chatOpen);
+  if (tab === "Chat") { ChatView.unmount(col); col.textContent = ""; ChatView.mount($("main")); return; }
+  if (wide || (mid && chatOpen)) ChatView.mount(col);
+  else { ChatView.unmount(col); col.textContent = ""; }
+}
+let resizing = 0;
+addEventListener("resize", () => { clearTimeout(resizing); resizing = setTimeout(() => { placeChat(); nav(); }, 150); });
+
+// a name tapped in chat opens that player's sheet (D304)
+function openPlayerSheet(id) { tab = "Players"; Players.open(id); render(); }
 
 // Redraws the Players tab in place: the scroll position, the search box's focus and caret, and an open player kept.
 // the Graves key in a player's sheet or card opens the Graves page for them (D297)
 function openGraves(name) { tab = "More"; moreView = "graves"; render().then(() => Graves.look(name)); }
+// the market line in a player's sheet opens the market filtered to them (D405, D415 R2)
+function openMarket(p) { tab = "More"; moreView = "market"; Market.forPlayer(p); render(); }
 
 const App = {
   refresh() {
+    if (tab === "More" && moreView === "find") { App.refreshMore(); return; } // an offline player's items or notes arrived (SU-39)
+    if (tab === "Map") { MapView.redraw(); return; } // the map's card and list (SU-47); the map itself is never redrawn
     if (tab !== "Players") return;
     const main = $("main"), active = document.activeElement;
-    const keep = active && (active.classList.contains("search") ? ".search" : active.classList.contains("reason") ? ".reason" : null);
+    const keep = active && (active.classList.contains("search") ? ".search" : active.classList.contains("reason") ? ".reason" : active.classList.contains("noteinput") ? ".noteinput" : active.classList.contains("additem") ? ".additem" : active.classList.contains("addcount") ? ".addcount" : active.classList.contains("pickq") ? ".pickq" : active.classList.contains("tpq") ? ".tpq" : active.classList.contains("tpx") ? ".tpx" : active.classList.contains("tpy") ? ".tpy" : active.classList.contains("tpz") ? ".tpz" : active.classList.contains("banreason") ? ".banreason" : active.classList.contains("bannote") ? ".bannote"
+      : active.classList.contains("bandays") ? ".bandays" : active.classList.contains("banhours") ? ".banhours" : null);
     const caret = keep ? active.selectionStart : 0, sy = window.scrollY, my = main.scrollTop;
     nav(); main.textContent = ""; Players.view(main, live); Players.detail(live);
     window.scrollTo(0, sy); main.scrollTop = my;
@@ -195,14 +285,29 @@ const App = {
 
 // The live feed. The browser retries by itself after a network error, but not after a refusal (an ended login, the
 // Cloudflare session running out, too many pages): then the page says so, checks why and reconnects or goes to log in (audit).
+let connected = false;
 function connect() {
   const es = new EventSource("/api/live");
-  es.addEventListener("open", () => offline(false));
+  es.addEventListener("open", () => {
+    offline(false);
+    if (connected) { ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); } // what was sent while the page was away (audit)
+    connected = true;
+  });
+  let servers = "";
   es.addEventListener("live", (e) => {
     live = JSON.parse(e.data);
     staffOnline();
-    App.refresh();
+    Lottery.onLive(live); // a draw counting somewhere (D411)
+    if (tab === "Map") MapView.live(live); else App.refresh();
+    const now = live.servers.map((s) => s.server + ":" + s.count).join(",");
+    if (now !== servers) { servers = now; ChatView.redraw(); } // the server chips and the TO list
   });
+  es.addEventListener("chat", (e) => JSON.parse(e.data).lines.forEach((l) => ChatView.incoming(l)));
+  es.addEventListener("room", (e) => StaffView.room(JSON.parse(e.data)));
+  es.addEventListener("messages", () => StaffView.messagesChanged());
+  es.addEventListener("notes", (e) => Notes.changed(JSON.parse(e.data).player));
+  es.addEventListener("tags", () => Tags.changed());
+  es.addEventListener("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
   es.addEventListener("ended", () => { es.close(); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
   es.addEventListener("replaced", () => { es.close(); replaced(); });
@@ -238,6 +343,12 @@ async function recheck() {
 (async () => {
   me = await api("/api/me");
   const m = $("me"); m.textContent = ""; m.appendChild(el("span", "nm", me.mcName + " ")); m.appendChild(el("span", "rk " + me.rank, me.rankLabel));
+  if (me.rank === "MODERATOR" && me.itemsPower) m.appendChild(el("span", "pw", "ITEMS"));
+  $("chatbtn").addEventListener("click", () => { chatOpen = !chatOpen; placeChat(); });
+  await Tags.load();
+  Pictures.load().then((c) => { if (c) App.refresh(); }); // item pictures and names (SU-41), when there are any
   await render();
+  ChatView.start();
+  StaffView.start();
   connect();
 })();

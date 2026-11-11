@@ -25,7 +25,7 @@ import java.util.Properties;
 public record PanelConfig(String listenHost, int listenPort, String publicUrl, String teamDomain, String aud,
                           String dbHost, int dbPort, String dbName, String dbUser, String dbPassword, boolean dbSsl, String tablePrefix,
                           String redisHost, int redisPort, String redisUser, String redisPassword, String redisChannel,
-                          byte[] secretKey, byte[] actionKey) {
+                          byte[] secretKey, byte[] actionKey, String mapRoot) {
     public static final String FILE = "panel.properties";
 
     private static final String ACTION_KEY_LINES = """
@@ -45,7 +45,7 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
             # The address staff open, exactly as in the browser (no slash at the end).
             publicUrl=https://staff.buildsecureprotect.com
 
-            # Cloudflare Access (Zero Trust > Access > Applications > this application):
+            # Cloudflare Access (Zero Trust > Access controls > Applications > this application > Additional settings):
             # the team domain, like bsp.cloudflareaccess.com, and the application's "Application Audience (AUD) Tag".
             cloudflare.teamDomain=
             cloudflare.aud=
@@ -65,6 +65,10 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
             redis.username=
             redis.password=
             redis.channel=network
+
+            # The staff map (BlueMap): the folder of BlueMap's web files (its webroot, holding index.html and maps/), mounted
+            # read-only from BlueMap's own server. Empty: the Map tab says the map is not set up.
+            map.root=
 
             # The panel's own key, made on the first start. Never share it; keep it with this file.
             secretKey=%s
@@ -127,7 +131,8 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
                 p.getProperty("database.user", "bsp").trim(), p.getProperty("database.password", ""), Boolean.parseBoolean(p.getProperty("database.ssl", "false").trim()),
                 p.getProperty("database.tablePrefix", "bsp_su_").trim(),
                 p.getProperty("redis.host", "localhost").trim(), number(p, "redis.port", 6379), p.getProperty("redis.username", "").trim(),
-                p.getProperty("redis.password", ""), p.getProperty("redis.channel", "network").trim(), key, actionKey);
+                p.getProperty("redis.password", ""), p.getProperty("redis.channel", "network").trim(), key, actionKey,
+                p.getProperty("map.root", "").trim());
     }
 
     /** The issuer Cloudflare writes in its tokens. */
@@ -173,6 +178,6 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
     @Override
     public String toString() {
         return "panel on " + listenHost + ":" + listenPort + " for " + publicUrl + ", Cloudflare team " + teamDomain + ", database " + dbHost + ":" + dbPort + "/" + dbName
-                + ", Redis " + redisHost + ":" + redisPort + " channel " + webChannel();
+                + ", Redis " + redisHost + ":" + redisPort + " channel " + webChannel() + (mapRoot.isEmpty() ? ", no map" : ", map from " + mapRoot);
     }
 }

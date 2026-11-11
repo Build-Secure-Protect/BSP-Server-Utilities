@@ -16,7 +16,7 @@ public final class ServerUtilsNetworkConfig {
     public static final String FILE = "bsp_server_utilities-network.toml";
 
     public static final ForgeConfigSpec SPEC;
-    public static final ForgeConfigSpec.ConfigValue<String> WEB_ACTION_KEY;
+    public static final ForgeConfigSpec.ConfigValue<String> WEB_ACTION_KEY, WEB_BAN_APPEAL;
     public static final ForgeConfigSpec.ConfigValue<String> DB_HOST, DB_DATABASE, DB_USER, DB_PASSWORD, DB_TABLE_PREFIX, REDIS_HOST, REDIS_USERNAME, REDIS_PASSWORD;
     public static final ForgeConfigSpec.IntValue DB_PORT, REDIS_PORT;
     public static final ForgeConfigSpec.BooleanValue DB_SSL, WEB_ENABLED;
@@ -53,6 +53,8 @@ public final class ServerUtilsNetworkConfig {
         WEB_ACTION_KEY = b.comment("The panel's action key (actionKey in its panel.properties; its console's action-key prints it).",
                 "Without it this server refuses every action from the panel (kicks, announcements). Keep it secret: anyone with it can kick players.")
                 .define("actionKey", "");
+        WEB_BAN_APPEAL = b.comment("A line added to the screen a banned player sees, such as where to appeal (\"Appeal on our Discord: discord.gg/...\").",
+                "Empty: no line. Use the same on every server.").define("banAppeal", "");
         b.pop();
         SPEC = b.build();
     }

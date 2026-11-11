@@ -27,7 +27,8 @@ import java.util.concurrent.TimeUnit;
  * {@code status} and {@code stop}.
  *
  * <p>{@code --demo} starts a panel to look at on this computer only (127.0.0.1): made-up servers and players, records in
- * memory, no Cloudflare, nothing that reaches a game server. It never reads {@code panel.properties}.
+ * memory, no Cloudflare, nothing that reaches a game server. It never reads {@code panel.properties}. {@code --demo <port>
+ * <folder>} also serves a BlueMap web folder at {@code /map/}.
  */
 public final class Main {
     private Main() {
@@ -43,8 +44,10 @@ public final class Main {
         Feed feed;
         Runnable stopFeed;
         com.mrgregles.bsp_staff_panel.act.Actions actions;
-        String actionKey;
+        com.mrgregles.bsp_staff_panel.chat.Chat chat;
+        String actionKey, mapRoot;
         if (demo) {
+            mapRoot = args.length > 2 ? args[2] : ""; // --demo <port> <BlueMap web folder>: a real map beside the made-up players
             store = new MemoryStore();
             box = new SecretBox(SecretBox.newKey());
             host = "127.0.0.1";
@@ -54,6 +57,12 @@ public final class Main {
             feed = new Feed(System::currentTimeMillis);
             stopFeed = Demo.feed(feed);
             actions = Demo.actions();
+            chat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, null, System::currentTimeMillis);
+            Runnable stopDemo = stopFeed, stopChat = Demo.chat(store);
+            stopFeed = () -> {
+                stopDemo.run();
+                stopChat.run();
+            };
             actionKey = "(demo)";
         } else {
             PanelConfig c;
@@ -65,6 +74,7 @@ public final class Main {
                 return;
             }
             System.out.println("Starting the " + c);
+            mapRoot = c.mapRoot();
             store = new JdbcStore(c.dbHost(), c.dbPort(), c.dbName(), c.dbUser(), c.dbPassword(), c.dbSsl(), c.tablePrefix());
             box = new SecretBox(c.secretKey());
             host = c.listenHost();
@@ -95,10 +105,12 @@ public final class Main {
             actionKey = java.util.Base64.getEncoder().encodeToString(c.actionKey());
             Feed signedFeed = new Feed(System::currentTimeMillis, c.actionKey()); // only what the game servers signed
             feed = signedFeed;
+            com.mrgregles.bsp_staff_panel.chat.Chat signedChat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, c.actionKey(), System::currentTimeMillis);
+            chat = signedChat;
             java.util.concurrent.atomic.AtomicLong lastRedis = new java.util.concurrent.atomic.AtomicLong();
             RedisListener redis = new RedisListener(c.redisHost(), c.redisPort(), c.redisUser(), c.redisPassword(), c.webChannel(),
                     m -> {
-                        if (!acts.acceptMessage(m) && signedFeed.acceptMessage(m)) {
+                        if (!signedChat.acceptMessage(m) && !acts.acceptMessage(m) && signedFeed.acceptMessage(m)) {
                             lastRedis.set(System.currentTimeMillis());
                         }
                     }).start();
@@ -125,13 +137,136 @@ public final class Main {
         }
         store.init();
         Auth auth = new Auth(store, box, System::currentTimeMillis);
-        PanelServer server = new PanelServer(host, port, publicUrl, gate, auth, store, feed, System::currentTimeMillis).withActions(actions).start();
+        com.mrgregles.bsp_staff_panel.talk.StaffTalk talk = new com.mrgregles.bsp_staff_panel.talk.StaffTalk(store, System::currentTimeMillis);
+        com.mrgregles.bsp_staff_panel.notes.PlayerNotes notes = new com.mrgregles.bsp_staff_panel.notes.PlayerNotes(store, System::currentTimeMillis);
+        com.mrgregles.bsp_staff_panel.items.ItemPictures pictures = new com.mrgregles.bsp_staff_panel.items.ItemPictures(store);
+        if (demo) {
+            Demo.pictures(store); // made-up item pictures, as an admin's /su icons would store them
+            Demo.bans(store);
+        }
+        final com.mrgregles.bsp_staff_panel.act.Actions marketActions = actions;
+        PanelServer server = new PanelServer(host, port, publicUrl, gate, auth, store, feed, System::currentTimeMillis).withActions(actions).withChat(chat).withTalk(talk)
+                .withNotes(notes).withPictures(pictures).withMap(mapRoot.isEmpty() ? null : Path.of(mapRoot))
+                .withMarket(new com.mrgregles.bsp_staff_panel.market.MarketDesk(feed, () -> marketActions, System::currentTimeMillis)).start();
+        if (!mapRoot.isEmpty() && !java.nio.file.Files.isRegularFile(Path.of(mapRoot, "index.html"))) {
+            System.out.println("The map's folder " + mapRoot + " holds no index.html yet: BlueMap writes it on its first start (or check the mount).");
+        }
+        Runnable stopCounts = notesToGame(feed, notes, actions), stopBefore = stopFeed;
+        stopFeed = () -> {
+            stopCounts.run();
+            stopBefore.run();
+        };
+        Runnable stopChat = chatPolling(chat, talk, pictures), stopRest = stopFeed;
+        stopFeed = () -> {
+            stopChat.run();
+            stopRest.run();
+        };
         System.out.println("BSP staff panel listening on " + host + ":" + server.port() + " for " + publicUrl);
         if (demo) {
             Auth.NewLink l = auth.createOwner(Demo.EMAIL, "Demo_Owner");
+            Demo.talk(store, l.account());
             System.out.println("DEMO: made-up data, nothing reaches a game server. Set up the demo Owner at " + publicUrl + "/setup#" + l.token());
         }
         console(auth, store, publicUrl, server, stopFeed, actionKey);
+    }
+
+    /**
+     * The chat table read every 3 seconds for lines Redis did not bring (SU-36), and every hour chat, staff room lines and
+     * read messages older than 30 days dropped (D263, D316).
+     */
+    private static Runnable chatPolling(com.mrgregles.bsp_staff_panel.chat.Chat chat, com.mrgregles.bsp_staff_panel.talk.StaffTalk talk,
+                                        com.mrgregles.bsp_staff_panel.items.ItemPictures pictures) {
+        ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "panel-chat");
+            t.setDaemon(true);
+            return t;
+        });
+        java.util.concurrent.atomic.AtomicReference<String> lastError = new java.util.concurrent.atomic.AtomicReference<>("");
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                chat.poll();
+                lastError.set("");
+            } catch (Exception e) {
+                if (!String.valueOf(e.getMessage()).equals(lastError.getAndSet(String.valueOf(e.getMessage())))) {
+                    System.err.println("[panel] reading the chat table: " + e.getMessage());
+                }
+            }
+        }, 0, 3, TimeUnit.SECONDS);
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                int gone = chat.prune();
+                int[] staff = talk.prune(); // the staff room and read messages, 30 days (D316)
+                if (gone + staff[0] + staff[1] > 0) {
+                    System.out.println("[panel] dropped as older than 30 days: " + gone + " chat lines, " + staff[0] + " staff room lines, " + staff[1] + " read messages.");
+                }
+            } catch (Exception e) {
+                System.err.println("[panel] dropping old chat: " + e.getMessage());
+            }
+        }, 1, 60, TimeUnit.MINUTES);
+        java.util.concurrent.atomic.AtomicReference<String> lastPictures = new java.util.concurrent.atomic.AtomicReference<>("");
+        ScheduledExecutorService pics = Executors.newSingleThreadScheduledExecutor(r -> { // its own thread: a big export never holds up chat (audit)
+            Thread t = new Thread(r, "panel-pictures");
+            t.setDaemon(true);
+            return t;
+        });
+        pics.scheduleWithFixedDelay(() -> { // the newest item pictures (SU-41): checked every minute, read when new
+            try {
+                pictures.refresh();
+                String p = pictures.problem();
+                if (!p.isEmpty() && !p.equals(lastPictures.getAndSet(p))) {
+                    System.err.println("[panel] " + p);
+                }
+            } catch (Exception e) {
+                if (!String.valueOf(e.getMessage()).equals(lastPictures.getAndSet(String.valueOf(e.getMessage())))) {
+                    System.err.println("[panel] reading the item pictures: " + e.getMessage());
+                }
+            }
+        }, 0, 60, TimeUnit.SECONDS);
+        return () -> {
+            s.shutdownNow();
+            pics.shutdownNow();
+        };
+    }
+
+    /**
+     * Each online player's notes count, with the newest's author and time, to every game server (D332): a signed notice
+     * {@code web_notes} about every 30 seconds, and within a second of a note being added or deleted. Staff in game see it
+     * when they hover the player on the CLIENTS or STAFF tab (D321).
+     */
+    private static Runnable notesToGame(Feed feed, com.mrgregles.bsp_staff_panel.notes.PlayerNotes notes, com.mrgregles.bsp_staff_panel.act.Actions actions) {
+        ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "panel-notes");
+            t.setDaemon(true);
+            return t;
+        });
+        java.util.concurrent.atomic.AtomicBoolean changed = new java.util.concurrent.atomic.AtomicBoolean(true);
+        java.util.concurrent.atomic.AtomicLong last = new java.util.concurrent.atomic.AtomicLong();
+        notes.onNotes(p -> changed.set(true));
+        s.scheduleWithFixedDelay(() -> {
+            long now = System.currentTimeMillis();
+            if (!changed.get() && now - last.get() < 30_000L) {
+                return;
+            }
+            try {
+                java.util.Map<String, String> online = new java.util.HashMap<>();
+                feed.json().getAsJsonArray("players").forEach(p -> online.put(p.getAsJsonObject().get("id").getAsString(), p.getAsJsonObject().get("name").getAsString()));
+                if (online.isEmpty()) {
+                    return;
+                }
+                com.google.gson.JsonObject counts = notes.counts(new java.util.ArrayList<>(online.keySet()));
+                counts.entrySet().forEach(e -> e.getValue().getAsJsonObject().addProperty("name", online.get(e.getKey()))); // the STAFF tab finds staff by name
+                com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+                o.addProperty("type", "web_notes"); // never read as an action, which carries the same signature
+                o.addProperty("v", 1);
+                o.add("counts", counts);
+                actions.notice("web_notes", o);
+                changed.set(false);
+                last.set(now);
+            } catch (Exception e) {
+                System.err.println("[panel] sending the notes counts: " + e.getMessage());
+            }
+        }, 2, 1, TimeUnit.SECONDS);
+        return s::shutdownNow;
     }
 
     private static void console(Auth auth, PanelStore store, String publicUrl, PanelServer server, Runnable stopFeed, String actionKey) throws Exception {

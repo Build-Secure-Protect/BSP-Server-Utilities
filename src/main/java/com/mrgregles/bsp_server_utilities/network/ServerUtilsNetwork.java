@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "5";
+    private static final String PROTOCOL = "6"; // 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -145,6 +145,25 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AfkAnswerPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AfkAnswerPacket::encode).decoder(AfkAnswerPacket::decode)
                 .consumerMainThread(AfkAnswerPacket::handle).add();
+        // The staff web panel's notes counts on hover (D321, protocol 6).
+        CHANNEL.messageBuilder(NotesCountPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(NotesCountPacket::encode).decoder(NotesCountPacket::decode)
+                .consumerMainThread(NotesCountPacket::handle).add();
+        // The staff web panel's item pictures from an admin's game (SU-41, D340, D373).
+        CHANNEL.messageBuilder(IconsAskPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(IconsAskPacket::encode).decoder(IconsAskPacket::decode)
+                .consumerMainThread(IconsAskPacket::handle).add();
+        CHANNEL.messageBuilder(IconsBeginPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(IconsBeginPacket::encode).decoder(IconsBeginPacket::decode)
+                .consumerMainThread(IconsBeginPacket::handle).add();
+        CHANNEL.messageBuilder(IconsPartPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(IconsPartPacket::encode).decoder(IconsPartPacket::decode)
+                .consumerMainThread(IconsPartPacket::handle).add();
+    }
+
+    /** Client to server. */
+    public static void sendToServer(Object packet) {
+        CHANNEL.sendToServer(packet);
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

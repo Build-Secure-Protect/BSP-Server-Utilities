@@ -307,9 +307,13 @@ final class ClientsTab {
         List<Line> lines = lines();
         int visible = (BOX_H - 4) / ROW;
         listScroll = Math.max(0, Math.min(listScroll, Math.max(0, lines.size() - visible)));
+        AdminClientsPacket.PlayerRow hovered = null;
         for (int i = 0; i < visible && listScroll + i < lines.size(); i++) {
             Line l = lines.get(listScroll + i);
             int ry = ly + 2 + i * ROW;
+            if (l.player() != null && mx >= lx && mx < lx + LEFT_W && my >= ry && my < ry + ROW) {
+                hovered = l.player();
+            }
             if (l.header() != null) {
                 Ui.text(g, font, l.header().toUpperCase(Locale.ROOT), lx + 5, ry + 3, Ui.MUTED, TINY);
             } else if (l.player() != null) {
@@ -357,6 +361,9 @@ final class ClientsTab {
         }
         if (data != null && data.rows().isEmpty()) {
             Ui.text(g, font, Ui.fit(font, Tr.t("clients.nobody"), LEFT_W - 10, TINY), lx + 5, ly + 2 + ROW + 3, Ui.MUTED, TINY);
+        }
+        if (hovered != null) {
+            ClientNotes.hover(g, font, hovered.id(), hovered.name(), mx, my); // the staff web panel's notes (D321)
         }
     }
 

@@ -49,6 +49,8 @@ public final class Actions {
     private final java.util.concurrent.Semaphore busy = new java.util.concurrent.Semaphore(4);
     private final Map<String, java.util.ArrayDeque<Long>> recent = new ConcurrentHashMap<>();
     public static final int PER_MINUTE = 10;
+    /** Reads that change nothing (a player's items, D337: every 15 s while a sheet is open) have their own allowance. */
+    public static final int READS_PER_MINUTE = 30;
 
     public Actions(byte[] key, Bus bus, LongSupplier clock) {
         this(key, bus, clock, WAIT_SECONDS);
@@ -79,51 +81,92 @@ public final class Actions {
      * @param fields the action's own fields: {@code action} and what it needs
      */
     public Answer ask(String server, String by, String rank, JsonObject fields) {
+        return askAll(java.util.List.of(server), by, rank, fields).get(server);
+    }
+
+    /**
+     * The same action to several servers at once (a chat line to the network, D313), counted as one action for the limits;
+     * each server's answer by its name, all within {@link #WAIT_SECONDS}.
+     */
+    public Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields) {
+        return askAll(servers, by, rank, fields, by, PER_MINUTE, "actions");
+    }
+
+    /** A read that changes nothing on the game server (SU-39), counted apart from actions, {@link #READS_PER_MINUTE} a minute. */
+    public Answer read(String server, String by, String rank, JsonObject fields) {
+        return askAll(java.util.List.of(server), by, rank, fields, "read:" + by, READS_PER_MINUTE, "reads").get(server);
+    }
+
+    private Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields, String budget, int perMinute, String what) {
         long now = clock.getAsLong();
-        java.util.ArrayDeque<Long> mine = recent.computeIfAbsent(by, k -> new java.util.ArrayDeque<>());
+        Map<String, Answer> out = new java.util.LinkedHashMap<>();
+        java.util.ArrayDeque<Long> mine = recent.computeIfAbsent(budget, k -> new java.util.ArrayDeque<>());
         synchronized (mine) {
             while (!mine.isEmpty() && mine.peekFirst() < now - 60_000L) {
                 mine.pollFirst();
             }
-            if (mine.size() >= PER_MINUTE) {
-                return new Answer(false, "That is " + PER_MINUTE + " actions in a minute: wait a moment.");
+            if (mine.size() >= perMinute) {
+                servers.forEach(s -> out.put(s, new Answer(false, "That is " + perMinute + " " + what + " in a minute: wait a moment.")));
+                return out;
             }
             mine.addLast(now);
         }
         if (!busy.tryAcquire()) {
-            return new Answer(false, "The panel is waiting on other actions; try again in a moment.");
+            servers.forEach(s -> out.put(s, new Answer(false, "The panel is waiting on other actions; try again in a moment.")));
+            return out;
         }
+        Map<String, String> ids = new java.util.LinkedHashMap<>();
         try {
-            return send(server, by, rank, fields, now);
+            for (String server : servers) {
+                String id = UUID.randomUUID().toString();
+                JsonObject a = new JsonObject();
+                a.addProperty("v", 1);
+                a.addProperty("id", id);
+                a.addProperty("at", now);
+                a.addProperty("by", by);
+                a.addProperty("rank", rank);
+                a.addProperty("server", server);
+                for (Map.Entry<String, JsonElement> e : fields.entrySet()) {
+                    a.add(e.getKey(), e.getValue());
+                }
+                waiting.put(id, new CompletableFuture<>());
+                ids.put(server, id);
+                try {
+                    bus.send(id, now, KIND_ACTION, sign(key, a.toString()));
+                } catch (Exception e) {
+                    waiting.remove(id).complete(new Answer(false, "The request could not be sent: " + e.getMessage()));
+                    out.put(server, new Answer(false, "The request could not be sent: " + e.getMessage()));
+                }
+            }
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(waitSeconds);
+            for (Map.Entry<String, String> e : ids.entrySet()) {
+                if (out.containsKey(e.getKey())) {
+                    continue;
+                }
+                CompletableFuture<Answer> f = waiting.get(e.getValue());
+                try {
+                    out.put(e.getKey(), f.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+                } catch (java.util.concurrent.TimeoutException t) {
+                    out.put(e.getKey(), new Answer(false, "No answer from " + e.getKey() + " in " + waitSeconds + " seconds. It may still have happened (answers are lost while Redis is down): check the LOG tab in game before trying again."));
+                } catch (Exception x) {
+                    out.put(e.getKey(), new Answer(false, "The request could not be sent: " + x.getMessage()));
+                }
+            }
+            return out;
         } finally {
+            ids.values().forEach(waiting::remove);
             busy.release();
         }
     }
 
-    private Answer send(String server, String by, String rank, JsonObject fields, long now) {
-        String id = UUID.randomUUID().toString();
-        JsonObject a = new JsonObject();
-        a.addProperty("v", 1);
-        a.addProperty("id", id);
-        a.addProperty("at", now);
-        a.addProperty("by", by);
-        a.addProperty("rank", rank);
-        a.addProperty("server", server);
-        for (Map.Entry<String, JsonElement> e : fields.entrySet()) {
-            a.add(e.getKey(), e.getValue());
-        }
-        CompletableFuture<Answer> f = new CompletableFuture<>();
-        waiting.put(id, f);
-        try {
-            bus.send(id, now, KIND_ACTION, sign(key, a.toString()));
-            return f.get(waitSeconds, TimeUnit.SECONDS);
-        } catch (java.util.concurrent.TimeoutException e) {
-            return new Answer(false, "No answer from " + server + " in " + waitSeconds + " seconds. It may still have happened (answers are lost while Redis is down): check the LOG tab in game before trying again.");
-        } catch (Exception e) {
-            return new Answer(false, "The request could not be sent: " + e.getMessage());
-        } finally {
-            waiting.remove(id);
-        }
+    /**
+     * A signed notice for every game server that waits for no answer (the notes counts, D332): the same signature as an
+     * action, sent through the same bus.
+     */
+    public void notice(String kind, JsonObject json) throws Exception {
+        long now = clock.getAsLong();
+        json.addProperty("at", now);
+        bus.send(UUID.randomUUID().toString(), now, kind, sign(key, json.toString()));
     }
 
     /** A message from the web channel; true when it was an answer to one of ours. */

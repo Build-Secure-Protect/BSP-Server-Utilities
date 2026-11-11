@@ -309,6 +309,57 @@ public final class Storage {
 
     private final java.util.concurrent.atomic.AtomicReference<Object[]> webRow = new java.util.concurrent.atomic.AtomicReference<>();
 
+    /** At most this many chat lines wait for the database; more while it is slow or away are dropped and counted ({@link #chatDropped()}). */
+    public static final int MAX_CHAT_WAITING = 2000;
+    private final java.util.concurrent.ConcurrentLinkedQueue<StorageBackend.WebChat> chatRows = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private final java.util.concurrent.atomic.AtomicInteger chatWaiting = new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicBoolean chatQueued = new java.util.concurrent.atomic.AtomicBoolean();
+    private volatile long chatDropped;
+
+    /**
+     * A public chat line for the staff web panel (SU-36): on Redis's web channel at once, and into {@code <prefix>web_chat}
+     * on the worker, several lines in one write when they come quickly.
+     */
+    public void publishChat(String kind, String payload, StorageBackend.WebChat row) {
+        publishWeb(kind, payload, false);
+        if (chatWaiting.incrementAndGet() > MAX_CHAT_WAITING) {
+            chatWaiting.decrementAndGet();
+            chatDropped++;
+            return;
+        }
+        chatRows.add(row);
+        if (chatQueued.compareAndSet(false, true)) {
+            submit(() -> {
+                chatQueued.set(false); // lines added from here on queue another write
+                List<StorageBackend.WebChat> rows = new java.util.ArrayList<>();
+                StorageBackend.WebChat r;
+                while ((r = chatRows.poll()) != null) {
+                    rows.add(r);
+                    chatWaiting.decrementAndGet();
+                }
+                try {
+                    backend.saveWebChat(rows);
+                } catch (Exception e) {
+                    // the database is away: the lines wait (at most MAX_CHAT_WAITING) for the next write, which the next line said starts (audit)
+                    for (StorageBackend.WebChat back : rows) {
+                        if (chatWaiting.incrementAndGet() > MAX_CHAT_WAITING) {
+                            chatWaiting.decrementAndGet();
+                            chatDropped++;
+                        } else {
+                            chatRows.add(back);
+                        }
+                    }
+                    throw e;
+                }
+            });
+        }
+    }
+
+    /** Chat lines dropped because the database was too far behind (0 normally). */
+    public long chatDropped() {
+        return chatDropped;
+    }
+
     /** One message as it travels on Redis: id, time, source server, kind and payload on their own lines (the panel reads the same). */
     public static String encode(StorageBackend.Notice n) {
         return n.uid() + "\n" + n.createdAt() + "\n" + n.source() + "\n" + n.kind() + "\n" + n.payload();

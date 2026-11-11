@@ -192,6 +192,78 @@ public final class MemoryBackend implements StorageBackend {
         webServers.put(server, new WebServer(server, atMs, snapshot));
     }
 
+    private final java.util.LinkedHashMap<String, WebChat> webChat = new java.util.LinkedHashMap<>();
+
+    public final List<Ban> bans = new ArrayList<>();
+
+    @Override
+    public synchronized List<Ban> loadActiveBans(long now) throws Exception {
+        check();
+        return bans.stream().filter(b -> b.activeAt(now)).toList();
+    }
+
+    @Override
+    public synchronized long insertBan(Ban b) throws Exception {
+        check();
+        long id = bans.size() + 1L;
+        bans.add(new Ban(id, b.player(), b.name(), b.reason(), b.note(), b.by(), b.atMs(), b.untilMs(), 0, "", 0));
+        return id;
+    }
+
+    @Override
+    public synchronized boolean liftBan(long id, String by, long at) throws Exception {
+        check();
+        for (int i = 0; i < bans.size(); i++) {
+            Ban b = bans.get(i);
+            if (b.id() == id && b.liftedAt() == 0) {
+                bans.set(i, new Ban(b.id(), b.player(), b.name(), b.reason(), b.note(), b.by(), b.atMs(), b.untilMs(), at, by, b.editedAt()));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public synchronized boolean editBan(long id, long untilMs, String reason, String note, long at) throws Exception {
+        check();
+        for (int i = 0; i < bans.size(); i++) {
+            Ban b = bans.get(i);
+            if (b.id() == id && b.liftedAt() == 0) {
+                bans.set(i, new Ban(b.id(), b.player(), b.name(), reason, note, b.by(), b.atMs(), untilMs, 0, "", at));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public synchronized Ban ban(long id) {
+        return bans.stream().filter(b -> b.id() == id).findFirst().orElse(null);
+    }
+
+    /** The item picture exports and the newest one's parts (tests read them). */
+    public final List<WebItemsExport> webItems = new ArrayList<>();
+    public final List<byte[]> webItemParts = new ArrayList<>();
+
+    @Override
+    public synchronized void saveWebItems(WebItemsExport export, List<byte[]> parts) throws Exception {
+        check();
+        webItems.add(export);
+        webItemParts.clear();
+        webItemParts.addAll(parts);
+    }
+
+    @Override
+    public synchronized void saveWebChat(List<WebChat> lines) throws Exception {
+        check();
+        lines.forEach(l -> webChat.putIfAbsent(l.uid(), l));
+    }
+
+    /** Every chat line kept, oldest first (tests). */
+    public synchronized List<WebChat> webChat() {
+        return new ArrayList<>(webChat.values());
+    }
+
     @Override
     public synchronized List<WebServer> loadWebServers() throws Exception {
         check();

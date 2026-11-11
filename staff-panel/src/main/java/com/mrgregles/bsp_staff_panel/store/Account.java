@@ -24,6 +24,13 @@ public final class Account {
     public int failed;
     public long lockedUntil, createdAt, lastLoginAt, previousLoginAt;
     public boolean active = true;
+    /** A Moderator an Owner trusts to add and remove players' items (D335, D363); Admins and Owners always may. */
+    public boolean itemsPower;
+
+    /** Whether this account may add and remove players' items. */
+    public boolean mayEditItems() {
+        return rank.atLeast(Rank.ADMIN) || itemsPower;
+    }
 
     public boolean setUp() {
         return password != null && totp != null;
@@ -46,6 +53,7 @@ public final class Account {
         a.lastLoginAt = lastLoginAt;
         a.previousLoginAt = previousLoginAt;
         a.active = active;
+        a.itemsPower = itemsPower;
         return a;
     }
 }

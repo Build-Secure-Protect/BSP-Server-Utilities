@@ -512,3 +512,318 @@ With BSP-InventorySync 0.7.0 on the servers:
 One reviewer, 11 findings, all checked and fixed: the panel takes a snapshot only when its signed `server` matches where it came from and it is under a minute old (a replay under another name, or an old one, is dropped); snapshots say whether BSP-InventorySync can answer about graves, and offline players' graves are asked of such a server; a return is sent on to the server an ONLINE answer names only when that server is sending to the panel (otherwise: return it there in game); a page replaced by a staff member's newer page gets `replaced` and stops with "Open on another page or device: tap here to use this one" (no endless reconnects); pages whose connection is still closing count against the limits; an answer arriving after staff left the More tab draws nothing; the player counter's list keeps each player's current name (UPDATE at a join when it changed); a second LEAVE (or AGREE) after LEAVE counts for nothing and keeps the first 3-second deadline; a late answer with data tested through `WebActions.dispatch` (signed, sent once BSP-InventorySync answers, never waited for), and records turned into JSON tested on a record shaped like `GraveReturn`; `<prefix>web_servers` and the panel's tables in utf8mb4; heads: the whole fetch within 10 s, capitals in the hash, no other port. 114/114 GameTests and 42/42 JUnit, twice; the replaced page and the graves server seen with `--demo`.
 
 Add to the network test: with BSP-InventorySync 0.7.0 on some servers only, an offline player's graves come from one of those; rename a player, log them in once, and find them on the Graves page by the new name; open the panel on five devices with one login: the oldest says it is open elsewhere and comes back when tapped.
+
+## 2026-11-10: SU-36, chat on the staff panel (D304 to D313)
+
+Headless: `WebChatGameTests` (a public line sent signed with its server, player, time and a one-time id; cancelled lines, empty lines, the panel off or no action key send nothing; section signs and control characters out, 256 characters at most; lines written to the shared table on the storage worker in one write, never twice; "say": "[Staff] Ana_Mod:" in violet with a hover, the words after it, the Action Log entry; "[Server]" in gold for Admins only; another name, an empty line or over 256 characters refused; no formatting codes slip in). 119/119 GameTests. Panel: `ChatTest` (only chat lines signed with the panel's key read, not snapshots or answers; a player's line only from its own server; each line once whether Redis or the table brought it; older lines, the lines around a search result, search by words, player and days, the 30-day prune; the panel's own lines kept signed; a network line as one action to several servers, a server not answering named; over HTTP: [Server] refused for a Moderator, the network reached server by server, a RETRY to one server not kept twice, § codes and other names refused; the chat table's definition the same on both sides). 49/49 JUnit. Seen with `--demo` at 1024 px (the column behind the CHAT button, sending with "✓ 5 servers") and on a phone (the Chat tab, the AS / TO sheet, search, a result shown among its lines). **Not run on the network: no real chat, Redis, MariaDB or game client yet.**
+
+On the network, with the panel set up and `webPanel.enabled` on every server:
+1. Say something in game on two servers: both lines appear on the panel within a second, with the server's name and colour; the Chat tab's badge on another tab shows a dot.
+2. Say "can a mod help" or a staff member's name: the line has a red bar and the badge a red number.
+3. Team chat (BSP-Core) and a player held by the rules popup: nothing on the panel.
+4. From the panel, as yourself to the network: every player on every server sees "[Staff] Name: text" in violet and white; hovering it says "from the staff panel"; the panel shows "✓ N servers"; the LOG tab has "chat on <server>" for each server.
+5. As an Admin, [Server] to one server: only that server's players see "[Server] text" in gold, hovering "From the staff". As a Moderator, [Server] is dimmed.
+6. Stop one game server, send to the network: the panel names it with RETRY after 6 seconds.
+7. Restart the panel: the last lines are still there (from `<prefix>web_chat`); scroll up for yesterday's lines; search for a word and a player, tap a result.
+8. Stop Redis for a minute while players chat: the lines still reach the panel within a few seconds (from the table).
+9. After 30 days, `<prefix>web_chat` holds nothing older (the panel's console says when lines are dropped).
+
+## 2026-11-10: SU-37, the Staff tab on the panel (D314 to D319, D327 to D329)
+
+Panel only (nothing in the game). Headless: `StaffTalkTest` (the room: one line only, 1000 characters, every page hears new and deleted lines; your own line deleted within 5 minutes and not after, an Admin not another's, an Owner any; paging older lines; messages: only the two people told of a direct one, unread until read, a third person neither sees nor marks it, REPLY marks read, "Read 21:40" for the sender, a message to all staff "Read by 1 of 2" with the names, not to yourself or a removed account, deleting; the 30-day prune keeps unread messages and drops them once read or once the reader's account is removed; 30 a minute; over HTTP: the room, sending, reading, the people to write to, a refusal as words, 401 without a login). 54/54 JUnit. Seen with `--demo` on a computer (room and messages side by side, sending, REPLY, the badge) and a phone (the switch, a right click on your line to delete it, the new message sheet). **Not run on the network or against MariaDB.**
+
+On the network, with two staff accounts on two devices:
+1. A says something in the room: B sees it at once; B's Staff tab shows a dot when on another tab, a red number when the line names B ("@B").
+2. A deletes the line within 5 minutes: "deleted" on both screens; after 5 minutes A's long press offers nothing; an Owner can still delete it.
+3. A writes to B while B's panel is closed: B opens the panel later and sees it with a teal edge and the badge's number; GOT IT clears it and A sees "Read <time>".
+4. A writes to All staff: A sees "Read by k of n" grow as others open it.
+5. REPLY: the answer reaches the sender and the original is marked read.
+6. Remove a staff account: their unread messages go after 30 days.
+
+## 2026-11-10: SU-38, notes and tags (D320 to D326, D330 to D332)
+
+Headless: `WebNotesGameTests` (a signed `web_notes` notice taken and its counts kept; another key, a copy, one over two minutes old, or any while the panel is off refused; odd entries left out; a newer notice replaces the counts; the counts only to staff who can open the admin panel; the packet round trip). 122/122 GameTests, twice. Panel: `NotesTest` (notes seen by all, changed or deleted only by their author or an Admin, the earlier words in the panel's log; counts with the newest author and time; tags put on and taken off by any staff member, a typed tag joining the list grey, the same name in any case one tag, the list kept by admins with the palette's colours and no two names alike, removal from every player; the counts notice signed as actions are; over HTTP). 59/59 JUnit. Seen with `--demo` on a phone (tags on rows and in chat, the sheet with tags and notes, the picker creating a tag, adding a note, More › Tags with the colour palette). **The hover in game is untested: it needs a game client (the GameTests run a server only).**
+
+On the network (every client on this version: protocol 6):
+1. A client with 0.9.0 cannot join: it is told the mod's version differs.
+2. On the panel, add a note about a player who is online. Within a few seconds, in game as staff, open the admin panel's CLIENTS tab and hover that player: "1 note / newest by <you>, just now / read them on the staff panel". A player without notes: no hover.
+3. Hover a staff member with notes on the STAFF tab: the same.
+4. Delete the note on the panel: within a few seconds the hover is gone.
+5. A player without the admin panel's rights never receives counts (nothing to see).
+6. On the panel, type a new tag on a player: grey in the list; as an Admin give it a colour; as a Moderator the Tags page has no keys to change it.
+7. Edit someone else's note as a Moderator: no ⋯; as an Admin: EDIT shows "edited <time>", and the panel's log keeps the earlier words.
+
+## 2026-11-10: audit of phase 2 (chat, the Staff tab, notes and tags)
+
+Two reviewers (the mod; the panel). No forgery, replay across kinds, XSS, SQL injection, rank bypass or leak of direct messages found. Fixed: notes counts not shown once the panel stops sending for 2 minutes or is switched off on the server (the hovers go); chat lines kept waiting (up to 2000) when a database write fails, written with the next line; the notes notice carries `"type":"web_notes"` and only that is read as one; right-to-left overrides, zero-width and C1 control characters stripped from chat; the hover drawn after everything else on the screen; the packet's count checked. Panel: chat lines sent to pages in one event every quarter second (a burst no longer drops the pages), and after the live feed reconnects the chat, the room and the messages are fetched again; a line said from the panel is kept once it may have been shown (a server answered, or did not answer in time), and a RETRY keeps it if the first try kept nothing; a reply to a message that is not yours is refused before anything is stored; ten searches a minute per account and an 8-second query limit; older lines paged "at or before" (no skipped lines) with "more" from the raw rows; a line that cannot be read back is never stored; two staff typing the same new tag at once get the one tag; a player id that is not a UUID is dropped. Dropped as untrue: "a player's line only from its own server" (every server holds the same key, so a signature cannot prove which server sent it). Accepted limits: messages beyond a person's newest 500 cannot be seen; a replayed old chat line can show once more after 5000 others; `executeBatch` row by row on the storage worker. 122/122 GameTests and 59/59 JUnit, twice; batched chat seen live with `--demo`.
+
+## 2026-11-10: SU-39, a player's items on the staff panel (D256, D279, D335 to D338, D360, D372)
+
+Headless: `WebItemsGameTests` (an item's id, key, a renamed item's name, enchantments as [id, level] and a book's stored ones, durability, lore as plain text, a potion's kind, a shulker box's contents with their slots, a plain stack carrying only what it has; the hash the same for any count, different when renamed, for another item, or for a worn tool; BSP-InventorySync's records read through look-alikes with the same names and types; `inv_read` refused without BSP-InventorySync or for a bad id, answering with only the filled slots, locks, missing items, a backpack's place and counts above 64, "Nothing has been saved" for a player never saved, a failed read saying why). 125/125 GameTests, twice. Panel: `PanelServerTest` (an offline player read from a server whose BSP-InventorySync reads items, not one without; an online player from their own server, asked once more on the live server the answer names if they moved; never played: said so; a login needed; Find a player: online first, a player online not repeated from the table, offline ones without a server, a non-name finding nothing), `ActionsTest` (30 reads a minute apart from the 10 actions). 61/61 JUnit, twice. Seen with `--demo` on a computer (the card) and a phone (the sheet): the layout, the tooltip, a shulker box's contents, a backpack opened, an offline player from Find a player with "saved 40 min ago" and "removals only while offline".
+
+**Untested: the real BSP-InventorySync.** BSP-InventorySync is not loaded in the GameTests: its records were stood in for by look-alikes with the same accessors. Its own `read` (live, snapshot, a player arriving, Curios, backpacks and danks) has not run with this mod.
+
+On the network (BSP-InventorySync 0.7.0 on every server):
+1. Open an online player's sheet: INVENTORY shows "live" with the slots as they are in game; move an item in game and within about 15 seconds (or on ↻) the panel shows it.
+2. Their armour from head to feet on the left, the offhand and the first three Curios slots on the right; open CURIOS for more when they wear more.
+3. Tap an enchanted tool: its enchantments, durability and lore; tap a full shulker box: what it holds.
+4. A backpack on their back or in their inventory: BACKPACK with where it sits and its slots; a backpack never opened says so.
+5. More › Find a player: type the start of an offline player's name, open them: "saved <time> · <server>", the items of their last save; their backpacks say "removals only while offline".
+6. A player switching servers while their sheet is open: the next read comes from the new server.
+7. A player who never joined since BSP-InventorySync was installed: "Nothing has been saved for that player yet."
+8. A server without BSP-InventorySync 0.7.0: its players' sheets say items need it.
+
+## 2026-11-10: SU-40, adding and removing items from the staff panel (D257, D335, D339, D342, D343, D361 to D363, D371)
+
+Headless: `WebItemsGameTests` (a Moderator without the items power refused before BSP-InventorySync; an unknown item, unreadable item data, more than 6400 refused; a Moderator with the power adds through BSP-InventorySync with the version shown; the answer's UNDO; a gold line to the player on this server; the Action Log; a slot holding something else untouched; a locked totem never moved; a removal of at most what is there with the version just read, its UNDO adding it back, armour coming back into the inventory; the UNDO of an add taking all 100 back from the two stacks it filled, then "nothing was taken back"; ONLINE answered with the server to ask; an `EditResult` read through its accessors). 127/127 GameTests, twice. Panel: `PanelServerTest` (403 without the power; the Owner gives and takes it, shown on the staff page and in `/api/me`; an id without its mod is Minecraft's; the power mark on a Moderator's action only; the UNDO token for 5 minutes, for the same staff member, once; ONLINE asked once more on the live server named; bad ids, areas and hashes refused; the panel's log). 62/62 JUnit, twice. Seen with `--demo`: + ADD with SURE? and the answer with UNDO, REMOVE from a tooltip (1, half, ALL), UNDO, the ITEMS mark on the staff page.
+
+**Untested: the real BSP-InventorySync `edit`** (a stand-in holding 36 slots in the GameTests), the gold line in a game client, and nothing on the network.
+
+On the network (BSP-InventorySync 0.7.0 on every server):
+1. As an Admin, open an online player's sheet, + ADD `diamond` × 64, SURE?: the player sees "Staff added 64 Diamond to your inventory." in gold; the panel shows the answer with UNDO and the slot outlined; the LOG tab has "items add ...".
+2. UNDO within 5 minutes: the 64 diamonds leave the player's inventory (from the slots they went into); the player sees "Staff removed 64 Diamond from your inventory."
+3. Tap an enchanted sword, REMOVE ALL, SURE?: it is gone in game; UNDO puts the same sword back (enchantments and name kept), maybe in another slot.
+4. Remove the player's boots: UNDO puts them in the inventory, not on their feet.
+5. Move an item in game, then tap REMOVE on its old slot on the panel without reading again: "That slot changed since you looked".
+6. A Shatter Totem in the inventory: its tooltip has no REMOVE.
+7. An offline player (Find a player): + ADD into the inventory: in their inventory at their next login on any server; their backpacks have no + ("removals only while offline").
+8. A player who switches servers between the read and the change: the change still lands (the panel asks the server named).
+9. As a Moderator: + ADD and REMOVE dimmed with "Admin or ITEMS". The Owner ticks "May add and remove items" on the staff page: the Moderator (after a reload) can add and remove; untick: refused again.
+10. More than 100 stacks (e.g. `dirt` × 6400 into a full inventory): BSP-InventorySync's answer (NO_ROOM) shows in red.
+
+## 2026-11-10: SU-41, item pictures and the picker (D271, D340, D341, D360, D373)
+
+Headless: `WebItemsGameTests.item_pictures_are_taken_only_from_an_admin_asked_whole_and_in_order` (not an admin: nothing asked; no shared storage: said so; another player's pieces ignored; a piece out of order refused and the ticket gone; a whole export stored in 512 KB parts with its row and the same bytes; a wrong SHA-256 not stored; too big refused before any piece). 128/128 GameTests, twice. Panel: `ItemPicturesTest` (the newest export read once, its catalog and sheets, other names in the zip skipped, a newer one that is not whole leaving the one held with a reason, a missing list said, the next good one taken; a sheet that is not a PNG refused, parts gone said), `PanelServerTest.item_pictures_are_served…` (the exports list, the catalog with caching, a sheet only of the export in use, logins needed). 65/65 JUnit, twice. Seen with `--demo`: pictures in the Items section, the picker (tabs, `@create brass`, a count, Add), More › Items.
+
+**Untested: the drawing in a game client** (`client/IconExport`: the creative tabs rebuilt, items drawn into an off-screen target, sheets read back, the zip, the pieces). Nothing of it runs in the GameTests (a server only), and it has not been run in a client yet. Also untested: MariaDB's packet limit with 512 KB parts (well under its 16 MB default), and the panel reading the parts from MariaDB.
+
+On the network (shared storage, the panel running):
+1. As an operator in your own game with the full pack, type `/su icons`: a gold line says the pictures are being drawn; the action bar counts "Drawing item pictures: N / M", then "Sending to the staff panel: N / M pieces"; then "Done: N items in M tabs are on the staff panel." The game keeps running (a short stutter at the start is the tabs being rebuilt).
+2. Look at the pictures: within a minute More › Items on the panel shows the export (items, tabs, you, the time, mods, size) and a row of pictures. Modded items (Create, Sophisticated Backpacks, BSP-Core) look as in game; animated ones show one frame.
+3. A player's sheet: their items as pictures with English names; an enchanted book's enchantments in English; a potion's own picture and name.
+4. + ADD: the creative picker; tabs as in the game; search `@create brass`; pick, count, Add, SURE?: the item arrives in game. A potion of swiftness arrives as that potion.
+5. As a player who is not an operator: `/su icons` is not offered.
+6. Leave the game halfway through sending: nothing is stored; `/su icons` again starts afresh.
+7. After a pack update, `/su icons` again: More › Items shows the new one on top, the old one in LAST EXPORTS.
+8. Very large packs: the export's size on More › Items (expected a few MB); MariaDB stores it in 512 KB parts.
+
+## 2026-11-10: SU-42, a grave's items on the Graves page (D298, D301, D302)
+
+Headless: `WebItemsGameTests.a_graves_items_are_read_through_inventory_sync` (a `GraveItems` look-alike read; a BSP-InventorySync without `graveItems` said so; a bad grave id refused first; the areas and XP, a locked totem, a backpack inside with its place; an empty or unknown grave said so). 129/129 GameTests, twice. Panel: `PanelServerTest.a_graves_items_are_read…` (asked of a server answering about graves, any rank, a bad id refused, a login needed). 66/66 JUnit, twice. Seen with `--demo`: two graves' slots with pictures, a tooltip, a backpack inside.
+
+**Untested: BSP-InventorySync's real `graveItems`.**
+
+On the network:
+1. Die with a full inventory and a backpack, then open More › Graves for yourself: the grave's stacks as slots with their pictures, the backpack's contents below it ("BACKPACK IN SLOT n").
+2. Tap an enchanted item: its enchantments in English.
+3. Return the grave (as an Admin): RETURN works as before.
+4. A grave with a Shatter Totem: its slot shows locked.
+
+## 2026-11-10: SU-43, teleports from the staff panel (D258, D344 to D349, D364 to D366, D374)
+
+Headless: `WebTeleportGameTests` (without BSP-Teleport said plainly; warps with portal ones marked and the spawns known; not on this server, still arriving or not a place refused; this server's own name in any case a move here with "You were moved by staff."; the Action Log; another server by name; "on the ground" refused for another server and the top block here; a player on this server gone to where they stand now; BSP-Teleport saying no said so; the snapshot's `tp`, `tpName` and `arriving`; a Destination look-alike read). 130/130 GameTests, twice (now against BSP-Core 1.16.1). Panel: `PanelServerTest.players_are_moved…` (places kept 30 s with spawns by the panel's server ids; a warp, a spawn in any case, a player with `target`, coordinates centred with "on the ground"; refused for another server's ground, not numbers, arriving; GO TO THEM and BRING THEM TO ME; the panel's log). 67/67 JUnit, twice. Seen with `--demo`: the four tabs, a move's answer, the coordinates form, an arriving player's greyed key.
+
+**Untested: BSP-Teleport's real API** (a stand-in in the GameTests) and every move in game.
+
+On the network (BSP-Teleport with API 2 on every server):
+1. Open a player's sheet, TELEPORT, SPAWN: each server with a `/setspawn` point; MOVE to another server's: they arrive there with "You were moved by staff."; `/back` takes them back.
+2. WARP: the network's warps by server, "restricted" ones marked; portal warps under "▸ N portal warps"; MOVE works without the warp's cost.
+3. PLAYER: move them to someone on another server, and to someone on the same server (landing where that player stands at that moment).
+4. COORDS: change x and z, tick "on the ground": they land on the top block; the tick is greyed for another server.
+5. With your own account in game: GO TO THEM (you move) and BRING THEM TO ME (they move to you).
+6. Right after a player switches servers: TELEPORT is greyed "arriving on <server>" for a moment.
+7. A landing near a totem being raided on another server: BSP-Teleport's raid rule sends them elsewhere (its own behaviour).
+8. The LOG tab: "tp <name> to <where>" by "<you> (panel)".
+
+## 2026-11-10: SU-44, network bans (D255, D350 to D359, D367 to D370, D375, D376)
+
+Headless: `WebBanGameTests` (the screen with the reason, the end in UTC and the time left, the appeal line, "This ban is permanent."; `PlayerList.canPlayerLogin` refused through the mixin for a banned player, not for anyone else, not after the end, not once lifted; the time in words; the panel's ban refused for a Moderator, without a reason or under a minute; written to the table with note and author, known here at once, the player here asked off the network with the screen, the other servers told, the Action Log; edited to permanent with a new reason; lifted by whom, joining again; lifting twice said so). 132/132 GameTests, twice. Panel: `PanelServerTest.bans_are_for_admins…` (the typed name checked; to the player's server, or any server for one offline; an Admin cannot ban a panel account or a staff role in game, the Owner can; nobody bans the Owner; custom days and hours, under an hour refused; ACTIVE, PAST, a search, a player's history; edit keeping the end; lift; the panel's log). 68/68 JUnit, twice. Seen with `--demo`: the form with the preview and history, SURE?, LAST CHECK (BAN asleep until the name is typed), the answer; More › Bans with ACTIVE, PAST, EDIT.
+
+**Untested: the refusal at a real login through Velocity** (Velocity's own words around the screen), and every ban on the network. A player with a staff role is checked by the game server only when they are on it.
+
+On the network:
+1. As an Admin, ban a test account for 1 hour with a reason: if online, it leaves the network at once with the screen; joining again shows "Unable to connect to <server>" with "You are banned from the Build Secure Protect network.", the reason and "Ends ... UTC (in 59 minutes)".
+2. Set `webPanel.banAppeal = "Appeal on our Discord: ..."` in `config/bsp_server_utilities-network.toml` on every server: the line shows under the end.
+3. Join each server in turn (through the proxy): every one refuses.
+4. More › Bans: the ban under ACTIVE; EDIT to Permanent: the screen says "This ban is permanent."; UNBAN (SURE?): within a minute (at once on servers that heard the notice) they can join; the ban moves to PAST "lifted ... by <you>".
+5. A 1-hour ban left alone: after the hour they can join; PAST says "ended".
+6. As a Moderator: BAN dimmed with "Admin"; More › Bans shows the lists but UNBAN and EDIT dimmed.
+7. As an Admin, open a staff member's sheet: BAN dimmed with "Owner"; as the Owner it works; nobody can ban an Owner's account.
+8. The LOG tab: "ban <name> (...): <reason>", "ban edit ...", "unban <name>" by "<you> (panel)".
+9. Vanilla `/ban` still works per server as before (untouched).
+
+## 2026-11-10: audit of phase 3 (items, item pictures, a grave's items, teleports, network bans)
+
+D377 (owner: "Audit first"). Two reviewers (the mod; the panel), given the code and decisions D335 to D376; every finding checked against the code. No forgery, XSS, SQL injection or CSRF gap; the reflection on BSP-InventorySync API 2 and BSP-Teleport API 2 and every 1.20.1 call in `client/IconExport` checked against the jars (names and signatures match).
+
+Fixed in the mod:
+- **Item data nested too deeply** (`inv_add`): over 96 levels of `{}` / `[]` refused before it is read. The game's reader has no limit, so tens of thousands of levels overflowed the server thread's stack (a crash), and over 512 the item would have locked the player out (their client and the next snapshot refuse it).
+- **UNDO of a removal from an offline player** carries the version the removal was saved as; before, BSP-InventorySync always answered CHANGED. An UNDO may carry item data up to 1 MB (the removed item itself, such as a shulker box of books); typed data stays at 64 KB.
+- **The UNDO of an add refused by BSP-InventorySync** (ONLINE, BUSY, FAILED) says so with the outcome and server, instead of "none of it is there any more"; the panel's ONLINE retry now works for it. Stopping after 64 slots is said as such.
+- **A banned player on another server** leaves the network once the bans are read again there (at once on the notice, or within a minute). Before, only the server that wrote the ban sent them off, so a player who switched servers in the moment of the ban kept playing (D350).
+- **Staff who are not on the server** asked to ban them: "only the Owner bans staff" now uses the staff roster (online anywhere, the staff groups' members in LuckPerms while offline, operators who count as staff), not only a staff member standing on that server. `ban_edit` checks it too and names the ban's player (D355).
+- **Lifting or changing one ban** no longer forgets a player's other ban in force until the reload.
+- **"On the ground"** under a roof (the Nether) searches below the roof for a floor with two free blocks over it; before, it put the player on the Nether roof. Where there is no ground (the End's void) it is refused, where before it sent the player to the bottom of the world.
+- Teleport destinations in the Action Log cleaned of colour codes and new lines. `/su icons` stops drawing when the game leaves the server.
+
+Fixed in the panel:
+- **An Admin could change a ban on staff** (`/api/ban/edit` checked only the rank): a staff member's ban is changed by the Owner alone, as it is given (D355). Lifting stays with Admins and Owners (D356). The ban form knows staff from `/api/ban/history` (`staff`: 0, 1 staff, 2 an Owner) and dims BAN before the two checks.
+- **An UNDO used twice at the same moment** went to the game server twice (`get` then `remove`): it is now spent at once. When the game server answers BUSY or ONLINE (nothing changed), the UNDO is kept for its 5 minutes.
+- **A grave's items**: read one grave after another; before, a player with five graves or more used every action the panel may have waiting at once, and other staff's actions were refused meanwhile.
+- **A broken item-picture export** is read once, not every minute (48 MB each time); a row larger than the game server stores is not fetched; the pictures are read on their own thread so chat is never held up.
+- A rank change ends the items power (an Admin made a Moderator again starts without it; the log says so). Each stack's REMOVE starts at ALL. + Ban by name says when the panel cannot be reached. A sheet path with a number past the largest long is a 404, not a 500. The warps and spawns from a moment ago are kept when asking again fails.
+
+Dropped as untrue: none of the reported defects. Accepted limits:
+- The panel knows an in-game staff member without a panel account only while they are online; the game server's roster check covers them offline (LuckPerms members, refreshed every 5 minutes).
+- A panel Owner is protected by their Minecraft name: after a name change, the panel account must be updated (the game server still refuses an Admin's ban when the Owner is in a staff group).
+- `/su icons`: checking and splitting the export (up to 48 MB) on the server thread is a short pause once per export. On a Velocity server switch while drawing, the pieces go to the new server, which ignores them silently: type `/su icons` again. Variants whose data is over 4096 characters are listed without it. Each sheet is read back on the render thread (a visible hitch per sheet).
+- The panel reads an export's bytes while holding its database connection (once per new export).
+- The panel accepts a custom ban of up to 3650 days and 1000 hours; the game server refuses over ten years with a clear message.
+- The UNDO token is spent when the answer is lost or refused in any other way (it may have happened: the LOG tab says).
+
+Tests added: `WebItemsGameTests.deep_item_data_is_refused_and_undo_works_offline_and_says_why_it_was_refused` (the look-alike now refuses an offline add of another version, as BSP-InventorySync does), `WebBanGameTests.staff_elsewhere_are_banned_by_the_owner_alone_and_a_ban_read_later_sends_them_off`, `WebTeleportGameTests.on_the_ground_stays_under_the_nether_roof_and_refuses_the_void`; `ItemPicturesTest.an_export_that_failed_is_not_read_again_and_the_limits_hold`; `PanelServerTest` (an UNDO kept after BUSY then spent, two UNDOs at once going through once, the power ending at a rank change, a Moderator refused BAN and UNBAN, an Admin refused EDIT on a staff ban while the Owner may and an Admin lifts it, the staff level in the history, the ban's player in an edit). 135/135 GameTests and 69/69 JUnit, twice.
+
+On the network, in addition to the checks of SU-40 to SU-44:
+1. Ban a player in the moment they switch servers (or ban a player on server A from a panel whose snapshot still shows server B): within a minute they leave the network with the ban's screen.
+2. As an Admin, try to ban a staff member who is offline and has no panel account: refused "only the Owner bans staff"; as the Owner it works. As an Admin, EDIT a staff member's ban: refused; UNBAN works.
+3. "On the ground" in the Nether: the player lands under the roof on a floor; in the End over the void: refused.
+4. Remove an item from an offline player, then UNDO: it is back at their next login.
+5. Add to a player, then press UNDO twice quickly: taken back once.
+
+## 2026-11-10: SU-45, the staff panel serves the map (D259, D381, D382, D397)
+
+Panel only. `PanelServerTest.the_map_is_served_from_bluemaps_folder_behind_the_login_with_its_own_rules` (401 without the login; "not set up" without `map.root`; `/map` to `/map/`; the page with the looser rules and `SAMEORIGIN` on `/map/` only, the panel's own pages still strict and `DENY`; a `.gz` sent with `Content-Encoding: gzip` and its type; a PNG tile; 304 when unchanged; 204 for a tile not drawn; 404 for anything else missing, a link out of the folder, `..` and BlueMap's live stream; logged out: refused at once). Seen with `--demo 8200 <the local trial's BlueMap web folder>`: BlueMap's own page under the panel's login, its tiles (flat and 3D), no page-rule errors in the console, `players.json` read every second (its live stream refused, so it asks).
+
+**Untested:** a real mount from BlueMap's Pterodactyl server, BlueMap 5.29's page (the look was 5.16's), through Cloudflare.
+
+On the network (once BlueMap runs, phase 4's instructions):
+1. Open `https://staff.buildsecureprotect.com/map/` while logged in to the panel: BlueMap's page with the network's maps.
+2. In a private window, logged in to Cloudflare but not the panel: "Log in to the staff panel first."
+3. Log out of the panel, then reload `/map/`: refused.
+
+## 2026-11-10: SU-46, the map's live data (D259, D386)
+
+Panel only. `MapLiveTest` (map ids for the overworld, Nether, End, a modded dimension and nothing; every player on every map with `foreign` off their own, positions at the feet, the game's yaw; names that are not plain and ids that are not ids left out; warps by the panel's server name on their own map only, portal warps in a hidden set, a warp's name escaped, spawns per dimension, the `classes` list BlueMap's page needs, no places: empty sets) and `PanelServerTest` (players.json from the feed and not BlueMap's file, `no-store`; markers.json's sets; an unknown head 404; the live stream 404). 73/73 JUnit, twice. Seen with `--demo` and a flat `frostwarf_overworld` map rendered from the Frostwarf copy: the demo players' heads on the map moving with the feed, the warp pin, the spawn pin; a pin without `classes` was refused by BlueMap's page (found in the browser, fixed, now tested). The browser pane draws about 3 frames a second when not watched, so heads glide slowly there.
+
+**Untested:** real players and skins, BSP-Teleport's real warps, graves as pins (SU-IS4 open).
+
+On the network (with BlueMap running):
+1. Open `/map/` and a server's overworld: everyone on it as their head and name, moving within a few seconds of moving in game; nobody from another server or dimension.
+2. Go into the Nether: you leave the overworld's map and appear on that server's Nether map.
+3. Warps and the spawn show as pins; a tap shows the name and server; portal warps appear when their set is switched on in BlueMap's menu.
+
+## 2026-11-10: SU-47, the Map tab on a computer (D389 to D395)
+
+Panel pages (`static/map.js`, `players.js` `stats` / `actions` / `closeKeys`, `items.js` `hotbar`, `app.js`, `panel.css`). `PanelServerTest`: the panel's pages may frame only the panel itself (`frame-src 'self'`). 73/73 JUnit, twice. Seen with `--demo` at 1440 × 900 and BlueMap 5.16's page on flat Frostwarf overworld and Nether maps: the list by server, the bar (server, dimensions, pins, following), a name tapped and the map following, the card (stats, hotbar, keys), the map going to the Nether with the gold line when the followed player's dimension changed (a made-up feed in the page; a switch still loading no longer lands after a newer one: found here, fixed), the trail as a BlueMap line, a warp pin's box moving the followed player there, the followed player leaving (greyed card and head, the gold line) and coming back.
+
+**Untested:** a real game (players moving, changing server or dimension), BlueMap 5.29's page, phones (SU-48), the pins' box with real BSP-Teleport warps.
+
+On the network:
+1. Map tab: everyone online by server on the left; tap a name: the map goes to them and follows; the card shows where they are, stats, hotbar.
+2. Drag the map away: "Following … centre" appears; tap "centre": back to them.
+3. The player goes into the Nether, then to another server: the map follows each time with a gold line.
+4. A dotted gold trail behind them for the last 2 minutes.
+5. ITEMS in the card: the whole inventory as on the Players tab (+ and REMOVE for those allowed); NOTES; TELEPORT, KICK and BAN as in their card.
+6. Tap a warp pin: its name and server and "Move <player> here"; tap it: they are moved, the answer shows.
+7. The player logs out: the card greys with "left the network at …", their head greyed where they were; they log back in within 10 minutes: followed again.
+8. Untick Warps, Spawns or Players in the bar: those disappear from the map.
+
+## 2026-11-11: SU-48, the Map tab on a phone (D393, D395 R4)
+
+Panel pages (`map.js`, `panel.css`). Seen with `--demo` at 375 × 812: the map between the top and the tabs, the server and dimensions above it (the pin ticks only on a computer), the players button opening the list as a sheet with its search at the top, a name tapped: the map follows and the player's sheet rises small (stats, Items, Notes, Stop following), its bar pulled up: hotbar, Teleport, Graves, Kick, Ban; the players button moved out of the sheet's way while following. The computer layout unchanged (checked at 1440). 73/73 JUnit, twice. In the browser pane's phone emulation BlueMap's drawing showed narrower than its frame although its canvas measured the frame's full size (a capture artefact there); BlueMap is asked to fit again after loading and on every resize.
+
+**Untested:** a real phone (touch, the address bar's height, BlueMap's own touch controls inside the frame).
+
+On a phone:
+1. Map tab: the map fills the screen; pinch and drag move it.
+2. The players button: everyone online; tap a name: the map follows them and their sheet rises.
+3. Tap the sheet's bar: it rises for everything; again: it goes down.
+4. Turn the phone sideways and back: the map fills the screen each time.
+
+## 2026-11-11: SU-49, BlueMap's settings and the setup instructions
+
+`tools/gen_bluemap.py` (`--self-test`: its map names against the panel's MapLiveTest cases, a flat Nether map with its roof left out). Run on the world copies: Frostwarf gives its overworld, Nether and End (AllTheModium's dimensions are empty there; the storage grids never); Spawn and Sanctuary also give AllTheModium's three. BlueMap 5.16's CLI drew Spawn and Sanctuary from the script's configuration in 24 s with no warnings, and kept every map name as written: **BlueMap turns any character but letters, digits and `_` in a map file's name into `_`** (found here: `bsp-spawn_nether` became `bsp_spawn_nether`), so map names became `<server>__<dimension>` in the panel (`MapLive`, `map.js`), the script and docs/API.md. Seen with `--demo` on that folder: the server picker (BSP-Spawn, Sanctuary, a server not sending made readable), the dimensions in order (Overworld, Nether, End, then the modded ones), following RuneSmith on `bsp_spawn__overworld`. 73/73 JUnit, twice.
+
+**Untested:** BlueMap 5.29 (the trial ran 5.16; the settings' keys are 5.29's own templates), Pterodactyl's mounts and the Java 25 image, the whole network's first run (the trial, D388).
+
+## 2026-11-11: audit of phase 4 (the map)
+
+D399 (owner: "audit then Phase 5 in a new conversation"). Two reviewers (the panel's map routes, `MapLive` and `tools/gen_bluemap.py`; the Map tab's pages and docs/STAFF_MAP_SETUP.md), given the code and D378 to D398, every finding checked against the code and BlueMap's source. No path out of the map folder, no serving without the login, no CSP leak to other pages; every BlueMap call the pages make exists; the script's settings match BlueMap 5.29's own.
+
+Fixed in the panel:
+- **The map card was rebuilt on every live update**, losing a reason, note or item id being typed, its scroll, and an open server picker: the card now keeps its scroll and the field being typed in (focus and caret), and the bar is not redrawn while its picker is open (seen in the demo: a kick reason kept through two updates). The pin box's move cannot be sent twice.
+- **Following a player whose marker BlueMap replaced** (they left and came back, or a poll failed) kept the camera on the old one: the new marker is followed; a player back within 10 minutes and a tab opened again are centred again.
+- **A map switch left waiting when the tab was closed** could stop every later switch until a reload: the queue starts afresh with each frame, and a switch gives up after 15 s.
+- The pin box opens at the pin (BlueMap passes `{event, data}`); a stale 1.5 s re-follow no longer catches a player staff moved on from; a pin's answer lands only on its own box; the pins chosen in the bar apply at once after a switch; the "left" marker sits where the player was last even before a trail, its name escaped; the card's "left" look no longer borrows the Staff tab's `.gone`.
+- **A followed player in a dimension without a map**: a gold line says so, the camera is not sent there, and the trail never joins two worlds.
+- **markers.json asked BSP-Teleport again on every poll while it failed** (every 10 s per open map, each holding one of the panel's four action slots up to 6 s): a failure is remembered for 30 s like a success.
+- Pins: the label is sent as written (BlueMap shows it as text) and only the detail, which it puts in as markup, is escaped; two warps with names alike no longer share one key; a null field no longer drops every pin. Bedrock names (a "." first) are shown.
+- `/map/` serves `.html` only as BlueMap's `index.html` and scripts only from its `assets/`.
+
+Fixed in docs/STAFF_MAP_SETUP.md: the config is put in place with `rsync -a --delete …/ …/config/` (a second `cp -r` nested it, and BlueMap's own defaults, written if it started first, stayed), BSP-Map is first started after that; Java 3 GB in the 4 GB server; the panel's mount attached to its egg and node; `-s` dropped (`-u` writes the settings); who can write BSP-Map's files is trusted like staff (no subusers, no untrusted packs or scripts); BlueMap's copy buttons do nothing under the panel's rules (D382).
+
+Accepted limits: the pin box moves the player followed (D395 R1 asked for the teleport sheet with the place chosen); warps of a server not sending now whose BSP-Teleport name differs from its id are not placed; a removed login still opens map files for up to 30 s; whoever can write BSP-Map's files can run code in the panel's name (narrowed above, stated in the setup).
+
+Tests added: `MapLiveTest` (Bedrock names, two warps alike kept apart with null fields, the detail escaped and the label as written), `PanelServerTest` (`..` aimed at a real file beside the folder, a page and a script outside BlueMap's own refused, HEAD; a new test: the login under another Cloudflare identity not believed). 74/74 JUnit, twice. The mod is unchanged since its 135/135 GameTests.
+
+
+## 2026-11-11: SU-50, the market and the lottery, game side (D400 to D415)
+
+`WebMarketGameTests` (2): without BSP-Core 1.16 said plainly and the snapshot says no market; every rank reads the lots (seller, price, server, an enchanted pickaxe with durability, a shulker box with what it holds, an empty stack left out) and the orders; REFRESH reads again first; the database down answered as such and never as an empty market; the lottery unreachable said so; a huge market cut to size with `cut`; the lottery's pot, names, phase and wins; a Moderator refused a draw even with a signed action; an Admin's draw goes to BSP-Core as "Ana_Admin (panel)" and is in the Action Log; busy, nobody, empty and unreachable worded; the snapshot's `market`, `lottery`, `lotterySince`, `lotteryUp`; a phase change seen once with its time. The stand-in is as strict as BSP-Core's api (server thread only, empty lists and read times 0 while not connected, `by` one line of at most 64). The second test reads the real BSP-Core 1.16.1 the test server loads (its market read time, the lottery's summary and names, the phase). 137/137 GameTests.
+
+**Untested:** BSP-Core's market and lottery on the network (MySQL and Redis, several servers), a real draw from the panel.
+
+On the network (once SU-51 and SU-52 are in, BSP-Core 1.16.0 or newer on every server):
+1. List a lot and place a buy order in game; open More › Market: both there within 30 s, the read time moving; REFRESH reads at once.
+2. Stop MariaDB for a moment (or start one server without it): its market reads "cannot be read", never an empty board; back once the database is.
+3. Draw the lottery from the panel as an Admin: the countdown on every server, the win on every server's lottery board, "lottery draw" by "<name> (panel)" in the Action Log of the drawing server.
+4. Draw again during the countdown from another panel: "A draw is already running on the network."
+5. A Moderator sees DRAW dimmed; with the pot empty, the draw is refused with "The pot is empty".
+
+## 2026-11-11: SU-51, the market and the lottery, the panel's side (D400 to D415)
+
+Panel only. `PanelServerTest.the_market_and_lottery_are_read_by_everyone_drawn_by_admins_and_every_page_sees_a_draw`: no server with BSP-Core 1.16 said so; the servers chosen (database connected first, then the busiest; a server without the market never); a Moderator reads the market, kept 30 s for every page, REFRESH asks again with `refresh`; the database down passed on as such; the lottery read; a Moderator's DRAW refused with 403 and nothing sent; the Owner's draw on the busiest connected server with the rank, in the panel's log; the feed's `lottery` while a server counts; the `counting` event once, with who drew and since when; the `won` event with the winner, the pieces and who drew; a draw begun in game has no panel name, and one that ended without a newer win is `ended`. 75/75 JUnit, twice.
+
+**Untested:** real game servers answering (SU-50's actions over Redis), the events in a browser (SU-52).
+
+## 2026-11-11: SU-52, More › Market and More › Lottery (D400 to D415)
+
+Pages only (75/75 JUnit unchanged). Seen with `--demo` at 1440 × 900 (with the chat column open) and 375 × 812: the Market Board as wide rows and as cards, a shulker box's tooltip with what it holds, the Wanted Board with its bars, Vexa's sheet "On the market: 1 lot, 1 order" opening the market filtered to her with the chip; the Lottery page in two columns and on a phone; DRAW, SURE? DRAW, the countdown in the pot card's corner, the winner in the card, the new win marked at the top of the list, the gold line "Lottery drawn by Demo_Owner: Kestrel_88 won 12,400 pieces", the card back to the new pot after a minute; a Moderator's DRAW dimmed with "Admin". No page errors.
+
+**Untested:** real game servers, real players' lots, a real draw seen by two staff at once, a real phone.
+
+On the network (with BSP-Core 1.16.0 or newer on every server):
+1. More › Market: the lots and orders as in game (a Trade Post's Market Board and Wanted Board), the same prices and ends; tap a shulker box in a lot: its contents.
+2. List a lot in game, then REFRESH: it appears; buy it in game, REFRESH: it is gone.
+3. Open a player's sheet who has lots: "On the market: …"; tap it: only theirs, ✕ shows everyone again.
+4. Two staff open More › Lottery; one draws: both see the countdown in the pot card, then the winner and the gold line; the game's countdown on every server; the winner paid in game.
+5. A Moderator's DRAW: dimmed. Draw with an empty pot: refused with the reason.
+
+## 2026-11-11: audit of phase 5 (the market and the lottery) and the setup guide (D416)
+
+Two reviewers (the game side; the panel, its pages and `docs/STAFF_PANEL_SETUP.md`), given the code and D400 to D415. Every finding was checked against the code; all were real. Nothing critical: no way for a Moderator or anyone with Redis alone to draw, no unescaped text in the pages, the routes under the panel's POST checks, a server without BSP-Core 1.16 never touching its classes.
+
+**Fixed (game side):**
+1. The adapter could call our callback a second time with a made-up answer when our own code inside it threw (on a single server BSP-Core answers at once, inside our `try`): a draw that began could be reported as failed, an error shown as an empty lottery, a REFRESH answered twice. Now a failure is answered only when BSP-Core failed before answering; an error after is logged once. Each answer is built inside its own guard, so the panel always gets exactly one.
+2. An error reading the market or lottery is said as an error ("could not be read on <server>"), never as the database being down or an empty lottery.
+3. The market's answer is bounded on the server thread: at most 6,000 stacks read (shulker boxes' contents counted), and no hash computed for view-only items.
+4. The Wanted Board has its own share of the answer (built first), so a large Market Board cannot leave it empty.
+5. Tests: the stand-in checks the thread on every call; a REFRESH whose database answers later; an unreadable market and lottery; a refused draw not logged; a drawer's name that is not a name; a normal read not `cut`; the real BSP-Core with a callback that throws (called once, logged, nothing escapes).
+6. `docs/API.md`: DRAWING also while a draw is being paid; `result` `failed`; names at most 5,000; the answers when BSP-Core errs; orders' `name`; no `h` on market items; the new caps.
+
+**Fixed (panel):**
+1. A game server that did not answer made pages queue behind each other for 6 s each (the reads held a lock while waiting). One read goes out at a time; other pages get the copy held or the failure, which is remembered 8 s; REFRESH at most once in 5 s for the whole panel (BSP-Core reads its whole database).
+2. A page could stay on "Counting" for good when the draw's end was missed (a phone asleep, a reconnect): the page reads the lottery again when the feed has had no draw for 10 s, and after every reconnect.
+3. One server stuck saying COUNTING blocked DRAW for every Admin: a draw said to run for over 2 minutes is ignored.
+4. The winner card said "won among 0 players in" (the new round's count): the count at the draw is kept and sent with the win.
+5. The end of a draw read the wins once; a win not written yet, or every action slot busy, gave "ended" without the gold line, and a win missing a field stopped the event: read again 2 s later, fields checked, always one event.
+6. The first "counting" could lack who drew (the countdown's snapshot can arrive before the draw's answer): who drew is known before asking.
+7. One bad snapshot could stop the whole live feed (the lottery watch ran inside the feed's single `try`): it has its own.
+8. Small: "tried to draw the lottery" logged when no server could; a lot or order without a name no longer blanks the page; "ended, closing soon" instead of "ends in 0 s"; the computer's header row by the stylesheet (no redraw on resize); SURE? keeps the key focused (Enter twice works); `down` read as a value, not a key.
+9. Test: `a_game_server_that_does_not_answer_is_asked_once_not_by_every_page_and_the_busiest_draws`; the stuck draw ignored.
+
+**Fixed (setup guide):** the `/su status` lines quoted as the game prints them; Redis must be plain TCP (a troubleshooting row); an allocation on `127.0.0.1` when cloudflared runs as a service on the node; `panel.properties`'s Cloudflare comment names today's menu.
+
+**Accepted limits:** `WebMarket`'s phase watch is static, so on an integrated server restarted in the same game `lotterySince` can be old once (a dedicated server restarts its JVM). No test follows a `lottery` event through a page's live stream end to end (the desk's events and the page are each tested; seen together in `--demo`). REFRESH's own redraw drops the search box's focus.
+
+137/137 GameTests and 76/76 JUnit, twice; build and name check clean. Seen again with `--demo`: the market, a draw with SURE? from the keyboard, the winner among 16, the gold line.

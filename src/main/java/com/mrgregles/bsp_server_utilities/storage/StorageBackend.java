@@ -159,6 +159,56 @@ public interface StorageBackend {
 
     List<WebServer> loadWebServers() throws Exception;
 
+    /**
+     * A public chat line for the staff web panel (SU-36): {@code line} is the line as the panel reads it (signed JSON, see
+     * docs/API.md); the plain columns are for searching. The panel adds its own lines to the same table and drops lines
+     * older than 30 days (D263).
+     */
+    record WebChat(String uid, long atMs, String server, String name, String text, String line) {
+    }
+
+    /** Adds lines; a line whose {@code uid} is stored already is skipped. */
+    void saveWebChat(List<WebChat> lines) throws Exception;
+
+    /**
+     * The item pictures for the staff web panel (SU-41, D340, D373): one export from an admin's game, a zip (pictures,
+     * tabs, English names) stored in {@code parts} of at most {@link #WEB_ITEMS_PART} bytes. The newest export's parts are
+     * kept; older exports keep their row (the panel's list of the last exports) but lose their parts.
+     */
+    record WebItemsExport(long id, long atMs, String by, String server, int items, int tabs, int mods, int size, int parts, String sha256) {
+    }
+
+    int WEB_ITEMS_PART = 512 * 1024;
+
+    void saveWebItems(WebItemsExport export, List<byte[]> parts) throws Exception;
+
+    /**
+     * A network ban (SU-44, D255, D350 to D356): who, why (the player sees it), a note only staff see, who banned and when,
+     * when it ends ({@code untilMs} 0: permanent), and when and by whom it was lifted ({@code liftedAt} 0: not lifted).
+     * Rows are kept for good (D356).
+     */
+    record Ban(long id, java.util.UUID player, String name, String reason, String note, String by, long atMs, long untilMs, long liftedAt, String liftedBy, long editedAt) {
+        public boolean activeAt(long now) {
+            return liftedAt == 0 && (untilMs == 0 || untilMs > now);
+        }
+    }
+
+    /** Bans neither lifted nor ended at {@code now}. */
+    List<Ban> loadActiveBans(long now) throws Exception;
+
+    /** Adds a ban; its id. */
+    long insertBan(Ban b) throws Exception;
+
+    /** Lifts a ban that is not lifted yet; false when there was none. */
+    boolean liftBan(long id, String by, long at) throws Exception;
+
+    /** Changes a ban's end, reason and note; false when there is no such ban still in force. */
+    boolean editBan(long id, long untilMs, String reason, String note, long at) throws Exception;
+
+    /** One ban by id, or null. */
+    @org.jetbrains.annotations.Nullable
+    Ban ban(long id) throws Exception;
+
     String describe();
 
     void close() throws Exception;

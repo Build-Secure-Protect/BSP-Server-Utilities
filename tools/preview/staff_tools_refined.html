@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Tools Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page for sets S and T: the Staff tab look A (D314 to D319) and notes and tags look A with the hover H1 (D320 to
+   D326). Sample data; names are made up. */
+/* Mock-up set Q: three looks for the Chat tab of the staff web panel on a phone (D261 to D263, D292), and three looks for
+   a line sent from the panel as it shows in game. Sample data; names are made up. The frames use the BSP website's own
+   tokens (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.mu{ color:var(--mu); } .dm{ color:var(--dim); } .vtx{ color:var(--vio); } .gtx{ color:var(--gold); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip.on{ background:var(--teal); color:#0f1115; border-color:var(--teal); font-weight:600; }
+.chip i{ width:7px; height:7px; border-radius:2px; display:block; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.tag{ font:600 9px var(--body); padding:0 5px; border-radius:999px; white-space:nowrap; vertical-align:1px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.62); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:8px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); margin-top:4px; }
+.opt{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:12.5px; }
+.opt.on{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.opt .rb{ width:14px; height:14px; border-radius:50%; border:2px solid var(--dim); flex:none; } .opt.on .rb{ border-color:var(--teal); background:radial-gradient(var(--teal) 45%, transparent 50%); }
+.opt .sub{ font-size:10.5px; color:var(--mu); }
+.opt.lock{ opacity:.5; }
+.in{ flex:1; min-width:0; height:38px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.in.typed{ color:var(--tx); }
+.send{ height:38px; padding:0 14px; border-radius:10px; background:var(--teal); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; }
+.pill{ position:absolute; left:50%; transform:translateX(-50%); background:var(--teal); color:#0f1115; font:600 11px var(--body); border-radius:999px; padding:4px 10px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+
+/* A: the stream, as the computer's column */
+.ascroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 14px 6px; gap:5px; position:relative; }
+.al{ font-size:12.5px; line-height:1.4; word-break:break-word; }
+.al .t{ font:10px var(--mono); color:var(--dim); }
+.al .sv{ font-size:10.5px; color:var(--mu); }
+.al .sv i{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:3px; vertical-align:0; }
+.al b{ font-weight:600; }
+.aspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
+.aspeak .chip{ padding:3px 8px; font-size:11px; }
+
+/* B: the game's own chat */
+.bscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; position:relative;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 38%,#33507a 72%,#6c8fbf 100%); padding:8px 0 6px; }
+.bl{ background:rgba(0,0,0,.52); color:#fff; font:12px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; word-break:break-word; margin-right:24px; }
+.gi{ display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px; color:#0f1115; font:700 8px/11px var(--body); text-align:center; text-shadow:none; }
+.bbar{ flex:none; background:#000; padding:7px 10px 9px; display:flex; flex-direction:column; gap:6px; border-top:1px solid #333; }
+.bbar .bin{ height:30px; background:rgba(255,255,255,.08); border:1px solid #555; color:#fff; font:12.5px var(--mono); display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+.bbar .bto{ display:flex; gap:6px; font:600 11px var(--body); }
+.bbar .bto span{ padding:3px 8px; border:1px solid #555; color:#ddd; border-radius:4px; }
+.bseg{ display:flex; gap:0; padding:0 14px 8px; flex:none; overflow:hidden; }
+.bseg span{ flex:none; padding:4px 8px; font:11px Silkscreen,var(--mono); color:var(--mu); border-bottom:2px solid transparent; }
+.bseg span.on{ color:var(--teal); border-bottom-color:var(--teal); }
+.prevbox{ background:#14171d; border:1px solid #2a2f3a; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.prevbox .lab{ font:600 10px var(--body); color:#9aa3b5; }
+
+/* C: conversation */
+.cscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:8px; position:relative; }
+.cg{ display:flex; gap:8px; align-items:flex-start; }
+.cg .cb{ display:flex; flex-direction:column; gap:3px; min-width:0; max-width:250px; }
+.cg .who{ font-size:11px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.cg .who b{ font-weight:600; }
+.cg .who .svn{ font-size:10px; padding:0 5px; border-radius:4px; }
+.cg .who .t{ font:10px var(--mono); color:var(--dim); }
+.bub{ background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:5px 9px; font-size:12.5px; line-height:1.35; word-break:break-word; align-self:flex-start; }
+.bub + .bub{ border-radius:12px; }
+.cg.me{ flex-direction:row-reverse; } .cg.me .cb{ align-items:flex-end; } .cg.me .who{ flex-direction:row-reverse; }
+.cg.me .bub{ background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; align-self:flex-end; }
+.sysl{ align-self:center; font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #4a4220; border-radius:999px; padding:3px 10px; }
+.cspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; gap:8px; align-items:center; background:var(--bg2); }
+.voice{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; box-shadow:0 0 0 2px var(--vio); background:#2a2240; }
+.menu{ position:absolute; left:28px; right:28px; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); }
+.menu div{ padding:11px 14px; font-size:13px; display:flex; gap:10px; align-items:center; }
+.menu div + div{ border-top:1px solid #23272f; }
+.menu svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* in game */
+.scene{ width:520px; max-width:100%; height:230px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ margin-right:0; width:max-content; max-width:440px; font-size:13px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.scene .hot i.sel{ box-shadow:inset 0 0 0 2px #fff; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; outline:1px solid #100010; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+.seg2{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:9px; padding:2px; font-size:12px; margin:0 14px 10px; flex:none; }
+.seg2 span{ flex:1; text-align:center; padding:5px 8px; border-radius:7px; color:var(--mu); position:relative; } .seg2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.seg2 .n{ display:inline-grid; place-items:center; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); margin-left:5px; padding:0 3px; }
+.rl{ display:flex; gap:8px; align-items:flex-start; font-size:12.5px; line-height:1.38; }
+.rl .who{ font-weight:600; } .rl .t{ font:10px var(--mono); color:var(--dim); margin-left:4px; }
+.rk{ font:600 9px var(--body); padding:0 5px; border-radius:4px; margin-left:4px; vertical-align:1px; }
+.rk.o{ background:#ffd23a22; color:#ffd23a; } .rk.a{ background:#b58cff22; color:#b58cff; } .rk.m{ background:#19d3b022; color:#19d3b0; }
+.msg{ margin:0 12px 8px; background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.msg.new{ box-shadow:inset 3px 0 0 var(--teal); }
+.msg .hd{ display:flex; gap:8px; align-items:center; font-size:12px; } .msg .hd .t{ white-space:nowrap; margin-left:auto; font:10px var(--mono); color:var(--dim); }
+.msg .tx{ font-size:12.5px; line-height:1.4; } .msg .ft{ font-size:10.5px; color:var(--mu); display:flex; gap:10px; }
+.to{ white-space:nowrap; font:600 10px var(--body); padding:1px 6px; border-radius:4px; background:#2b2f3a; color:var(--soft); }
+.keyrow{ display:flex; gap:6px; } .k{ flex:1; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:12px; background:var(--pn); border:1px solid var(--ln); }
+.k.p{ background:var(--teal); color:#0f1115; border-color:var(--teal); } .k.g{ background:#2a2614; color:var(--gold); border-color:#4a4220; }
+.ir{ display:flex; gap:10px; align-items:center; padding:9px 14px; border-top:1px solid #20242d; }
+.ir .nm{ font-weight:600; font-size:13px; } .ir .lst{ font-size:11.5px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ir .tm{ font:10px var(--mono); color:var(--dim); } .ir .un{ min-width:18px; height:18px; border-radius:9px; background:var(--teal); color:#0f1115; font:700 10.5px var(--body); display:grid; place-items:center; padding:0 4px; }
+.ir.pin{ background:#14171d; }
+.roomi{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; flex:none; }
+.roomi svg{ width:18px; height:18px; stroke:#0f1115; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.fab{ position:absolute; right:16px; bottom:84px; width:48px; height:48px; border-radius:16px; background:var(--teal); color:#0f1115; display:grid; place-items:center; font:600 26px var(--body); box-shadow:0 8px 20px rgba(0,0,0,.5); }
+.thread{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:6px; }
+.bub{ max-width:240px; background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:6px 10px; font-size:12.5px; line-height:1.38; align-self:flex-start; }
+.bub.me{ align-self:flex-end; background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; }
+.rd{ align-self:flex-end; font-size:10px; color:var(--mu); margin-top:-3px; }
+.heads{ display:flex; gap:10px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.hd1{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; color:var(--mu); width:46px; flex:none; text-align:center; }
+.hd1 .ring{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; }
+.hd1.off{ opacity:.45; }
+.away{ margin:0 12px 10px; background:#2a2614; border:1px solid #4a4220; border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:7px; flex:none; }
+.away .lab{ font:10.5px Silkscreen,var(--mono); color:var(--gold); }
+.sel{ box-shadow:0 0 0 2px var(--teal) !important; }
+.day{ align-self:center; font:600 10px var(--body); color:var(--mu); background:var(--pn); border:1px solid var(--ln); border-radius:999px; padding:1px 9px; margin:2px 0; }
+.ta{ min-height:80px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); padding:9px 11px; font-size:13px; line-height:1.4; }
+.sh2{ position:absolute; left:0; right:0; bottom:0; top:92px; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 0 0; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.pad{ padding:0 14px; }
+.eff{ font-size:10.5px; padding:2px 7px; border-radius:6px; background:#1f2a2a; color:#7fe0cf; border:1px solid #24443f; white-space:nowrap; }
+.sect2{ font:10.5px Silkscreen,var(--mono); color:var(--mu); display:flex; justify-content:space-between; align-items:center; padding:0 14px; }
+.sect2 .add{ font:600 11px var(--body); color:var(--teal); }
+.tg{ font:600 10.5px var(--body); padding:2px 8px; border-radius:999px; white-space:nowrap; display:inline-flex; gap:5px; align-items:center; }
+.tg.addt{ background:transparent; border:1px dashed var(--ln); color:var(--mu); }
+.tg .x{ opacity:.7; }
+.nt{ margin:0 12px; background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.nt .hd{ display:flex; gap:7px; align-items:center; font-size:11.5px; } .nt .hd .t{ font:10px var(--mono); color:var(--dim); }
+.nt .hd .dots{ margin-left:auto; color:var(--mu); font-weight:700; letter-spacing:1px; }
+.nt .tx{ font-size:12.5px; line-height:1.42; }
+.nt .ed{ font-size:10px; color:var(--dim); }
+.rk{ font:600 9px var(--body); padding:0 5px; border-radius:4px; } .rk.o{ background:#ffd23a22; color:#ffd23a; } .rk.a{ background:#b58cff22; color:#b58cff; } .rk.m{ background:#19d3b022; color:#19d3b0; }
+.addn{ margin:0 12px; display:flex; gap:6px; }
+.bg-list{ position:absolute; inset:0; opacity:.35; pointer-events:none; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12px; flex:none; }
+.ptabs span{ padding:8px 10px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 0 0 0 transparent, inset 0 -2px 0 var(--teal); }
+.tl{ display:grid; grid-template-columns:56px 12px 1fr; gap:0 8px; padding:0 14px; }
+.tl .t{ font:600 10.5px var(--mono); color:var(--mu); text-align:right; padding-top:9px; line-height:1.25; }
+.tl .line{ position:relative; } .tl .line::before{ content:""; position:absolute; left:5px; top:0; bottom:0; width:2px; background:#2a2f3a; }
+.tl .line i{ position:absolute; left:1px; top:11px; width:10px; height:10px; border-radius:50%; box-shadow:0 0 0 3px #14171d; }
+.tl .body{ padding:6px 0 12px; font-size:12.5px; line-height:1.42; border-bottom:1px solid #20242d; }
+.sticky{ margin:0 12px; background:#2a2614; border:1px solid #4a4220; border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.sticky .lab{ font:10.5px Silkscreen,var(--mono); color:var(--gold); display:flex; justify-content:space-between; }
+.sticky .tx{ font-size:12.5px; line-height:1.42; color:#f3ead0; }
+.trow{ display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid #20242d; font-size:12.5px; }
+.sw{ width:18px; height:18px; border-radius:5px; flex:none; }
+.trow .ct{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.trow.pending{ background:#1b1e25; }
+.pal{ display:grid; grid-template-columns:repeat(8,1fr); gap:6px; padding:4px 14px 6px; }
+.pal i{ aspect-ratio:1; border-radius:6px; display:block; } .pal i.on{ box-shadow:0 0 0 2px #e8eaf0; }
+.tgrid{ display:flex; flex-wrap:wrap; gap:8px; padding:0 14px; }
+.tcard{ border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:2px; min-width:92px; }
+.tcard b{ font-size:12.5px; } .tcard span{ font-size:10.5px; opacity:.8; }
+.k{ height:34px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:12px; background:var(--pn); border:1px solid var(--ln); flex:1; }
+.k.p{ background:var(--teal); color:#0f1115; border-color:var(--teal); } .k.d{ color:var(--coral); border-color:#5a2a2a; } .k.sure{ background:#ffd23a; color:#0f1115; border-color:#ffd23a; }
+.chk{ width:18px; height:18px; border-radius:5px; border:2px solid var(--dim); flex:none; display:grid; place-items:center; font:700 11px var(--body); color:#0f1115; }
+.chk.on{ background:var(--teal); border-color:var(--teal); }
+.ta{ border-radius:10px; background:var(--pn); border:1px solid var(--ln); padding:9px 11px; font-size:13px; line-height:1.45; }
+.menu2{ position:absolute; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); z-index:5; min-width:190px; }
+.menu2 div{ padding:10px 14px; font-size:13px; } .menu2 div + div{ border-top:1px solid #23272f; } .menu2 .dg{ color:var(--coral); } .menu2 .mu{ font-size:11px; }
+.gone{ font-style:italic; color:var(--dim); }
+.ph.desk{ width:1060px; height:640px; border-radius:12px; border-width:6px; flex-direction:row; }
+.side{ width:190px; flex:none; border-right:1px solid var(--ln); background:#12151b; display:flex; flex-direction:column; padding:14px 10px; gap:4px; }
+.side .nav{ padding:8px 10px; border-radius:8px; font-size:13px; color:var(--mu); display:flex; justify-content:space-between; }
+.side .nav.on{ background:var(--pn); color:var(--teal); }
+.side .so{ display:flex; gap:7px; align-items:center; font-size:11.5px; padding:3px 6px; }
+.mid{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.chatcol{ width:300px; flex:none; border-left:1px solid var(--ln); display:flex; flex-direction:column; background:#12151b; }
+.cols{ flex:1; display:flex; min-height:0; }
+.cols > div{ display:flex; flex-direction:column; min-width:0; }
+.prow{ display:flex; align-items:center; gap:9px; padding:8px 12px; border-top:1px solid #20242d; }
+.prow .nm{ font-weight:600; font-size:13px; white-space:nowrap; }
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:17px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:14px 16px; gap:10px; width:440px; height:290px; box-shadow:0 0 0 2px var(--V); }
+.scr .lbl{ font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.scr .row{ height:28px; display:flex; align-items:center; gap:9px; padding:0 9px; white-space:nowrap; overflow:hidden; font-size:15px; }
+.scr .row.hov{ background:#1b2230; }
+.scr .srv{ font-size:13px; padding:0 6px; border-radius:2px; background:#1b2230; color:#9AA3B5; }
+.scr .g{ color:var(--G); } .scr .ok{ color:var(--OK); } .scr .m{ color:var(--M); }
+.scr .box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:4px 0; display:flex; flex-direction:column; }
+.scr .ttl{ font:600 14px var(--body); letter-spacing:.12em; text-transform:uppercase; color:var(--V); }
+.mctip{ position:absolute; background:#100010f2; border:2px solid #2d0a63; color:#fff; font:13px/1.45 var(--mono); padding:5px 8px; border-radius:3px; width:max-content; max-width:290px; z-index:2; }
+.more1{ font:600 9.5px var(--body); color:var(--mu); padding:0 5px; border-radius:999px; border:1px solid var(--ln); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: sets S and T refined</h1>
+    <p class="lede">The Staff tab as picked (look A, D314) with read marks, 30 days, deleting within 5 minutes, the badge and messages to all staff from every rank (D315 to D319); notes and tags as picked (look A, D320) with the hover H1 in game (D321) and your other answers (D322 to D326). Six points to confirm below. Made-up names.</p>
+  </header>
+  <section><h2>The Staff tab</h2>
+    <div class="stage">
+      <div><div class="ph" id="s1"></div><div class="cap">R1, the room: a long press on your own line (4 minutes left to delete it), a deleted line above</div></div>
+      <div><div class="ph" id="s2"></div><div class="cap">R2, messages: REPLY opened under Mrgregles' message; your sent ones with read marks</div></div>
+    </div>
+    <div class="stage"><div><div class="ph desk" id="s3"></div><div class="cap" style="max-width:1060px">R3, on a computer: the room and messages side by side in the middle, the chat column on the right as always (D292)</div></div></div></section>
+  <section><h2>Notes and tags</h2>
+    <div class="stage">
+      <div><div class="ph" id="t1"></div><div class="cap">R4, the ⋯ on your own note: Edit, Delete (SURE?)</div></div>
+      <div><div class="ph" id="t2"></div><div class="cap">R5, tags beside names: the Players list (two shown, "+1" for more)</div></div>
+      <div><div class="scr" id="t3"></div><div class="cap">R6, in game: the hover on the CLIENTS list (H1)</div></div>
+    </div></section>
+  <section><h2>To confirm</h2>
+    <div class="card"><ol>
+      <li><b>R1. The room.</b> Lines with each person's head and rank, newest at the bottom, a divider for each day, "@Name" lit when it names you. A long press on your own line within 5 minutes offers DELETE (with the time left); "deleted" stays in its place. Owners may delete any line, at any time. Older lines load when you scroll up, back to 30 days.</li>
+      <li><b>R2. Messages.</b> Newest first; unread ones have a teal edge. GOT IT marks a message read; REPLY opens a box under it, already addressed to the sender. + NEW MESSAGE opens a sheet: TO (a staff member or All staff) and the text, up to 1000 characters. Your own sent messages show "Read 21:40", or "Read by 4 of 6" for all staff with the names on a tap.</li>
+      <li><b>R3. On a computer.</b> The room and messages side by side in the middle (no switch), with the chat column on the right as on every tab.</li>
+      <li><b>R4. Notes.</b> The ⋯ shows only on notes you wrote, or on every note for Admins and Owners: EDIT (the "edited" mark, the earlier words kept in the panel's log) and DELETE (SURE?). A note is plain text up to 1000 characters.</li>
+      <li><b>R5. Tags everywhere.</b> Beside the name on the Players list, the player's sheet and card, chat lines, search results and the Graves page; two at most on a row, then "+1"; all of them in the sheet.</li>
+      <li><b>R6. The count in game.</b> The panel sends the game servers each online player's notes count (and the newest's author and time) with its own signed message, about every 30 seconds and at once when a note is added or deleted; staff clients receive it with the STAFF and CLIENTS data. The hover says nothing for a player with no notes.</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SV_COL={"BSP-Spawn":"#19d3b0","Frostwarf":"#7fb2ff","Boulderbrook":"#d9a066","Moongrove":"#b58cff","Stormfall":"#9aa3b5","Sanctuary":"#7fe08a","SafeRoom":"#ffd23a"};
+const SHORT={"BSP-Spawn":"Spawn","Frostwarf":"Frostwarf","Boulderbrook":"Boulder","Moongrove":"Moongrove","Stormfall":"Stormfall","Sanctuary":"Sanctuary","SafeRoom":"SafeRoom"};
+const TAGS={"Vexa":[["Suspected cheater","#ff6b5c"]],"Newbie_Sam":[["New","#7fb2ff"]],"BrickLayerTom":[["Supporter","#ffd23a"]]};
+const CHAT=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole, can a mod help"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:36","Moongrove","Vexa","in like 5 minutes lol"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+
+/* ---------- pixel heads ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+ person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+ filter:'<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:38</span><span>●●● 5G 82%</span></div>');
+function tabbar(on,chatBadge){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",chatBadge],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const tagHtml=n=>(TAGS[n]||[]).map(([t,c])=>` <span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("");
+const topBar=(f,extra)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">CHAT</div>${extra||""}<div class="ico">${SV.search}</div></div>`));};
+function serverChips(f,on){const d=h('<div class="chips"></div>');d.appendChild(h(`<span class="chip ${on==="All"?"on":""}">All servers</span>`));
+  Object.keys(SV_COL).slice(0,5).forEach(s=>d.appendChild(h(`<span class="chip ${on===s?"on":""}"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span>`)));f.appendChild(d);}
+
+/* ---------- A ---------- */
+function aLine([t,s,n,x]){let who;
+  if(s==="staff")who=`<b class="vtx">[Staff] ${n}</b>`;
+  else if(s==="server")who=`<b class="gtx">[Server]</b>`;
+  else who=`<span class="sv"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span> <b>${n}</b>${tagHtml(n)}`;
+  return h(`<div class="al"><span class="t">${t}</span> ${who} ${x}</div>`);}
+const STAFF=[["Mrgregles","o","Owner"],["Saffi","a","Admin"],["Bramble","a","Admin"],["Ana_Mod","m","Moderator"],["Kip","m","Moderator"],["Rook","m","Moderator"]];
+const RK=n=>{const s=STAFF.find(x=>x[0]===n);return `<span class="rk ${s[1]}">${s[2]}</span>`;};
+const tg=(t,c)=>`<span class="tg" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`;
+function tabbarS(on,sb){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat"],["map","Map"],["shield","Staff",sb],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const ROOM=[["21:02","Saffi","anyone else seeing lag spikes on Frostwarf?"],["21:03","Kip","not on spawn"],["21:04","Mrgregles","checking the host, Frostwarf's nether is pregenerating"],["21:05","Kip",null],["21:12","Rook","Vexa has 12 diamonds in 5 min on Moongrove, watching her"],["21:20","Saffi","lag gone 👍"],["21:31","Kip","restart at 22:00? @Ana_Mod can you post it"],["21:34","Ana_Mod","done, sent as [Server] to the network"]];
+function roomLines(lines,small){const s=h('<div class="ascroll" style="gap:9px"></div>');s.appendChild(h('<div class="day">Today</div>'));
+  lines.forEach(([t,n,x])=>{const r=h(`<div class="rl"><div style="min-width:0"><span class="who ${n==="Ana_Mod"?"vtx":""}">${n}</span>${RK(n)}<span class="t">${t}</span><div>${x===null?'<span class="gone">deleted</span>':x.replace("@Ana_Mod",'<b class="vtx">@Ana_Mod</b>')}</div></div></div>`);r.prepend(headCanvas(n,small||24));s.appendChild(r);});return s;}
+const segS=(f,on)=>f.appendChild(h(`<div class="seg2"><span class="${on==="room"?"on":""}">Room</span><span class="${on==="msg"?"on":""}">Messages<span class="n">1</span></span></div>`));
+const topS=(f,t)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">${t}</div><div class="ico">${SV.search}</div></div>`));};
+const boxS=(f,ph)=>f.appendChild(h(`<div class="aspeak"><div style="display:flex;gap:6px"><div class="in">${ph}</div><div class="send">Send</div></div></div>`));
+function msgCard(n,to,t,x,nw,ft){const c=h(`<div class="msg ${nw?"new":""}"><div class="hd"><b>${n}</b>${RK(n)}<span class="to">${to}</span><span class="t">${t}</span></div><div class="tx">${x}</div>${ft||""}</div>`);c.querySelector(".hd").prepend(headCanvas(n,20));return c;}
+/* R1 */
+(function(){const f=document.getElementById("s1");topS(f,"STAFF");segS(f,"room");const r=roomLines(ROOM);f.appendChild(r);boxS(f,"Say something to the staff…");f.appendChild(tabbarS("Staff",1));
+  f.appendChild(h('<div class="dimmer" style="z-index:3"></div>'));
+  const last=r.lastElementChild;last.style.position="relative";last.style.zIndex="4";last.style.background="#14171d";last.style.borderRadius="8px";last.style.boxShadow="0 0 0 2px #19d3b0";
+  f.appendChild(h('<div class="menu2" style="right:24px;bottom:200px"><div>Copy</div><div class="dg">Delete <span class="mu">· 4 min left</span></div></div>'));})();
+/* R2 */
+(function(){const f=document.getElementById("s2");topS(f,"STAFF");segS(f,"msg");
+  const s=h('<div style="flex:1;overflow:hidden;display:flex;flex-direction:column"></div>');
+  s.appendChild(h('<div style="padding:0 12px 8px"><div class="k p" style="height:34px">+ New message</div></div>'));
+  s.appendChild(msgCard("Mrgregles","to you","Sun 23:40","Can you keep an eye on Moongrove tonight? Two reports of x-ray there.",true,'<div style="display:flex;gap:6px"><div class="in typed" style="height:34px">On it, Rook is watching her too.</div><div class="send" style="height:34px">Send</div></div><div style="font-size:10.5px;color:#9aa3b5">Replying to Mrgregles · GOT IT once sent</div>'));
+  s.appendChild(msgCard("Ana_Mod","to all staff","20:58","Vexa is tagged Suspected cheater, notes on her sheet. Please do not kick without proof.",false,'<div class="ft"><span>Read by 4 of 6 ›</span></div>'));
+  s.appendChild(msgCard("Ana_Mod","to Kip","20:50","Thanks for covering spawn earlier!",false,'<div class="ft"><span>Read 20:58</span></div>'));
+  s.appendChild(msgCard("Saffi","to all staff","09:15","Restart on Sunday at 10:00 for the BSP-Core update.",false,'<div class="ft"><span>You read it 09:40</span></div>'));
+  f.appendChild(s);f.appendChild(tabbarS("Staff",1));})();
+/* R3, the computer */
+(function(){const f=document.getElementById("s3");
+  const side=h('<div class="side"><div class="brand" style="padding:0 8px 10px">BSP STAFF</div></div>');
+  [["Players"],["Chat"],["Map"],["Staff","1"],["More"]].forEach(([l,b])=>side.appendChild(h(`<div class="nav ${l==="Staff"?"on":""}"><span>${l}</span>${b?`<span class="badge" style="position:static">${b}</span>`:""}</div>`)));
+  side.appendChild(h('<div class="sect" style="padding:12px 8px 4px">STAFF ONLINE · 5</div>'));
+  [["Mrgregles","on the panel","#19d3b0"],["Saffi","Frostwarf ▣","#8fe04a"],["Kip","BSP-Spawn","#8fe04a"],["Rook","Moongrove, away","#f2b544"],["Ana_Mod","on the panel","#19d3b0"]].forEach(([n,w,c])=>{const r=h(`<div class="so"><span style="width:7px;height:7px;border-radius:50%;background:${c}"></span><span class="grow"><b>${n}</b><br><span style="color:#9aa3b5;font-size:10px">${w}</span></span></div>`);r.insertBefore(headCanvas(n,20),r.children[1]);side.appendChild(r);});
+  f.appendChild(side);
+  const mid=h('<div class="mid"></div>');mid.appendChild(h('<div class="top" style="padding:14px 16px 10px"><div class="brand grow">STAFF</div><div class="ico">'+SV.search+'</div></div>'));
+  const cols=h('<div class="cols"></div>');
+  const left=h('<div style="flex:1.1;border-right:1px solid #2a2f3a"></div>');left.appendChild(h('<div class="sect" style="padding:0 14px 6px">ROOM</div>'));left.appendChild(roomLines(ROOM.slice(2),24));boxS(left,"Say something to the staff…");
+  const right=h('<div style="flex:1;overflow:hidden"></div>');right.appendChild(h('<div class="sect" style="padding:0 14px 6px;display:flex;justify-content:space-between"><span>MESSAGES · 1 UNREAD</span><span style="font-family:var(--body);font-size:11px;color:#19d3b0">+ New message</span></div>'));
+  right.appendChild(msgCard("Mrgregles","to you","Sun 23:40","Can you keep an eye on Moongrove tonight? Two reports of x-ray there.",true,'<div style="display:flex;gap:6px"><div class="k">Reply</div><div class="k p">Got it</div></div>'));
+  right.appendChild(msgCard("Ana_Mod","to all staff","20:58","Vexa is tagged Suspected cheater, notes on her sheet. Please do not kick without proof.",false,'<div class="ft"><span>Read by 4 of 6 ›</span></div>'));
+  right.appendChild(msgCard("Ana_Mod","to Kip","20:50","Thanks for covering spawn earlier!",false,'<div class="ft"><span>Read 20:58</span></div>'));
+  cols.appendChild(left);cols.appendChild(right);mid.appendChild(cols);f.appendChild(mid);
+  const cc=h('<div class="chatcol"></div>');cc.appendChild(h('<div style="display:flex;align-items:center;gap:8px;padding:14px 14px 10px"><span class="sect grow" style="margin:0">NETWORK CHAT</span><span class="chip" style="padding:3px 8px">All servers ▾</span></div>'));
+  const cl=h('<div class="ascroll" style="padding:0 14px 6px"></div>');CHAT.slice(5).forEach(l=>cl.appendChild(aLine(l)));cc.appendChild(cl);
+  cc.appendChild(h(`<div class="aspeak"><div style="display:flex;gap:6px"><span class="chip">As <b class="vtx">[Staff] Ana_Mod</b> ▾</span><span class="chip">Network ▾</span></div><div style="display:flex;gap:6px"><div class="in">Say something…</div><div class="send">Send</div></div></div>`));
+  f.appendChild(cc);})();
+/* R4 */
+(function(){const f=document.getElementById("t1");const bg=h('<div class="bg-list"></div>');bg.appendChild(status());f.appendChild(bg);f.appendChild(h('<div class="dimmer"></div>'));
+  const sh=h('<div class="sh2"><div class="grab"></div></div>');f.appendChild(sh);
+  const d=h(`<div class="pad" style="display:flex;gap:12px;align-items:center"><div class="grow"><div style="font-size:17px;font-weight:600">Vexa</div><div style="font-size:11px;color:#9aa3b5"><span style="color:#AA00AA">■</span> Nightshade · Moongrove · ping 120 ms</div><div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">${tg("Suspected cheater","#ff6b5c")}${tg("Watch","#ffd23a")}<span class="tg addt">+ Tag</span></div></div></div>`);d.prepend(headCanvas("Vexa",48));sh.appendChild(d);
+  sh.appendChild(h('<div class="pad" style="font-size:11px;color:#9aa3b5">… stats, inventory, ender chest, backpacks above …</div>'));
+  sh.appendChild(h('<div class="sect2"><span>NOTES · 2</span></div>'));
+  const note=(n,t,x,ed,dots)=>{const c=h(`<div class="nt"><div class="hd"><b>${n}</b>${RK(n)}<span class="t">${t}</span><span class="dots">${dots?"⋯":""}</span></div><div class="tx">${x}</div>${ed?`<div class="ed">${ed}</div>`:""}</div>`);c.querySelector(".hd").prepend(headCanvas(n,18));return c;};
+  sh.appendChild(note("Rook","2 h ago","Found 12 diamonds in 5 minutes at y -58 on Moongrove. Watching her tonight; screenshots in the staff drive.","",false));
+  const mine=note("Ana_Mod","1 h ago","Asked in chat if x-ray is allowed. Told her no and pointed her to /rules.","edited 21:40",true);mine.style.position="relative";sh.appendChild(mine);
+  sh.appendChild(h('<div class="addn"><div class="in">Add a note about Vexa…</div><div class="send">Add</div></div>'));
+  f.appendChild(h('<div class="menu2" style="right:24px;top:376px"><div>Edit</div><div style="background:#ffd23a;color:#0f1115;font-weight:600">Sure? Delete it</div></div>'));})();
+/* R5 */
+(function(){const f=document.getElementById("t2");f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">PLAYERS</div><div class="ico">${SV.search}</div></div>`));
+  const card=h('<div style="margin:0 12px;background:#1a1d24;border:1px solid #2a2f3a;border-radius:12px;overflow:hidden"></div>');
+  card.appendChild(h('<div style="padding:8px 12px;font-size:12px;display:flex;gap:7px;align-items:center"><span style="width:9px;height:9px;border-radius:2px;background:#AA00AA"></span><b>Nightshade</b><span style="color:#9aa3b5">· 3 online</span></div>'));
+  [["Vexa","Moongrove",[["Suspected cheater","#ff6b5c"],["Watch","#ffd23a"],["Muted before","#b58cff"]]],["ObsidianOtter","Moongrove",[]],["Pixl","Stormfall",[["x-ray?","#6b7180"]]]].forEach(([n,sv,tags])=>{
+    const shown=tags.slice(0,2).map(([t,c])=>tg(t,c)).join(" ")+(tags.length>2?` <span class="more1">+${tags.length-2}</span>`:"");
+    const r=h(`<div class="prow"><div style="min-width:0;flex:1"><div><span class="nm">${n}</span> ${shown}</div><div style="font-size:11px;color:#9aa3b5">${sv} · overworld</div></div></div>`);r.prepend(headCanvas(n,30));card.appendChild(r);});
+  f.appendChild(card);
+  f.appendChild(h('<div class="sect" style="padding:14px 14px 6px">AND IN CHAT</div>'));
+  const c=h('<div style="padding:0 14px;display:flex;flex-direction:column;gap:5px"></div>');CHAT.filter(l=>["Vexa","Newbie_Sam","BrickLayerTom"].includes(l[2])).slice(0,4).forEach(l=>c.appendChild(aLine(l)));f.appendChild(c);
+  f.appendChild(h('<div style="flex:1"></div>'));f.appendChild(tabbar("Players"));})();
+/* R6 */
+(function(){const s=document.getElementById("t3");
+  s.appendChild(h('<div style="display:flex;justify-content:space-between;align-items:center"><span class="ttl">Clients</span><span class="m" style="font-size:13px">Players · 6</span></div>'));
+  const b=h('<div class="box"></div>');b.appendChild(h('<div class="row lbl">Online · network</div>'));
+  [["Kat_Miner","Stormfall",'<span class="g">2 ⚑</span>'],["Vexa","Moongrove",'<span class="ok">✓</span>'],["Tomo_42","Spawn",'<span class="g">1 ⚑</span>'],["Pip","Frostwarf",'<span class="ok">✓</span>'],["Steve_Builds","Spawn",'<span class="ok">✓</span>'],["Lumen","Moongrove",'<span class="m" style="font-size:13px">exempt</span>']].forEach(([n,sv,st])=>b.appendChild(h(`<div class="row ${n==="Vexa"?"hov":""}"><span style="font-weight:600">${n}</span><span class="srv">${sv}</span><span style="flex:1"></span>${st}</div>`)));
+  s.appendChild(b);
+  s.appendChild(h('<div class="mctip" style="left:130px;top:118px"><span style="color:#FFD23A">2 notes</span><br><span style="color:#AAAAAA">newest by Ana_Mod, 1 h ago</span><br><span style="color:#AAAAAA">read them on the staff panel</span></div>'));})();
+</script>
+</body>
+</html>

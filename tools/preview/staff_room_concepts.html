@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Room Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set S: three looks for the Staff tab of the staff web panel (D265): the live staff room and messages to one staff
+   member or all staff that wait until they next open the panel. Set R is skipped so its choices do not clash with the
+   refined pages' R1 to R3. Sample data; names are made up. */
+/* Mock-up set Q: three looks for the Chat tab of the staff web panel on a phone (D261 to D263, D292), and three looks for
+   a line sent from the panel as it shows in game. Sample data; names are made up. The frames use the BSP website's own
+   tokens (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.mu{ color:var(--mu); } .dm{ color:var(--dim); } .vtx{ color:var(--vio); } .gtx{ color:var(--gold); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip.on{ background:var(--teal); color:#0f1115; border-color:var(--teal); font-weight:600; }
+.chip i{ width:7px; height:7px; border-radius:2px; display:block; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.tag{ font:600 9px var(--body); padding:0 5px; border-radius:999px; white-space:nowrap; vertical-align:1px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.62); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:8px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); margin-top:4px; }
+.opt{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:12.5px; }
+.opt.on{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.opt .rb{ width:14px; height:14px; border-radius:50%; border:2px solid var(--dim); flex:none; } .opt.on .rb{ border-color:var(--teal); background:radial-gradient(var(--teal) 45%, transparent 50%); }
+.opt .sub{ font-size:10.5px; color:var(--mu); }
+.opt.lock{ opacity:.5; }
+.in{ flex:1; min-width:0; height:38px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.in.typed{ color:var(--tx); }
+.send{ height:38px; padding:0 14px; border-radius:10px; background:var(--teal); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; }
+.pill{ position:absolute; left:50%; transform:translateX(-50%); background:var(--teal); color:#0f1115; font:600 11px var(--body); border-radius:999px; padding:4px 10px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+
+/* A: the stream, as the computer's column */
+.ascroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 14px 6px; gap:5px; position:relative; }
+.al{ font-size:12.5px; line-height:1.4; word-break:break-word; }
+.al .t{ font:10px var(--mono); color:var(--dim); }
+.al .sv{ font-size:10.5px; color:var(--mu); }
+.al .sv i{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:3px; vertical-align:0; }
+.al b{ font-weight:600; }
+.aspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
+.aspeak .chip{ padding:3px 8px; font-size:11px; }
+
+/* B: the game's own chat */
+.bscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; position:relative;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 38%,#33507a 72%,#6c8fbf 100%); padding:8px 0 6px; }
+.bl{ background:rgba(0,0,0,.52); color:#fff; font:12px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; word-break:break-word; margin-right:24px; }
+.gi{ display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px; color:#0f1115; font:700 8px/11px var(--body); text-align:center; text-shadow:none; }
+.bbar{ flex:none; background:#000; padding:7px 10px 9px; display:flex; flex-direction:column; gap:6px; border-top:1px solid #333; }
+.bbar .bin{ height:30px; background:rgba(255,255,255,.08); border:1px solid #555; color:#fff; font:12.5px var(--mono); display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+.bbar .bto{ display:flex; gap:6px; font:600 11px var(--body); }
+.bbar .bto span{ padding:3px 8px; border:1px solid #555; color:#ddd; border-radius:4px; }
+.bseg{ display:flex; gap:0; padding:0 14px 8px; flex:none; overflow:hidden; }
+.bseg span{ flex:none; padding:4px 8px; font:11px Silkscreen,var(--mono); color:var(--mu); border-bottom:2px solid transparent; }
+.bseg span.on{ color:var(--teal); border-bottom-color:var(--teal); }
+.prevbox{ background:#14171d; border:1px solid #2a2f3a; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.prevbox .lab{ font:600 10px var(--body); color:#9aa3b5; }
+
+/* C: conversation */
+.cscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:8px; position:relative; }
+.cg{ display:flex; gap:8px; align-items:flex-start; }
+.cg .cb{ display:flex; flex-direction:column; gap:3px; min-width:0; max-width:250px; }
+.cg .who{ font-size:11px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.cg .who b{ font-weight:600; }
+.cg .who .svn{ font-size:10px; padding:0 5px; border-radius:4px; }
+.cg .who .t{ font:10px var(--mono); color:var(--dim); }
+.bub{ background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:5px 9px; font-size:12.5px; line-height:1.35; word-break:break-word; align-self:flex-start; }
+.bub + .bub{ border-radius:12px; }
+.cg.me{ flex-direction:row-reverse; } .cg.me .cb{ align-items:flex-end; } .cg.me .who{ flex-direction:row-reverse; }
+.cg.me .bub{ background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; align-self:flex-end; }
+.sysl{ align-self:center; font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #4a4220; border-radius:999px; padding:3px 10px; }
+.cspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; gap:8px; align-items:center; background:var(--bg2); }
+.voice{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; box-shadow:0 0 0 2px var(--vio); background:#2a2240; }
+.menu{ position:absolute; left:28px; right:28px; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); }
+.menu div{ padding:11px 14px; font-size:13px; display:flex; gap:10px; align-items:center; }
+.menu div + div{ border-top:1px solid #23272f; }
+.menu svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* in game */
+.scene{ width:520px; max-width:100%; height:230px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ margin-right:0; width:max-content; max-width:440px; font-size:13px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.scene .hot i.sel{ box-shadow:inset 0 0 0 2px #fff; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; outline:1px solid #100010; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+.seg2{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:9px; padding:2px; font-size:12px; margin:0 14px 10px; flex:none; }
+.seg2 span{ flex:1; text-align:center; padding:5px 8px; border-radius:7px; color:var(--mu); position:relative; } .seg2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.seg2 .n{ display:inline-grid; place-items:center; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); margin-left:5px; padding:0 3px; }
+.rl{ display:flex; gap:8px; align-items:flex-start; font-size:12.5px; line-height:1.38; }
+.rl .who{ font-weight:600; } .rl .t{ font:10px var(--mono); color:var(--dim); margin-left:4px; }
+.rk{ font:600 9px var(--body); padding:0 5px; border-radius:4px; margin-left:4px; vertical-align:1px; }
+.rk.o{ background:#ffd23a22; color:#ffd23a; } .rk.a{ background:#b58cff22; color:#b58cff; } .rk.m{ background:#19d3b022; color:#19d3b0; }
+.msg{ margin:0 12px 8px; background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:5px; }
+.msg.new{ box-shadow:inset 3px 0 0 var(--teal); }
+.msg .hd{ display:flex; gap:8px; align-items:center; font-size:12px; } .msg .hd .t{ white-space:nowrap; margin-left:auto; font:10px var(--mono); color:var(--dim); }
+.msg .tx{ font-size:12.5px; line-height:1.4; } .msg .ft{ font-size:10.5px; color:var(--mu); display:flex; gap:10px; }
+.to{ white-space:nowrap; font:600 10px var(--body); padding:1px 6px; border-radius:4px; background:#2b2f3a; color:var(--soft); }
+.keyrow{ display:flex; gap:6px; } .k{ flex:1; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:12px; background:var(--pn); border:1px solid var(--ln); }
+.k.p{ background:var(--teal); color:#0f1115; border-color:var(--teal); } .k.g{ background:#2a2614; color:var(--gold); border-color:#4a4220; }
+.ir{ display:flex; gap:10px; align-items:center; padding:9px 14px; border-top:1px solid #20242d; }
+.ir .nm{ font-weight:600; font-size:13px; } .ir .lst{ font-size:11.5px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ir .tm{ font:10px var(--mono); color:var(--dim); } .ir .un{ min-width:18px; height:18px; border-radius:9px; background:var(--teal); color:#0f1115; font:700 10.5px var(--body); display:grid; place-items:center; padding:0 4px; }
+.ir.pin{ background:#14171d; }
+.roomi{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; flex:none; }
+.roomi svg{ width:18px; height:18px; stroke:#0f1115; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.fab{ position:absolute; right:16px; bottom:84px; width:48px; height:48px; border-radius:16px; background:var(--teal); color:#0f1115; display:grid; place-items:center; font:600 26px var(--body); box-shadow:0 8px 20px rgba(0,0,0,.5); }
+.thread{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:6px; }
+.bub{ max-width:240px; background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:6px 10px; font-size:12.5px; line-height:1.38; align-self:flex-start; }
+.bub.me{ align-self:flex-end; background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; }
+.rd{ align-self:flex-end; font-size:10px; color:var(--mu); margin-top:-3px; }
+.heads{ display:flex; gap:10px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.hd1{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; color:var(--mu); width:46px; flex:none; text-align:center; }
+.hd1 .ring{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; }
+.hd1.off{ opacity:.45; }
+.away{ margin:0 12px 10px; background:#2a2614; border:1px solid #4a4220; border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:7px; flex:none; }
+.away .lab{ font:10.5px Silkscreen,var(--mono); color:var(--gold); }
+.sel{ box-shadow:0 0 0 2px var(--teal) !important; }
+.day{ align-self:center; font:600 10px var(--body); color:var(--mu); background:var(--pn); border:1px solid var(--ln); border-radius:999px; padding:1px 9px; margin:2px 0; }
+.ta{ min-height:80px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); padding:9px 11px; font-size:13px; line-height:1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: mock-up set S, the Staff tab</h1>
+    <p class="lede">Three looks for the Staff tab (D265): one live staff room for every staff member on the panel, and messages to one staff member or to all staff that wait until they next open the panel. Panel only: nothing of this reaches the game. On a computer the same view fills the middle of the dashboard (the chat column stays on the right). Set R is skipped so its choices do not clash with the refined pages' R1 to R3. Made-up names.</p>
+  </header>
+  <section><h2>A. The room, with messages beside it</h2>
+    <div class="card"><p>Two halves under one switch: ROOM (the live staff room, with each person's head and rank) and MESSAGES (a red number for unread ones). Messages are cards, the unread ones with a teal edge; REPLY and GOT IT on each; + NEW MESSAGE at the top.</p></div>
+    <div class="stage"><div><div class="ph" id="a1"></div><div class="cap">A1, the room</div></div><div><div class="ph" id="a2"></div><div class="cap">A2, messages (2 unread)</div></div></div></section>
+  <section><h2>B. An inbox, like a messaging app</h2>
+    <div class="card"><p>A list of conversations: the staff room pinned at the top, then "All staff" notices, then one row per person you have written to or heard from, each with the last line and an unread count. Tapping one opens it as a thread; under your own last message, when it was read.</p></div>
+    <div class="stage"><div><div class="ph" id="b1"></div><div class="cap">B1, the list</div></div><div><div class="ph" id="b2"></div><div class="cap">B2, a thread with Mrgregles</div></div></div></section>
+  <section><h2>C. Who is here, and what waited for you</h2>
+    <div class="card"><p>The staff along the top as heads (ringed teal on the panel, green in game with their server, faded when away); tap a head to message them. Messages left while you were away sit in a gold box above the room until GOT IT; the room runs below. Writing a message opens a sheet with the heads to pick from, or ALL STAFF.</p></div>
+    <div class="stage"><div><div class="ph" id="c1"></div><div class="cap">C1, the tab when you open the panel</div></div><div><div class="ph" id="c2"></div><div class="cap">C2, writing to Kip and Saffi</div></div></div></section>
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>S1. The look.</b> A: the room and messages as two halves under one switch, messages as cards with REPLY and GOT IT. B: an inbox list with the room pinned at the top and a thread per person, like a messaging app. C: staff heads along the top, waiting messages in a gold box over the live room.</li>
+      <li><b>S2. Read marks.</b> The sender sees when a message was read ("Read 21:40"; for all staff, "Read by 4 of 6" with the names on a tap). Or no read marks at all.</li>
+      <li><b>S3. How long the room and messages are kept.</b> 30 days, as chat (D263); a message nobody has read yet is kept until it is read. Or a year. Or for ever.</li>
+      <li><b>S4. Deleting.</b> You may delete your own line or message within 5 minutes ("deleted" stays in its place), and Owners may delete any. Or nothing is ever deleted.</li>
+      <li><b>S5. The Staff tab's badge.</b> A red number for unread messages to you and room lines that name you; a plain dot for any other new room line (as Chat, D308). Or a number for every new room line too.</li>
+      <li><b>S6. Who may write to all staff.</b> Every rank. Or Admins and Owners only, with Moderators writing to one person at a time.</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SV_COL={"BSP-Spawn":"#19d3b0","Frostwarf":"#7fb2ff","Boulderbrook":"#d9a066","Moongrove":"#b58cff","Stormfall":"#9aa3b5","Sanctuary":"#7fe08a","SafeRoom":"#ffd23a"};
+const SHORT={"BSP-Spawn":"Spawn","Frostwarf":"Frostwarf","Boulderbrook":"Boulder","Moongrove":"Moongrove","Stormfall":"Stormfall","Sanctuary":"Sanctuary","SafeRoom":"SafeRoom"};
+const TAGS={"Vexa":[["Suspected cheater","#ff6b5c"]],"Newbie_Sam":[["New","#7fb2ff"]],"BrickLayerTom":[["Supporter","#ffd23a"]]};
+const CHAT=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole, can a mod help"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:36","Moongrove","Vexa","in like 5 minutes lol"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+
+/* ---------- pixel heads ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+ person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+ filter:'<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:38</span><span>●●● 5G 82%</span></div>');
+function tabbar(on,chatBadge){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",chatBadge],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const tagHtml=n=>(TAGS[n]||[]).map(([t,c])=>` <span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("");
+const topBar=(f,extra)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">CHAT</div>${extra||""}<div class="ico">${SV.search}</div></div>`));};
+function serverChips(f,on){const d=h('<div class="chips"></div>');d.appendChild(h(`<span class="chip ${on==="All"?"on":""}">All servers</span>`));
+  Object.keys(SV_COL).slice(0,5).forEach(s=>d.appendChild(h(`<span class="chip ${on===s?"on":""}"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span>`)));f.appendChild(d);}
+
+/* ---------- A ---------- */
+function aLine([t,s,n,x]){let who;
+  if(s==="staff")who=`<b class="vtx">[Staff] ${n}</b>`;
+  else if(s==="server")who=`<b class="gtx">[Server]</b>`;
+  else who=`<span class="sv"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span> <b>${n}</b>${tagHtml(n)}`;
+  return h(`<div class="al"><span class="t">${t}</span> ${who} ${x}</div>`);}
+function tabbarS(on,sb){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat"],["map","Map"],["shield","Staff",sb],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const STAFF=[["Mrgregles","o","Owner","panel"],["Saffi","a","Admin","game","Frostwarf"],["Bramble","a","Admin","off"],["Ana_Mod","m","Moderator","panel"],["Kip","m","Moderator","game","BSP-Spawn"],["Rook","m","Moderator","away","Moongrove"]];
+const RK=n=>{const s=STAFF.find(x=>x[0]===n);return `<span class="rk ${s[1]}">${s[2]}</span>`;};
+const ROOM=[["20:41","Bramble","evening all"],["20:44","Kip","hi! quiet on spawn so far"],["21:02","Saffi","anyone else seeing lag spikes on Frostwarf?"],["21:03","Kip","not on spawn"],["21:04","Mrgregles","checking the host, Frostwarf's nether is pregenerating"],["21:12","Rook","Vexa has 12 diamonds in 5 min on Moongrove, watching her"],["21:13","Ana_Mod","I'll stay on her too, she asked if x-ray was allowed"],["21:20","Saffi","lag gone 👍"],["21:31","Kip","restart at 22:00? @Ana_Mod can you post it"],["21:33","Ana_Mod","done, sent as [Server] to the network"]];
+const roomTab=(f,seg)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">STAFF</div><div class="ico">${SV.search}</div></div>`));
+  if(seg)f.appendChild(h(`<div class="seg2"><span class="${seg==="room"?"on":""}">Room</span><span class="${seg==="msg"?"on":""}">Messages<span class="n">2</span></span></div>`));};
+function room(lines,small){const s=h('<div class="ascroll" style="gap:9px"></div>');lines.forEach(([t,n,x])=>{const r=h(`<div class="rl"><div style="min-width:0"><span class="who ${n==="Ana_Mod"?"vtx":""}">${n}</span>${RK(n)}<span class="t">${t}</span><div>${x.replace("@Ana_Mod",'<b class="vtx">@Ana_Mod</b>')}</div></div></div>`);r.prepend(headCanvas(n,small||26));s.appendChild(r);});return s;}
+const box=(f,ph)=>f.appendChild(h(`<div class="aspeak"><div style="display:flex;gap:6px"><div class="in">${ph}</div><div class="send">Send</div></div></div>`));
+/* A */
+(function(){const f=document.getElementById("a1");roomTab(f,"room");f.appendChild(room(ROOM));box(f,"Say something to the staff…");f.appendChild(tabbarS("Staff",2));})();
+(function(){const f=document.getElementById("a2");roomTab(f,"msg");
+  const s=h('<div style="flex:1;overflow:hidden;display:flex;flex-direction:column"></div>');
+  s.appendChild(h('<div style="padding:0 12px 8px"><div class="k p" style="height:34px">+ New message</div></div>'));
+  const m=(n,to,t,x,nw,ft)=>{const c=h(`<div class="msg ${nw?"new":""}"><div class="hd"><b>${n}</b>${RK(n)}<span class="to">${to}</span><span class="t">${t}</span></div><div class="tx">${x}</div>${ft||""}</div>`);c.querySelector(".hd").prepend(headCanvas(n,20));return c;};
+  s.appendChild(m("Mrgregles","to you","Sun 23:40","Can you keep an eye on Moongrove tonight? Two reports of x-ray there.",true,'<div class="keyrow"><div class="k">Reply</div><div class="k p">Got it</div></div>'));
+  s.appendChild(m("Saffi","to all staff","today 09:15","Restart on Sunday at 10:00 for the BSP-Core update. Please tell players in chat from 09:30.",true,'<div class="keyrow"><div class="k">Reply</div><div class="k p">Got it</div></div>'));
+  s.appendChild(m("Ana_Mod","to Kip","today 20:50","Thanks for covering spawn earlier!",false,'<div class="ft"><span>Read 20:58</span></div>'));
+  s.appendChild(m("Bramble","to all staff","Fri 18:02","New tag list is up: please use Watch instead of Suspected.",false,'<div class="ft"><span>You read it Fri 18:30</span></div>'));
+  f.appendChild(s);f.appendChild(tabbarS("Staff",2));})();
+/* B */
+(function(){const f=document.getElementById("b1");roomTab(f);
+  const s=h('<div style="flex:1;overflow:hidden"></div>');
+  s.appendChild(h(`<div class="ir pin"><div class="roomi" style="background:var(--teal)">${SV.users}</div><div class="grow"><div class="nm">Staff room</div><div class="lst">Ana_Mod: done, sent as [Server] to the network</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="tm">21:33</span><span class="un">3</span></div></div>`));
+  s.appendChild(h(`<div class="ir pin"><div class="roomi" style="background:var(--gold)">${SV.shield}</div><div class="grow"><div class="nm">All staff</div><div class="lst">Saffi: Restart on Sunday at 10:00 for the BSP-Core…</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="tm">09:15</span><span class="un">1</span></div></div>`));
+  [["Mrgregles","Can you keep an eye on Moongrove tonight? Two…","Sun",1],["Kip","You: Thanks for covering spawn earlier!","20:50",0],["Rook","screenshots of Vexa's mining are in the drive","Sat",0],["Bramble","ok","Fri",0]].forEach(([n,x,t,u])=>{
+    const r=h(`<div class="ir"><div class="grow"><div class="nm">${n}${RK(n)}</div><div class="lst">${x}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="tm">${t}</span>${u?`<span class="un">${u}</span>`:""}</div></div>`);r.prepend(headCanvas(n,36));s.appendChild(r);});
+  f.appendChild(s);f.appendChild(h('<div class="fab">+</div>'));f.appendChild(tabbarS("Staff",2));})();
+(function(){const f=document.getElementById("b2");f.appendChild(status());
+  const t=h(`<div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="grow"><div style="font-weight:600">Mrgregles${RK("Mrgregles")}</div><div style="font-size:10.5px;color:#19d3b0">on the panel</div></div></div>`);t.insertBefore(headCanvas("Mrgregles",30),t.children[1]);f.appendChild(t);
+  const s=h('<div class="thread"></div>');
+  s.appendChild(h('<div class="day">Saturday</div>'));
+  s.appendChild(h('<div class="bub">Welcome to the panel! Ask me if anything is unclear.</div>'));
+  s.appendChild(h('<div class="bub me">Thanks! Is kicking for x-ray ok or should I wait for proof?</div>'));
+  s.appendChild(h('<div class="bub">Wait for proof, screenshots or the Action Log. Kick only if they grief.</div>'));
+  s.appendChild(h('<div class="day">Sunday</div>'));
+  s.appendChild(h('<div class="bub">Can you keep an eye on Moongrove tonight? Two reports of x-ray there.</div>'));
+  s.appendChild(h('<div class="day">Today</div>'));
+  s.appendChild(h('<div class="bub me">On it. Vexa found 12 diamonds in 5 minutes, Rook is watching too.</div>'));
+  s.appendChild(h('<div class="rd">Read 21:40</div>'));
+  f.appendChild(s);box(f,"Message Mrgregles…");f.appendChild(tabbarS("Staff",1));})();
+/* C */
+function headsStrip(f,pick){const d=h('<div class="heads"></div>');
+  STAFF.filter(s=>s[0]!=="Ana_Mod").forEach(([n,,,st,sv])=>{const ring=st==="panel"?"#19d3b0":st==="game"?"#8fe04a":st==="away"?"#f2b544":"#3a3f4b";
+    const e=h(`<div class="hd1 ${st==="off"?"off":""}"><div class="ring" style="box-shadow:0 0 0 2px ${ring}"></div><span>${n}</span><span style="font-size:8.5px;margin-top:-3px">${st==="panel"?"panel":st==="off"?"away":(sv||"").replace("BSP-","")}</span></div>`);
+    e.querySelector(".ring").appendChild(headCanvas(n,30));if(pick&&pick.includes(n))e.querySelector(".ring").classList.add("sel");d.appendChild(e);});f.appendChild(d);}
+(function(){const f=document.getElementById("c1");roomTab(f);headsStrip(f);
+  const a=h('<div class="away"><div class="lab">WHILE YOU WERE AWAY · 2</div></div>');
+  const one=(n,to,x)=>{const r=h(`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><div style="min-width:0"><b>${n}</b> <span class="to">${to}</span><div style="margin-top:2px">${x}</div></div></div>`);r.prepend(headCanvas(n,22));return r;};
+  a.appendChild(one("Mrgregles","to you","Can you keep an eye on Moongrove tonight? Two reports of x-ray there."));
+  a.appendChild(one("Saffi","to all staff","Restart on Sunday at 10:00 for the BSP-Core update."));
+  a.appendChild(h('<div class="keyrow"><div class="k">Reply</div><div class="k g">Got it, both</div></div>'));f.appendChild(a);
+  f.appendChild(room(ROOM.slice(3),22));box(f,"Say something to the staff…");f.appendChild(tabbarS("Staff",2));})();
+(function(){const f=document.getElementById("c2");roomTab(f);headsStrip(f);f.appendChild(room(ROOM.slice(4),22));box(f,"Say something to the staff…");f.appendChild(tabbarS("Staff"));
+  f.appendChild(h('<div class="dimmer"></div>'));const sh=h('<div class="sheet"><div class="grab"></div><div class="sect">NEW MESSAGE · TO</div></div>');
+  const hs=h('<div style="display:flex;flex-wrap:wrap;gap:8px 4px"></div>');
+  [["All staff",0]].forEach(()=>hs.appendChild(h('<div class="hd1"><div class="ring" style="background:#2a2614;box-shadow:0 0 0 2px #4a4220;color:#ffd23a;font:600 9px var(--body)">ALL</div><span>All staff</span></div>')));
+  STAFF.filter(s=>s[0]!=="Ana_Mod").forEach(([n])=>{const e=h(`<div class="hd1"><div class="ring" style="box-shadow:0 0 0 2px #3a3f4b"></div><span>${n}</span></div>`);e.querySelector(".ring").appendChild(headCanvas(n,30));if(["Kip","Saffi"].includes(n))e.querySelector(".ring").classList.add("sel");hs.appendChild(e);});
+  sh.appendChild(hs);
+  sh.appendChild(h('<div class="ta">Can one of you cover Moongrove after 23:00? I have to log off and Vexa is still mining.</div>'));
+  sh.appendChild(h('<div style="font-size:10.5px;color:#9aa3b5">Kip and Saffi see it now if they are on the panel, otherwise when they next open it.</div>'));
+  sh.appendChild(h('<div class="keyrow"><div class="k">Cancel</div><div class="k p">Send to 2</div></div>'));f.appendChild(sh);})();
+</script>
+</body>
+</html>

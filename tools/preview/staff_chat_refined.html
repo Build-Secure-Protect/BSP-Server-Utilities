@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Chat Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page for set Q: look A (D304) and the in-game line G1 (D305), with D306 to D310. Sample data; names are made up. */
+/* Mock-up set Q: three looks for the Chat tab of the staff web panel on a phone (D261 to D263, D292), and three looks for
+   a line sent from the panel as it shows in game. Sample data; names are made up. The frames use the BSP website's own
+   tokens (BSP repo src/static/css/site.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg);
+  color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.mu{ color:var(--mu); } .dm{ color:var(--dim); } .vtx{ color:var(--vio); } .gtx{ color:var(--gold); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.ico{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; position:relative; }
+.ico svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.badge{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.grow{ flex:1; min-width:0; }
+.chips{ display:flex; gap:6px; padding:0 14px 10px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:5px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.chip.on{ background:var(--teal); color:#0f1115; border-color:var(--teal); font-weight:600; }
+.chip i{ width:7px; height:7px; border-radius:2px; display:block; }
+.head{ flex:none; image-rendering:pixelated; border-radius:3px; display:block; }
+.tag{ font:600 9px var(--body); padding:0 5px; border-radius:999px; white-space:nowrap; vertical-align:1px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); } .tnav svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tnav .badge{ top:-4px; right:-2px; }
+.dimmer{ position:absolute; inset:0; background:rgba(5,6,8,.62); }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 16px; display:flex; flex-direction:column; gap:8px; }
+.grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); margin-top:4px; }
+.opt{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); font-size:12.5px; }
+.opt.on{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.opt .rb{ width:14px; height:14px; border-radius:50%; border:2px solid var(--dim); flex:none; } .opt.on .rb{ border-color:var(--teal); background:radial-gradient(var(--teal) 45%, transparent 50%); }
+.opt .sub{ font-size:10.5px; color:var(--mu); }
+.opt.lock{ opacity:.5; }
+.in{ flex:1; min-width:0; height:38px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.in.typed{ color:var(--tx); }
+.send{ height:38px; padding:0 14px; border-radius:10px; background:var(--teal); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; }
+.pill{ position:absolute; left:50%; transform:translateX(-50%); background:var(--teal); color:#0f1115; font:600 11px var(--body); border-radius:999px; padding:4px 10px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+
+/* A: the stream, as the computer's column */
+.ascroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 14px 6px; gap:5px; position:relative; }
+.al{ font-size:12.5px; line-height:1.4; word-break:break-word; }
+.al .t{ font:10px var(--mono); color:var(--dim); }
+.al .sv{ font-size:10.5px; color:var(--mu); }
+.al .sv i{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:3px; vertical-align:0; }
+.al b{ font-weight:600; }
+.aspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
+.aspeak .chip{ padding:3px 8px; font-size:11px; }
+
+/* B: the game's own chat */
+.bscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; position:relative;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 38%,#33507a 72%,#6c8fbf 100%); padding:8px 0 6px; }
+.bl{ background:rgba(0,0,0,.52); color:#fff; font:12px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; word-break:break-word; margin-right:24px; }
+.gi{ display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px; color:#0f1115; font:700 8px/11px var(--body); text-align:center; text-shadow:none; }
+.bbar{ flex:none; background:#000; padding:7px 10px 9px; display:flex; flex-direction:column; gap:6px; border-top:1px solid #333; }
+.bbar .bin{ height:30px; background:rgba(255,255,255,.08); border:1px solid #555; color:#fff; font:12.5px var(--mono); display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+.bbar .bto{ display:flex; gap:6px; font:600 11px var(--body); }
+.bbar .bto span{ padding:3px 8px; border:1px solid #555; color:#ddd; border-radius:4px; }
+.bseg{ display:flex; gap:0; padding:0 14px 8px; flex:none; overflow:hidden; }
+.bseg span{ flex:none; padding:4px 8px; font:11px Silkscreen,var(--mono); color:var(--mu); border-bottom:2px solid transparent; }
+.bseg span.on{ color:var(--teal); border-bottom-color:var(--teal); }
+.prevbox{ background:#14171d; border:1px solid #2a2f3a; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.prevbox .lab{ font:600 10px var(--body); color:#9aa3b5; }
+
+/* C: conversation */
+.cscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:0 12px 6px; gap:8px; position:relative; }
+.cg{ display:flex; gap:8px; align-items:flex-start; }
+.cg .cb{ display:flex; flex-direction:column; gap:3px; min-width:0; max-width:250px; }
+.cg .who{ font-size:11px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.cg .who b{ font-weight:600; }
+.cg .who .svn{ font-size:10px; padding:0 5px; border-radius:4px; }
+.cg .who .t{ font:10px var(--mono); color:var(--dim); }
+.bub{ background:var(--pn); border:1px solid var(--ln); border-radius:4px 12px 12px 12px; padding:5px 9px; font-size:12.5px; line-height:1.35; word-break:break-word; align-self:flex-start; }
+.bub + .bub{ border-radius:12px; }
+.cg.me{ flex-direction:row-reverse; } .cg.me .cb{ align-items:flex-end; } .cg.me .who{ flex-direction:row-reverse; }
+.cg.me .bub{ background:#2a2240; border-color:#4a3a78; border-radius:12px 4px 12px 12px; align-self:flex-end; }
+.sysl{ align-self:center; font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #4a4220; border-radius:999px; padding:3px 10px; }
+.cspeak{ flex:none; border-top:1px solid var(--ln); padding:8px 12px 10px; display:flex; gap:8px; align-items:center; background:var(--bg2); }
+.voice{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; box-shadow:0 0 0 2px var(--vio); background:#2a2240; }
+.menu{ position:absolute; left:28px; right:28px; background:#1a1d24; border:1px solid var(--ln); border-radius:12px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.6); }
+.menu div{ padding:11px 14px; font-size:13px; display:flex; gap:10px; align-items:center; }
+.menu div + div{ border-top:1px solid #23272f; }
+.menu svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* in game */
+.scene{ width:520px; max-width:100%; height:230px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ margin-right:0; width:max-content; max-width:440px; font-size:13px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.scene .hot i.sel{ box-shadow:inset 0 0 0 2px #fff; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; outline:1px solid #100010; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+.day{ align-self:center; font:600 10px var(--body); color:var(--mu); background:var(--pn); border:1px solid var(--ln); border-radius:999px; padding:1px 9px; margin:2px 0; }
+.al.hit{ background:#ff6b5c14; box-shadow:inset 2px 0 0 var(--coral); margin:0 -14px; padding:1px 14px; }
+.al.mine .ok{ font:600 10px var(--body); color:var(--teal); margin-left:4px; }
+.al.pend{ opacity:.55; }
+.fail{ font-size:11.5px; color:#ffb3aa; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:6px 9px; display:flex; gap:8px; align-items:center; }
+.fail b{ color:var(--coral); margin-left:auto; font-size:11px; }
+.sbox{ flex:none; padding:0 14px 8px; display:flex; flex-direction:column; gap:6px; }
+.res{ padding:7px 14px; border-top:1px solid #20242d; font-size:12.5px; line-height:1.4; }
+.res .w{ font-size:10.5px; color:var(--mu); }
+.res mark{ background:#ffd23a33; color:var(--gold); padding:0 1px; border-radius:2px; }
+.count{ font:600 10.5px var(--mono); color:var(--gold); text-align:right; }
+.dotb{ position:absolute; top:-2px; right:2px; width:8px; height:8px; border-radius:50%; background:var(--soft); }
+.ph.strip{ height:auto; border-radius:0 0 22px 22px; border-top:0; }
+.strip .tnav{ background:#14171d; }
+.scene{ width:520px; max-width:100%; height:200px; border-radius:8px; position:relative; overflow:hidden; flex:none;
+  background:linear-gradient(170deg,#3d5c35 0%,#2a3f25 40%,#33507a 75%,#6c8fbf 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:0 0 38px; box-sizing:border-box; }
+.scene .bl{ background:rgba(0,0,0,.52); color:#fff; font:13px/1.38 var(--mono); padding:1px 8px; text-shadow:1px 1px 0 #3f3f3f; width:max-content; max-width:440px; }
+.scene .hot{ position:absolute; left:50%; bottom:6px; transform:translateX(-50%); display:flex; gap:2px; }
+.scene .hot i{ width:20px; height:20px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #8b8b8b; display:block; }
+.tip{ position:absolute; background:#100010f0; border:2px solid #2d0a63; color:#fff; font:12px/1.4 var(--mono); padding:4px 7px; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Staff panel: set Q refined, chat</h1>
+    <p class="lede">Look A as picked (D304): the plain stream, the same as the computer's column. With your other answers: SEND at once and every line in the Action Log (D306), [Server] for Admins and Owners (D307), the badge (D308), older lines and search (D309), the in-game line G1 with its hover (D305, D310). Three points to confirm below. Made-up names and lines.</p>
+  </header>
+  <section><h2>The Chat tab</h2>
+    <div class="stage">
+      <div><div class="ph" id="f1"></div><div class="cap">R1, the stream: days, older lines, lines for staff marked</div></div>
+      <div><div class="ph" id="f2"></div><div class="cap">R2, search: "diamond", Vexa, any server, last 7 days</div></div>
+      <div><div class="ph" id="f3"></div><div class="cap">R3, after SEND, a line that did not reach one server, and a long line being typed</div></div>
+    </div></section>
+  <section><h2>The badge on another tab</h2>
+    <div class="card"><p>On any other tab, Chat shows a red number for new lines that name you or ask for staff, or a plain dot when only ordinary lines are new. Seeing the Chat tab (or the chat column on a computer) clears it.</p></div>
+    <div class="stage"><div><div class="ph strip" id="s1"></div><div class="cap">2 lines for staff since you looked</div></div><div><div class="ph strip" id="s2"></div><div class="cap">only ordinary lines since you looked</div></div></div></section>
+  <section><h2>In game (G1)</h2>
+    <div class="stage"><div><div class="scene" id="g1"></div><div class="cap" style="max-width:520px">A [Staff] line with its hover, then a [Server] line</div></div></div></section>
+  <section><h2>To confirm</h2>
+    <div class="card"><ol>
+      <li><b>R1. The stream.</b> A divider for each day ("Yesterday", "Today"); scrolling to the top loads older lines, back to 30 days. Lines that name you (your Minecraft name) or say "staff", "admin", "mod" or "help" have a red bar on the left; they are what the red number counts. Tags beside names, and a tapped name opens that player's sheet.</li>
+      <li><b>R2. Search.</b> The magnifier opens a box at the top with three choosers: player, server and day (today, 7 days, 30 days). Results come newest first with the words lit up; tapping one shows it in the stream with the lines around it.</li>
+      <li><b>R3. After SEND.</b> Your line shows at once, faint, then full with "✓ 7 servers" once the servers say they showed it. A server that did not answer within 6 seconds is named in a red line with RETRY, which sends to that server only. At most 256 characters (the game's own limit), with a count from 200; plain text, no &amp; colour codes (those stay for announcements, D240).</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- sample data ---------- */
+const SV_COL={"BSP-Spawn":"#19d3b0","Frostwarf":"#7fb2ff","Boulderbrook":"#d9a066","Moongrove":"#b58cff","Stormfall":"#9aa3b5","Sanctuary":"#7fe08a","SafeRoom":"#ffd23a"};
+const SHORT={"BSP-Spawn":"Spawn","Frostwarf":"Frostwarf","Boulderbrook":"Boulder","Moongrove":"Moongrove","Stormfall":"Stormfall","Sanctuary":"Sanctuary","SafeRoom":"SafeRoom"};
+const TAGS={"Vexa":[["Suspected cheater","#ff6b5c"]],"Newbie_Sam":[["New","#7fb2ff"]],"BrickLayerTom":[["Supporter","#ffd23a"]]};
+const CHAT=[["21:30","Frostwarf","Kestrel_88","raid at 9 tonight, bring tnt"],["21:31","Moongrove","Vexa","anyone selling diamonds?"],["21:31","Moongrove","ObsidianOtter","@Vexa check the market"],["21:32","BSP-Spawn","Newbie_Sam","how do i get to the market"],["21:32","staff","Ana_Mod","the market is the big hall north of spawn"],["21:33","Boulderbrook","TallyHo","lol"],["21:33","Stormfall","Pixl","help im stuck in a hole, can a mod help"],["21:34","Boulderbrook","Juniper_K","who has spare iron"],["21:34","server","","Restart in 30 minutes"],["21:35","Frostwarf","BrickLayerTom","gg"],["21:35","BSP-Spawn","Glimmer","is the lottery on today?"],["21:36","Sanctuary","Ash_Tree","nice build"],["21:36","Moongrove","Vexa","found 12 diamonds already"],["21:36","Moongrove","Vexa","in like 5 minutes lol"],["21:37","Stormfall","Pixl","nvm got out"],["21:37","Frostwarf","Kestrel_88","bring food too"],["21:38","BSP-Spawn","Newbie_Sam","thanks!"],["21:38","Boulderbrook","TallyHo","anyone?"]];
+
+/* ---------- pixel heads ---------- */
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function rnd(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SKIN=["#f2c9a0","#d9a066","#a8714a","#6b4a33","#e8b98f"],HAIR=["#3b2414","#7a4a1f","#d8b04a","#1a1a1a","#a33b1f","#5b5f6b","#2c3a7a"];
+function headCanvas(name,size){const c=document.createElement("canvas");c.width=8;c.height=8;c.className="head";c.style.width=c.style.height=size+"px";
+  const g=c.getContext("2d"),r=rnd(hash(name)),sk=SKIN[Math.floor(r()*SKIN.length)],hr=HAIR[Math.floor(r()*HAIR.length)],eye=["#3a6bd1","#3b8a3b","#5a3a1f","#2a2a2a"][Math.floor(r()*4)];
+  g.fillStyle=sk;g.fillRect(0,0,8,8);g.fillStyle=hr;g.fillRect(0,0,8,2+Math.floor(r()*2));g.fillRect(0,2,1,2+Math.floor(r()*3));g.fillRect(7,2,1,2+Math.floor(r()*3));
+  g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);g.fillStyle=eye;g.fillRect(2,4,1,1);g.fillRect(5,4,1,1);
+  g.fillStyle="rgba(0,0,0,.25)";g.fillRect(3,5,2,1);g.fillStyle="#7a3b2b";g.fillRect(2,6,4,1);if(r()<.4){g.fillStyle=hr;g.fillRect(2,6,4,2);}return c;}
+
+/* ---------- small helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ note:'<svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 11h8M8 15h5"/></svg>',
+ copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+ person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+ filter:'<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'};
+const status=()=>h('<div class="sbar"><span>21:38</span><span>●●● 5G 82%</span></div>');
+function tabbar(on,chatBadge){const d=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat",chatBadge],["map","Map"],["shield","Staff",1],["more","More"]].forEach(([i,l,b])=>{
+  d.appendChild(h(`<div class="${l===on?"on":""}">${SV[i]}<span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</div>`));});return d;}
+const tagHtml=n=>(TAGS[n]||[]).map(([t,c])=>` <span class="tag" style="background:${c}22;color:${c};border:1px solid ${c}55">${t}</span>`).join("");
+const topBar=(f,extra)=>{f.appendChild(status());f.appendChild(h(`<div class="top"><div class="brand grow">CHAT</div>${extra||""}<div class="ico">${SV.search}</div></div>`));};
+function serverChips(f,on){const d=h('<div class="chips"></div>');d.appendChild(h(`<span class="chip ${on==="All"?"on":""}">All servers</span>`));
+  Object.keys(SV_COL).slice(0,5).forEach(s=>d.appendChild(h(`<span class="chip ${on===s?"on":""}"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span>`)));f.appendChild(d);}
+
+/* ---------- A ---------- */
+function aLine([t,s,n,x]){let who;
+  if(s==="staff")who=`<b class="vtx">[Staff] ${n}</b>`;
+  else if(s==="server")who=`<b class="gtx">[Server]</b>`;
+  else who=`<span class="sv"><i style="background:${SV_COL[s]}"></i>${SHORT[s]}</span> <b>${n}</b>${tagHtml(n)}`;
+  return h(`<div class="al"><span class="t">${t}</span> ${who} ${x}</div>`);}
+const MORE=[["21:38","Moongrove","Vexa","@Ana_Mod is x-ray allowed?"]];
+function stream(f,lines,opts){const s=h('<div class="ascroll"></div>');(opts.pre||[]).forEach(x=>s.appendChild(x));
+  lines.forEach(l=>{const e=aLine(l);if(/\b(staff|admin|mod|help)\b|@?Ana_Mod/i.test(l[3])&&l[1]!=="staff")e.classList.add("hit");s.appendChild(e);});
+  (opts.post||[]).forEach(x=>s.appendChild(x));f.appendChild(s);}
+function speak(f,to,typed,count){f.appendChild(h(`<div class="aspeak"><div style="display:flex;gap:6px;align-items:center"><span class="chip">As <b class="vtx">[Staff] Ana_Mod</b> ▾</span><span class="chip">${to} ▾</span>${count?`<span class="grow count">${count}</span>`:""}</div><div style="display:flex;gap:6px"><div class="in ${typed?"typed":""}">${typed||"Say something…"}</div><div class="send">Send</div></div></div>`));}
+(function(){const f=document.getElementById("f1");topBar(f);serverChips(f,"All");
+  const yday=[["23:58","Frostwarf","Kestrel_88","night all"],["23:59","BSP-Spawn","Glimmer","gn"]];
+  stream(f,[...yday,...CHAT.slice(2,9),...CHAT.slice(9,13),...MORE],{pre:[h('<div class="day" style="opacity:.7">Loading older lines…</div>'),h('<div class="day">Yesterday</div>'),aLine(yday[0]),aLine(yday[1]),h('<div class="day">Today</div>')].slice(0,2)});
+  /* the yesterday lines were added through 'lines'; place the Today divider after them */
+  const s=f.querySelector(".ascroll");const all=[...s.querySelectorAll(".al")];all[1].after(h('<div class="day">Today</div>'));
+  speak(f,"To the network");f.appendChild(tabbar("Chat"));})();
+(function(){const f=document.getElementById("f2");f.appendChild(status());
+  f.appendChild(h(`<div class="top"><div class="in typed" style="height:34px">diamond</div><div class="ico">${SV_x()}</div></div>`));
+  f.appendChild(h('<div class="sbox"><div style="display:flex;gap:6px"><span class="chip on">Vexa ▾</span><span class="chip">Any server ▾</span><span class="chip on">7 days ▾</span></div><div style="font-size:11px;color:#9aa3b5">4 lines, newest first</div></div>'));
+  const s=h('<div style="flex:1;overflow:hidden"></div>');
+  [["Today 21:36","Moongrove","found 12 <mark>diamond</mark>s already"],["Today 21:31","Moongrove","anyone selling <mark>diamond</mark>s?"],["Tue 19:02","Moongrove","<mark>diamond</mark> ore at y -58 everywhere here"],["Sun 14:47","Frostwarf","trading 2 stacks of iron for <mark>diamond</mark>s"]].forEach(([w,sv,x])=>{
+    s.appendChild(h(`<div class="res"><div class="w">${w} · <span style="color:${SV_COL[sv]}">${sv}</span></div><b>Vexa</b>${tagHtml("Vexa")} ${x}</div>`));});
+  f.appendChild(s);f.appendChild(tabbar("Chat"));})();
+function SV_x(){return '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';}
+(function(){const f=document.getElementById("f3");topBar(f);serverChips(f,"All");
+  const mine1=h(`<div class="al mine"><span class="t">21:39</span> <b class="vtx">[Staff] Ana_Mod</b> <span class="mu" style="font-size:10.5px">to the network</span> restart in 30 minutes, find a safe spot<span class="ok">✓ 6 of 7 servers</span></div>`);
+  const fail=h('<div class="fail">Frostwarf did not answer, so its players may not have seen it.<b>RETRY</b></div>');
+  const mine2=h(`<div class="al mine pend"><span class="t">21:40</span> <b class="vtx">[Staff] Ana_Mod</b> <span class="mu" style="font-size:10.5px">to Moongrove</span> Vexa, x-ray packs and mods are not allowed here, please check the rules<span class="ok" style="color:var(--mu)">sending…</span></div>`);
+  stream(f,CHAT.slice(2,14).concat(MORE),{post:[mine1,fail,mine2]});
+  const typed="Pixl, glad you got out! Next time /spawn takes you back from anywhere, and staff are around all evening on the panel, so just say help in chat and one of us will come to you wherever you are on the network";
+  speak(f,"To Stormfall",typed,typed.length+" / 256");
+  f.appendChild(tabbar("Chat"));})();
+(function(){const a=document.getElementById("s1");const t=tabbar("Players",2);t.querySelector(".tnav div:first-child")?.classList.add("on");a.appendChild(t);
+  const b=document.getElementById("s2");const t2=tabbar("Players");const chat=t2.children[1];chat.appendChild(h('<span class="dotb"></span>'));b.appendChild(t2);})();
+(function(){const s=document.getElementById("g1");
+  [["Kestrel_88","raid at 9 tonight, bring tnt"],["Vexa","@Ana_Mod is x-ray allowed?"]].forEach(([n,x])=>s.appendChild(h(`<div class="bl">&lt;${n}&gt; ${x}</div>`)));
+  s.appendChild(h(`<div class="bl"><span style="color:#B58CFF">[Staff] Ana_Mod:</span> no, x-ray packs and mods are not allowed</div>`));
+  s.appendChild(h(`<div class="bl"><span style="color:#FFAA00">[Server]</span> Restart in 30 minutes</div>`));
+  const hot=h('<div class="hot"></div>');for(let i=0;i<9;i++)hot.appendChild(h('<i></i>'));s.appendChild(hot);
+  s.appendChild(h(`<div class="tip" style="left:300px;top:10px"><span style="color:#B58CFF">Ana_Mod</span>, staff<br><span style="color:#AAAAAA">from the staff panel</span></div>`));})();
+</script>
+</body>
+</html>

@@ -20,6 +20,8 @@ import java.util.function.LongSupplier;
  */
 public final class Feed {
     public static final long STALE_MS = 20_000L;
+    /** A draw counts 5 s and BSP-Core pays it within a minute: one said to run for longer than this is stuck (audit of phase 5). */
+    public static final long STUCK_DRAW_MS = 120_000L;
     public static final int VERSION = 1;
 
     private record Entry(String server, long heardAt, JsonObject snapshot) {
@@ -134,9 +136,103 @@ public final class Feed {
 
     /** Live servers whose BSP-InventorySync answers about graves (their snapshot says so). */
     public List<String> liveWithGraves() {
+        return liveWith("graves");
+    }
+
+    /** Live servers whose BSP-InventorySync reads a player's items (SU-39; their snapshot says so). */
+    public List<String> liveWithItems() {
+        return liveWith("items");
+    }
+
+    /** Live servers where BSP-Teleport moves players (SU-43). */
+    public List<String> liveWithTp() {
+        return liveWith("tp");
+    }
+
+    /** The name BSP-Teleport and the proxy know a server by (its snapshot's {@code tpName}), or the server's own id. */
+    public String tpName(String server) {
+        Entry e = servers.get(server);
+        JsonElement n = e == null ? null : e.snapshot.get("tpName");
+        return n != null && n.isJsonPrimitive() && !n.getAsString().isBlank() ? n.getAsString() : server;
+    }
+
+    /** A player online on a live server as the feed has them (with {@code server}), or null. */
+    public JsonObject player(String id) {
+        for (String name : live()) {
+            Entry e = servers.get(name);
+            if (e == null) {
+                continue;
+            }
+            for (JsonElement p : e.snapshot.getAsJsonArray("players")) {
+                if (p.isJsonObject() && p.getAsJsonObject().has("id") && p.getAsJsonObject().get("id").getAsString().equalsIgnoreCase(id)) {
+                    JsonObject c = p.getAsJsonObject().deepCopy();
+                    c.addProperty("server", name);
+                    return c;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Live servers with BSP-Core 1.16's market and lottery (SU-51), those whose database is connected first, then the
+     * busiest first (D410: the busiest draws).
+     */
+    public List<String> liveWithMarket() {
+        return liveWith("market").stream().sorted(java.util.Comparator.comparing((String n) -> !flag(n, "lotteryUp"))
+                .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
+    /**
+     * Where the network's lottery draw stands (D411): {@code {phase, since, server}} of a live server whose snapshot says a
+     * draw is counting (else starting), the earliest {@code since} among them; null when every server says IDLE.
+     */
+    public JsonObject lottery() {
+        JsonObject best = null;
+        for (String n : liveWith("market")) {
+            Entry e = servers.get(n);
+            if (e == null || !e.snapshot.has("lottery") || !e.snapshot.get("lottery").isJsonPrimitive()) {
+                continue;
+            }
+            String phase = e.snapshot.get("lottery").getAsString();
+            if (!phase.equals("COUNTING") && !phase.equals("DRAWING")) {
+                continue;
+            }
+            long since;
+            try {
+                since = e.snapshot.has("lotterySince") && e.snapshot.get("lotterySince").isJsonPrimitive() ? e.snapshot.get("lotterySince").getAsLong() : 0;
+            } catch (RuntimeException notANumber) {
+                since = 0;
+            }
+            if (since > 0 && clock.getAsLong() - since > STUCK_DRAW_MS) {
+                continue; // a server still saying a draw runs long after it began missed its end: it must not block DRAW (audit)
+            }
+            boolean better = best == null || (phase.equals("COUNTING") && !best.get("phase").getAsString().equals("COUNTING"))
+                    || (phase.equals(best.get("phase").getAsString()) && since > 0 && (best.get("since").getAsLong() == 0 || since < best.get("since").getAsLong()));
+            if (better) {
+                best = new JsonObject();
+                best.addProperty("phase", phase);
+                best.addProperty("since", since);
+                best.addProperty("server", n);
+            }
+        }
+        return best;
+    }
+
+    private boolean flag(String server, String flag) {
+        Entry e = servers.get(server);
+        return e != null && e.snapshot.has(flag) && e.snapshot.get(flag).isJsonPrimitive() && e.snapshot.get(flag).getAsBoolean();
+    }
+
+    private int players(String server) {
+        Entry e = servers.get(server);
+        return e == null || !e.snapshot.has("players") || !e.snapshot.get("players").isJsonArray() ? 0 : e.snapshot.getAsJsonArray("players").size();
+    }
+
+    private List<String> liveWith(String flag) {
         return live().stream().filter(n -> {
             Entry e = servers.get(n);
-            return e != null && e.snapshot.has("graves") && e.snapshot.get("graves").isJsonPrimitive() && e.snapshot.get("graves").getAsBoolean();
+            return e != null && e.snapshot.has(flag) && e.snapshot.get(flag).isJsonPrimitive() && e.snapshot.get(flag).getAsBoolean();
         }).toList();
     }
 
@@ -164,6 +260,9 @@ public final class Feed {
             s.addProperty("at", e.snapshot.has("at") ? e.snapshot.get("at").getAsLong() : 0);
             s.addProperty("mspt", e.snapshot.has("mspt") ? e.snapshot.get("mspt").getAsDouble() : 0);
             s.addProperty("max", e.snapshot.has("max") ? e.snapshot.get("max").getAsInt() : 0);
+            s.addProperty("tp", e.snapshot.has("tp") && e.snapshot.get("tp").isJsonPrimitive() && e.snapshot.get("tp").getAsBoolean()); // SU-43
+            s.addProperty("tpName", tpName(name));
+            s.addProperty("market", flag(name, "market")); // SU-51
             JsonArray ps = e.snapshot.getAsJsonArray("players");
             s.addProperty("count", ps.size());
             list.add(s);
@@ -179,6 +278,10 @@ public final class Feed {
         JsonArray pa = new JsonArray();
         players.forEach(pa::add);
         out.add("servers", list);
+        JsonObject draw = lottery();
+        if (draw != null) {
+            out.add("lottery", draw); // a draw counting somewhere (D411)
+        }
         out.add("players", pa);
         return out;
     }

@@ -54,6 +54,9 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();
+        com.mrgregles.bsp_server_utilities.web.WebChat.registerEvents();
+        com.mrgregles.bsp_server_utilities.web.WebNotes.registerNotices();
+        com.mrgregles.bsp_server_utilities.web.WebBans.registerNotices(); // network bans (SU-44)
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -87,6 +90,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.onLogin(p);
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogin(p);
+                com.mrgregles.bsp_server_utilities.web.WebNotes.sendTo(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
@@ -100,6 +104,7 @@ public class BSPServerUtilities {
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> ImageService.forget(e.getEntity().getUUID()));
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> com.mrgregles.bsp_server_utilities.web.ProxyKick.forget(e.getEntity().getUUID()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> com.mrgregles.bsp_server_utilities.web.WebItemsUpload.forget(e.getEntity().getUUID()));
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e) -> {
             if (e.phase == TickEvent.Phase.END) {
                 RulesService.tick(e.getServer());
@@ -117,6 +122,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebAgent.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.web.WebNotes.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.web.WebBans.tick(e.getServer()); // the bans in force: read at start and every minute
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

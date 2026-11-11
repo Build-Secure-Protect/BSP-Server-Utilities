@@ -65,6 +65,9 @@ public final class ServerUtilsCommands {
                     return 1;
                 }))
                 .then(Commands.literal("status").requires(Perms::canEdit).executes(c -> status(c.getSource())))
+                // the staff web panel's item pictures, drawn by this admin's own game (SU-41, D373)
+                .then(Commands.literal("icons").requires(Perms::canEdit)
+                        .executes(c -> com.mrgregles.bsp_server_utilities.web.WebItemsUpload.ask(c.getSource().getPlayerOrException()) ? 1 : 0))
                 .then(Commands.literal("clearitems").requires(Perms::canEdit)
                         .then(Commands.argument("where", StringArgumentType.word())
                                 .suggests((c, b) -> {
