@@ -34,7 +34,8 @@ def slug(s):
 
 def dimension_slug(dimension):
     d = (dimension or "").lower()
-    return {"minecraft:overworld": "overworld", "minecraft:the_nether": "nether", "minecraft:the_end": "end"}.get(d, slug(d))
+    return {"minecraft:overworld": "overworld", "overworld": "overworld", "minecraft:the_nether": "nether", "the_nether": "nether",
+            "minecraft:the_end": "end", "the_end": "end"}.get(d, slug(d))  # as the panel's MapLive.dimensionSlug
 
 
 def map_id(server, dimension):
@@ -58,6 +59,15 @@ def holds_anything(region_dir):
         return False
 
 
+def listing(folder):
+    """The names in a folder, or None (said once) when it cannot be read, as over a share that is down."""
+    try:
+        return sorted(os.listdir(folder))
+    except OSError as e:
+        print(f"cannot read {folder} ({e.strerror or e}): left out")
+        return None
+
+
 def dimensions_of(world):
     """[(dimension id, region folder)] that this world has and that are places holding something."""
     found = []
@@ -66,10 +76,10 @@ def dimensions_of(world):
             found.append((dim, os.path.join(world, sub)))
     base = os.path.join(world, "dimensions")
     if os.path.isdir(base):
-        for ns in sorted(os.listdir(base)):
+        for ns in listing(base) or []:
             if ns in SKIP_NAMESPACES or not os.path.isdir(os.path.join(base, ns)):
                 continue
-            for path in sorted(os.listdir(os.path.join(base, ns))):
+            for path in listing(os.path.join(base, ns)) or []:
                 region = os.path.join(base, ns, path, "region")
                 if holds_anything(region):
                     found.append((ns + ":" + path, region))
@@ -186,13 +196,28 @@ log: {{
 def self_test():
     cases = {("Frostwarf", "minecraft:overworld"): "frostwarf__overworld", ("BSP-Spawn", "minecraft:the_nether"): "bsp_spawn__nether",
              ("Moongrove", "minecraft:the_end"): "moongrove__end", ("Stormfall", "allthemodium:mining"): "stormfall__allthemodium_mining",
-             ("", None): "unknown__unknown"}  # the same cases as the panel's MapLiveTest
+             ("", None): "unknown__unknown", ("-BSP Spawn-", "the_nether"): "bsp_spawn__nether",
+             ("X", "THE_END"): "x__end", ("X", "overworld"): "x__overworld"}  # the panel's MapLive.mapId gives these
     bad = [(k, v, map_id(*k)) for k, v in cases.items() if map_id(*k) != v]
     for k, want, got in bad:
         print(f"map_id{k}: {got}, the panel says {want}")
     conf = map_conf("/w", "minecraft:the_nether", "N", 1, False)
     if "enable-hires: false" not in conf or "subtract: true" not in conf:
         bad.append(("nether map", "flat, roof left out", conf))
+    import tempfile
+    with tempfile.TemporaryDirectory() as t:  # a modded folder that cannot be read is left out, not a crash
+        os.makedirs(os.path.join(t, "region"))
+        locked = os.path.join(t, "dimensions", "somemod")
+        os.makedirs(locked)
+        os.chmod(locked, 0)
+        try:
+            got = [d for d, _ in dimensions_of(t)]
+        except OSError as e:
+            got = e
+        finally:
+            os.chmod(locked, 0o755)
+        if got != ["minecraft:overworld"]:
+            bad.append(("unreadable folder", ["minecraft:overworld"], got))
     print("self-test: " + ("ok" if not bad else f"{len(bad)} wrong"))
     return 0 if not bad else 1
 
@@ -227,6 +252,10 @@ def main():
             continue
         for dimension, region in dimensions_of(here):
             mid = map_id(server, dimension)
+            if mid + ".conf" in written:
+                print(f"{server} {dimension}: the map id {mid} is already taken (two names that differ only in"
+                      " punctuation or case): left out; rename one")
+                continue
             name = f"{server} · {dimension_label(dimension)}"
             with open(os.path.join(maps_dir, mid + ".conf"), "w", encoding="utf-8") as f:
                 f.write(map_conf(world, dimension, name, sorting, dimension in o.ceiling))

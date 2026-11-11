@@ -892,4 +892,43 @@ On the network, after the map guide:
 3. Build or break something on Frostwarf (on `.27`), wait for the world to save (a few minutes, or `save-all` in its
    console), then within 5 more minutes the panel's map shows it.
 4. Stop `.28` (or its NFS service) for a minute: BSP-Map keeps running; Moongrove and Stormfall's maps catch up once it
-   is back (`sudo mount -a` on `.25` if a share says `Stale file handle`).
+   is back (if a share says `Stale file handle`: the guide's unmount, `sudo mount -a`, and restart BSP-Map).
+
+## 2026-11-11: audit of the map setup (the guide and `tools/gen_bluemap.py`)
+Two reviewers, given the guide, the script, the panel's map code and D380 to D398 and D431 to D434 (not conclusions):
+one against BlueMap 5.29's source, one against the NFS, fstab, systemd and Wings documentation and source. Every
+finding checked before fixing; BlueMap's CLI source read here to confirm the stop finding.
+
+Fixed:
+- BSP-Map used the panel's egg (Stop `stop`, started text the panel's line). BlueMap's CLI never reads its console
+  and stops only on a signal (its shutdown hook saves): Stop did nothing, Restart killed it after 10 minutes without
+  saving, and it showed Starting forever. The guide now imports a `BlueMap` egg: Stop `^C`, started text `Start updating`.
+- The two SafeRoom bind lines in `.25`'s `/etc/fstab` had no `nofail`: a wrong UUID would stop `.25` starting up
+  (emergency mode: no SSH, database, Redis or panel). `nofail` added, and `sudo findmnt --verify` after every change.
+- A share missing when `.25` starts is not mounted later by itself, and a container never sees a share mounted after
+  it started (Docker's binds are private): the guide's step after a restart or a machine being off (mount, check,
+  restart BSP-Map); the same restart added to the stale-share fix and to a server moving machine (unmount first,
+  daemon-reload).
+- Wings' `allowed_mounts` listed all of `/var/lib/pterodactyl/volumes` (any server's files, passwords included):
+  now only BSP-Map's folder, and the guide says to replace the usual `allowed_mounts: []` line and check Wings runs.
+- `--threads 4` contradicted "half of four cores": 2. Java 25 typed as a custom image; the startup changed only in
+  the Admin area; Wings' log for a refused mount.
+- `gen_bluemap.py`: a modded folder it cannot read (a share down) crashed it half way, leaving the settings
+  incomplete; now said and left out. Bare dimension names (`the_nether`) gave other ids than the panel's `mapId`;
+  now the same. Two names giving the same map id silently overwrote one another; now said and the second left out.
+  Self-test has the panel's cases for these and an unreadable folder (the old script fails both, the new passes).
+
+Checked and correct: every key the script writes exists in BlueMap 5.29 with that meaning; the CLI flags;
+Java 25; `region-file-check-interval` in minutes and run by `-u`; the web folder's file names and the panel's `.gz`
+serving; Wings refusing a mount under a folder the server could change (so the whole BSP-Map folder is mounted);
+`ufw ... port nfs` (2049, NFSv4); `bind,ro`; `rsync --delete --exclude packs/`; the sizes.
+
+Accepted: the void servers (Spawn, Sanctuary) show an empty Nether and End (D383: three on every server); the region
+check reads every region file's 8 KB header each 5 minutes, about 80 MB over the network per check at about 10,000
+region files (an estimate); a modded dimension missing from `level.dat` is drawn with overworld light; two modded
+dimensions with the same path in different mods share a label; shares use `no_subtree_check`, so `.25`'s root could
+reach other files on those disks (`.25` already holds the database, Redis and the panel's keys).
+
+**Untested:** everything on the network, as above. Added checks: Stop BSP-Map: its console says `Saving...` then
+`Stopped.` within a few seconds; restart `.25` with `.28` off: `.25` starts normally, and after `.28` is back the
+guide's step brings Moongrove and Stormfall back.
