@@ -864,7 +864,7 @@ D420 to D424 (owner: "All defaults"): five reviewers by area across all five pha
 **Untested:** everything on the network. No real Redis, MariaDB, Velocity, Cloudflare, game client or phone has run any of this. The local trial with Redis and MySQL (D423) was not run: the line gave about 9 to 20 KB/s (MySQL's 164 MB would have taken about 5 hours) and there is no database on the Mac; the owner chose to skip it (D430), so the network install is the first time the two halves meet real Redis and MariaDB: run the checks below first. Real phones: the keyboard through redraws, iOS zoom, the ± key.
 
 On the network, in addition to the checks of SU-32 to SU-52:
-1. Make the panel's database and user (the guide's part 3, step 8) and start the panel: its console says `Redis …: listening on bsp_su:network:web`. Give `redis.password` a wrong value: the console says Redis refused and why, and any action answers "the panel is not connected to Redis".
+1. Make the panel's database and user (the guide's part 5) and start the panel: its console says `Redis …: listening on bsp_su:network:web`. Give `redis.password` a wrong value: the console says Redis refused and why, and any action answers "the panel is not connected to Redis".
 2. Put `actionKey` and `panelKey` on one server only: `/su status` there says the panel's actions are taken; another server without `panelKey` says none are taken until it is set.
 3. Stop Redis for a minute: a kick on the panel answers that the server cannot answer the panel (or that the panel is not connected); nothing happens in game; start Redis: within 30 s actions work again.
 4. Restart a game server: it disappears from the panel at once and comes back when it starts. Start a game server while MariaDB is stopped, then start MariaDB: no old announcements appear, and a banned test account is refused all along.
@@ -873,3 +873,23 @@ On the network, in addition to the checks of SU-32 to SU-52:
 7. Give a Moderator the items power: they must log in again, and their login lasts 48 hours.
 8. On a phone: type a note, a kick reason, a ban reason and coordinates while players move: nothing jumps or closes; turn on airplane mode for a minute: "Not live", then back by itself.
 9. Put an emoji in a ban reason: the Action Log has it (after the utf8mb4 lines the game server logged, if any).
+
+## 2026-11-11: the map across four machines (D431 to D434)
+The game servers are on four machines (`.25` SafeRoom; `.26` Spawn, Sanctuary; `.27` Frostwarf, Boulderbrook; `.28`
+Moongrove, Stormfall), and Pterodactyl mounts reach only their own machine. BlueMap now runs on `.25` beside the panel
+and reads the other worlds over NFS, each world folder shared read-only to `.25` only (never a server's `config/`).
+BlueMap's own source shows its file watcher sees only local changes, but its region check (`region-file-check-interval`,
+5 minutes, already set by `tools/gen_bluemap.py`) finds changes on any file system: the map is at most about 5 minutes
+behind. Nothing in the mod or the panel changed; `docs/STAFF_MAP_SETUP.md` rewritten step by step; the script's notes.
+`tools/gen_bluemap.py --self-test` ok.
+
+**Untested:** all of it (NFS between the machines, the mounts, BlueMap 5.29 reading over the network, the first
+drawing's time on `.25`).
+
+On the network, after the map guide:
+1. On `.25`, `ls /mnt/bsp-worlds/<server>/region | head` lists region files for all seven worlds.
+2. BSP-Map's console: every map `updating`, then `Your maps are now all up-to-date!`.
+3. Build or break something on Frostwarf (on `.27`), wait for the world to save (a few minutes, or `save-all` in its
+   console), then within 5 more minutes the panel's map shows it.
+4. Stop `.28` (or its NFS service) for a minute: BSP-Map keeps running; Moongrove and Stormfall's maps catch up once it
+   is back (`sudo mount -a` on `.25` if a share says `Stale file handle`).

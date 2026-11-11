@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Writes BlueMap's configuration for the staff web panel's map (SU-49; D259, D379 to D385, D397, D398).
 
-One BlueMap command-line renderer reads every game server's world through read-only mounts and writes a flat map
+One BlueMap command-line renderer (on 192.168.1.25, D431) reads every game server's world through read-only mounts
+(the other machines' worlds shared over the network by NFS, D432) and writes a flat map
 (D397) of every dimension that is a place (D383): the overworld, the Nether and the End of each server, plus any other
 modded dimension that holds anything, but never the storage grids (AE2 spatial storage, Compact Machines' rooms,
 Create Teleporters' pocket). Everything generated is drawn (D398). The panel serves BlueMap's web folder itself (D381),
@@ -10,8 +11,11 @@ so BlueMap's own web server is off.
 Map ids are the panel's: `<server>__<dimension>` (docs/API.md, "The staff web panel's map"; the panel's MapLive.mapId).
 The server id is the name each game server has in BSP-Server Utilities' network config: the name the panel shows.
 
-    python3 tools/gen_bluemap.py --out config --web /home/container/web --data /home/container/data \\
-        --threads 4 --server "Frostwarf=/mnt/frostwarf/frostwarf" --server "BSP-Spawn=/mnt/spawn/spawn_void" ...
+    python3 gen_bluemap.py --out bluemap-config --web /home/container/web --data /home/container/data \\
+        --threads 4 --server "BSP-Frostwarf=/mnt/bsp-worlds/frostwarf" --server "BSP-Spawn=/mnt/bsp-worlds/spawn" ...
+
+BlueMap's file watcher does not see changes made on another machine; its region check (`region-file-check-interval`,
+every 5 minutes) does, so the map is at most about 5 minutes behind (D433).
 
     python3 tools/gen_bluemap.py --self-test
 """
