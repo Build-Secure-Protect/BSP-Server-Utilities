@@ -49,6 +49,40 @@ public final class ItemPictures {
         return loaded;
     }
 
+    private volatile Loaded variantsOf;
+    private volatile java.util.Set<String> variants = java.util.Set.of();
+
+    /**
+     * Whether an item's data is one of the variants the picture export lists for that item (a potion, an enchanted book):
+     * typed item data is taken only from the picker, never made up (audit). Empty data is always allowed.
+     */
+    public boolean knowsVariant(String item, String snbt) {
+        if (snbt == null || snbt.isEmpty()) {
+            return true;
+        }
+        Loaded l = loaded;
+        if (l == null) {
+            return false;
+        }
+        if (variantsOf != l) {
+            java.util.Set<String> set = new java.util.HashSet<>();
+            try {
+                com.google.gson.JsonArray items = com.google.gson.JsonParser.parseString(l.catalog()).getAsJsonObject().getAsJsonArray("items");
+                for (com.google.gson.JsonElement e : items) {
+                    com.google.gson.JsonObject o = e.getAsJsonObject();
+                    if (o.has("nbt") && o.has("id")) {
+                        set.add(o.get("id").getAsString() + "\u0000" + o.get("nbt").getAsString());
+                    }
+                }
+            } catch (RuntimeException bad) {
+                // nothing known
+            }
+            variants = set;
+            variantsOf = l;
+        }
+        return variants.contains(item + "\u0000" + snbt);
+    }
+
     /** Why the newest export could not be used ("" when fine). */
     public String problem() {
         return problem;

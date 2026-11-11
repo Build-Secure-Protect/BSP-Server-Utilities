@@ -66,6 +66,7 @@ class NotesTest {
         JsonArray all = n.notes(VEXA);
         assertEquals(2, all.size(), "every staff member sees both, oldest first");
         assertEquals("Rook", all.get(0).getAsJsonObject().get("author").getAsString());
+        assertEquals("MODERATOR", all.get(0).getAsJsonObject().get("authorRank").getAsString(), "with the author's rank for the card (D320)");
 
         long id = note.get("id").getAsLong();
         assertThrows(PlayerNotes.Refused.class, () -> n.edit(kip, id, "changed"), "a Moderator does not change another's note (D330)");
@@ -191,7 +192,7 @@ class NotesTest {
     private static HttpResponse<String> get(HttpClient http, PanelServer server, String path, String who, String cookie) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + path)).header("Cf-Access-Jwt-Assertion", "good:" + who).GET();
         if (cookie != null) {
-            b.header("Cookie", PanelServer.COOKIE + "=" + cookie);
+            b.header("Cookie", PanelServer.SECURE_COOKIE + "=" + cookie);
         }
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }

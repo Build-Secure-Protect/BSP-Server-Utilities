@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 public final class RedisListener {
     private static final int CONNECT_TIMEOUT_MS = 3000, READ_TIMEOUT_MS = 15_000;
     private static final long FIRST_RETRY_MS = 500, MAX_RETRY_MS = 30_000;
+    /** A message larger than this is not read: the connection is dropped and made again (audit: a huge PUBLISH could exhaust the memory). */
+    public static final int MAX_BULK = 8 * 1024 * 1024;
     private final String host, user, password, channel;
     private final int port;
     private final Consumer<String> onMessage;
@@ -29,8 +31,16 @@ public final class RedisListener {
     private volatile boolean running = true, subscribed;
     private volatile Socket socket;
     private volatile String lastError = "";
+    private String lastSaid = "";
+    private final Consumer<String> log;
 
     public RedisListener(String host, int port, String user, String password, String channel, Consumer<String> onMessage) {
+        this(host, port, user, password, channel, onMessage, line -> System.out.println("[panel] " + line));
+    }
+
+    /** {@code log} hears each change of state once (connected, or why not), as the game servers' Redis link says it (audit). */
+    public RedisListener(String host, int port, String user, String password, String channel, Consumer<String> onMessage, Consumer<String> log) {
+        this.log = log;
         this.host = host;
         this.port = port;
         this.user = user;
@@ -48,6 +58,11 @@ public final class RedisListener {
 
     public boolean subscribed() {
         return subscribed;
+    }
+
+    /** Why it is not listening (empty while it is). */
+    public String lastError() {
+        return lastError.isEmpty() ? "no error yet" : lastError;
     }
 
     public String status() {
@@ -83,9 +98,17 @@ public final class RedisListener {
                     }
                 }
                 command(out, "SUBSCRIBE", channel);
-                read(in);
+                Object reply = read(in);
+                if (reply instanceof Error e) {
+                    throw new IOException("Redis refused to subscribe: " + e.text + (e.text.startsWith("NOAUTH") ? " (redis.password is empty or wrong)"
+                            : e.text.startsWith("NOPERM") ? " (the Redis user needs the channel: &* or &bsp_su:*)" : ""));
+                }
+                if (!(reply instanceof List<?> ok && ok.size() == 3 && "subscribe".equals(ok.get(0)))) {
+                    throw new IOException("Redis did not confirm the subscription: " + reply);
+                }
                 subscribed = true;
                 lastError = "";
+                say("Redis " + host + ":" + port + ": listening on " + channel);
                 retry = FIRST_RETRY_MS;
                 boolean pinged = false;
                 while (running) {
@@ -101,17 +124,22 @@ public final class RedisListener {
                         continue;
                     }
                     pinged = false;
+                    if (frame instanceof Error e) {
+                        throw new IOException("Redis said: " + e.text); // a refused PING or anything else: never treated as listening (audit)
+                    }
                     if (frame instanceof List<?> l && l.size() == 3 && "message".equals(l.get(0)) && l.get(2) instanceof String m) {
                         try {
                             onMessage.accept(m);
-                        } catch (RuntimeException e) {
+                        } catch (RuntimeException | StackOverflowError e) {
                             lastError = "a message could not be read: " + e;
                         }
                     }
                 }
-            } catch (IOException | RuntimeException e) {
+            } catch (IOException | RuntimeException | OutOfMemoryError | StackOverflowError e) {
+                // anything at all: the listener carries every answer, so it must never stop for good (audit)
                 if (running) {
                     lastError = String.valueOf(e.getMessage());
+                    say("Redis " + host + ":" + port + ": not listening (" + lastError + "); trying again");
                 }
             } finally {
                 subscribed = false;
@@ -123,6 +151,15 @@ public final class RedisListener {
                 return;
             }
             retry = Math.min(retry * 2, MAX_RETRY_MS);
+        }
+    }
+
+    /** Says a change of state once (not the same line again while it stays so). */
+    private void say(String line) {
+        String key = line.replaceAll("\\d+ ms", "");
+        if (!key.equals(lastSaid)) {
+            lastSaid = key;
+            log.accept(line);
         }
     }
 
@@ -173,6 +210,9 @@ public final class RedisListener {
                 if (n < 0) {
                     return null;
                 }
+                if (n > MAX_BULK) {
+                    throw new IOException("a message of " + n + " bytes is over the panel's limit");
+                }
                 byte[] data = in.readNBytes(n);
                 in.read();
                 in.read();
@@ -180,6 +220,9 @@ public final class RedisListener {
             }
             case '*': {
                 int n = Integer.parseInt(l);
+                if (n > 1024) {
+                    throw new IOException("a reply of " + n + " parts is not a pub/sub message");
+                }
                 List<Object> list = new ArrayList<>(Math.max(0, n));
                 for (int i = 0; i < n; i++) {
                     list.add(read(in));

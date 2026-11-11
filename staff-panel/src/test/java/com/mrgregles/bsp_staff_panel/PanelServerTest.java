@@ -81,7 +81,7 @@ class PanelServerTest {
     private HttpResponse<String> get(String path, String who, String cookie) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder(uri(path)).GET();
         if (who != null) b.header("Cf-Access-Jwt-Assertion", "good:" + who);
-        if (cookie != null) b.header("Cookie", PanelServer.COOKIE + "=" + cookie);
+        if (cookie != null) b.header("Cookie", PanelServer.SECURE_COOKIE + "=" + cookie);
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
@@ -89,7 +89,7 @@ class PanelServerTest {
         HttpRequest.Builder b = HttpRequest.newBuilder(uri(path)).POST(HttpRequest.BodyPublishers.ofString(json))
                 .header("Content-Type", "application/json").header("X-BSP", "1").header("Origin", URL);
         if (who != null) b.header("Cf-Access-Jwt-Assertion", "good:" + who);
-        if (cookie != null) b.header("Cookie", PanelServer.COOKIE + "=" + cookie);
+        if (cookie != null) b.header("Cookie", PanelServer.SECURE_COOKIE + "=" + cookie);
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
@@ -177,6 +177,8 @@ class PanelServerTest {
         assertEquals(10, json(done).getAsJsonArray("codes").size());
         String setCookie = done.headers().firstValue("Set-Cookie").orElse("");
         assertTrue(setCookie.contains("HttpOnly") && setCookie.contains("SameSite=Strict") && setCookie.contains("Secure"), setCookie);
+        assertTrue(setCookie.startsWith("__Host-bsp_panel=") && setCookie.contains("Path=/;") && !setCookie.contains("Domain"),
+                "a __Host- cookie over https: no other *.domain page can set one in its place (audit): " + setCookie);
         assertTrue(setCookie.contains("Max-Age=" + Rank.OWNER.session().toSeconds()), "48 hours for an Owner (D281): " + setCookie);
         String cookie = cookieOf(done);
         JsonObject me = json(get("/api/me", "owner@bsp.test", cookie));
@@ -221,7 +223,7 @@ class PanelServerTest {
     void the_live_feed_reaches_an_open_page() throws Exception {
         String o = owner();
         feed.accept("BSP-Spawn", clock.get(), "{\"v\":1,\"server\":\"BSP-Spawn\",\"at\":1,\"mspt\":20.5,\"max\":100,\"players\":[{\"name\":\"Vexa\",\"role\":null}]}");
-        HttpRequest req = HttpRequest.newBuilder(uri("/api/live")).header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test").header("Cookie", PanelServer.COOKIE + "=" + o).GET().build();
+        HttpRequest req = HttpRequest.newBuilder(uri("/api/live")).header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test").header("Cookie", PanelServer.SECURE_COOKIE + "=" + o).GET().build();
         HttpResponse<InputStream> r = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
         assertEquals("text/event-stream; charset=utf-8", r.headers().firstValue("Content-Type").orElse(""));
         BufferedReader in = new BufferedReader(new InputStreamReader(r.body(), StandardCharsets.UTF_8));
@@ -231,6 +233,7 @@ class PanelServerTest {
         assertEquals("BSP-Spawn", j.getAsJsonArray("players").get(0).getAsJsonObject().get("server").getAsString(), "each player carries their server");
         assertEquals(1, server.liveCount());
         feed.accept("Frostwarf", clock.get(), "{\"v\":1,\"server\":\"Frostwarf\",\"at\":2,\"mspt\":30,\"max\":100,\"players\":[]}");
+        clock.addAndGet(PanelServer.LIVE_EVERY_MS); // changes go out at most every 5 s (D251; audit: every snapshot redrew every page)
         String next = nextData(in);
         assertTrue(next.contains("Frostwarf") && next.contains("\"onPanel\":[\"Mrgregles\"]"), "a change is pushed, with who is on the panel (D293): " + next);
         r.body().close();
@@ -386,7 +389,7 @@ class PanelServerTest {
         JsonObject added = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"ana@bsp.test\",\"mcName\":\"Ana_Mod\",\"rank\":\"MODERATOR\"}"));
         String token = added.get("link").getAsString().substring((URL + "/setup#").length());
         String secret = json(post("/api/setup/info", "ana@bsp.test", null, "{\"token\":\"" + token + "\"}")).get("secret").getAsString();
-        String ana = cookieOf(post("/api/setup", "ana@bsp.test", null,
+        String anaFirst = cookieOf(post("/api/setup", "ana@bsp.test", null,
                 "{\"token\":\"" + token + "\",\"secret\":\"" + secret + "\",\"code\":\"" + code(secret) + "\",\"password\":\"" + PW + "\"}"));
         long anaId = store.accountByEmail("ana@bsp.test").orElseThrow().id;
         java.util.concurrent.atomic.AtomicBoolean busyOnce = new java.util.concurrent.atomic.AtomicBoolean();
@@ -413,9 +416,17 @@ class PanelServerTest {
         feed.accept("Frostwarf", clock.get(), "{\"v\":1,\"server\":\"Frostwarf\",\"at\":1,\"items\":true,\"players\":[]}");
         String add = "{\"player\":\"Vexa\",\"area\":\"inventory\",\"item\":\"Diamond\",\"count\":64,\"version\":0}";
 
-        assertEquals(403, post("/api/items/add", "ana@bsp.test", ana, add).statusCode(), "a Moderator without the items power");
-        assertFalse(json(me("ana@bsp.test", ana)).get("itemsPower").getAsBoolean());
+        assertEquals(403, post("/api/items/add", "ana@bsp.test", anaFirst, add).statusCode(), "a Moderator without the items power");
+        assertFalse(json(me("ana@bsp.test", anaFirst)).get("itemsPower").getAsBoolean());
         assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + anaId + ",\"action\":\"items\",\"on\":true}")).get("ok").getAsBoolean());
+        assertEquals(401, me("ana@bsp.test", anaFirst).statusCode(), "giving the power ends her open logins (D428)");
+        clock.addAndGet(30_000); // a code is taken once per 30-second step
+        feed.accept("Moongrove", clock.get(), "{\"v\":1,\"server\":\"Moongrove\",\"at\":2,\"items\":true,\"players\":[{\"id\":\"" + vexa + "\",\"name\":\"Vexa\"}]}");
+        feed.accept("Frostwarf", clock.get(), "{\"v\":1,\"server\":\"Frostwarf\",\"at\":2,\"items\":true,\"players\":[]}");
+        HttpResponse<String> relogin = post("/api/login", "ana@bsp.test", null, "{\"password\":\"" + PW + "\",\"code\":\"" + code(secret) + "\"}");
+        assertTrue(relogin.headers().firstValue("Set-Cookie").orElse("").contains("Max-Age=" + Rank.ADMIN.session().toSeconds()),
+                "and she logs in again for 48 hours, as Admins do (D428): " + relogin.headers().firstValue("Set-Cookie").orElse(""));
+        String ana = cookieOf(relogin);
         assertTrue(json(me("ana@bsp.test", ana)).get("itemsPower").getAsBoolean(), "the Owner gave it");
         assertTrue(json(get("/api/staff", "owner@bsp.test", o)).getAsJsonArray("staff").asList().stream().anyMatch(x -> x.getAsJsonObject().get("itemsPower").getAsBoolean()), "shown on the staff page");
 
@@ -480,7 +491,7 @@ class PanelServerTest {
         assertFalse(json(post("/api/items/remove", "owner@bsp.test", o, "{\"player\":\"Vexa\",\"area\":\"inventory\",\"slot\":5,\"hash\":\"zz\",\"count\":1}")).get("ok").getAsBoolean(), "not a hash");
 
         assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + anaId + ",\"action\":\"items\",\"on\":false}")).get("ok").getAsBoolean());
-        assertEquals(403, post("/api/items/add", "ana@bsp.test", ana, add).statusCode(), "taken back: refused again");
+        assertEquals(401, post("/api/items/add", "ana@bsp.test", ana, add).statusCode(), "taken back: her logins end too (D428), so nothing is added");
         // audit: a rank change ends the power, so an Admin made a Moderator again starts without it
         assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + anaId + ",\"action\":\"items\",\"on\":true}")).get("ok").getAsBoolean());
         assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + anaId + ",\"action\":\"rank\",\"rank\":\"ADMIN\"}")).get("ok").getAsBoolean());
@@ -506,7 +517,7 @@ class PanelServerTest {
         assertTrue(json(cat).getAsJsonObject("catalog").getAsJsonArray("items").size() == 2);
         assertTrue(cat.headers().firstValue("Cache-Control").orElse("").contains("max-age"), "the browser keeps it");
         HttpResponse<byte[]> sheet = http.send(java.net.http.HttpRequest.newBuilder(uri("/api/items/sheet/500/0.png")).header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test")
-                .header("Cookie", PanelServer.COOKIE + "=" + o).GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+                .header("Cookie", PanelServer.SECURE_COOKIE + "=" + o).GET().build(), HttpResponse.BodyHandlers.ofByteArray());
         assertEquals(200, sheet.statusCode());
         assertEquals("image/png", sheet.headers().firstValue("Content-Type").orElse(""));
         assertEquals(ItemPicturesTest.PNG.length, sheet.body().length);
@@ -796,7 +807,7 @@ class PanelServerTest {
         assertEquals(vexa, asked.get(asked.size() - 1).get("player").getAsString(), "the ban's player, which the game server checks");
         assertTrue(json(post("/api/ban/lift", "saffi@bsp.test", saffi, "{\"ban\":1}")).get("ok").getAsBoolean());
         assertEquals("unban", asked.get(asked.size() - 1).get("action").getAsString());
-        // audit: a ban on staff is changed by the Owner alone, as it was given (D355); lifting stays with Admins (D356)
+        // audit: a ban on staff is changed and lifted by the Owner alone, as it was given (D355, D427)
         String kipId = "88888888-2222-3333-4444-555555555555";
         store.bans.add(new PanelStore.Ban(4, kipId, "Kip", "Abuse", "", "Mrgregles", now - 1000, now + 3_600_000L, 0, "", 0));
         int n = asked.size();
@@ -804,7 +815,12 @@ class PanelServerTest {
                 "an Admin cannot make a staff member's ban longer");
         assertEquals(n, asked.size(), "nothing sent");
         assertTrue(json(post("/api/ban/edit", "owner@bsp.test", o, "{\"ban\":4,\"length\":\"perm\",\"reason\":\"Abuse\",\"note\":\"\"}")).get("ok").getAsBoolean(), "the Owner can");
-        assertTrue(json(post("/api/ban/lift", "saffi@bsp.test", saffi, "{\"ban\":4}")).get("ok").getAsBoolean(), "an Admin lifts it (D356)");
+        int m = asked.size();
+        JsonObject adminLift = json(post("/api/ban/lift", "saffi@bsp.test", saffi, "{\"ban\":4}"));
+        assertFalse(adminLift.get("ok").getAsBoolean(), "an Admin does not lift a staff member's ban (D427)");
+        assertTrue(adminLift.get("message").getAsString().contains("only the Owner lifts"), adminLift.toString());
+        assertEquals(m, asked.size(), "nothing sent");
+        assertTrue(json(post("/api/ban/lift", "owner@bsp.test", o, "{\"ban\":4}")).get("ok").getAsBoolean(), "the Owner does");
         assertEquals(1, json(post("/api/ban/history", "saffi@bsp.test", saffi, "{\"player\":\"Kip\"}")).get("staff").getAsInt(), "the form knows Kip is staff");
         assertEquals(2, json(post("/api/ban/history", "saffi@bsp.test", saffi, "{\"player\":\"Mrgregles\"}")).get("staff").getAsInt(), "and the Owner");
         assertEquals(0, json(post("/api/ban/history", "saffi@bsp.test", saffi, "{\"player\":\"Vexa\"}")).get("staff").getAsInt(), "and a player");
@@ -858,7 +874,7 @@ class PanelServerTest {
             assertTrue(app.headers().firstValue("Content-Security-Policy").orElse("").contains("frame-src 'self'"), "the Map tab frames /map/ from this panel only (SU-47)");
 
             HttpResponse<byte[]> tex = http.send(HttpRequest.newBuilder(uri("/map/maps/frostwarf__overworld/textures.json")).header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test")
-                    .header("Cookie", PanelServer.COOKIE + "=" + o).build(), HttpResponse.BodyHandlers.ofByteArray());
+                    .header("Cookie", PanelServer.SECURE_COOKIE + "=" + o).build(), HttpResponse.BodyHandlers.ofByteArray());
             assertEquals(200, tex.statusCode());
             assertEquals("gzip", tex.headers().firstValue("Content-Encoding").orElse(""), "BlueMap's .gz files go as gzip");
             assertTrue(tex.headers().firstValue("Content-Type").orElse("").startsWith("application/json"));
@@ -868,7 +884,7 @@ class PanelServerTest {
             assertEquals("image/png", tile.headers().firstValue("Content-Type").orElse(""));
             String modified = tile.headers().firstValue("Last-Modified").orElse("");
             HttpResponse<String> again = http.send(HttpRequest.newBuilder(uri("/map/maps/frostwarf__overworld/tiles/1/x0/z0.png")).header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test")
-                    .header("Cookie", PanelServer.COOKIE + "=" + o).header("If-Modified-Since", modified).build(), HttpResponse.BodyHandlers.ofString());
+                    .header("Cookie", PanelServer.SECURE_COOKIE + "=" + o).header("If-Modified-Since", modified).build(), HttpResponse.BodyHandlers.ofString());
             assertEquals(304, again.statusCode(), "unchanged since: not sent again");
             assertEquals(204, get("/map/maps/frostwarf__overworld/tiles/1/x5/z5.png", "owner@bsp.test", o).statusCode(), "a tile not drawn yet: nothing, not an error");
             assertEquals(404, get("/map/maps/frostwarf__overworld/nothing.json", "owner@bsp.test", o).statusCode());
@@ -879,7 +895,7 @@ class PanelServerTest {
             assertEquals(404, get("/map/maps/evil.html", "owner@bsp.test", o).statusCode(), "only BlueMap's own page runs at /map/ (audit)");
             assertEquals(404, get("/map/maps/evil.js", "owner@bsp.test", o).statusCode(), "and scripts only from its assets");
             HttpResponse<Void> head = http.send(HttpRequest.newBuilder(uri("/map/maps/frostwarf__overworld/tiles/1/x0/z0.png")).method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test").header("Cookie", PanelServer.COOKIE + "=" + o).build(), HttpResponse.BodyHandlers.discarding());
+                    .header("Cf-Access-Jwt-Assertion", "good:owner@bsp.test").header("Cookie", PanelServer.SECURE_COOKIE + "=" + o).build(), HttpResponse.BodyHandlers.discarding());
             assertEquals(200, head.statusCode(), "HEAD answers too");
             assertEquals(404, get("/map/maps/frostwarf__overworld/live/sse", "owner@bsp.test", o).statusCode(), "no live stream: BlueMap's page reads players.json instead");
             // SU-46: the live data is the panel's own, from its feed

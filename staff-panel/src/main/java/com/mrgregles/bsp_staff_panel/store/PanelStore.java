@@ -112,7 +112,11 @@ public interface PanelStore {
      * A chat line in {@code <prefix>web_chat}: BSP-Server Utilities writes the lines players say, the panel its own. {@code line}
      * is the signed line (docs/API.md); the panel shows only what it can open with its key.
      */
-    record ChatRow(long id, long atMs, String line) {
+    record ChatRow(long id, long atMs, String line, String uid) {
+        public ChatRow(long id, long atMs, String line) {
+            this(id, atMs, line, null);
+        }
+
     }
 
     /** The chat table, word for word as BSP-Server Utilities' JdbcBackend makes it (a JUnit test compares the two). */

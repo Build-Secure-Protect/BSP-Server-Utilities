@@ -51,7 +51,11 @@ public class WebActionGameTests {
     private static final String VECTOR_SIGNED = "eyJ2IjoxLCJpZCI6InZlY3Rvci0xIiwiYXQiOjE4MDAwMDAwMDAwMDAsImJ5IjoiQW5hX01vZCIsInJhbmsiOiJNT0RFUkFUT1IiLCJzZXJ2ZXIiOiJCU1AtU3Bhd24iLCJhY3Rpb24iOiJraWNrIiwicGxheWVyIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicmVhc29uIjoiVGVzdGluZyJ9.1d0ae001505e5b2b3e1bc51d0538c2e2c08bdcba370daf0be97b60cd57007223";
 
     private static String action(String id, long at, String action, String extra) {
-        return WebActions.sign(KEY, "{\"v\":1,\"id\":\"" + id + "\",\"at\":" + at + ",\"by\":\"Ana_Mod\",\"rank\":\"MODERATOR\",\"server\":\"" + Storage.currentServerId()
+        return actionAs("MODERATOR", id, at, action, extra);
+    }
+
+    private static String actionAs(String rank, String id, long at, String action, String extra) {
+        return WebActions.sign(KEY, "{\"v\":1,\"id\":\"" + id + "\",\"at\":" + at + ",\"by\":\"Ana_Mod\",\"rank\":\"" + rank + "\",\"server\":\"" + Storage.currentServerId()
                 + "\",\"action\":\"" + action + "\"" + extra + "}");
     }
 
@@ -199,12 +203,14 @@ public class WebActionGameTests {
             WebActions.Answer done = list.later().get();
             h.assertTrue(done.ok() && done.data().getAsJsonArray().size() == 1 && done.data().getAsJsonArray().get(0).getAsJsonObject().get("shortId").getAsString().equals("3f9a2c1b"),
                     "the graves come back as the answer's data: " + done);
-            WebActions.Answer ret = WebActions.handle(server, action("c2-" + marker, now, "grave_return", ",\"player\":\"" + vexa + "\",\"grave\":\"3f9a2c1b\",\"name\":\"Vexa_" + marker + "\""));
+            WebActions.Answer modRet = WebActions.handle(server, action("c2m-" + marker, now, "grave_return", ",\"player\":\"" + vexa + "\",\"grave\":\"3f9a2c1b\",\"name\":\"Vexa_" + marker + "\""));
+            h.assertTrue(modRet != null && !modRet.ok() && modRet.later() == null, "a Moderator's grave return refused here too (D296): " + modRet);
+            WebActions.Answer ret = WebActions.handle(server, actionAs("ADMIN", "c2-" + marker, now, "grave_return", ",\"player\":\"" + vexa + "\",\"grave\":\"3f9a2c1b\",\"name\":\"Vexa_" + marker + "\""));
             WebActions.Answer r = ret.later().get();
             h.assertTrue(r.ok() && r.message().contains("next login") && returned.get(0).equals(vexa + " 3f9a2c1b Ana_Mod"), "returned through BSP-InventorySync, by the staff member: " + returned);
             boolean logged = ActionLog.recent(server, 20, false, List.of()).stream().anyMatch(e -> e.actor().equals("Ana_Mod (panel)") && e.text().contains("grave return Vexa_" + marker));
             h.assertTrue(logged, "and in the Action Log");
-            WebActions.Answer bad = WebActions.handle(server, action("c3-" + marker, now, "grave_return", ",\"player\":\"" + vexa + "\",\"grave\":\"../x\""));
+            WebActions.Answer bad = WebActions.handle(server, actionAs("ADMIN", "c3-" + marker, now, "grave_return", ",\"player\":\"" + vexa + "\",\"grave\":\"../x\""));
             h.assertTrue(bad != null && !bad.ok() && bad.later() == null && returned.size() == 1, "not a grave id: refused before BSP-InventorySync");
         } finally {
             com.mrgregles.bsp_server_utilities.compat.InventorySync.useForTests(null);
@@ -290,9 +296,11 @@ public class WebActionGameTests {
             boolean logged = ActionLog.recent(server, 20, false, List.of()).stream().anyMatch(e -> e.actor().equals("Ana_Mod (panel)") && e.text().contains("kick") && e.text().contains(marker));
             h.assertTrue(logged, "the kick is in the Action Log by Ana_Mod (panel)");
 
-            WebActions.Answer bc = WebActions.handle(server, action("b2-" + marker, now, "broadcast", ",\"title\":false,\"colour\":\"gold\",\"target\":\"all\",\"network\":false,\"message\":\"Hello " + marker + "\""));
+            WebActions.Answer modBc = WebActions.handle(server, action("b2m-" + marker, now, "broadcast", ",\"title\":false,\"colour\":\"gold\",\"target\":\"all\",\"network\":false,\"message\":\"Hello " + marker + "\""));
+            h.assertTrue(modBc != null && !modBc.ok() && shown.isEmpty(), "a Moderator's announcement refused here too (D250): " + modBc);
+            WebActions.Answer bc = WebActions.handle(server, actionAs("ADMIN", "b2-" + marker, now, "broadcast", ",\"title\":false,\"colour\":\"gold\",\"target\":\"all\",\"network\":false,\"message\":\"Hello " + marker + "\""));
             h.assertTrue(bc != null && bc.ok() && shown.size() == 1 && shown.get(0).endsWith("Hello " + marker), "the announcement shown as /broadcast shows it: " + bc + " " + shown);
-            WebActions.Answer bad = WebActions.handle(server, action("b3-" + marker, now, "broadcast", ",\"title\":false,\"colour\":\"plaid\",\"target\":\"all\",\"network\":false,\"message\":\"x\""));
+            WebActions.Answer bad = WebActions.handle(server, actionAs("ADMIN", "b3-" + marker, now, "broadcast", ",\"title\":false,\"colour\":\"plaid\",\"target\":\"all\",\"network\":false,\"message\":\"x\""));
             h.assertTrue(bad != null && !bad.ok() && shown.size() == 1, "an unknown colour: refused, nothing shown");
         } finally {
             WebActions.useReal();

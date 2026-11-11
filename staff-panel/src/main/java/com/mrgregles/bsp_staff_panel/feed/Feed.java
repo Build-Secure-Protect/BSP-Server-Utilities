@@ -31,6 +31,7 @@ public final class Feed {
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private final LongSupplier clock;
     private volatile long lastMessageAt;
+    private final Map<String, Long> unsignedSaid = new ConcurrentHashMap<>();
 
     /** Null only for the demo and tests: the game servers' snapshots are then taken unsigned. */
     private final byte[] key;
@@ -62,6 +63,12 @@ public final class Feed {
     public boolean accept(String server, long heardAt, String payload) {
         String json = key == null ? payload : com.mrgregles.bsp_staff_panel.crypto.Signed.open(key, payload);
         if (json == null) {
+            Long said = unsignedSaid.get(server);
+            if (said == null || clock.getAsLong() - said > 3_600_000L) { // named once an hour, so the one server with another key is found (audit)
+                unsignedSaid.put(server, clock.getAsLong());
+                System.err.println("[panel] a snapshot said to be from " + server.replaceAll("[^A-Za-z0-9_.-]", "?")
+                        + " is not signed with this panel's action key: put the key the console's action-key prints in that server's webPanel.actionKey");
+            }
             return false; // not signed with this panel's key: dropped (audit)
         }
         JsonObject o;
@@ -87,6 +94,12 @@ public final class Feed {
         if (old != null && old.snapshot.has("at") && old.snapshot.get("at").getAsLong() >= at) {
             return false;
         }
+        if (o.has("stopping") && o.get("stopping").isJsonPrimitive() && o.get("stopping").getAsBoolean()) {
+            servers.remove(server); // its last word before it stops: gone at once, not 20 s later (audit)
+            lastMessageAt = clock.getAsLong();
+            listeners.forEach(Runnable::run);
+            return true;
+        }
         servers.put(server, new Entry(server, heardAt, o));
         lastMessageAt = clock.getAsLong();
         listeners.forEach(Runnable::run);
@@ -95,9 +108,35 @@ public final class Feed {
 
     /** The servers heard from lately, by name. */
     public List<String> live() {
-        long cut = clock.getAsLong() - STALE_MS;
-        servers.values().removeIf(e -> e.heardAt < cut);
+        long now = clock.getAsLong();
+        servers.values().removeIf(e -> e.heardAt < now - staleAfter(e));
         return servers.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+    }
+
+    /**
+     * How long a server may stay quiet before it counts as gone: {@link #STALE_MS}, or about three of its own snapshots
+     * when it sends less often (its snapshot's {@code every}; audit: a server sending every 25 s flickered).
+     */
+    private static long staleAfter(Entry e) {
+        long every = 0;
+        try {
+            every = e.snapshot.has("every") ? e.snapshot.get("every").getAsLong() : 0;
+        } catch (RuntimeException notANumber) {
+            // the usual
+        }
+        return Math.max(STALE_MS, Math.min(30, Math.max(0, every)) * 3000L + 5000L);
+    }
+
+    /**
+     * Why a server cannot be asked anything now, or null: its snapshot says no answer can reach the panel from it (its
+     * Redis is not connected; answers travel on Redis only), so it carries nothing out (audit).
+     */
+    public String whyNoAnswers(String server) {
+        Entry e = servers.get(server);
+        if (e == null || !e.snapshot.has("answers") || !e.snapshot.get("answers").isJsonPrimitive() || e.snapshot.get("answers").getAsBoolean()) {
+            return null;
+        }
+        return server + " cannot answer the panel: its Redis is not connected, so it carries out nothing from here until it is (its /su status says why). Nothing was sent.";
     }
 
     /** Where a player is: {server, name}, by id or (any case) by name; null when they are not online on a live server. */

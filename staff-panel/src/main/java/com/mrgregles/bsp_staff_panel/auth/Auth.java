@@ -284,6 +284,7 @@ public final class Auth {
             if (t.itemsPower != on) {
                 t.itemsPower = on;
                 store.update(t);
+                store.deleteSessionsOf(t.id); // logs in again for the login's new length (48 h with the power, D428)
                 log(by.email, (on ? "gave " : "took the items power from ") + t.email + (on ? " the items power" : ""));
             }
             return null;
@@ -481,7 +482,7 @@ public final class Auth {
     private String openSession(Account a) throws Exception {
         String token = Tokens.token();
         long now = clock.getAsLong();
-        store.saveSession(new PanelStore.Session(box.fingerprint(token), a.id, now, now + a.rank.session().toMillis()));
+        store.saveSession(new PanelStore.Session(box.fingerprint(token), a.id, now, now + a.session().toMillis())); // D281, D428
         return token;
     }
 

@@ -72,7 +72,10 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
         });
-        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> Storage.stop());
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
+            com.mrgregles.bsp_server_utilities.web.WebAgent.farewell(e.getServer()); // the panel drops this server at once, not 20 s later (audit)
+            Storage.stop();
+        });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
         MinecraftForge.EVENT_BUS.addListener(ServerUtilsCommands::onRegister);
         // The rules popup: the gate at login, the hold, the popup (RulesHold blocks actions while held).

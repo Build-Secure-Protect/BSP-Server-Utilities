@@ -4,7 +4,7 @@
 // with a second tap. Each grave's items as slots like a chest (D301), with their pictures (SU-41); tap one for its name,
 // enchantments and what it holds; backpacks and danks inside the grave under it (SU-42, BSP-InventorySync's SU-IS3).
 const Graves = (() => {
-  const st = { query: "", result: null, busy: false, armed: {}, answers: {}, items: {}, tip: null };
+  const st = { query: "", result: null, busy: false, armed: {}, answers: {}, items: {}, tip: null, seq: 0, returning: {} };
   const ago = (ms) => {
     const m = Math.round((Date.now() - ms) / 60000);
     if (m < 60) return Math.max(1, m) + " min ago";
@@ -13,10 +13,13 @@ const Graves = (() => {
   };
   const dim = (d) => (d || "").replace(/^minecraft:/, "").replace("the_nether", "nether").replace("the_end", "end");
 
+  // the newest look wins: an older answer arriving last is left out (audit)
   async function look(name) {
-    st.query = name; st.busy = true; st.result = null; st.answers = {}; st.armed = {}; st.items = {}; st.tip = null; App.refreshMore();
-    try { st.result = await api("/api/graves", { player: name }); } catch (e) { st.result = { ok: false, message: "The panel could not be reached." }; }
-    st.busy = false; App.refreshMore();
+    const seq = ++st.seq;
+    st.query = name; st.busy = true; st.result = null; st.answers = {}; st.armed = {}; st.items = {}; st.tip = null; st.returning = {}; App.refreshMore();
+    const r = await call("/api/graves", { player: name });
+    if (seq !== st.seq) return;
+    st.result = r; st.busy = false; App.refreshMore();
   }
 
   function card(g, p, me) {
@@ -31,15 +34,21 @@ const Graves = (() => {
     const ans = st.answers[g.shortId];
     if (ans) c.appendChild(el("div", ans.ok ? "okm" : "err", ans.message));
     if (g.returnable === true && !(ans && ans.ok)) {
-      const can = me.rank !== "MODERATOR";
-      const b = el("button", "btn sm" + (can ? "" : " ghost locked-item"), can ? (Date.now() - (st.armed[g.shortId] || 0) < 3000 ? "Sure? Return it to " + p.name : "Return to " + p.name) : "Return (Admin)");
-      b.type = "button";
+      const can = me.rank !== "MODERATOR", plain = "Return to " + p.name, sure = "Sure? Return it to " + p.name;
+      const left = 3000 - (Date.now() - (st.armed[g.shortId] || 0)), working = !!st.returning[g.shortId];
+      const b = el("button", "btn sm" + (can ? "" : " ghost locked-item"), can ? (working ? "Returning…" : left > 0 ? sure : plain) : "Return (Admin)");
+      b.type = "button"; b.dataset.keep = "greturn:" + g.shortId;
+      b.disabled = working; // a redraw while it runs keeps the key off (audit)
+      if (can && !working) unarm(b, left, plain);
       b.addEventListener("click", async () => {
         if (!can) { alert("Graves are returned by Admins and Owners."); return; }
-        if (Date.now() - (st.armed[g.shortId] || 0) > 3000) { st.armed[g.shortId] = Date.now(); b.textContent = "Sure? Return it to " + p.name; return; }
-        st.armed[g.shortId] = 0; b.disabled = true; b.textContent = "Returning…";
-        try { st.answers[g.shortId] = await api("/api/grave/return", { player: p.id, grave: g.shortId }); }
-        catch (e) { st.answers[g.shortId] = { ok: false, message: "The panel could not be reached." }; }
+        if (st.returning[g.shortId]) return;
+        if (Date.now() - (st.armed[g.shortId] || 0) > 3000) { st.armed[g.shortId] = Date.now(); b.textContent = sure; unarm(b, 3000, plain); return; }
+        const items = st.items; // the same look still on screen when it answers
+        st.armed[g.shortId] = 0; st.returning[g.shortId] = true; b.disabled = true; b.textContent = "Returning…";
+        const r = await call("/api/grave/return", { player: p.id, grave: g.shortId }, true);
+        if (items !== st.items) return;
+        st.returning[g.shortId] = false; st.answers[g.shortId] = r;
         App.refreshMore();
       });
       c.appendChild(b);
@@ -56,8 +65,7 @@ const Graves = (() => {
     items[g.shortId] = "loading";
     queue = queue.then(async () => {
       if (items !== st.items) return;
-      let r;
-      try { r = await api("/api/grave/items", { player: p.id, grave: g.shortId }); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+      const r = await call("/api/grave/items", { player: p.id, grave: g.shortId });
       items[g.shortId] = r;
       if (items === st.items) App.refreshMore();
     });
@@ -89,7 +97,7 @@ const Graves = (() => {
         const it = by.get(i);
         const b = el("button", "islot" + (it && it.lk ? " lk" : "")); b.type = "button";
         if (!it) { b.disabled = true; grid.appendChild(b); continue; }
-        const key = g.shortId + " " + a.id + " " + i;
+        const key = g.shortId + " " + a.id + " " + i; b.dataset.keep = "gslot:" + key;
         if (st.tip === key) { b.classList.add("sel"); tipItem = it; }
         b.appendChild(Items.icon(it, 24) || el("span", "ilt", Items.letters(it)));
         if (it.n > 1) b.appendChild(el("span", "ct", it.n > 9999 ? Math.round(it.n / 1000) + "k" : String(it.n)));
@@ -106,7 +114,7 @@ const Graves = (() => {
   function view(main, me) {
     main.appendChild(el("h2", null, "Graves"));
     const f = el("form", "gsearch");
-    const q = el("input", "search"); q.type = "search"; q.placeholder = "A player's name, online or not"; q.value = st.query; q.maxLength = 16;
+    const q = el("input", "search"); q.type = "search"; q.placeholder = "A player's name, online or not"; q.value = st.query; q.maxLength = 16; q.dataset.keep = "graveq";
     const go = el("button", "btn sm", "Look"); go.type = "submit";
     f.appendChild(q); f.appendChild(go);
     f.addEventListener("submit", (e) => { e.preventDefault(); if (q.value.trim()) look(q.value.trim()); });

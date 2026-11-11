@@ -82,23 +82,23 @@ public final class JdbcBackend implements StorageBackend {
     @Override
     public void init() throws SQLException {
         try (Statement st = conn().createStatement()) {
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "notices (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid VARCHAR(36) NOT NULL, created_at BIGINT NOT NULL, source VARCHAR(64) NOT NULL, kind VARCHAR(32) NOT NULL, payload MEDIUMTEXT, KEY created (created_at))");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rules (id INT NOT NULL PRIMARY KEY, heading VARCHAR(64) NOT NULL, intro VARCHAR(320) NOT NULL, leave_message VARCHAR(320) NOT NULL, version INT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rule_items (pos INT NOT NULL PRIMARY KEY, title VARCHAR(96) NOT NULL, text TEXT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rules_agreed (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, version INT NOT NULL, agreed_at BIGINT NOT NULL, server VARCHAR(64) NOT NULL, KEY version (version))");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_settings (id INT NOT NULL PRIMARY KEY, operators BOOLEAN NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_groups (pos INT NOT NULL PRIMARY KEY, grp VARCHAR(64) NOT NULL, label VARCHAR(48) NOT NULL, colour INT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_seen (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, seen_at BIGINT NOT NULL, server VARCHAR(64) NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid VARCHAR(36) NOT NULL, at_ms BIGINT NOT NULL, server VARCHAR(64) NOT NULL, actor_id VARCHAR(36) NOT NULL, actor VARCHAR(32) NOT NULL, role_group VARCHAR(64) NOT NULL, role_label VARCHAR(48) NOT NULL, colour INT NOT NULL, kind VARCHAR(16) NOT NULL, text TEXT NOT NULL, UNIQUE KEY uid (uid), KEY at (at_ms))");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log_switches (cmd VARCHAR(64) NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "despawn_settings (id INT NOT NULL PRIMARY KEY, settings MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_rules (id INT NOT NULL PRIMARY KEY, rules MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_setup (id INT NOT NULL PRIMARY KEY, setup MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "setup_state (id INT NOT NULL PRIMARY KEY, state MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, first_at BIGINT NOT NULL, first_server VARCHAR(64) NOT NULL, KEY first_at (first_at))");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "notices (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid VARCHAR(36) NOT NULL, created_at BIGINT NOT NULL, source VARCHAR(64) NOT NULL, kind VARCHAR(32) NOT NULL, payload MEDIUMTEXT, KEY created (created_at)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rules (id INT NOT NULL PRIMARY KEY, heading VARCHAR(64) NOT NULL, intro VARCHAR(320) NOT NULL, leave_message VARCHAR(320) NOT NULL, version INT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rule_items (pos INT NOT NULL PRIMARY KEY, title VARCHAR(96) NOT NULL, text TEXT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "rules_agreed (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, version INT NOT NULL, agreed_at BIGINT NOT NULL, server VARCHAR(64) NOT NULL, KEY version (version)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_settings (id INT NOT NULL PRIMARY KEY, operators BOOLEAN NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_groups (pos INT NOT NULL PRIMARY KEY, grp VARCHAR(64) NOT NULL, label VARCHAR(48) NOT NULL, colour INT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "staff_seen (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, seen_at BIGINT NOT NULL, server VARCHAR(64) NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid VARCHAR(36) NOT NULL, at_ms BIGINT NOT NULL, server VARCHAR(64) NOT NULL, actor_id VARCHAR(36) NOT NULL, actor VARCHAR(32) NOT NULL, role_group VARCHAR(64) NOT NULL, role_label VARCHAR(48) NOT NULL, colour INT NOT NULL, kind VARCHAR(16) NOT NULL, text TEXT NOT NULL, UNIQUE KEY uid (uid), KEY at (at_ms)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "log_switches (cmd VARCHAR(64) NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "despawn_settings (id INT NOT NULL PRIMARY KEY, settings MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_rules (id INT NOT NULL PRIMARY KEY, rules MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "check_setup (id INT NOT NULL PRIMARY KEY, setup MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "setup_state (id INT NOT NULL PRIMARY KEY, state MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, first_at BIGINT NOT NULL, first_server VARCHAR(64) NOT NULL, KEY first_at (first_at)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, snapshot MEDIUMTEXT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate(WEB_CHAT_TABLE.replace("<prefix>", prefix)); // the staff web panel's chat (SU-36); the panel makes the same table
             // network bans (SU-44): kept for good, read by every server at start, every minute and on a notice; the panel lists them
@@ -108,12 +108,39 @@ public final class JdbcBackend implements StorageBackend {
             // the staff web panel's item pictures (SU-41): one row per export, the newest one's zip in parts
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_items (id BIGINT NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, made_by VARCHAR(32) NOT NULL,"
                     + " server VARCHAR(64) NOT NULL, items INT NOT NULL, tabs INT NOT NULL, mods INT NOT NULL, size INT NOT NULL, parts INT NOT NULL, sha256 CHAR(64) NOT NULL) DEFAULT CHARSET=utf8mb4");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_item_parts (export BIGINT NOT NULL, part INT NOT NULL, data MEDIUMBLOB NOT NULL, PRIMARY KEY (export, part))");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE)");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_item_parts (export BIGINT NOT NULL, part INT NOT NULL, data MEDIUMBLOB NOT NULL, PRIMARY KEY (export, part)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE) DEFAULT CHARSET=utf8mb4");
+            warnCharsets();
             if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
                 st.executeUpdate("ALTER TABLE " + prefix + "afk_settings ADD COLUMN macros BOOLEAN NOT NULL DEFAULT TRUE");
             }
+        }
+    }
+
+    /**
+     * Tables made before every table said utf8mb4 take the database's default (latin1 on many MariaDB servers), where an
+     * emoji in a ban reason or a panel line fails to be written (audit). Said once at start with the line that fixes it;
+     * not changed by itself (converting a large Action Log takes a while and is the owner's call).
+     */
+    private void warnCharsets() {
+        List<String> old = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE ?")) {
+            ps.setString(1, prefix.replace("_", "\\_") + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String c = rs.getString(2);
+                    if (c != null && !c.startsWith("utf8mb4")) {
+                        old.add(rs.getString(1));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            return; // only a warning
+        }
+        if (!old.isEmpty()) {
+            com.mrgregles.bsp_server_utilities.BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: {} shared tables are not utf8mb4, so emoji and some symbols cannot be stored in them: {}. Once, with the servers stopped: {}",
+                    old.size(), old, String.join(" ", old.stream().map(t -> "ALTER TABLE " + t + " CONVERT TO CHARACTER SET utf8mb4;").toList()));
         }
     }
 

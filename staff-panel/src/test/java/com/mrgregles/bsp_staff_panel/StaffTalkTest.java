@@ -210,7 +210,7 @@ class StaffTalkTest {
     private static HttpResponse<String> get(HttpClient http, PanelServer server, String path, String who, String cookie) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + path)).header("Cf-Access-Jwt-Assertion", "good:" + who).GET();
         if (cookie != null) {
-            b.header("Cookie", PanelServer.COOKIE + "=" + cookie);
+            b.header("Cookie", PanelServer.SECURE_COOKIE + "=" + cookie);
         }
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }

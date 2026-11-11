@@ -35,6 +35,8 @@ public final class Main {
     }
 
     public static void main(String[] args) throws Exception {
+        // a connection that sends its request slowly is closed after 15 s instead of holding one of the 16 threads (audit)
+        System.setProperty("sun.net.httpserver.maxReqTime", "15");
         boolean demo = args.length > 0 && args[0].equals("--demo");
         PanelStore store;
         SecretBox box;
@@ -46,6 +48,7 @@ public final class Main {
         com.mrgregles.bsp_staff_panel.act.Actions actions;
         com.mrgregles.bsp_staff_panel.chat.Chat chat;
         String actionKey, mapRoot;
+        java.util.function.Supplier<String> redisState = () -> "Redis: not used (demo)";
         if (demo) {
             mapRoot = args.length > 2 ? args[2] : ""; // --demo <port> <BlueMap web folder>: a real map beside the made-up players
             store = new MemoryStore();
@@ -75,7 +78,10 @@ public final class Main {
             }
             System.out.println("Starting the " + c);
             mapRoot = c.mapRoot();
-            store = new JdbcStore(c.dbHost(), c.dbPort(), c.dbName(), c.dbUser(), c.dbPassword(), c.dbSsl(), c.tablePrefix());
+            store = new JdbcStore(c.dbHost(), c.dbPort(), c.dbName(), c.dbPanelName(), c.dbUser(), c.dbPassword(), c.dbSsl(), c.tablePrefix());
+            if (c.dbPanelName().equals(c.dbName())) {
+                System.out.println("database.panelName is the shared database: anyone with the game servers' database password can change the panel's accounts. The setup guide's own database and user prevent that.");
+            }
             box = new SecretBox(c.secretKey());
             host = c.listenHost();
             port = c.listenPort();
@@ -86,12 +92,28 @@ public final class Main {
             gate = header -> AccessJwt.verify(header, keys::key, c.issuer(), c.aud(), System.currentTimeMillis() / 1000);
             com.mrgregles.bsp_staff_panel.act.RedisSender sender = new com.mrgregles.bsp_staff_panel.act.RedisSender(c.redisHost(), c.redisPort(), c.redisUser(), c.redisPassword());
             PanelStore forNotices = store;
+            java.util.concurrent.atomic.AtomicReference<RedisListener> listening = new java.util.concurrent.atomic.AtomicReference<>();
+            java.util.concurrent.atomic.AtomicReference<String> lastSendError = new java.util.concurrent.atomic.AtomicReference<>("");
             actions = new com.mrgregles.bsp_staff_panel.act.Actions(c.actionKey(), (uid, at, kind, payload) -> {
+                boolean action = com.mrgregles.bsp_staff_panel.act.Actions.KIND_ACTION.equals(kind);
+                RedisListener l = listening.get();
+                if (action && (l == null || !l.subscribed())) {
+                    // answers come back on Redis only: sent now, it would be done with staff told "no answer" (audit)
+                    throw new IllegalStateException("the panel is not connected to Redis (" + (l == null ? "starting" : l.lastError()) + "), so no answer could reach it; nothing was sent");
+                }
                 Exception redisFailed = null;
                 try {
                     sender.publish(c.serverChannel(), com.mrgregles.bsp_staff_panel.act.Actions.line(uid, at, kind, payload));
+                    lastSendError.set("");
                 } catch (Exception e) {
-                    redisFailed = e; // the table still carries it
+                    redisFailed = e;
+                    if (!String.valueOf(e.getMessage()).equals(lastSendError.getAndSet(String.valueOf(e.getMessage())))) {
+                        System.err.println("[panel] Redis did not take a message: " + e.getMessage());
+                    }
+                    if (action) {
+                        // the table alone reaches a listening server only every 30 s, past the action's time (audit)
+                        throw new IllegalStateException("Redis did not take it (" + e.getMessage() + "); nothing was sent");
+                    }
                 }
                 try {
                     forNotices.insertNotice(uid, at, com.mrgregles.bsp_staff_panel.act.Actions.SOURCE, kind, payload); // the servers' safety net
@@ -101,10 +123,12 @@ public final class Main {
                     }
                 }
             }, System::currentTimeMillis);
+            actions.signWith(new com.mrgregles.bsp_staff_panel.crypto.PanelSigner(c.signingKey())); // only the panel can order anything (D426)
             com.mrgregles.bsp_staff_panel.act.Actions acts = actions;
-            actionKey = java.util.Base64.getEncoder().encodeToString(c.actionKey());
+            actionKey = c.panelKey();
             Feed signedFeed = new Feed(System::currentTimeMillis, c.actionKey()); // only what the game servers signed
             feed = signedFeed;
+            actions.refuseWhen(signedFeed::whyNoAnswers);
             com.mrgregles.bsp_staff_panel.chat.Chat signedChat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, c.actionKey(), System::currentTimeMillis);
             chat = signedChat;
             java.util.concurrent.atomic.AtomicLong lastRedis = new java.util.concurrent.atomic.AtomicLong();
@@ -114,20 +138,26 @@ public final class Main {
                             lastRedis.set(System.currentTimeMillis());
                         }
                     }).start();
+            listening.set(redis);
+            redisState = redis::status;
             ScheduledExecutorService poll = Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "panel-table");
                 t.setDaemon(true);
                 return t;
             });
             PanelStore s = store;
+            java.util.concurrent.atomic.AtomicReference<String> lastTableError = new java.util.concurrent.atomic.AtomicReference<>("");
             poll.scheduleWithFixedDelay(() -> {
                 if (redis.subscribed() && System.currentTimeMillis() - lastRedis.get() < 15_000L) {
                     return; // Redis is carrying snapshots; the table is the fallback (audit: only Redis's own count here)
                 }
                 try {
                     s.webServers().forEach(r -> signedFeed.accept(r.server(), r.atMs(), r.snapshot()));
+                    lastTableError.set("");
                 } catch (Exception e) {
-                    System.err.println("[panel] reading the servers' table: " + e.getMessage());
+                    if (!String.valueOf(e.getMessage()).equals(lastTableError.getAndSet(String.valueOf(e.getMessage())))) {
+                        System.err.println("[panel] reading the servers' table: " + e.getMessage()); // once, not every 5 s (audit)
+                    }
                 }
             }, 0, 5, TimeUnit.SECONDS);
             stopFeed = () -> {
@@ -135,7 +165,14 @@ public final class Main {
                 poll.shutdownNow();
             };
         }
-        store.init();
+        try {
+            store.init();
+        } catch (java.sql.SQLException e) {
+            System.out.println("The panel cannot use its database: " + e.getMessage()
+                    + "\nCheck database.host, .port, .name, .user and .password in " + PanelConfig.FILE + " (from inside the panel's container), then start the panel again.");
+            System.exit(1);
+            return;
+        }
         Auth auth = new Auth(store, box, System::currentTimeMillis);
         com.mrgregles.bsp_staff_panel.talk.StaffTalk talk = new com.mrgregles.bsp_staff_panel.talk.StaffTalk(store, System::currentTimeMillis);
         com.mrgregles.bsp_staff_panel.notes.PlayerNotes notes = new com.mrgregles.bsp_staff_panel.notes.PlayerNotes(store, System::currentTimeMillis);
@@ -167,7 +204,7 @@ public final class Main {
             Demo.talk(store, l.account());
             System.out.println("DEMO: made-up data, nothing reaches a game server. Set up the demo Owner at " + publicUrl + "/setup#" + l.token());
         }
-        console(auth, store, publicUrl, server, stopFeed, actionKey);
+        console(auth, store, publicUrl, server, stopFeed, actionKey, redisState, feed);
     }
 
     /**
@@ -216,7 +253,7 @@ public final class Main {
                 if (!p.isEmpty() && !p.equals(lastPictures.getAndSet(p))) {
                     System.err.println("[panel] " + p);
                 }
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) { // never stops for good (audit)
                 if (!String.valueOf(e.getMessage()).equals(lastPictures.getAndSet(String.valueOf(e.getMessage())))) {
                     System.err.println("[panel] reading the item pictures: " + e.getMessage());
                 }
@@ -269,7 +306,8 @@ public final class Main {
         return s::shutdownNow;
     }
 
-    private static void console(Auth auth, PanelStore store, String publicUrl, PanelServer server, Runnable stopFeed, String actionKey) throws Exception {
+    private static void console(Auth auth, PanelStore store, String publicUrl, PanelServer server, Runnable stopFeed, String actionKey,
+                                java.util.function.Supplier<String> redisState, Feed feed) throws Exception {
         System.out.println("Type help for the console's commands.");
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         String line;
@@ -284,7 +322,7 @@ public final class Main {
                             reset-owner <email>                    clears that person's authenticator; they set up a new one at their next login
                             reset-login <email>                    clears their password and authenticator; prints a new setup link
                             staff                                  every staff account
-                            action-key                             the key every game server needs as webPanel.actionKey
+                            action-key                             the panel's public key, every game server's webPanel.panelKey
                             status                                 open pages and servers heard from
                             stop                                   stops the panel""");
                     case "create-owner" -> {
@@ -311,8 +349,14 @@ public final class Main {
                                     + (x.lockedUntil > System.currentTimeMillis() ? " LOCKED" : ""));
                         }
                     }
-                    case "action-key" -> System.out.println("Put this in every game server's config/bsp_server_utilities-network.toml, [webPanel] actionKey = \"" + actionKey + "\"");
-                    case "status" -> System.out.println(server.liveCount() + " pages open; on the panel: " + server.onPanel());
+                    case "action-key" -> System.out.println("The panel's public key, for every game server's config/bsp_server_utilities-network.toml, [webPanel] panelKey = \""
+                            + actionKey + "\"\n(and actionKey from " + PanelConfig.FILE + ", which is not printed here)");
+                    case "status" -> {
+                        System.out.println(server.liveCount() + " pages open; on the panel: " + server.onPanel());
+                        System.out.println(redisState.get());
+                        System.out.println("Game servers sending: " + (feed.live().isEmpty() ? "none" : String.join(", ", feed.live()))
+                                + feed.live().stream().map(x -> feed.whyNoAnswers(x)).filter(java.util.Objects::nonNull).map(x -> "\n  " + x).collect(java.util.stream.Collectors.joining()));
+                    }
                     case "stop" -> {
                         server.stop();
                         stopFeed.run();

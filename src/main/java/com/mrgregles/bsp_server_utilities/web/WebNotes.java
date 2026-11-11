@@ -56,7 +56,7 @@ public final class WebNotes {
         if (!WebAgent.enabled()) {
             return false;
         }
-        JsonObject o = WebActions.verify(WebActions.currentKey(), payload);
+        JsonObject o = WebActions.fromPanel(payload); // signed by the panel's own key (D426)
         long at;
         try {
             if (o == null || !"web_notes".equals(o.get("type").getAsString()) || o.get("v").getAsInt() != 1 || !o.get("counts").isJsonObject()) {

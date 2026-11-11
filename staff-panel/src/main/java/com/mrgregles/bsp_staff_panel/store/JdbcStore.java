@@ -20,16 +20,40 @@ import java.util.Optional;
  */
 public final class JdbcStore implements PanelStore {
     private final String url, user, password, prefix;
+    /** The game servers' shared tables (players, bans, notices, web_servers, web_chat, web_items): in their own database when the panel has one of its own (D425). */
+    private final String shared;
+    private final boolean ownDatabase;
     private Connection conn;
 
     public JdbcStore(String host, int port, String database, String user, String password, boolean ssl, String prefix) {
+        this(host, port, database, database, user, password, ssl, prefix);
+    }
+
+    /**
+     * {@code panelDatabase} holds the panel's own tables (accounts, sessions, notes, the staff room) with a user only the
+     * panel has (D425: the game servers' database password must not reach the accounts); {@code database} is the game
+     * servers' shared one, where the panel reads and adds only what it needs.
+     */
+    public JdbcStore(String host, int port, String database, String panelDatabase, String user, String password, boolean ssl, String prefix) {
         if (!prefix.matches("[A-Za-z0-9_]{0,32}")) {
             throw new IllegalArgumentException("the table prefix may hold letters, digits and underscores only");
         }
-        this.url = "jdbc:mariadb://" + host + ":" + port + "/" + database + (ssl ? "?sslMode=verify-full" : "");
+        if (!database.matches("[A-Za-z0-9_]{1,64}") || !panelDatabase.matches("[A-Za-z0-9_]{1,64}")) {
+            throw new IllegalArgumentException("database names may hold letters, digits and underscores only");
+        }
+        this.ownDatabase = !panelDatabase.equals(database);
+        this.shared = ownDatabase ? "`" + database + "`." + prefix : prefix;
+        database = panelDatabase;
+        // a database that stops answering fails a request after 15 s instead of holding every page's thread for good (audit)
+        this.url = "jdbc:mariadb://" + host + ":" + port + "/" + database + "?connectTimeout=5000&socketTimeout=15000" + (ssl ? "&sslMode=verify-full" : "");
         this.user = user;
         this.password = password;
         this.prefix = prefix;
+    }
+
+    /** How the shared tables are named from the panel's own database (tests). */
+    public String sharedTables() {
+        return shared;
     }
 
     private Connection conn() throws SQLException {
@@ -67,7 +91,14 @@ public final class JdbcStore implements PanelStore {
                     + " kind VARCHAR(8) NOT NULL, expires_at BIGINT NOT NULL, KEY staff (staff)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_log (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, at_ms BIGINT NOT NULL,"
                     + " who VARCHAR(254) NOT NULL, what TEXT NOT NULL, KEY at (at_ms)) DEFAULT CHARSET=utf8mb4");
-            st.executeUpdate(WEB_CHAT_TABLE.replace("<prefix>", prefix)); // BSP-Server Utilities makes it too: whichever starts first
+            try (Statement chat = conn().createStatement()) {
+                chat.executeUpdate(WEB_CHAT_TABLE.replace("<prefix>", shared)); // BSP-Server Utilities makes it too: whichever starts first
+            } catch (SQLException noRight) {
+                if (!ownDatabase) {
+                    throw noRight;
+                }
+                // in the shared database the panel's own user may not make tables: the game servers make it (they start first)
+            }
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_room (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, at_ms BIGINT NOT NULL, staff BIGINT NOT NULL,"
                     + " name VARCHAR(32) NOT NULL, rnk VARCHAR(16) NOT NULL, text VARCHAR(1000) NOT NULL, deleted BOOLEAN NOT NULL, KEY at (at_ms)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_messages (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, at_ms BIGINT NOT NULL, from_staff BIGINT NOT NULL,"
@@ -262,7 +293,7 @@ public final class JdbcStore implements PanelStore {
     @Override
     public synchronized Optional<String[]> findPlayer(String name) throws SQLException {
         boolean byId = name.length() == 36;
-        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name FROM " + prefix + "players WHERE " + (byId ? "uuid" : "name") + " = ? LIMIT 1")) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name FROM " + shared + "players WHERE " + (byId ? "uuid" : "name") + " = ? LIMIT 1")) {
             ps.setString(1, byId ? name.toLowerCase(java.util.Locale.ROOT) : name); // names: the table's collation ignores case
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? Optional.of(new String[]{rs.getString(1), rs.getString(2)}) : Optional.empty();
@@ -279,7 +310,7 @@ public final class JdbcStore implements PanelStore {
 
     private List<Ban> bansWhere(String where, java.util.function.Consumer<PreparedStatement> bind) throws SQLException {
         List<Ban> out = new java.util.ArrayList<>();
-        try (PreparedStatement ps = conn().prepareStatement("SELECT " + BAN_COLS + " FROM " + prefix + "bans " + where)) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + BAN_COLS + " FROM " + shared + "bans " + where)) {
             bind.accept(ps);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -326,7 +357,7 @@ public final class JdbcStore implements PanelStore {
     @Override
     public synchronized List<ItemsExport> itemsExports(int limit) throws SQLException {
         List<ItemsExport> out = new java.util.ArrayList<>();
-        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, made_by, server, items, tabs, mods, size, parts, sha256 FROM " + prefix + "web_items ORDER BY id DESC LIMIT ?")) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, made_by, server, items, tabs, mods, size, parts, sha256 FROM " + shared + "web_items ORDER BY id DESC LIMIT ?")) {
             ps.setInt(1, limit);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -346,7 +377,7 @@ public final class JdbcStore implements PanelStore {
     public synchronized byte[] itemsExportBytes(long id) throws SQLException {
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
         int parts = 0;
-        try (PreparedStatement ps = conn().prepareStatement("SELECT data FROM " + prefix + "web_item_parts WHERE export = ? ORDER BY part")) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT data FROM " + shared + "web_item_parts WHERE export = ? ORDER BY part")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -362,7 +393,7 @@ public final class JdbcStore implements PanelStore {
     public synchronized List<String[]> searchPlayers(String start, int limit) throws SQLException {
         String like = start.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         List<String[]> out = new java.util.ArrayList<>();
-        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name FROM " + prefix + "players WHERE name LIKE ? ORDER BY name LIMIT ?")) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name FROM " + shared + "players WHERE name LIKE ? ORDER BY name LIMIT ?")) {
             ps.setString(1, like); // the table's collation ignores case
             ps.setInt(2, limit);
             try (ResultSet rs = ps.executeQuery()) {
@@ -381,7 +412,7 @@ public final class JdbcStore implements PanelStore {
 
     @Override
     public synchronized void insertNotice(String uid, long at, String source, String kind, String payload) throws SQLException {
-        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "notices (uid, created_at, source, kind, payload) VALUES (?, ?, ?, ?, ?)")) {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + shared + "notices (uid, created_at, source, kind, payload) VALUES (?, ?, ?, ?, ?)")) {
             ps.setString(1, uid);
             ps.setLong(2, at);
             ps.setString(3, source);
@@ -394,7 +425,7 @@ public final class JdbcStore implements PanelStore {
     @Override
     public synchronized List<WebRow> webServers() throws SQLException {
         List<WebRow> out = new ArrayList<>();
-        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT server, at_ms, snapshot FROM " + prefix + "web_servers")) {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT server, at_ms, snapshot FROM " + shared + "web_servers")) {
             while (rs.next()) {
                 out.add(new WebRow(rs.getString(1), rs.getLong(2), rs.getString(3)));
             }
@@ -649,7 +680,7 @@ public final class JdbcStore implements PanelStore {
 
     @Override
     public synchronized void insertChat(String uid, long at, String server, String name, String text, String line) throws SQLException {
-        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "web_chat (uid, at_ms, server, name, text, line) VALUES (?, ?, ?, ?, ?, ?)")) {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + shared + "web_chat (uid, at_ms, server, name, text, line) VALUES (?, ?, ?, ?, ?, ?)")) {
             ps.setString(1, uid);
             ps.setLong(2, at);
             ps.setString(3, server);
@@ -662,13 +693,13 @@ public final class JdbcStore implements PanelStore {
 
     private List<ChatRow> chatRows(String where, Object... args) throws SQLException {
         List<ChatRow> out = new ArrayList<>();
-        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, line FROM " + prefix + "web_chat " + where)) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, line, uid FROM " + shared + "web_chat " + where)) {
             for (int i = 0; i < args.length; i++) {
                 ps.setObject(i + 1, args[i]);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    out.add(new ChatRow(rs.getLong(1), rs.getLong(2), rs.getString(3)));
+                    out.add(new ChatRow(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4)));
                 }
             }
         }
@@ -692,7 +723,7 @@ public final class JdbcStore implements PanelStore {
 
     @Override
     public synchronized long chatLastId() throws SQLException {
-        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT COALESCE(MAX(id), 0) FROM " + prefix + "web_chat")) {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT COALESCE(MAX(id), 0) FROM " + shared + "web_chat")) {
             return rs.next() ? rs.getLong(1) : 0;
         }
     }
@@ -716,14 +747,14 @@ public final class JdbcStore implements PanelStore {
         where.append(" ORDER BY at_ms DESC, id DESC LIMIT ?");
         args.add(limit);
         List<ChatRow> out = new ArrayList<>();
-        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, line FROM " + prefix + "web_chat " + where)) {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, at_ms, line, uid FROM " + shared + "web_chat " + where)) {
             ps.setQueryTimeout(8); // a search never holds the panel's one connection for long (audit)
             for (int i = 0; i < args.size(); i++) {
                 ps.setObject(i + 1, args.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    out.add(new ChatRow(rs.getLong(1), rs.getLong(2), rs.getString(3)));
+                    out.add(new ChatRow(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4)));
                 }
             }
         }
@@ -732,7 +763,7 @@ public final class JdbcStore implements PanelStore {
 
     @Override
     public synchronized int pruneChat(long beforeMs) throws SQLException {
-        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "web_chat WHERE at_ms < ?")) {
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + shared + "web_chat WHERE at_ms < ?")) {
             ps.setLong(1, beforeMs);
             return ps.executeUpdate();
         }

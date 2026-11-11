@@ -26,7 +26,7 @@ function personKey(id, name, cls) {
   b.title = p ? name + " is online on " + p.server : name + " is offline";
   b.addEventListener("click", () => {
     if (p) { openPlayerSheet(id); return; }
-    FindPlayer.open({ id, name }); tab = "More"; moreView = "find"; render(); // D415 R2: their Find a player page
+    openOffline({ id, name }); // D415 R2: their Find a player page
   });
   return b;
 }
@@ -49,11 +49,12 @@ const Market = (() => {
   async function load(refresh) {
     if (st.loading) return;
     st.loading = true; st.triedAt = Date.now();
-    let r;
-    try { r = await api("/api/market", refresh ? { refresh: true } : {}); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+    const r = await call("/api/market", refresh ? { refresh: true } : {});
     st.loading = false;
     if (r.ok || r.down || !st.data) st.data = r; else st.answer = r.message; // a refused REFRESH keeps the copy on screen
-    if (tab === "More" && moreView === "market") App.refreshMore(); else App.refresh();
+    if (tab === "More" && moreView === "market") { App.refreshMore(); return; }
+    const a = document.activeElement; // a sheet's market line: drawn once nothing in the sheet is being typed in
+    whenFree(a && a.closest ? a.closest("#pdetail, .offsheet, .mcard") : null, () => App.refresh());
   }
 
   function mine(list, key) { return st.who ? list.filter((x) => x[key] === st.who.id) : list; }
@@ -76,6 +77,7 @@ const Market = (() => {
     const slots = el("div", "mks");
     (l.items || []).forEach((it, i) => slots.appendChild(stackSlot(it, st.tip && st.tip.lot === l.id && st.tip.i === i,
       () => { st.tip = st.tip && st.tip.lot === l.id && st.tip.i === i ? null : { lot: l.id, i }; App.refreshMore(); })));
+    slots.querySelectorAll(".islot").forEach((x, i) => { x.dataset.keep = "lot:" + l.id + ":" + i; });
     c.appendChild(slots);
     c.appendChild(personKey(l.seller, l.sellerName, "mkw"));
     const p = el("div", "mkp"); p.appendChild(el("span", "mkprice", fmtN(l.price))); p.appendChild(el("span", "mu", " pieces")); c.appendChild(p);
@@ -114,7 +116,7 @@ const Market = (() => {
     const lots = mine(d.lots || [], "seller"), orders = mine(d.orders || [], "buyer");
     const seg = el("div", "seg mkseg");
     [["lots", "Market Board", lots.length], ["orders", "Wanted Board", orders.length]].forEach(([k, label, n]) => {
-      const b = el("button", st.board === k ? "on" : "", label + (d.down ? "" : " · " + n)); b.type = "button";
+      const b = el("button", st.board === k ? "on" : "", label + (d.down ? "" : " · " + n)); b.type = "button"; b.dataset.keep = "mkboard:" + k;
       b.addEventListener("click", () => { st.board = k; st.tip = null; App.refreshMore(); });
       seg.appendChild(b);
     });
@@ -126,14 +128,14 @@ const Market = (() => {
       main.appendChild(chip);
     }
     const bar = el("div", "mkbarrow");
-    const q = el("input", "search mkq"); q.type = "search"; q.placeholder = st.board === "lots" ? "Item or seller" : "Item or buyer"; q.value = st.q; q.maxLength = 40;
-    const sort = el("select", "mksort");
+    const q = el("input", "search mkq"); q.type = "search"; q.placeholder = st.board === "lots" ? "Item or seller" : "Item or buyer"; q.value = st.q; q.maxLength = 40; q.dataset.keep = "mkq";
+    const sort = el("select", "mksort"); sort.dataset.keep = "mksort";
     SORTS.forEach(([v, t]) => { const o = el("option", null, t); o.value = v; o.selected = v === st.sort; sort.appendChild(o); });
     bar.appendChild(q); bar.appendChild(sort); main.appendChild(bar);
     const age = el("div", "mkage");
     const readMs = st.board === "lots" ? d.lotsReadMs : d.ordersReadMs;
     age.appendChild(el("span", d.down ? "rd" : "mu", d.down ? "not read" : "market read " + spanOf(Date.now() - (readMs > 0 ? readMs : d.at)) + " ago · from " + d.server));
-    const rf = el("button", "btn sm ghost mkrf", st.loading ? "Reading…" : "REFRESH"); rf.type = "button"; rf.disabled = st.loading;
+    const rf = el("button", "btn sm ghost mkrf", st.loading ? "Reading…" : "REFRESH"); rf.type = "button"; rf.disabled = st.loading; rf.dataset.keep = "mkrf";
     rf.addEventListener("click", () => { st.answer = null; load(true); App.refreshMore(); });
     age.appendChild(rf); main.appendChild(age);
     if (st.answer) main.appendChild(el("div", "err", st.answer));
@@ -188,13 +190,12 @@ const Market = (() => {
 
 // ---------------------------------------------------------------- the lottery (D408 to D411, D413, D415 R1, R3)
 const Lottery = (() => {
-  const st = { data: null, loading: false, q: "", armed: 0, answer: null, draw: null, won: null, ticker: 0 };
+  const st = { data: null, loading: false, q: "", armed: 0, answer: null, draw: null, won: null, ticker: 0, drawing: false };
 
   async function load() {
     if (st.loading) return;
     st.loading = true;
-    let r;
-    try { r = await api("/api/lottery", {}); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+    const r = await call("/api/lottery", {});
     st.loading = false; st.data = r;
     if (r.draw && !st.draw) st.draw = { since: r.draw.since || Date.now(), server: r.draw.server, seen: Date.now() };
     if (shown()) App.refreshMore();
@@ -245,21 +246,23 @@ const Lottery = (() => {
     const can = me.rank !== "MODERATOR";
     const why = !d.ok ? "" : !d.pot ? "the pot is empty" : !d.entrants ? "nobody is in" : "";
     const sure = Date.now() - st.armed < 3000;
-    const b = el("button", "btn sm lotdraw" + (sure ? " sure" : "") + (!can || why ? " off" : ""), sure ? "SURE? DRAW" : "DRAW"); b.type = "button";
+    const b = el("button", "btn sm lotdraw" + (sure && !st.drawing ? " sure" : "") + (!can || why ? " off" : ""), st.drawing ? "Drawing…" : sure ? "SURE? DRAW" : "DRAW"); b.type = "button"; b.dataset.keep = "lotdraw";
+    b.disabled = st.drawing; // a redraw while it runs keeps the key off (audit)
     if (!can) b.appendChild(el("span", "rk ADMIN", "Admin"));
     else if (why) b.title = "DRAW: " + why;
     b.addEventListener("click", async () => {
       if (!can) { alert("Admins and Owners draw the lottery."); return; }
       if (why) { st.answer = { ok: false, message: "Not drawn: " + why + "." }; App.refreshMore(); return; }
+      if (st.drawing) return;
       if (Date.now() - st.armed > 3000) {
         st.armed = Date.now();
         App.refreshMore().then(() => { const k = document.querySelector(".lotdraw"); if (k) k.focus(); }); // Enter twice works too
         setTimeout(() => { if (shown()) App.refreshMore(); }, 3100);
         return;
       }
-      st.armed = 0; b.disabled = true; b.textContent = "Drawing…";
-      let r;
-      try { r = await api("/api/lottery/draw", {}); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+      st.armed = 0; st.drawing = true; b.disabled = true; b.textContent = "Drawing…";
+      const r = await call("/api/lottery/draw", {}, true);
+      st.drawing = false;
       st.answer = { ok: r.ok, message: r.message };
       if (r.ok && !st.draw) st.draw = { since: Date.now(), by: me.mcName, server: r.server, seen: Date.now() };
       App.refreshMore();
@@ -273,14 +276,14 @@ const Lottery = (() => {
     if (!d) { load(); main.appendChild(el("div", "note", "Reading the lottery…")); return; }
     if (!d.ok) {
       main.appendChild(el("div", "err", d.message));
-      const again = el("button", "btn sm ghost", "Try again"); again.type = "button"; again.addEventListener("click", () => { st.data = null; load(); App.refreshMore(); });
+      const again = el("button", "btn sm ghost", "Try again"); again.type = "button"; again.dataset.keep = "lotagain"; again.addEventListener("click", () => { st.data = null; load(); App.refreshMore(); });
       main.appendChild(again); return;
     }
     const cols = el("div", "lotcols"), left = el("div", "lotcol"), right = el("div", "lotcol");
     left.appendChild(potCard(d));
     const names = d.names || [];
     const sect = el("div", "lotsect"); sect.appendChild(el("span", null, "IN THE DRAW")); sect.appendChild(el("span", "mu", names.length + " · as BSP-Core counts them")); left.appendChild(sect);
-    const q = el("input", "search lotq"); q.type = "search"; q.placeholder = "Find a name"; q.value = st.q; q.maxLength = 16; left.appendChild(q);
+    const q = el("input", "search lotq"); q.type = "search"; q.placeholder = "Find a name"; q.value = st.q; q.maxLength = 16; q.dataset.keep = "lotq"; left.appendChild(q);
     const chips = el("div", "lotnames");
     const online = new Set(live.players.map((p) => p.name));
     const drawNames = () => {
@@ -345,6 +348,7 @@ const GoldLine = (() => {
     g.appendChild(el("span", "grow", text));
     const x = el("button", null, "✕"); x.type = "button"; x.title = "Close"; x.addEventListener("click", () => g.remove());
     g.appendChild(x);
+    if (typeof placeGold === "function") placeGold();
   }
   return { show };
 })();

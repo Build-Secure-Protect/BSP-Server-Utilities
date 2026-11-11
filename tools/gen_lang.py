@@ -47,8 +47,12 @@ STATUS = {
     "web_waiting": "Staff web panel: on, sending this server's players every %s s; nothing sent yet.",
     "web_no_storage": "Staff web panel: on, but it needs shared storage, so nothing is sent.",
     "web_off": "Staff web panel: off (webPanel.enabled in config/bsp_server_utilities-network.toml).",
-    "web_actions_on": "Staff web panel: what this server sends is signed, and kicks and announcements from the panel are taken (webPanel.actionKey).",
+    "web_actions_on": "Staff web panel: what this server sends is signed, and the panel's actions are taken (webPanel.actionKey).",
     "web_actions_off": "Staff web panel: nothing is sent and no action is taken until webPanel.actionKey is set.",
+    "web_actions_bad": "Staff web panel: webPanel.actionKey is not a key the panel made (copy it again from the panel's console, action-key); nothing is sent and no action is taken.",
+    "web_panel_key_off": "Staff web panel: what this server sends is signed, but no action from the panel is taken until webPanel.panelKey (the panel's public key, from its console's action-key) is set.",
+    "web_panel_key_bad": "Staff web panel: webPanel.panelKey is not the panel's public key (copy it again from the panel's console, action-key); no action from the panel is taken.",
+    "web_no_answers": "Staff web panel: Redis is not connected here, so the panel's actions are not taken (their answers travel on Redis).",
 }
 KEYS.update({"message.bsp_server_utilities.status." + k: v for k, v in STATUS.items()})
 # /su players (the player counter)

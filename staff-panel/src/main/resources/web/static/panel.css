@@ -78,6 +78,9 @@ h2 { font-size: 17px; margin: 6px 0 0; }
 .menu .pop button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 12px; font-size: 13px; cursor: pointer; color: var(--tx); }
 .menu .pop button + button { border-top: 1px solid var(--ln); }
 .menu .pop button.danger { color: var(--coral); }
+.menu .pop.up { top: auto; bottom: 30px; } /* the last rows of a list open upwards */
+.stafflist { overflow: visible; } /* the ⋯ menu of the last rows is never cut off (audit) */
+.stname { display: inline-flex; align-items: center; gap: 8px; } /* D291: name and face */
 .form { display: flex; flex-direction: column; gap: 10px; background: var(--pn); border: 1px solid var(--ln); border-radius: 12px; padding: 12px; }
 .linkbox { font: 12px var(--mono); word-break: break-all; background: var(--bg); border: 1px dashed var(--ln); border-radius: 8px; padding: 8px; }
 .staffon { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12.5px; }
@@ -129,6 +132,7 @@ main .tiles { display: none; }
 .dname { font-size: 18px; font-weight: 600; }
 .close { background: none; border: 0; color: var(--mu); font-size: 18px; cursor: pointer; align-self: flex-start; }
 .loc { font-size: 12px; color: var(--soft); }
+.dlive, .mlive { display: flex; flex-direction: column; gap: 10px; } .mlive { gap: 8px; }
 .tl { color: var(--teal); }
 .statbox { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 14px; background: var(--pn); border: 1px solid var(--ln); border-radius: 10px; padding: 10px; }
 .xprow { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
@@ -153,7 +157,7 @@ main .tiles { display: none; }
 .gslot { aspect-ratio: 1; background: #0c0e12; box-shadow: inset 0 0 0 1px #2a2f3a; }
 .gslot.full { background: #1f2a2a; box-shadow: inset 0 0 0 1px #24443f; }
 .offline.tap { cursor: pointer; }
-.offline { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; background: #3a1d1d; color: #ff8f86; border: 1px solid #5a2a2a;
+.offline { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 22; background: #3a1d1d; color: #ff8f86; border: 1px solid #5a2a2a;
   border-radius: 999px; padding: 6px 14px; font-size: 13px; }
 .pact { display: flex; flex-direction: column; gap: 8px; }
 .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -286,6 +290,7 @@ select.small { height: 34px; font-size: 13px; width: auto; flex: 1 1 90px; paddi
 }
 @media (min-width: 1300px) {
   .chatcol { display: flex; flex-direction: column; }
+  .pdetail { right: 400px; } /* the player's card opens beside the chat column, not over it (audit) */
   .chatbtn { display: none !important; }
   body.chattab .chatcol { display: none; }
 }
@@ -308,6 +313,9 @@ main.staffmain { padding-bottom: 76px; }
 .linemenu { position: fixed; left: 50%; transform: translateX(-50%); bottom: 96px; width: min(320px, calc(100vw - 32px)); z-index: 30; background: #22262f; border: 1px solid var(--ln); border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.5); display: flex; flex-direction: column; min-width: 190px; }
 .linemenu button { background: none; border: 0; text-align: left; padding: 10px 12px; font-size: 13px; cursor: pointer; color: var(--tx); } .linemenu button + button { border-top: 1px solid var(--ln); }
 .linemenu .danger { color: var(--coral); }
+.rdots { flex: none; align-self: flex-start; background: none; border: 0; color: var(--mu); font-weight: 700; font-size: 15px; line-height: 1; padding: 2px 4px; cursor: pointer; opacity: .55; }
+.rdots:hover, .rdots:focus-visible { opacity: 1; }
+@media (hover: none) { .rdots { display: none; } } /* a phone has the long press (D327) */
 .msghalf > .btn { flex: none; }
 .msglist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .msg { background: var(--pn); border: 1px solid var(--ln); border-radius: 12px; padding: 9px 11px; display: flex; flex-direction: column; gap: 6px; }
@@ -354,6 +362,8 @@ textarea.ta:focus { outline: none; border-color: var(--teal); }
 .pal { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
 .swb { aspect-ratio: 1; border-radius: 6px; border: 0; cursor: pointer; } .swb.on { box-shadow: 0 0 0 2px var(--tx); }
 .csheet .search { order: 0; width: 100%; flex: none; } /* the Players bar orders its own search box last */
+.taglist { display: flex; flex-direction: column; gap: 8px; }
+.itemspage { display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------- a player's items (SU-39, D360) ---------- */
 .items { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
@@ -398,7 +408,7 @@ textarea.ta:focus { outline: none; border-color: var(--teal); }
 .step { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .step button { min-width: 34px; height: 30px; border-radius: 7px; background: #1a1d24; border: 1px solid #2a2f3a; color: #e8eaf0; font: 600 12px var(--mono); padding: 0 8px; cursor: pointer; }
 .step button.on { background: var(--teal); color: #0f1115; border-color: var(--teal); }
-.addcount { width: 86px; height: 30px; }
+input.addcount { width: 86px; height: 30px; padding: 0 8px; border-radius: 7px; font-family: var(--mono); }
 .mctip .acts { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-family: var(--body); }
 .btn.sure { background: var(--gold); color: #1a1400; }
 .btn.danger { background: var(--coral); color: #10151c; }
@@ -416,6 +426,8 @@ textarea.ta:focus { outline: none; border-color: var(--teal); }
 .ptab.on { background: #22262f; border-color: var(--teal); }
 .pickq { font-family: var(--mono); }
 .pgrid { max-height: 230px; overflow-y: auto; align-content: start; }
+.pmore:empty { display: none; } .pmore .btn { width: 100%; }
+.pickbelow { display: flex; flex-direction: column; gap: 7px; } .pickbelow:empty { display: none; }
 .pickrow { display: flex; gap: 10px; align-items: center; }
 .psample { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; }
 .kvl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; } .kvl span:nth-child(odd) { color: var(--mu); }
@@ -435,6 +447,10 @@ textarea.ta:focus { outline: none; border-color: var(--teal); }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .fld { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; color: var(--mu); }
 .tpnum { font-family: var(--mono); }
+.tpnumrow { display: flex; gap: 4px; } .tpnumrow input { flex: 1; min-width: 0; padding: 0 8px; }
+.pm { flex: none; width: 32px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--ln); color: var(--soft); font: 600 14px var(--mono); cursor: pointer; padding: 0; }
+.pm:disabled { opacity: .4; cursor: default; }
+.tplist { display: flex; flex-direction: column; gap: 7px; }
 .btn.vio { background: #b58cff22; color: var(--vio); border: 1px solid #b58cff55; }
 .keynote { display: block; font: 500 9.5px var(--body); color: var(--gold); }
 .key.on { border-color: var(--teal); color: var(--teal); }
@@ -486,6 +502,7 @@ main.mapmain { padding: 0; }
 .mgrab::after { content: ""; position: absolute; left: 4px; right: 4px; top: 5px; height: 4px; border-radius: 2px; background: #3a3f4b; }
 .mbar .mpins { display: none; }
 .mlist .search { order: 0; }
+.mrows { display: flex; flex-direction: column; }
 .mstage { position: relative; flex: 1; min-width: 0; background: #0b0d11; overflow: hidden; }
 .mframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
 .mnote { margin: 24px; }
@@ -596,6 +613,7 @@ select.mksort { width: auto; flex: none; height: 34px; padding: 0 8px; font-size
 .goldline { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 21; width: min(560px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px;
   padding: 8px 10px; border-radius: 10px; background: #2a2410; border: 1px solid #ffd23a88; color: var(--gold); font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .goldline .grow { flex: 1; min-width: 0; }
+body.notlive .goldline { top: 50px; } /* below the "Not live" line, never over it (audit); app.js sets the exact place */
 .goldline button { background: none; border: 0; color: var(--mu); cursor: pointer; font-size: 14px; }
 @media (min-width: 900px) {
   .mkseg { align-self: flex-start; min-width: 320px; }
@@ -606,4 +624,9 @@ select.mksort { width: auto; flex: none; height: 34px; padding: 0 8px; font-size
   .mkord { grid-template-columns: 30px minmax(140px, 1fr) minmax(110px, 150px) minmax(120px, 190px); }
   .mkord .mkw { grid-column: auto; }
   .lotcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+}
+
+/* a phone: text fields at 16 px, so an iPhone does not zoom the page when one is tapped (audit) */
+@media (max-width: 899px) {
+  input, select, textarea { font-size: 16px !important; }
 }

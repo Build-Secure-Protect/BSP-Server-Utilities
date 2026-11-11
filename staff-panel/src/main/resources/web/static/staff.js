@@ -7,7 +7,16 @@ const StaffView = (() => {
   let lines = [], ids = new Set(), more = true, loading = false, started = false;
   let box = { messages: [], unread: 0, people: [] }, half = "room", host = null;
   let roomDraft = "", newMsg = null, replying = null, replyDraft = "", menuFor = null, readersOf = null;
-  let unread = { calls: 0, any: false };
+  let unread = { calls: 0, any: false }, busy = false;
+  // one request at a time from this tab: a second press of Send, Got it or Delete while the first is on its way does
+  // nothing, and its key is off meanwhile (audit)
+  async function once(key, path, body) {
+    if (busy) return null;
+    busy = true; if (key) key.disabled = true;
+    const r = await call(path, body, true);
+    busy = false; if (key) key.disabled = false;
+    return r;
+  }
 
   // ---------------------------------------------------------------- data
   async function start() {
@@ -22,7 +31,7 @@ const StaffView = (() => {
     if (ids.has(l.id)) { lines = lines.map((x) => x.id === l.id ? l : x); return false; } // a deletion replaces the line
     ids.add(l.id); lines.push(l); lines.sort((a, b) => a.id - b.id); return true;
   }
-  async function loadMessages() { const r = await api("/api/messages"); if (r.ok) box = r; if (typeof nav === "function") nav(); }
+  async function loadMessages() { const r = await call("/api/messages"); if (r.ok) box = r; if (typeof nav === "function") nav(); }
   const namesMe = (l) => !!me && l.staffId !== me.id && new RegExp("(^|[^A-Za-z0-9_])@?" + me.mcName.replace(/[^A-Za-z0-9_]/g, "") + "([^A-Za-z0-9_]|$)", "i").test(l.text);
   function room(l) {
     const fresh = add(l);
@@ -37,7 +46,7 @@ const StaffView = (() => {
       const list = host && host.querySelector(".roomlines"), h0 = list ? list.scrollHeight : 0;
       const r = await api("/api/room?before=" + lines[0].id); r.lines.forEach(add); more = r.more; draw();
       const l2 = host && host.querySelector(".roomlines"); if (l2 && list) l2.scrollTop += l2.scrollHeight - h0;
-    } finally { loading = false; }
+    } catch (e) { /* the next scroll to the top asks again */ } finally { loading = false; }
   }
 
   // ---------------------------------------------------------------- where
@@ -72,13 +81,12 @@ const StaffView = (() => {
     if (!host) return;
     const old = host.querySelector(".roomlines");
     const atBottom = !old || old.scrollHeight - old.scrollTop - old.clientHeight < 40, keep = old ? old.scrollTop : 0;
-    const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.keep : null;
-    const caret = focus ? document.activeElement.selectionStart : 0;
+    const h = hold();
     host.textContent = "";
     const wrap = el("div", "stafftab");
     const seg = el("div", "seg staffseg");
     [["room", "Room"], ["msg", "Messages"]].forEach(([k, t]) => {
-      const b = el("button", half === k ? "on" : "", t); b.type = "button";
+      const b = el("button", half === k ? "on" : "", t); b.type = "button"; b.dataset.keep = "half:" + k;
       if (k === "msg" && box.unread) b.appendChild(el("span", "n", String(box.unread)));
       b.addEventListener("click", () => { half = k; draw(true); }); seg.appendChild(b);
     });
@@ -90,7 +98,7 @@ const StaffView = (() => {
     host.appendChild(wrap);
     const list = host.querySelector(".roomlines");
     if (list) list.scrollTop = toBottom || atBottom ? list.scrollHeight : keep;
-    if (focus) { const i = host.querySelector('[data-keep="' + focus + '"]'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* a select */ } } }
+    give(h);
   }
 
   function roomHalf() {
@@ -108,11 +116,12 @@ const StaffView = (() => {
     const f = el("form", "speakform");
     const i = el("input", "chatin"); i.type = "text"; i.maxLength = MAX; i.placeholder = "Say something to the staff…"; i.value = roomDraft; i.dataset.keep = "room";
     i.addEventListener("input", () => { roomDraft = i.value; });
-    const s = el("button", "btn sm", "Send"); s.type = "submit";
+    const s = el("button", "btn sm", "Send"); s.type = "submit"; s.disabled = busy;
     f.appendChild(i); f.appendChild(s);
     f.addEventListener("submit", async (ev) => {
       ev.preventDefault(); const text = roomDraft.trim(); if (!text) return;
-      const r = await api("/api/room/say", { text });
+      const r = await once(s, "/api/room/say", { text });
+      if (!r) return;
       if (!r.ok) { note(r.message); return; }
       roomDraft = ""; add(r.line); draw(true);
     });
@@ -136,7 +145,10 @@ const StaffView = (() => {
     }
     row.appendChild(g);
     if (!l.deleted && deletable(l.staffId, l.at)) {
-      // a long press (or a right click) on a line you may delete (D327)
+      // a long press (or a right click) on a line you may delete (D327); from the keyboard its ⋯ key
+      const dots = el("button", "rdots", "⋯"); dots.type = "button"; dots.title = "Delete"; dots.dataset.keep = "rdots:" + l.id;
+      dots.addEventListener("click", () => { menuFor = l.id; draw(); const d = host && host.querySelector('[data-keep="rldel"]'); if (d) d.focus(); });
+      row.appendChild(dots);
       let timer = 0;
       row.addEventListener("pointerdown", () => { timer = setTimeout(() => { menuFor = l.id; draw(); }, 500); });
       ["pointerup", "pointerleave", "pointercancel"].forEach((e) => row.addEventListener(e, () => clearTimeout(timer)));
@@ -145,9 +157,13 @@ const StaffView = (() => {
     if (menuFor === l.id) {
       const m = el("div", "linemenu");
       const left = l.staffId === me.id && me.rank !== "OWNER" ? " · " + Math.max(1, Math.ceil((DELETE_MS - (Date.now() - l.at)) / 60000)) + " min left" : "";
-      const d = el("button", "danger", "Delete" + left); d.type = "button";
-      d.addEventListener("click", async () => { const r = await api("/api/room/delete", { id: l.id }); menuFor = null; if (!r.ok) note(r.message); else add(r.line); draw(); });
-      const c = el("button", null, "Cancel"); c.type = "button"; c.addEventListener("click", () => { menuFor = null; draw(); });
+      const d = el("button", "danger", "Delete" + left); d.type = "button"; d.dataset.keep = "rldel"; d.disabled = busy;
+      d.addEventListener("click", async () => {
+        const r = await once(d, "/api/room/delete", { id: l.id });
+        if (!r) return;
+        menuFor = null; if (!r.ok) note(r.message); else add(r.line); draw();
+      });
+      const c = el("button", null, "Cancel"); c.type = "button"; c.dataset.keep = "rlcancel"; c.addEventListener("click", () => { menuFor = null; draw(); });
       m.appendChild(d); m.appendChild(c); row.appendChild(m);
     }
     return row;
@@ -157,7 +173,7 @@ const StaffView = (() => {
     const half = el("div", "msghalf");
     const head = el("div", "sect"); head.appendChild(el("span", null, "MESSAGES" + (box.unread ? " · " + box.unread + " UNREAD" : "")));
     half.appendChild(head);
-    const nb = el("button", "btn sm", "+ New message"); nb.type = "button";
+    const nb = el("button", "btn sm", "+ New message"); nb.type = "button"; nb.dataset.keep = "newmsg";
     nb.addEventListener("click", () => { newMsg = { to: "all", text: "" }; draw(); });
     half.appendChild(nb);
     const list = el("div", "msglist");
@@ -178,16 +194,19 @@ const StaffView = (() => {
     const foot = el("div", "mfoot");
     if (m.mine) {
       if (m.to === "all") {
-        const r = el("button", "linkish", "Read by " + m.readers.length + " of " + m.of + (m.readers.length ? " ›" : "")); r.type = "button";
+        const r = el("button", "linkish", "Read by " + m.readers.length + " of " + m.of + (m.readers.length ? " ›" : "")); r.type = "button"; r.dataset.keep = "readers:" + m.id;
         r.addEventListener("click", () => { readersOf = readersOf === m.id ? null : m.id; draw(); });
         foot.appendChild(r);
       } else foot.appendChild(el("span", null, m.theyReadAt ? "Read " + when(m.theyReadAt) : "Not read yet"));
     } else if (m.read) foot.appendChild(el("span", null, "You read it " + when(m.readAt)));
     if (deletable(m.fromId, m.at)) {
-      let armed = 0; const d = el("button", "linkish danger", "Delete"); d.type = "button";
+      let armed = 0; const d = el("button", "linkish danger", "Delete"); d.type = "button"; d.dataset.keep = "mdel:" + m.id;
       d.addEventListener("click", async () => {
-        if (Date.now() - armed > 3000) { armed = Date.now(); d.textContent = "Sure? Delete"; return; }
-        const r = await api("/api/messages/delete", { id: m.id }); if (!r.ok) note(r.message); await loadMessages(); draw();
+        if (busy) return;
+        if (Date.now() - armed > 3000) { armed = Date.now(); d.textContent = "Sure? Delete"; unarm(d, 3000, "Delete"); return; }
+        const r = await once(d, "/api/messages/delete", { id: m.id });
+        if (!r) return;
+        if (!r.ok) note(r.message); await loadMessages(); draw();
       });
       foot.appendChild(d);
     }
@@ -198,19 +217,25 @@ const StaffView = (() => {
         const f = el("form", "speakform");
         const i = el("input", "chatin"); i.type = "text"; i.maxLength = MAX; i.placeholder = "Reply to " + m.from + "…"; i.value = replyDraft; i.dataset.keep = "reply";
         i.addEventListener("input", () => { replyDraft = i.value; });
-        const s = el("button", "btn sm", "Send"); s.type = "submit"; f.appendChild(i); f.appendChild(s);
+        const s = el("button", "btn sm", "Send"); s.type = "submit"; s.disabled = busy; f.appendChild(i); f.appendChild(s);
         f.addEventListener("submit", async (ev) => {
           ev.preventDefault(); if (!replyDraft.trim()) return;
-          const r = await api("/api/messages/send", { to: String(m.fromId), text: replyDraft, replyTo: m.id });
+          const r = await once(s, "/api/messages/send", { to: String(m.fromId), text: replyDraft, replyTo: m.id });
+          if (!r) return;
           if (!r.ok) { note(r.message); return; }
           replying = null; replyDraft = ""; await loadMessages(); draw();
         });
         c.appendChild(f); c.appendChild(el("div", "sub", "Replying to " + m.from + " · marked read once sent"));
       } else {
         const keys = el("div", "row2");
-        const rp = el("button", "btn sm ghost", "Reply"); rp.type = "button"; rp.addEventListener("click", () => { replying = m.id; replyDraft = ""; draw(); });
-        const ok = el("button", "btn sm", "Got it"); ok.type = "button";
-        ok.addEventListener("click", async () => { await api("/api/messages/read", { id: m.id }); await loadMessages(); draw(); });
+        const rp = el("button", "btn sm ghost", "Reply"); rp.type = "button"; rp.dataset.keep = "reply:" + m.id;
+        rp.addEventListener("click", () => { replying = m.id; replyDraft = ""; draw(); const i = host && host.querySelector('[data-keep="reply"]'); if (i) i.focus(); });
+        const ok = el("button", "btn sm", "Got it"); ok.type = "button"; ok.dataset.keep = "gotit:" + m.id; ok.disabled = busy;
+        ok.addEventListener("click", async () => {
+          const r = await once(ok, "/api/messages/read", { id: m.id });
+          if (!r) return;
+          if (!r.ok) note(r.message); await loadMessages(); draw();
+        });
         keys.appendChild(rp); keys.appendChild(ok); c.appendChild(keys);
       }
     }
@@ -234,11 +259,12 @@ const StaffView = (() => {
     sh.appendChild(el("div", "sub", "They see it now if they are on the panel, otherwise when they next open it."));
     const row = el("div", "row2");
     const cancel = el("button", "btn sm ghost", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", () => { newMsg = null; draw(); });
-    const send = el("button", "btn sm", "Send"); send.type = "submit";
+    const send = el("button", "btn sm", "Send"); send.type = "submit"; send.disabled = busy;
     row.appendChild(cancel); row.appendChild(send); sh.appendChild(row);
     sh.addEventListener("submit", async (ev) => {
       ev.preventDefault(); if (!newMsg.text.trim()) return;
-      const r = await api("/api/messages/send", { to: newMsg.to, text: newMsg.text });
+      const r = await once(send, "/api/messages/send", { to: newMsg.to, text: newMsg.text });
+      if (!r) return;
       if (!r.ok) { note(r.message); return; }
       newMsg = null; half = "msg"; await loadMessages(); draw();
     });
@@ -246,11 +272,17 @@ const StaffView = (() => {
   }
   function note(text) { const t = el("div", "toast", text); document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
 
-  // after the live feed came back: the room's newest lines and the messages again (audit)
+  // After the live feed came back: the room's newest lines and the messages again. When more was said meanwhile than one
+  // page holds, the room starts again from the newest page (older lines by scrolling up), so no gap is hidden (audit).
   async function resync() {
     if (!started) return;
-    try { const r = await api("/api/room"); r.lines.forEach(add); await loadMessages(); } catch (e) { return; }
-    draw();
+    const r = await call("/api/room");
+    if (!r.ok || !Array.isArray(r.lines)) return;
+    const joined = !lines.length || !r.more || !r.lines.length || r.lines.some((l) => ids.has(l.id)) || Math.min(...r.lines.map((l) => l.id)) <= lines[lines.length - 1].id;
+    if (!joined) { lines = []; ids = new Set(); more = true; }
+    r.lines.forEach(add);
+    await loadMessages();
+    draw(!joined);
   }
   return { mount, unmount, room, messagesChanged, badge, start, resync };
 })();

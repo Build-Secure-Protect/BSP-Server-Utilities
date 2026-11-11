@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
 
 /**
  * This server's part of the staff web panel (owner decisions D247, D251): while {@code webPanel.enabled} is on in
@@ -32,7 +33,11 @@ public final class WebAgent {
     private static BooleanSupplier enabled = WebAgent::configEnabled;
     private static IntSupplier seconds = WebAgent::configSeconds;
     private static Function<MinecraftServer, Collection<ServerPlayer>> players = s -> List.copyOf(s.getPlayerList().getPlayers());
-    private static int ticks, watchTicks;
+    private static LongSupplier clock = System::currentTimeMillis;
+    private static long nextAt;
+    private static int watchTicks;
+    /** The longest gap between snapshots: the panel counts a server as gone after about three missed ones (audit: 30 s made servers flicker). */
+    public static final int MAX_SECONDS = 10;
     private static volatile long lastSentMs;
     private static volatile int lastCount;
 
@@ -60,29 +65,65 @@ public final class WebAgent {
     }
 
     public static int seconds() {
-        return Math.max(2, Math.min(30, seconds.getAsInt()));
+        return Math.max(2, Math.min(MAX_SECONDS, seconds.getAsInt()));
     }
 
-    /** Every server tick: sends a snapshot once every {@link #seconds()} while on and shared. */
+    /**
+     * Every server tick: sends a snapshot once every {@link #seconds()} of real time while on and shared. Timed by the
+     * clock, not by ticks, so a server lagging at 5 TPS still sends every 5 seconds and does not drop off the panel (audit).
+     */
     public static void tick(MinecraftServer server) {
         Storage s = Storage.active();
         if (!enabled() || s == null) {
-            ticks = 0;
+            nextAt = 0;
             return;
         }
+        long now = clock.getAsLong();
         if (++watchTicks >= 20) {
             watchTicks = 0;
             if (WebMarket.watch()) {
-                ticks = 0;
+                nextAt = now + seconds() * 1000L;
                 send(server, s); // a draw began or ended: every panel sees it at once (D411)
                 return;
             }
         }
-        if (++ticks < seconds() * 20) {
+        if (nextAt == 0) {
+            nextAt = now + seconds() * 1000L;
             return;
         }
-        ticks = 0;
+        if (now < nextAt) {
+            return;
+        }
+        nextAt = now + seconds() * 1000L;
         send(server, s);
+    }
+
+    /**
+     * Whether an answer can reach the panel from here: answers travel on Redis only, so while this server's Redis
+     * publishing connection is down, an action would be carried out with the panel told "no answer" (audit). The snapshot
+     * says so, the panel then sends nothing here, and {@link WebActions#dispatch} carries nothing out.
+     */
+    public static boolean canAnswer() {
+        Storage s = Storage.active();
+        com.mrgregles.bsp_server_utilities.storage.RedisLink r = s == null ? null : s.redis();
+        return answersForTests != null ? answersForTests : r != null && r.publishing();
+    }
+
+    @Nullable
+    private static Boolean answersForTests;
+
+    /** The last snapshot before this server stops: nobody online and {@code stopping}, so the panel drops it at once (audit). */
+    public static void farewell(MinecraftServer server) {
+        Storage s = Storage.active();
+        byte[] key = WebActions.currentKey();
+        if (!enabled() || s == null || key == null) {
+            return;
+        }
+        JsonObject snapshot = WebSnapshot.build(server, s.serverId(), List.of(), System.currentTimeMillis());
+        snapshot.addProperty("every", seconds());
+        snapshot.addProperty("answers", false);
+        snapshot.addProperty("stopping", true);
+        s.publishWeb(KIND_SNAPSHOT, WebActions.signText(key, GSON.toJson(snapshot)), true);
     }
 
     /** Builds and sends this server's snapshot now; returns the JSON sent. */
@@ -94,6 +135,8 @@ public final class WebAgent {
         Collection<ServerPlayer> online = players.apply(server);
         long now = System.currentTimeMillis();
         JsonObject snapshot = WebSnapshot.build(server, s.serverId(), online, now);
+        snapshot.addProperty("every", seconds()); // the panel counts this server gone after about three missed (audit)
+        snapshot.addProperty("answers", canAnswer());
         String json = GSON.toJson(snapshot);
         s.publishWeb(KIND_SNAPSHOT, WebActions.signText(key, json), true);
         lastSentMs = now;
@@ -112,6 +155,18 @@ public final class WebAgent {
 
     /** Tests: whether it is on, how often, and whose players it reads (null leaves that one as it is). */
     public static void useForTests(@Nullable Boolean on, @Nullable Integer every, @Nullable Function<MinecraftServer, Collection<ServerPlayer>> who) {
+        useForTests(on, every, who, null, null);
+    }
+
+    /** Tests: also the clock the snapshots are timed by and whether answers can reach the panel (null: as it is). */
+    public static void useForTests(@Nullable Boolean on, @Nullable Integer every, @Nullable Function<MinecraftServer, Collection<ServerPlayer>> who,
+                                   @Nullable LongSupplier time, @Nullable Boolean answers) {
+        if (time != null) {
+            clock = time;
+        }
+        if (answers != null) {
+            answersForTests = answers;
+        }
         if (on != null) {
             enabled = () -> on;
         }
@@ -121,14 +176,16 @@ public final class WebAgent {
         if (who != null) {
             players = who;
         }
-        ticks = 0;
+        nextAt = 0;
     }
 
     public static void useReal() {
         enabled = WebAgent::configEnabled;
         seconds = WebAgent::configSeconds;
         players = s -> List.copyOf(s.getPlayerList().getPlayers());
-        ticks = 0;
+        clock = System::currentTimeMillis;
+        answersForTests = null;
+        nextAt = 0;
         lastSentMs = 0;
         lastCount = 0;
     }

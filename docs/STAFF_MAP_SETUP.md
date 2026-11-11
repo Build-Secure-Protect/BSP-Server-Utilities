@@ -15,7 +15,7 @@ The first run is the trial (D388): the numbers it gives (time, memory, disk) are
 - Expected: about **3 GB** of map for the whole network (flat, D397, D398), **2 to 4 GB of memory**, and a first run of roughly a day on 4 threads (the Mac trial drew 190 chunks a second on 8 threads; the network has about 10.5 million chunks). After that, only changed land is drawn again, within minutes of each server's save.
 
 ## 1. BlueMap's own server
-1. In Pterodactyl, create a server named **BSP-Map** with the generic Java egg (or any egg that runs a jar), on the same node as the game servers. Memory **4 GB** (BlueMap used 3.4 GB on 8 threads; the startup gives Java 3 GB of it, leaving room for the rest), disk **20 GB**, CPU as many cores as you can spare (it renders on half of them).
+1. In Pterodactyl, create a server named **BSP-Map** with a Java egg that runs a jar (Pterodactyl ships none: the one imported for the staff panel, its part 3), on the same node as the game servers. Memory **4 GB** (BlueMap used 3.4 GB on 8 threads; the startup gives Java 3 GB of it, leaving room for the rest), disk **20 GB**, CPU as many cores as you can spare (it renders on half of them).
 2. Docker image: **`ghcr.io/pterodactyl/yolks:java_25`** (Startup tab, or the egg's images as admin).
 3. Upload `bluemap-5.29-cli.jar` to the server's root with the file manager or SFTP.
 4. Startup command (admin: the egg's startup, or the server's Startup tab if it lets you edit it):
@@ -39,7 +39,7 @@ Each game server's files live on the node at `/var/lib/pterodactyl/volumes/<the 
    ```
    then `systemctl restart wings`.
 2. Admin › Mounts › Create, once per game server: **Source** `/var/lib/pterodactyl/volumes/<UUID>`, **Target** `/mnt/<name>` (for example `/mnt/frostwarf`), **Read Only** ticked, **User Mountable** unticked. Attach each mount to the node and to the BSP-Map server's egg, then to the **BSP-Map** server (its Mounts tab).
-   Wings 1.13.4 and newer skips a mount whose parent folders can be written by the server's user: mount the **whole volume** (as above), never a folder inside it.
+   Wings (1.13.4 and newer, read from its code; not tried) skips a mount whose parent folders can be written by the server's user: mount the **whole volume** (as above), never a folder inside it. `allowed_mounts` lets an admin mount any server's volume into any server: keep every mount admin-only ("User Mountable" unticked).
 3. Its file manager will not show the mounts; BlueMap reads them.
 4. One more mount, for the panel: **Source** `/var/lib/pterodactyl/volumes/<BSP-Map's UUID>`, **Target** `/mnt/bsp-map`, **Read Only**, attached to the node and to the staff panel's egg, then to the **staff panel's** server.
 
@@ -62,7 +62,7 @@ python3 tools/gen_bluemap.py --out /tmp/bluemap-config --web /home/container/web
 Put the written folder in BSP-Map's root as `config` (so `config/core.conf`, `config/maps/...`), **replacing** whatever is there, so no older map file stays behind:
 
 ```
-rsync -a --delete /tmp/bluemap-config/ /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/config/
+rsync -a --delete --exclude packs/ /tmp/bluemap-config/ /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/config/
 chown -R pterodactyl:pterodactyl /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/config
 ```
 
@@ -85,7 +85,7 @@ Restart the panel. Until BlueMap has written its page, the Map tab says the map 
 
 ## Afterwards
 - **Pack updates:** restart BSP-Map so it reads the mods again (`-n`).
-- **A new server or world:** run the script again with every `--server`, put the folder in place with the same `rsync --delete` as in step 3, restart BSP-Map. A map no longer wanted goes with it; its drawing stays in `web/maps/<id>` until you delete that too.
+- **A new server or world:** run the script again with every `--server`, put the folder in place with the same `rsync --delete --exclude packs/` as in step 3 (BlueMap's `config/packs`, where a resource pack for modded blocks goes, is kept), restart BSP-Map. A map no longer wanted goes with it; its drawing stays in `web/maps/<id>` until you delete that too.
 - **A modded dimension shows only its roof:** run the script again with `--ceiling <namespace:path>` (for example `--ceiling allthemodium:the_other`): its roof is left out like the Nether's.
 - **Blocks in odd colours:** modded blocks drawn by code have no picture BlueMap can read; the worst ones are fixed later with a small resource pack (D387).
 - **BlueMap's newer versions:** change the jar's name in the startup; the settings stay.
@@ -95,5 +95,5 @@ Restart the panel. Until BlueMap has written its page, the Map tab says the map 
 - **A server's maps are missing in the panel's server list**: its `--server` id differs from the name the panel shows; run the script again with the panel's spelling.
 - **Heads do not move**: they come from the panel's own feed; check the Players tab shows the same players.
 - **"Unsupported class file major version"** in BSP-Map's console: the Docker image is not Java 25.
-- **"You need to accept the download"**: `config/core.conf` was not the script's (it sets `accept-download: true`): put the script's folder in place again with `rsync --delete` (step 3).
+- **"You must accept the required file download in order for BlueMap to work!"** (and BlueMap stops): `config/core.conf` was not the script's (it sets `accept-download: true`): put the script's folder in place again with the `rsync` of step 3.
 - **The copy buttons in BlueMap's click box do nothing**: the panel's rules for `/map/` block BlueMap's inline click handlers (D382). Everything else works.

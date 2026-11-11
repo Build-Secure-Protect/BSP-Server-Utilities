@@ -176,7 +176,7 @@ public final class MemoryStore implements PanelStore {
     }
 
     private static ChatRow row(Chat c) {
-        return new ChatRow(c.id, c.at, c.line);
+        return new ChatRow(c.id, c.at, c.line, c.uid);
     }
 
     private static final Comparator<Chat> OLDEST_FIRST = Comparator.comparingLong(Chat::at).thenComparingLong(Chat::id);

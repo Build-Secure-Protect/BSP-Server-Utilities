@@ -121,6 +121,15 @@ public final class WebTeleports {
                 || Math.abs(x) > 30_000_000 || Math.abs(z) > 30_000_000 || y < -2048 || y > 4096) {
             return new WebActions.Answer(id, false, "Not a place: a world id and x, y, z within the world.");
         }
+        if (!bool(to, "ground") && t == null) {
+            // a typo such as -640 for -64 would drop the player into the void (audit): within the world's build height
+            ResourceLocation rl = local ? ResourceLocation.tryParse(world) : null;
+            ServerLevel there = rl == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, rl));
+            int low = there != null ? there.getMinBuildHeight() : -64, high = there != null ? there.getMaxBuildHeight() : 320;
+            if (y < low || y > high) {
+                return new WebActions.Answer(id, false, "y must be between " + low + " and " + high + " in " + world + ".");
+            }
+        }
         if (bool(to, "ground")) {
             if (!local) {
                 return new WebActions.Answer(id, false, "\"On the ground\" works only on " + name + "'s own server (" + here + ").");

@@ -467,8 +467,22 @@ public final class ServerUtilsCommands {
         say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
         say(source, webStatus(s));
         if (com.mrgregles.bsp_server_utilities.web.WebAgent.enabled()) {
-            say(source, Component.translatable(com.mrgregles.bsp_server_utilities.web.WebActions.ready()
-                    ? "message.bsp_server_utilities.status.web_actions_on" : "message.bsp_server_utilities.status.web_actions_off"));
+            String keyLine;
+            if (com.mrgregles.bsp_server_utilities.web.WebActions.ready()) {
+                keyLine = "message.bsp_server_utilities.status.web_actions_on";
+            } else if (com.mrgregles.bsp_server_utilities.web.WebActions.keyIsMalformed()) {
+                keyLine = "message.bsp_server_utilities.status.web_actions_bad"; // set, but not the panel's: said apart from "not set" (audit)
+            } else if (com.mrgregles.bsp_server_utilities.web.WebActions.currentKey() == null) {
+                keyLine = "message.bsp_server_utilities.status.web_actions_off";
+            } else if (com.mrgregles.bsp_server_utilities.web.WebActions.panelKeyIsMalformed()) {
+                keyLine = "message.bsp_server_utilities.status.web_panel_key_bad";
+            } else {
+                keyLine = "message.bsp_server_utilities.status.web_panel_key_off"; // what it sends is signed; no action until the panel's public key is set (D426)
+            }
+            say(source, Component.translatable(keyLine));
+            if (s != null && com.mrgregles.bsp_server_utilities.web.WebActions.ready() && !com.mrgregles.bsp_server_utilities.web.WebAgent.canAnswer()) {
+                say(source, Component.translatable("message.bsp_server_utilities.status.web_no_answers"));
+            }
         }
         return 1;
     }

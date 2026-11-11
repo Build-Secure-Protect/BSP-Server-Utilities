@@ -109,8 +109,10 @@ public class WebGameTests {
         alpha.drain();
         try {
             WebActions.useForTests(KEY, null, null);
-            WebAgent.useForTests(true, 5, s -> List.of(p));
+            java.util.concurrent.atomic.AtomicLong t = new java.util.concurrent.atomic.AtomicLong(1_000_000L);
+            WebAgent.useForTests(true, 5, s -> List.of(p), t::get, true);
             for (int i = 0; i < 200; i++) {
+                t.addAndGet(50);
                 WebAgent.tick(server);
             }
             h.assertTrue(WebAgent.lastSentMs() == 0, "on, but without shared storage nothing is sent");
@@ -118,35 +120,50 @@ public class WebGameTests {
             Storage.useForTests(alpha);
             WebAgent.useForTests(false, 5, null);
             for (int i = 0; i < 200; i++) {
+                t.addAndGet(50);
                 WebAgent.tick(server);
             }
             alpha.drain();
             h.assertTrue(db.loadWebServers().isEmpty() && WebAgent.lastSentMs() == 0, "off: nothing is sent (the default)");
 
             WebAgent.useForTests(true, 5, null);
-            for (int i = 0; i < 99; i++) {
+            WebAgent.tick(server); // the timer starts
+            for (int i = 0; i < 20; i++) {
+                t.addAndGet(249);
                 WebAgent.tick(server);
             }
             alpha.drain();
-            h.assertTrue(db.loadWebServers().isEmpty(), "not before 5 seconds (100 ticks)");
+            h.assertTrue(db.loadWebServers().isEmpty(), "not before 5 seconds of real time (20 ticks here)");
+            t.addAndGet(20);
             WebAgent.tick(server);
             alpha.drain();
             List<StorageBackend.WebServer> rows = db.loadWebServers();
-            h.assertTrue(rows.size() == 1 && rows.get(0).server().equals("alpha") && WebAgent.lastCount() == 1, "the 100th tick sends this server's row: " + rows);
+            h.assertTrue(rows.size() == 1 && rows.get(0).server().equals("alpha") && WebAgent.lastCount() == 1, "5 seconds on the clock send this server's row, however few ticks passed (a lagging server): " + rows);
             JsonObject snap = JsonParser.parseString(unsigned(h, rows.get(0).snapshot())).getAsJsonObject();
             h.assertTrue(only(snap).get("name").getAsString().equals(p.getGameProfile().getName()), "with the player in it, signed with the key");
+            h.assertTrue(snap.get("every").getAsInt() == 5 && snap.get("answers").getAsBoolean() && !snap.has("stopping"), "the interval and that answers can reach the panel: " + snap);
             long first = rows.get(0).atMs();
             Thread.sleep(2);
-            for (int i = 0; i < 100; i++) {
-                WebAgent.tick(server);
-            }
+            t.addAndGet(5000);
+            WebAgent.tick(server);
             alpha.drain();
             rows = db.loadWebServers();
             h.assertTrue(rows.size() == 1 && rows.get(0).atMs() > first, "the next one replaces it: one row per server");
 
+            WebAgent.useForTests(true, 30, null);
+            h.assertTrue(WebAgent.seconds() == WebAgent.MAX_SECONDS, "at most " + WebAgent.MAX_SECONDS + " s between snapshots, whatever the config says");
+            WebAgent.useForTests(true, 5, null, null, false);
+            Thread.sleep(2);
+            WebAgent.farewell(server);
+            alpha.drain();
+            snap = JsonParser.parseString(unsigned(h, db.loadWebServers().get(0).snapshot())).getAsJsonObject();
+            h.assertTrue(snap.get("stopping").getAsBoolean() && snap.getAsJsonArray("players").isEmpty() && !snap.get("answers").getAsBoolean(),
+                    "the last snapshot before a stop: nobody, stopping, no answers: " + snap);
+
             WebActions.useForTests(null, null, null);
             long before = WebAgent.lastSentMs();
             for (int i = 0; i < 100; i++) {
+                t.addAndGet(100);
                 WebAgent.tick(server);
             }
             h.assertTrue(WebAgent.lastSentMs() == before, "without webPanel.actionKey nothing is sent (it would be unsigned)");

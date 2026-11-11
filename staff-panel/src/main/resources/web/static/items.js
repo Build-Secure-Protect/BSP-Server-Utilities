@@ -89,18 +89,28 @@ const Items = (() => {
     return words(area.split("/")[0]) + " slot " + (i + 1);
   }
 
-  async function fetchFor(p, redraw) {
+  // A read of their items. quiet: a read the page asked for by itself (every 15 s): drawn once nothing in the sheet is
+  // being typed in, so a search or a count being typed is never taken away.
+  async function fetchFor(p, redraw, quiet) {
     const c = cache.get(p.id) || {};
     if (c.loading) return;
     cache.set(p.id, Object.assign(c, { loading: true }));
     try { const r = await api("/api/items", { player: p.id }); cache.set(p.id, { r, at: Date.now() }); }
-    catch (e) { cache.set(p.id, { r: { ok: false, message: "The panel could not be reached." }, at: Date.now() }); }
-    redraw();
+    catch (e) { cache.set(p.id, { r: { ok: false, message: failText(e) }, at: Date.now() }); }
+    if (!quiet) { redraw(); return; }
+    const a = document.activeElement;
+    whenFree(a && a.closest ? a.closest("#pdetail, .offsheet, .mcard") : null, redraw);
+  }
+  /** The live feed's turn: read an online player's items again when 15 s have gone by (D337). */
+  function poll(p, redraw) {
+    const c = cache.get(p.id);
+    if (!c || (!c.loading && Date.now() - c.at > REFRESH_MS)) fetchFor(Object.assign({}, p, { redraw }), redraw, true);
   }
 
   function slot(it, p, area) {
     const s = el("button", "islot" + (it && it.lk ? " lk" : "") + (it && it.miss ? " miss" : "")); s.type = "button";
     if (!it) { s.disabled = true; return s; }
+    s.dataset.keep = "slot:" + area + ":" + it.i;
     if (tip && tip.player === p.id && tip.area === area && tip.slot === it.i) s.classList.add("sel");
     const mk = marks.get(p.id);
     if (mk && mk.until > Date.now() && mk.area === area && (mk.hash ? it.h === mk.hash : mk.slot === it.i)) s.classList.add("chg");
@@ -148,8 +158,7 @@ const Items = (() => {
   async function change(p, path, body) {
     if (busy) return;
     busy = true;
-    let r;
-    try { r = await api(path, body); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+    const r = await call(path, body, true);
     busy = false;
     last.set(p.id, { ok: r.ok, message: r.message || (r.ok ? "Done." : "Not done."), undo: r.undo, until: r.until });
     if (r.ok && path.endsWith("/add")) marks.set(p.id, { area: body.area, hash: r.hash, until: Date.now() + REFRESH_MS + 5000 });
@@ -158,6 +167,18 @@ const Items = (() => {
     const c = cache.get(p.id); if (c) c.at = 0; // read again now
     fetchFor(p, p.redraw);
   }
+  // a key whose second press within 3 s does it: its words change in place, so focus stays on it (D338, D339)
+  function sureKey(b, key, plain, sureText, plainCls, act, ready) {
+    const left = armedFor(key) ? 3000 - (Date.now() - armed.at) : 0;
+    b.textContent = left > 0 ? sureText() : plain(); b.className = left > 0 ? "btn sm sure" : plainCls;
+    unarm(b, left, plain(), plainCls);
+    b.addEventListener("click", () => {
+      if (busy) return;
+      if (ready && !ready()) return;
+      if (!sure(key)) { b.textContent = sureText(); b.className = "btn sm sure"; unarm(b, 3000, plain(), plainCls); return; }
+      b.disabled = true; act();
+    });
+  }
   function removeRow(p, area, it) {
     const box = el("div", "acts");
     if (!canEdit()) { const b = el("button", "btn sm ghost locked-item", "Remove · Admin or ITEMS"); b.type = "button"; b.addEventListener("click", () => alert(NOT_YOURS)); box.appendChild(b); return box; }
@@ -165,23 +186,21 @@ const Items = (() => {
     if (it.n > 1) {
       const row = el("div", "step");
       [1, Math.ceil(it.n / 2), it.n].filter((v, i, a) => a.indexOf(v) === i).forEach((v) => {
-        const c = el("button", v === n ? "on" : "", v === it.n ? "ALL " + v : String(v)); c.type = "button";
+        const c = el("button", v === n ? "on" : "", v === it.n ? "ALL " + v : String(v)); c.type = "button"; c.dataset.keep = "rmn:" + v;
         c.addEventListener("click", () => { removeCount = v; p.redraw(); }); row.appendChild(c);
       });
       box.appendChild(row);
     }
     const key = "rm " + p.id + " " + area.id + " " + it.i + " " + n;
-    const go = el("button", "btn sm " + (armedFor(key) ? "sure" : "danger"), armedFor(key) ? "Sure? Remove " + n + " " + name(it) : "Remove " + n); go.type = "button";
-    go.addEventListener("click", () => {
-      if (!sure(key)) { p.redraw(); return; }
-      change(p, "/api/items/remove", { player: p.id, area: area.id, slot: it.i, hash: it.h, count: n });
-    });
+    const go = el("button"); go.type = "button"; go.dataset.keep = "rmgo";
+    sureKey(go, key, () => "Remove " + n, () => "Sure? Remove " + n + " " + name(it), "btn sm danger",
+      () => change(p, "/api/items/remove", { player: p.id, area: area.id, slot: it.i, hash: it.h, count: n }));
     box.appendChild(go);
     return box;
   }
   function addButton(p, area, label) {
-    const b = el("button", "plus" + (canEdit() ? "" : " off"), label || "+ ADD"); b.type = "button";
-    if (!canEdit()) b.title = "Admin or ITEMS";
+    const can = canEdit();
+    const b = el("button", "plus" + (can ? "" : " off"), (label || "+ ADD") + (can ? "" : " · Admin or ITEMS")); b.type = "button"; b.dataset.keep = "iadd:" + area.id; // D278, D371
     b.addEventListener("click", () => {
       if (!canEdit()) { alert(NOT_YOURS); return; }
       adding = adding && adding.player === p.id && adding.area === area.id ? null : { player: p.id, area: area.id, item: "", count: 1 };
@@ -189,70 +208,98 @@ const Items = (() => {
     });
     return b;
   }
-  // the picker (D271, D360): the creative inventory, tabs along the top, a search box (name, or @mod), slots
+  // the picker (D271, D360): the creative inventory, tabs along the top, a search box (name, or @mod), slots. Choosing a
+  // tab, searching and picking an item change the picker in place; a tab's items are drawn a screenful at a time.
+  const PAGE = 180;
   function picker(p, area, version) {
     const cat = Pictures.ready();
     const f = el("div", "addbox picker");
     f.appendChild(el("div", "ilab2", "ADD TO " + p.name.toUpperCase() + " · " + where(area.id, 0).replace(/ slot 1$/, "").replace(/hotbar 1/, "inventory").toUpperCase()));
-    if (adding.tab === undefined) { adding.tab = 0; adding.q = ""; adding.sel = -1; }
-    const tabs = el("div", "ptabs2");
-    cat.tabs.forEach((t, i) => {
-      const b = el("button", "ptab" + (i === adding.tab && !adding.q ? " on" : "")); b.type = "button"; b.title = t.name;
+    if (adding.tab === undefined) { adding.tab = 0; adding.q = ""; adding.sel = -1; adding.shown = PAGE; }
+    const tabs = el("div", "ptabs2"); tabs.dataset.scroll = "ptabs";
+    const tabKeys = cat.tabs.map((t, i) => {
+      const b = el("button", "ptab"); b.type = "button"; b.title = t.name; b.dataset.keep = "ptab:" + i;
       const ic = Pictures.icon(t.icon, 20); if (ic) b.appendChild(ic); else b.textContent = t.name.slice(0, 2);
-      b.addEventListener("click", () => { adding.tab = i; adding.q = ""; p.redraw(); });
-      tabs.appendChild(b);
+      b.addEventListener("click", () => { adding.tab = i; adding.q = ""; q.value = ""; adding.shown = PAGE; fill(); g.scrollTop = 0; });
+      tabs.appendChild(b); return b;
     });
     f.appendChild(tabs);
-    const q = el("input", "pickq"); q.type = "search"; q.placeholder = "Search " + cat.items.length + " items, or @mod"; q.value = adding.q;
+    const q = el("input", "pickq"); q.type = "search"; q.placeholder = "Search " + cat.items.length + " items, or @mod"; q.value = adding.q; q.dataset.keep = "pickq";
     q.autocapitalize = "off"; q.spellcheck = false;
-    q.addEventListener("input", () => { adding.q = q.value; clearTimeout(adding.timer); adding.timer = setTimeout(() => p.redraw(), 200); });
+    q.addEventListener("input", () => { adding.q = q.value; clearTimeout(adding.timer); adding.timer = setTimeout(() => { adding.shown = PAGE; fill(); g.scrollTop = 0; }, 200); });
     f.appendChild(q);
-    let list;
-    const words2 = adding.q.trim().toLowerCase();
-    if (words2) {
+    const lab = el("div", "ilab2"), g = el("div", "igrid pgrid"), more = el("div", "pmore"), below = el("div", "pickbelow");
+    g.dataset.scroll = "pgrid";
+    f.appendChild(lab); f.appendChild(g); f.appendChild(more); f.appendChild(below);
+    function list() {
+      const words2 = adding.q.trim().toLowerCase();
+      if (!words2) { const t = cat.tabs[adding.tab] || cat.tabs[0]; return { items: t ? t.items : [], label: t ? t.name.toUpperCase() + " · " + (t.items || []).length : "" }; }
       let mod = null, text = words2;
       if (text.startsWith("@")) { const sp = text.indexOf(" "); mod = (sp < 0 ? text.slice(1) : text.slice(1, sp)); text = sp < 0 ? "" : text.slice(sp + 1).trim(); }
-      list = [];
-      for (let i = 0; i < cat.items.length && list.length < 270; i++) {
+      const out = [];
+      for (let i = 0; i < cat.items.length; i++) {
         const it = cat.items[i], ns = it.id.slice(0, it.id.indexOf(":"));
         if (mod && !ns.startsWith(mod)) continue;
         if (text && !(it.name || "").toLowerCase().includes(text) && !it.id.includes(text)) continue;
-        list.push(i);
+        out.push(i);
       }
-      f.appendChild(el("div", "ilab2", list.length >= 270 ? "the first 270 found" : list.length + " found"));
-    } else {
-      const t = cat.tabs[adding.tab] || cat.tabs[0];
-      list = t ? t.items : [];
-      f.appendChild(el("div", "ilab2", t ? t.name.toUpperCase() + " · " + list.length : ""));
+      return { items: out, label: out.length + " found" };
     }
-    const g = el("div", "igrid pgrid");
-    list.forEach((i) => {
-      const b = el("button", "islot" + (i === adding.sel ? " sel" : "")); b.type = "button"; b.title = cat.items[i].name;
+    function itemKey(i) {
+      const b = el("button", "islot" + (i === adding.sel ? " sel" : "")); b.type = "button"; b.title = cat.items[i].name; b.dataset.keep = "pick:" + i;
       const ic = Pictures.icon(i, 24); b.appendChild(ic || el("span", "ilt", letters(cat.items[i])));
-      b.addEventListener("click", () => { adding.sel = i; p.redraw(); });
-      g.appendChild(b);
-    });
-    f.appendChild(g);
-    if (adding.sel >= 0) {
+      b.addEventListener("click", () => {
+        adding.sel = i;
+        g.querySelectorAll(".islot.sel").forEach((x) => x.classList.remove("sel")); b.classList.add("sel");
+        fillBelow();
+      });
+      return b;
+    }
+    function fill() {
+      const l = list();
+      tabKeys.forEach((b, i) => b.classList.toggle("on", i === adding.tab && !adding.q.trim()));
+      lab.textContent = l.label;
+      g.textContent = ""; more.textContent = "";
+      l.items.slice(0, adding.shown).forEach((i) => g.appendChild(itemKey(i)));
+      const left = l.items.length - adding.shown;
+      if (left > 0) {
+        const m = el("button", "btn sm ghost", "Show " + Math.min(PAGE, left) + " more (" + left + " not shown)"); m.type = "button"; m.dataset.keep = "pmore";
+        m.addEventListener("click", () => {
+          const from = adding.shown; adding.shown += PAGE;
+          l.items.slice(from, adding.shown).forEach((i) => g.appendChild(itemKey(i)));
+          const rest = l.items.length - adding.shown;
+          if (rest > 0) m.textContent = "Show " + Math.min(PAGE, rest) + " more (" + rest + " not shown)"; else { m.remove(); }
+        });
+        more.appendChild(m);
+      }
+    }
+    function fillBelow() {
+      below.textContent = "";
+      if (adding.sel < 0) return;
       const it = cat.items[adding.sel];
       const r = el("div", "pickrow"); const ic = Pictures.icon(adding.sel, 32); if (ic) r.appendChild(ic);
-      const t = el("div", "grow"); t.appendChild(el("div", "nm", it.name)); t.appendChild(el("div", "sub mono", it.id)); r.appendChild(t); f.appendChild(r);
-      f.appendChild(countRow(p));
+      const t = el("div", "grow"); t.appendChild(el("div", "nm", it.name)); t.appendChild(el("div", "sub mono", it.id)); r.appendChild(t); below.appendChild(r);
+      const go = el("button"); go.type = "button"; go.dataset.keep = "addgo";
+      const plain = () => "Add " + adding.count + " " + it.name, sure2 = () => "Sure? Add " + adding.count + " " + it.name;
       const key = "add " + p.id + " " + area.id + " " + adding.sel;
-      const go = el("button", "btn sm" + (armedFor(key) ? " sure" : ""), armedFor(key) ? "Sure? Add " + adding.count + " " + it.name : "Add " + adding.count + " " + it.name); go.type = "button";
-      go.addEventListener("click", () => {
-        if (!sure(key)) { p.redraw(); return; }
-        change(p, "/api/items/add", { player: p.id, area: area.id, item: it.id, snbt: it.nbt || "", count: adding.count, version });
-      });
-      f.appendChild(go);
+      below.appendChild(countRow(() => { go.textContent = armedFor(key) ? sure2() : plain(); }));
+      sureKey(go, key, plain, sure2, "btn sm",
+        () => change(p, "/api/items/add", { player: p.id, area: area.id, item: it.id, snbt: it.nbt || "", count: adding.count, version }));
+      below.appendChild(go);
     }
+    fill(); fillBelow();
     return f;
   }
-  function countRow(p) {
-    const row = el("div", "step");
-    [1, 16, 32, 64].forEach((v) => { const c = el("button", adding.count === v ? "on" : "", String(v)); c.type = "button"; c.addEventListener("click", () => { adding.count = v; p.redraw(); }); row.appendChild(c); });
-    const n = el("input", "addcount"); n.type = "number"; n.min = 1; n.max = 6400; n.value = adding.count; n.title = "Up to 100 stacks";
-    n.addEventListener("input", () => { adding.count = Math.max(1, Math.min(6400, Number(n.value) || 1)); });
+  // 1, 16, 32, 64 or typed, up to 100 stacks (D339); changed in place
+  function countRow(changed) {
+    const row = el("div", "step"), chips = [];
+    [1, 16, 32, 64].forEach((v) => {
+      const c = el("button", adding.count === v ? "on" : "", String(v)); c.type = "button"; c.dataset.keep = "cnt:" + v; chips.push([v, c]);
+      c.addEventListener("click", () => { adding.count = v; n.value = String(v); mark(); changed(); }); row.appendChild(c);
+    });
+    const n = el("input", "addcount"); n.type = "text"; n.inputMode = "numeric"; n.pattern = "[0-9]*"; n.maxLength = 4; n.value = adding.count; n.title = "Up to 100 stacks"; n.dataset.keep = "addcount";
+    const mark = () => chips.forEach(([v, c]) => c.classList.toggle("on", v === adding.count));
+    n.addEventListener("input", () => { adding.count = Math.max(1, Math.min(6400, Number(n.value.replace(/[^0-9]/g, "")) || 1)); mark(); changed(); });
     row.appendChild(n);
     return row;
   }
@@ -261,19 +308,18 @@ const Items = (() => {
     if (Pictures.ready()) return picker(p, area, version);
     const f = el("div", "addbox");
     f.appendChild(el("div", "ilab2", "ADD TO " + p.name.toUpperCase() + " · " + where(area.id, 0).replace(/ slot 1$/, "").replace(/hotbar 1/, "inventory").toUpperCase()));
-    const i = el("input", "additem"); i.type = "text"; i.maxLength = 160; i.placeholder = "Item id: minecraft:diamond, create:brass_ingot"; i.value = adding.item;
+    const i = el("input", "additem"); i.type = "text"; i.maxLength = 160; i.placeholder = "Item id: minecraft:diamond, create:brass_ingot"; i.value = adding.item; i.dataset.keep = "additem";
     i.autocapitalize = "off"; i.spellcheck = false;
-    i.addEventListener("input", () => { adding.item = i.value; });
-    f.appendChild(i);
-    f.appendChild(countRow(p));
-    f.appendChild(el("div", "note", "No item pictures yet: an Admin types /su icons in their own game, and this becomes the creative picker."));
     const key = "add " + p.id + " " + area.id;
-    const go = el("button", "btn sm" + (armedFor(key) ? " sure" : ""), armedFor(key) ? "Sure? Add " + adding.count + " " + words(adding.item) : "Add"); go.type = "button";
-    go.addEventListener("click", () => {
-      if (!adding.item.trim()) { i.focus(); return; }
-      if (!sure(key)) { p.redraw(); return; }
-      change(p, "/api/items/add", { player: p.id, area: area.id, item: adding.item.trim(), count: adding.count, version });
-    });
+    const go = el("button"); go.type = "button"; go.dataset.keep = "addgo";
+    const plain = () => "Add", sure2 = () => "Sure? Add " + adding.count + " " + words(adding.item);
+    i.addEventListener("input", () => { adding.item = i.value; if (armedFor(key)) go.textContent = sure2(); });
+    f.appendChild(i);
+    f.appendChild(countRow(() => { if (armedFor(key)) go.textContent = sure2(); }));
+    f.appendChild(el("div", "note", "No item pictures yet: an Admin types /su icons in their own game, and this becomes the creative picker."));
+    sureKey(go, key, plain, sure2, "btn sm",
+      () => change(p, "/api/items/add", { player: p.id, area: area.id, item: adding.item.trim(), count: adding.count, version }),
+      () => { if (adding.item.trim()) return true; i.focus(); return false; }); // an id first
     f.appendChild(go);
     return f;
   }
@@ -283,8 +329,8 @@ const Items = (() => {
     const line = el("div", a.ok ? "okm" : "err", a.message);
     const left = a.undo ? a.until - Date.now() : 0;
     if (left > 0) {
-      const u = el("button", "undo", "UNDO " + Math.floor(left / 60000) + ":" + String(Math.floor(left / 1000) % 60).padStart(2, "0")); u.type = "button";
-      u.addEventListener("click", () => change(p, "/api/items/undo", { token: a.undo }));
+      const u = el("button", "undo", "UNDO " + Math.floor(left / 60000) + ":" + String(Math.floor(left / 1000) % 60).padStart(2, "0")); u.type = "button"; u.dataset.keep = "undo";
+      u.addEventListener("click", () => { u.disabled = true; change(p, "/api/items/undo", { token: a.undo }); });
       line.appendChild(u);
     }
     return line;
@@ -305,7 +351,7 @@ const Items = (() => {
     const wrap = el("div", "items");
     const c = cache.get(p.id);
     const stale = !c || (opts.live && !c.loading && Date.now() - c.at > REFRESH_MS);
-    if (stale) fetchFor(p, opts.redraw);
+    if (stale) fetchFor(p, opts.redraw, !!c); // the first read drawn at once; later ones once nothing is being typed
     const head = el("div", "sect"); head.appendChild(el("span", null, "INVENTORY"));
     const right = el("span", "ihead");
     const r = c && c.r;
@@ -314,7 +360,7 @@ const Items = (() => {
       if (it.live) right.appendChild(el("span", "tl", "●"));
       right.appendChild(el("span", it.live ? "live" : "saved", it.live ? "live · " + ago(c.at) : "saved " + ago(it.savedAt) + (it.server ? " · " + it.server : "")));
     }
-    const again = el("button", "iref", "↻"); again.type = "button"; again.title = "Read again";
+    const again = el("button", "iref", "↻"); again.type = "button"; again.title = "Read again"; again.dataset.keep = "iref";
     again.addEventListener("click", () => { cache.set(p.id, Object.assign(cache.get(p.id) || {}, { at: 0 })); fetchFor(p, opts.redraw); });
     right.appendChild(again);
     const inv0 = r && r.ok && r.items ? (r.items.areas || []).find((x) => x.id === "inventory") : null;
@@ -331,7 +377,8 @@ const Items = (() => {
     const arm = el("div", "icol"); const armor = by("armor"); [3, 2, 1, 0].forEach((i) => arm.appendChild(grid(armor, i, i + 1, p, "one").firstChild)); eq.appendChild(arm);
     const fig = el("div", "ifig"); fig.appendChild(typeof Players !== "undefined" ? Players.face(p, 56) : el("span")); eq.appendChild(fig);
     const cur = el("div", "icol"); cur.appendChild(el("span", "ilab", "CURIOS"));
-    const curios = areas.filter((a) => a.kind === "CURIOS");
+    // cosmetic slots (BSP-InventorySync's CURIOS_COSMETIC) with the rest, after them, named "(cosmetic)"
+    const curios = areas.filter((a) => a.kind === "CURIOS" || a.kind === "CURIOS_COSMETIC").sort((a, b) => (a.kind === "CURIOS_COSMETIC") - (b.kind === "CURIOS_COSMETIC"));
     let shown = 0;
     curios.forEach((a) => a.slots.forEach((s) => { if (shown < 3) { cur.appendChild(slot(s, p, a.id)); shown++; } }));
     while (shown < 3) { cur.appendChild(slot(null, p, "")); shown++; }
@@ -365,7 +412,7 @@ const Items = (() => {
   function fold(p, key, title, sub, body) {
     const k = p.id + " " + key, isOpen = open.has(k);
     const f = el("div", "ifold");
-    const h = el("button", "ifh"); h.type = "button";
+    const h = el("button", "ifh"); h.type = "button"; h.dataset.keep = "fold:" + key;
     h.appendChild(el("b", null, title)); h.appendChild(el("span", "mu", sub + (isOpen ? " ⌃" : " ⌄")));
     h.addEventListener("click", () => { isOpen ? open.delete(k) : open.add(k); p.redraw(); });
     f.appendChild(h);
@@ -377,7 +424,7 @@ const Items = (() => {
   function hotbar(p, opts) {
     p = Object.assign({}, p, { redraw: opts.redraw });
     const c = cache.get(p.id);
-    if (!c || (!c.loading && Date.now() - c.at > REFRESH_MS)) fetchFor(p, opts.redraw);
+    if (!c || (!c.loading && Date.now() - c.at > REFRESH_MS)) fetchFor(p, opts.redraw, !!c);
     const r = c && c.r, inv = r && r.ok && r.items ? (r.items.areas || []).find((x) => x.id === "inventory") : null;
     const wrap = el("div", "items");
     wrap.appendChild(grid(inv, 0, 9, p, "hot"));
@@ -386,45 +433,52 @@ const Items = (() => {
     return wrap;
   }
 
-  return { section, hotbar, forget, name, icon: (it, size) => Pictures.icon(Pictures.indexOf(it.id, it.v), size), letters, describe: (it, areaId) => tooltip(it, areaId) };
+  return { section, hotbar, poll, forget, name, icon: (it, size) => Pictures.icon(Pictures.indexOf(it.id, it.v), size), letters, describe: (it, areaId) => tooltip(it, areaId) };
 })();
 
 // More › Find a player (D336, D372): anyone who ever joined, by the start of their name. An online player opens their
 // sheet on the Players tab; an offline one opens here, with their items from the last save, graves and notes.
 const FindPlayer = (() => {
-  const st = { q: "", found: [], chosen: null, timer: 0 };
+  const st = { q: "", found: [], chosen: null, timer: 0, error: "" };
   async function search(q) {
     st.q = q;
     if (!q) { st.found = []; App.refreshMore(); return; }
-    try { const r = await api("/api/players/find", { q }); if (st.q === q) st.found = r.ok ? r.players : []; } catch (e) { st.found = []; }
-    if (st.q === q) App.refreshMore();
+    const r = await call("/api/players/find", { q });
+    if (st.q !== q) return;
+    st.found = r.ok ? r.players : []; st.error = r.ok ? "" : r.message;
+    App.refreshMore();
   }
   function view(main) {
     if (st.chosen) { offline(main, st.chosen); return; }
     main.appendChild(el("h2", null, "Find a player"));
-    const q = el("input", "search findq"); q.type = "search"; q.placeholder = "The start of a name, online or not"; q.value = st.q; q.maxLength = 16;
+    const q = el("input", "search findq"); q.type = "search"; q.placeholder = "The start of a name, online or not"; q.value = st.q; q.maxLength = 16; q.dataset.keep = "findq";
     q.addEventListener("input", () => { clearTimeout(st.timer); const v = q.value.trim(); st.timer = setTimeout(() => search(v), 250); });
     main.appendChild(q);
     const list = el("div", "list");
     st.found.forEach((p) => {
-      const b = el("button", "item menuitem"); b.type = "button";
+      const b = el("button", "item menuitem"); b.type = "button"; b.dataset.keep = "found:" + p.id;
       const g = el("div", "grow"); g.appendChild(el("div", "nm", p.name)); g.appendChild(Tags.chips(p.id, 2));
       g.appendChild(el("div", "sub", p.server ? "online on " + p.server : "offline"));
       b.appendChild(g); b.appendChild(el("span", "tl", "OPEN"));
-      b.addEventListener("click", () => { if (p.server) openPlayerSheet(p.id); else { st.chosen = p; App.refreshMore(); } });
+      // online and in the feed: their sheet; otherwise here (the feed may not have them yet: audit)
+      b.addEventListener("click", () => { if (p.server && live.players.some((x) => x.id === p.id)) openPlayerSheet(p.id); else { choose(p); App.refreshMore(); } });
       list.appendChild(b);
     });
-    if (st.q && !st.found.length) list.appendChild(el("div", "note", "Nobody whose name starts with “" + st.q + "” has played on the network."));
+    if (st.error) list.appendChild(el("div", "err", st.error));
+    else if (st.q && !st.found.length) list.appendChild(el("div", "note", "Nobody whose name starts with “" + st.q + "” has played on the network."));
     main.appendChild(list);
     main.appendChild(el("div", "note", "Everyone who has joined the network. An online player opens on the Players tab; an offline one here, with their items from their last save."));
-    if (document.activeElement === document.body) q.focus();
   }
+  // opening an offline player reads their items fresh (audit)
+  function choose(p) { if (!st.chosen || st.chosen.id !== p.id) Items.forget(p.id); st.chosen = p; }
+  // the search box ready to type in when the page is opened on a computer
+  function focus() { const q = document.querySelector(".findq"); if (q && matchMedia("(min-width: 900px)").matches) q.focus(); }
   function offline(main, p) {
     const who = el("div", "offwho"); const g = el("div", "grow");
     g.appendChild(el("div", "dname", p.name)); g.appendChild(Tags.chips(p.id));
     g.appendChild(el("div", "sub", "offline"));
     who.appendChild(Players.face(p, 44)); who.appendChild(g); main.appendChild(who);
-    const keys = el("div", "keys"); const gr = el("button", "key", "Graves"); gr.type = "button"; gr.addEventListener("click", () => { st.chosen = null; openGraves(p.name); });
+    const keys = el("div", "keys"); const gr = el("button", "key", "Graves"); gr.type = "button"; gr.dataset.keep = "k:graves"; gr.addEventListener("click", () => { st.chosen = null; openGraves(p.name); });
     keys.appendChild(gr); main.appendChild(keys);
     const box = el("div", "offsheet");
     const ml = Market.line(p); // D405: their lots and orders, when they have any
@@ -433,15 +487,17 @@ const FindPlayer = (() => {
     box.appendChild(Notes.section(p));
     main.appendChild(box);
   }
-  return { view, reset: () => { st.chosen = null; }, chosen: () => st.chosen, open: (p) => { st.chosen = p; } };
+  return { view, focus, reset: () => { st.chosen = null; }, chosen: () => st.chosen, open: choose };
 })();
 
 // More › Items (D373): the item pictures the panel has, who made them and when, and how to make a fresh set.
 const ItemsPage = (() => {
   let data = null;
-  async function view(main) {
+  async function view(host) {
+    const main = el("div", "itemspage"); host.appendChild(main); // drawn again meanwhile: this one is left out (audit)
     main.appendChild(el("h2", null, "Item pictures"));
-    if (!data) { try { data = await api("/api/items/exports"); } catch (e) { data = { ok: false }; } }
+    if (!data) { data = await call("/api/items/exports"); if (!data.ok && data.failed) { const e = data; data = null; main.appendChild(el("div", "err", e.message)); return; } }
+    if (!main.isConnected) return;
     const d = data, cur = d && d.current;
     const when = (at) => new Date(at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
     if (d && d.problem) main.appendChild(el("div", "err", d.problem));
@@ -452,6 +508,7 @@ const ItemsPage = (() => {
         ["Size", cur.size >= 1048576 ? (cur.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(cur.size / 1024)) + " KB"]].forEach(([k, v]) => { kv.appendChild(el("span", null, k)); kv.appendChild(el("span", null, v)); });
       main.appendChild(kv);
       const cat = await Pictures.load();
+      if (!main.isConnected) return;
       if (cat) { const row = el("div", "psample"); for (let i = 0; i < Math.min(27, cat.items.length); i++) { const ic = Pictures.icon(i, 30); if (ic) row.appendChild(ic); } main.appendChild(row); }
     }
     main.appendChild(el("div", "sect", "A FRESH EXPORT"));

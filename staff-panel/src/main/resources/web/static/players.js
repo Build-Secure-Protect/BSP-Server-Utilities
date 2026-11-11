@@ -2,7 +2,7 @@
 // The Players tab (D273 to D279, D287, D292 to D294): servers, players grouped by team (or by server), their stats as
 // the game's own icons; a player opens in a sheet from the bottom on a phone, or a card to drag on a computer.
 const Players = (() => {
-  let groupBy = "team", filter = "", openId = null, collapsed = new Set(), cardPos = null;
+  let groupBy = "team", filter = "", openId = null, collapsed = new Set(), cardPos = null, lastName = "", lastFor = null;
 
   // ---------------------------------------------------------------- the game's icons, drawn as pixels
   const ART = {
@@ -78,7 +78,7 @@ const Players = (() => {
   }
 
   function row(p) {
-    const r = el("button", "prow" + (p.id === openId ? " sel" : "")); r.type = "button";
+    const r = el("button", "prow" + (p.id === openId ? " sel" : "")); r.type = "button"; r.dataset.keep = "prow:" + p.id;
     r.appendChild(head(p, 30));
     const g = el("div", "grow"); const top = el("div", "pname"); top.appendChild(el("span", "nm", p.name)); top.appendChild(Tags.chips(p.id, 2)); // D331
     if (p.role) top.appendChild(el("span", "chip role", p.role));
@@ -94,11 +94,15 @@ const Players = (() => {
     const mini = el("div", "statsmini minirow"); if (p.hp <= 6) mini.appendChild(el("span", "low", "LOW"));
     mini.appendChild(icon("heart", 1, 9)); mini.appendChild(el("span", null, String(Math.round(p.hp) / 2)));
     r.appendChild(mini);
-    r.addEventListener("click", () => { if (openId !== p.id) { kickOpen = null; result = null; } openId = p.id; App.refresh(); });
+    r.addEventListener("click", () => { if (openId !== p.id) { kickOpen = null; result = null; kickReason = ""; } openId = p.id; App.refresh(); });
     return r;
   }
 
+  // The list. A bar whose search box is being typed in is kept as it is (only its count changes), so the box keeps its
+  // focus and a phone its keyboard; everything else is drawn again.
   function view(main, live) {
+    const kept = [...main.children].find((x) => x.classList.contains("pbar") && typingIn(x)) || null;
+    const before = [], after = [];
     const total = live.players.length;
     // servers: chips on a phone, tiles on a computer
     const chips = el("div", "chips");
@@ -109,27 +113,35 @@ const Players = (() => {
       t.title = s.server + " · " + s.mspt + " ms a tick"; tiles.appendChild(t);
     });
     const net = el("div", "tile net"); net.appendChild(el("b", null, String(total))); net.appendChild(document.createTextNode("Network")); tiles.appendChild(net);
-    main.appendChild(chips); main.appendChild(tiles);
+    before.push(chips, tiles);
+    const put = () => {
+      [...main.children].forEach((x) => { if (x !== kept) x.remove(); });
+      before.forEach((x) => main.insertBefore(x, kept)); // insertBefore(x, null) appends
+      after.forEach((x) => main.appendChild(x));
+    };
     if (!live.servers.length) {
-      main.appendChild(el("div", "note", "No game server has sent its players yet. Each server sends them while webPanel.enabled is on in its config/bsp_server_utilities-network.toml."));
-      return;
+      before.push(el("div", "note", "No game server has sent its players yet. Each server sends them while webPanel.enabled is on in its config/bsp_server_utilities-network.toml."));
+      put(); return;
     }
     const gs = groups(live.players);
     const bar = el("div", "pbar");
-    const count = el("div", "grow"); count.appendChild(el("span", "big", String(total)));
+    const count = el("div", "grow pcount"); count.appendChild(el("span", "big", String(total)));
     count.appendChild(el("span", "mu", " online · " + (groupBy === "team" ? gs.filter((x) => x.key !== "none").length + " teams" : live.servers.length + " servers")));
     bar.appendChild(count);
-    const search = el("input", "search"); search.type = "search"; search.placeholder = "Find a player…"; search.value = filter;
-    search.addEventListener("input", () => { filter = search.value.trim().toLowerCase(); App.refresh(true); });
+    const search = el("input", "search"); search.type = "search"; search.placeholder = "Find a player…"; search.value = filter; search.dataset.keep = "psearch";
+    search.addEventListener("input", () => { filter = search.value.trim().toLowerCase(); App.refresh(); });
     bar.appendChild(search);
     const seg = el("div", "seg");
     [["team", "Teams"], ["server", "Servers"]].forEach(([k, t]) => {
-      const b = el("button", groupBy === k ? "on" : "", t); b.type = "button"; b.addEventListener("click", () => { groupBy = k; App.refresh(); }); seg.appendChild(b);
+      const b = el("button", groupBy === k ? "on" : "", t); b.type = "button"; b.dataset.keep = "pseg:" + k;
+      b.addEventListener("click", () => { groupBy = k; App.refresh(); }); seg.appendChild(b);
     });
-    bar.appendChild(seg); main.appendChild(bar);
+    bar.appendChild(seg);
+    if (kept) { const old = kept.querySelector(".pcount"); if (old) old.replaceWith(count); [...kept.querySelectorAll(".seg button")].forEach((b, i) => b.classList.toggle("on", (i === 0) === (groupBy === "team"))); }
+    else before.push(bar);
     const grid = el("div", "groups");
     gs.forEach((gr) => {
-      const card = el("div", "gcard"); const h = el("button", "ghead"); h.type = "button"; h.style.borderLeftColor = gr.colour;
+      const card = el("div", "gcard"); const h = el("button", "ghead"); h.type = "button"; h.style.borderLeftColor = gr.colour; h.dataset.keep = "grp:" + gr.key;
       h.appendChild(el("span", "nm", gr.label)); h.appendChild(el("span", "mu", gr.players.length + " online"));
       h.appendChild(el("span", "chev", collapsed.has(gr.key) ? "⌄" : "⌃"));
       h.addEventListener("click", () => { collapsed.has(gr.key) ? collapsed.delete(gr.key) : collapsed.add(gr.key); App.refresh(); });
@@ -138,17 +150,27 @@ const Players = (() => {
       grid.appendChild(card);
     });
     if (!gs.length) grid.appendChild(el("div", "note", "Nobody online matches “" + filter + "”."));
-    main.appendChild(grid);
-    if (search === document.activeElement) search.focus();
+    after.push(grid);
+    put();
   }
 
   // ---------------------------------------------------------------- one player: the sheet (phone) or card (computer)
   let lastLive = { servers: [], players: [] };
-  function detail(live) {
+  // tick: the live feed alone changed. Only its numbers are drawn again (where they are, stats, ping), and the keys
+  // unless a field among them is being typed in or chosen; the items are read again when due (D337).
+  function detail(live, tick) {
     lastLive = live;
     let box = $("pdetail");
     if (!openId) { if (box) box.remove(); const d = $("pdim"); if (d) d.remove(); return; }
     const p = live.players.find((x) => x.id === openId);
+    if (p) { lastName = p.name; lastFor = p.id; }
+    if (tick && box && p && box.querySelector(".dlive")) {
+      box.querySelector(".dsub").replaceWith(subLine(p));
+      box.querySelector(".dlive").replaceWith(livePart(p));
+      const acts = box.querySelector(".pact"); if (acts && !typingIn(acts)) acts.replaceWith(actionsFor(p));
+      Items.poll({ id: p.id, name: p.name, skin: p.skin }, () => App.refresh());
+      return;
+    }
     if (!box) {
       const dimmer = el("div", "pdim"); dimmer.id = "pdim"; dimmer.addEventListener("click", close); document.body.appendChild(dimmer);
       box = el("div", "pdetail"); box.id = "pdetail"; document.body.appendChild(box);
@@ -157,25 +179,25 @@ const Players = (() => {
     const scrolled = box.scrollTop; // kept through the redraw every few seconds
     box.textContent = "";
     const top = el("div", "dtop"); const grip = el("div", "grip"); grip.title = "Drag"; top.appendChild(grip);
-    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close"; x.addEventListener("click", close);
+    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close"; x.dataset.keep = "pclose"; x.addEventListener("click", close);
     box.appendChild(el("div", "grab"));
     if (!p) {
-      top.appendChild(el("div", "grow nm", "Not online any more")); top.appendChild(x); box.appendChild(top);
+      // they left (a ban sends them off the network): the last answer stays with the card (audit)
+      const name = lastFor === openId ? lastName : "";
+      const who = el("div", "grow"); if (name) who.appendChild(el("div", "dname", name)); who.appendChild(el("div", name ? "sub" : "nm", "Not online any more"));
+      top.appendChild(who); top.appendChild(x); box.appendChild(top);
+      const a = Bans.answerFor(openId) || result;
+      if (a) box.appendChild(el("div", a.ok ? "okm" : "err", a.message));
       box.appendChild(el("div", "note", "They left the network, or their server stopped sending."));
       drag(grip, box); return;
     }
     const who = el("div", "grow"); const n = el("div", "dname"); n.textContent = p.name; who.appendChild(n);
-    const sub = el("div", "sub");
-    if (p.team) { const sq = el("span", "sq", "■"); sq.style.color = p.team.colour; sub.appendChild(sq); sub.appendChild(document.createTextNode(" " + p.team.name + " · ")); }
-    sub.appendChild(document.createTextNode("ping " + p.ping + " ms" + (p.role ? " · " + p.role : "") + (p.mode !== "survival" ? " · " + p.mode : "")));
-    who.appendChild(sub);
+    who.appendChild(subLine(p));
     const tags = el("div", "tagline"); tags.appendChild(Tags.chips(p.id)); // every tag in the sheet, + TAG to change them (D320)
-    const add = el("button", "tg addt", "+ Tag"); add.type = "button"; add.addEventListener("click", () => Tags.open(p)); tags.appendChild(add);
+    const add = el("button", "tg addt", "+ Tag"); add.type = "button"; add.dataset.keep = "addtag"; add.addEventListener("click", () => Tags.open(p)); tags.appendChild(add);
     who.appendChild(tags);
     top.appendChild(head(p, 48)); top.appendChild(who); top.appendChild(x); box.appendChild(top);
-    const loc = el("div", "loc mono"); loc.appendChild(el("span", "tl", "● ")); loc.appendChild(document.createTextNode(where(p) + (p.afkMs > 0 ? " · AFK " + minutes(p.afkMs) : "")));
-    box.appendChild(loc);
-    box.appendChild(stats(p));
+    box.appendChild(livePart(p));
     box.appendChild(actionsFor(p));
     const ml = Market.line(p); // D405: their lots and orders, when they have any
     if (ml) box.appendChild(ml);
@@ -183,6 +205,20 @@ const Players = (() => {
     box.appendChild(Notes.section(p));
     drag(grip, box);
     box.scrollTop = scrolled;
+  }
+
+  function subLine(p) {
+    const sub = el("div", "sub dsub");
+    if (p.team) { const sq = el("span", "sq", "■"); sq.style.color = p.team.colour; sub.appendChild(sq); sub.appendChild(document.createTextNode(" " + p.team.name + " · ")); }
+    sub.appendChild(document.createTextNode("ping " + p.ping + " ms" + (p.role ? " · " + p.role : "") + (p.mode !== "survival" ? " · " + p.mode : "")));
+    return sub;
+  }
+  // where they are and their stats: what the live feed changes
+  function livePart(p) {
+    const w = el("div", "dlive");
+    const loc = el("div", "loc mono"); loc.appendChild(el("span", "tl", "● ")); loc.appendChild(document.createTextNode(where(p) + (p.afkMs > 0 ? " · AFK " + minutes(p.afkMs) : "")));
+    w.appendChild(loc); w.appendChild(stats(p));
+    return w;
   }
 
   // the stats as the game's icons, the numbers and the effects (the card here and the map's card, SU-47)
@@ -201,27 +237,31 @@ const Players = (() => {
   }
 
   // ---------------------------------------------------------------- actions (D278): Kick for every rank; more as they are built
-  let kickOpen = null, kickReason = "", kickArmed = 0, result = null;
+  let kickOpen = null, kickReason = "", kickArmed = 0, kickBusy = false, result = null;
   function actionsFor(p) {
     const wrap = el("div", "pact");
     const keys = el("div", "keys");
-    const kick = el("button", "key danger", "Kick"); kick.type = "button";
+    const kick = el("button", "key danger", "Kick"); kick.type = "button"; kick.dataset.keep = "k:kick";
     kick.addEventListener("click", () => { kickOpen = kickOpen === p.id ? null : p.id; result = null; App.refresh(); });
-    const graves = el("button", "key", "Graves"); graves.type = "button";
+    const graves = el("button", "key", "Graves"); graves.type = "button"; graves.dataset.keep = "k:graves";
     graves.addEventListener("click", () => { openId = null; kickOpen = null; result = null; Players.leave(); openGraves(p.name); });
     keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
     const tp = Teleport.box(p, lastLive); if (tp) wrap.appendChild(tp); // SU-43
     const bn = Bans.box(p); if (bn) wrap.appendChild(bn); // SU-44
     if (kickOpen === p.id) {
       const f = el("div", "kickform");
-      const why = el("input", "reason"); why.type = "text"; why.maxLength = 160; why.placeholder = "Why (they read it)"; why.value = kickReason;
+      const why = el("input", "reason"); why.type = "text"; why.maxLength = 160; why.placeholder = "Why (they read it)"; why.value = kickReason; why.dataset.keep = "kickwhy";
       why.addEventListener("input", () => { kickReason = why.value; });
-      const go = el("button", "btn sm danger", Date.now() - kickArmed < 3000 ? "Sure? Kick " + p.name : "Kick " + p.name + " from the network"); go.type = "button";
+      const plain = "Kick " + p.name + " from the network", left = 3000 - (Date.now() - kickArmed);
+      const go = el("button", "btn sm danger", kickBusy ? "Kicking…" : left > 0 ? "Sure? Kick " + p.name : plain); go.type = "button"; go.dataset.keep = "kickgo";
+      go.disabled = kickBusy; // a redraw while it runs keeps the key off
+      if (!kickBusy) unarm(go, left, plain);
       go.addEventListener("click", async () => {
-        if (Date.now() - kickArmed > 3000) { kickArmed = Date.now(); go.textContent = "Sure? Kick " + p.name; return; } // a second tap within 3 s
-        kickArmed = 0; go.disabled = true; go.textContent = "Kicking…";
-        try { const r = await api("/api/act", { action: "kick", player: p.id, reason: kickReason }); result = r; if (r.ok) { kickOpen = null; kickReason = ""; } }
-        catch (e) { result = { ok: false, message: "The panel could not be reached." }; }
+        if (kickBusy) return;
+        if (Date.now() - kickArmed > 3000) { kickArmed = Date.now(); go.textContent = "Sure? Kick " + p.name; unarm(go, 3000, plain); return; } // a second tap within 3 s
+        kickArmed = 0; kickBusy = true; go.disabled = true; go.textContent = "Kicking…";
+        const r = await call("/api/act", { action: "kick", player: p.id, reason: kickReason }, true);
+        kickBusy = false; result = r; if (r.ok) { kickOpen = null; kickReason = ""; }
         App.refresh();
       });
       f.appendChild(why); f.appendChild(go); wrap.appendChild(f);
@@ -242,11 +282,12 @@ const Players = (() => {
     });
   }
 
-  function close() { openId = null; kickOpen = null; result = null; Teleport.close(); Bans.close(); App.refresh(); }
+  // closing forgets their items, so the next open reads them fresh (audit)
+  function close() { if (openId) Items.forget(openId); openId = null; kickOpen = null; kickReason = ""; result = null; Teleport.close(); Bans.close(); App.refresh(); }
   function leave() { openId = null; detail({ players: [] }); }
 
   // a name tapped in chat (D304) opens that player's sheet or card
-  function open(id) { openId = id; kickOpen = null; result = null; }
-  function closeKeys() { kickOpen = null; result = null; Teleport.close(); Bans.close(); }
+  function open(id) { if (openId !== id) kickReason = ""; openId = id; kickOpen = null; result = null; }
+  function closeKeys() { kickOpen = null; kickReason = ""; result = null; Teleport.close(); Bans.close(); }
   return { view, detail, leave, open, face: head, stats, actions: (p, l) => { lastLive = l; return actionsFor(p); }, closeKeys };
 })();

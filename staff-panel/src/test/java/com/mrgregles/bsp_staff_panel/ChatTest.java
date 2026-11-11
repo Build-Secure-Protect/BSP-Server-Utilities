@@ -248,7 +248,7 @@ class ChatTest {
             assertFalse(post(http, server, "owner@bsp.test", owner, "{\"voice\":\"staff\",\"to\":\"Frostwarf\",\"text\":\"hi\"}").get("ok").getAsBoolean(), "a server not sending to the panel");
 
             HttpResponse<String> lines = http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/api/chat"))
-                    .header("Cf-Access-Jwt-Assertion", "good:ana@bsp.test").header("Cookie", PanelServer.COOKIE + "=" + mod).GET().build(), HttpResponse.BodyHandlers.ofString());
+                    .header("Cf-Access-Jwt-Assertion", "good:ana@bsp.test").header("Cookie", PanelServer.SECURE_COOKIE + "=" + mod).GET().build(), HttpResponse.BodyHandlers.ofString());
             assertEquals("hello all", JsonParser.parseString(lines.body()).getAsJsonObject().getAsJsonArray("lines").get(0).getAsJsonObject().get("text").getAsString());
             assertEquals(401, http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/api/chat"))
                     .header("Cf-Access-Jwt-Assertion", "good:ana@bsp.test").GET().build(), HttpResponse.BodyHandlers.ofString()).statusCode(), "only for a login");
@@ -265,7 +265,7 @@ class ChatTest {
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + path)).POST(HttpRequest.BodyPublishers.ofString(json))
                 .header("Content-Type", "application/json").header("X-BSP", "1").header("Origin", URL).header("Cf-Access-Jwt-Assertion", "good:" + who);
         if (cookie != null) {
-            b.header("Cookie", PanelServer.COOKIE + "=" + cookie);
+            b.header("Cookie", PanelServer.SECURE_COOKIE + "=" + cookie);
         }
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }

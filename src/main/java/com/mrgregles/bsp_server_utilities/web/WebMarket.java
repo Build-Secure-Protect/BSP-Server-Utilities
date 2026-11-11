@@ -8,6 +8,7 @@ import com.mrgregles.bsp_server_utilities.log.LogEntry;
 import com.mrgregles.bsp_server_utilities.storage.Storage;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -80,10 +81,15 @@ public final class WebMarket {
             return new WebActions.Answer(id, false, NO_ECONOMY);
         }
         if (!bool(a, "refresh")) {
-            return answer(id, eco.market(server));
+            BspCore.Market held = safelyRead(server, eco);
+            boolean neverRead = held != null && held.lotsReadMs() <= 0 && held.ordersReadMs() <= 0 && eco.connected();
+            if (!neverRead) {
+                return safely(id, "The market", () -> answer(id, held, eco.connected())); // guarded like the REFRESH path (audit)
+            }
+            // connected but not read yet (a server just started): read now rather than call it "not connected" (audit)
         }
         CompletableFuture<WebActions.Answer> later = new CompletableFuture<>();
-        eco.refresh(server, () -> later.complete(safely(id, "The market", () -> answer(id, eco.market(server)))));
+        eco.refresh(server, () -> later.complete(safely(id, "The market", () -> answer(id, eco.market(server), eco.connected()))));
         return new WebActions.Answer(id, true, "", null, later);
     }
 
@@ -102,11 +108,21 @@ public final class WebMarket {
     /** The Wanted Board's share of {@link #MAX_CHARS}, filled first, so many lots never leave the orders empty (audit). */
     public static final int ORDER_CHARS = 300_000;
 
-    private static WebActions.Answer answer(String id, BspCore.Market m) {
+    @Nullable
+    private static BspCore.Market safelyRead(MinecraftServer server, BspCore.Economy eco) {
+        try {
+            return eco.market(server);
+        } catch (RuntimeException e) {
+            return null; // answered as "could not be read"
+        }
+    }
+
+    private static WebActions.Answer answer(String id, BspCore.Market m, boolean connected) {
         if (m == null) {
             return new WebActions.Answer(id, false, "The market could not be read on " + Storage.currentServerId() + " (BSP-Core answered with an error; its log says why).");
         }
-        boolean down = m.lotsReadMs() <= 0 && m.ordersReadMs() <= 0 && m.lots().isEmpty() && m.orders().isEmpty();
+        // BSP-Core's own word first (D414: a copy read before the database went away is not "fine"), then a copy never read
+        boolean down = !connected || m.lotsReadMs() <= 0 && m.ordersReadMs() <= 0 && m.lots().isEmpty() && m.orders().isEmpty();
         JsonObject data = new JsonObject();
         data.addProperty("lotsReadMs", m.lotsReadMs());
         data.addProperty("ordersReadMs", m.ordersReadMs());

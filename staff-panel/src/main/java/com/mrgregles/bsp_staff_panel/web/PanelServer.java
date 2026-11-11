@@ -46,7 +46,15 @@ import java.util.function.LongSupplier;
  * server or Cloudflare would log.
  */
 public final class PanelServer {
+    /** The login cookie's name over plain http (the demo, tests); over https {@link #SECURE_COOKIE}. */
     public static final String COOKIE = "bsp_panel";
+    /** {@code __Host-}: only this host may set it, so another *.buildsecureprotect.com page cannot push a cookie that locks staff out (audit). */
+    public static final String SECURE_COOKIE = "__Host-bsp_panel";
+
+    /** The login cookie's name: {@link #SECURE_COOKIE} over https. */
+    public static String cookieName(boolean https) {
+        return https ? SECURE_COOKIE : COOKIE;
+    }
     public static final int MAX_BODY = 16 * 1024, MAX_LIVE = 50;
     public static final long LIVE_PING_MS = 20_000L;
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
@@ -100,6 +108,9 @@ public final class PanelServer {
     private final List<Live> live = new CopyOnWriteArrayList<>();
     private final List<Live> closing = new CopyOnWriteArrayList<>();
     private volatile boolean dirty = true;
+    private volatile long lastLive;
+    /** The live view goes to the pages at most this often (D251: positions every 5 s). */
+    public static final long LIVE_EVERY_MS = 5_000L;
     private volatile long lastPing;
 
     public PanelServer(String host, int port, String publicUrl, Gate gate, Auth auth, PanelStore store, Feed feed, LongSupplier clock) throws IOException {
@@ -277,6 +288,7 @@ public final class PanelServer {
             try {
                 id = gate.check(ex.getRequestHeaders().getFirst("Cf-Access-Jwt-Assertion"));
             } catch (AccessJwt.Invalid e) {
+                sayRefusal(e.getMessage());
                 text(ex, 403, "Open this panel through its address, signed in to Cloudflare.");
                 return;
             }
@@ -328,25 +340,26 @@ public final class PanelServer {
         return auth.check(cookie(ex), id.email());
     }
 
-    private static String cookie(HttpExchange ex) {
+    private String cookie(HttpExchange ex) {
+        String name = cookieName(https);
         for (String header : ex.getRequestHeaders().getOrDefault("Cookie", List.of())) {
             for (String part : header.split(";")) {
                 String p = part.trim();
-                if (p.startsWith(COOKIE + "=")) {
-                    return p.substring(COOKIE.length() + 1);
+                if (p.startsWith(name + "=")) {
+                    return p.substring(name.length() + 1);
                 }
             }
         }
         return null;
     }
 
-    private void setCookie(HttpExchange ex, String token, Rank rank) {
-        ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=" + token + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + rank.session().toSeconds()
+    private void setCookie(HttpExchange ex, String token, Account who) {
+        ex.getResponseHeaders().add("Set-Cookie", cookieName(https) + "=" + token + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + who.session().toSeconds()
                 + (https ? "; Secure" : ""));
     }
 
     private void clearCookie(HttpExchange ex) {
-        ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (https ? "; Secure" : ""));
+        ex.getResponseHeaders().add("Set-Cookie", cookieName(https) + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (https ? "; Secure" : ""));
     }
 
     private void get(HttpExchange ex, String path, AccessJwt.Identity id) throws Exception {
@@ -495,7 +508,7 @@ public final class PanelServer {
         o.addProperty("outcome", l.outcome().name());
         switch (l.outcome()) {
             case OK -> {
-                setCookie(ex, l.token(), l.account().rank);
+                setCookie(ex, l.token(), l.account());
                 o.addProperty("ok", true);
                 o.addProperty("backupLeft", l.backupLeft());
             }
@@ -581,7 +594,7 @@ public final class PanelServer {
     }
 
     private void done(HttpExchange ex, Auth.Done d) throws IOException {
-        setCookie(ex, d.token(), d.account().rank);
+        setCookie(ex, d.token(), d.account());
         JsonObject o = ok();
         JsonArray codes = new JsonArray();
         d.backupCodes().forEach(codes::add);
@@ -1203,11 +1216,11 @@ public final class PanelServer {
 
     /** Where a grave action goes: the player's server, or a server whose BSP-InventorySync can answer (graves are network-wide). */
     private String serverFor(String[] player) {
-        if (player[2] != null) {
+        List<String> able = feed.liveWithGraves();
+        if (player[2] != null && (able.isEmpty() || able.contains(player[2]))) {
             return player[2];
         }
-        List<String> able = feed.liveWithGraves();
-        return able.isEmpty() ? null : able.get(0);
+        return able.isEmpty() ? player[2] : able.get(0); // their server cannot answer about graves: one that can (audit)
     }
 
     private void graves(HttpExchange ex, AccessJwt.Identity id, JsonObject b) throws Exception {
@@ -1336,7 +1349,8 @@ public final class PanelServer {
             return;
         }
         List<String> able = feed.liveWithItems();
-        String server = p[2] != null ? p[2] : able.isEmpty() ? null : able.get(0);
+        // their own server first; when it cannot read items, any that can (an offline-style read; audit)
+        String server = p[2] != null && (able.isEmpty() || able.contains(p[2])) ? p[2] : able.isEmpty() ? p[2] : able.get(0);
         com.mrgregles.bsp_staff_panel.act.Actions act = actions;
         if (server == null || act == null) {
             json(ex, 200, refused("No game server with BSP-InventorySync 0.7.0 is sending to the panel right now."));
@@ -1443,6 +1457,12 @@ public final class PanelServer {
                     json(ex, 200, refused("Not an item id (such as minecraft:diamond or create:brass_ingot)."));
                     return;
                 }
+                com.mrgregles.bsp_staff_panel.items.ItemPictures pics = pictures;
+                if (!snbt.isEmpty() && (pics == null || !pics.knowsVariant(item, snbt))) {
+                    // item data only as the picker lists it (a potion, an enchanted book), never typed in (audit)
+                    json(ex, 200, refused("That item's data is not one the item pictures list: choose it in the picker."));
+                    return;
+                }
                 f.addProperty("action", "inv_add");
                 f.addProperty("item", item);
                 f.addProperty("snbt", snbt);
@@ -1467,18 +1487,20 @@ public final class PanelServer {
             f.addProperty("items", true); // the items power, which the game server checks too
         }
         List<String> able = feed.liveWithItems();
-        String server = p[2] != null ? p[2] : able.isEmpty() ? null : able.get(0);
+        // their own server first; when it cannot read items, any that can (an offline-style read; audit)
+        String server = p[2] != null && (able.isEmpty() || able.contains(p[2])) ? p[2] : able.isEmpty() ? p[2] : able.get(0);
         com.mrgregles.bsp_staff_panel.act.Actions act = actions;
         if (server == null || act == null) {
             json(ex, 200, refused("No game server with BSP-InventorySync 0.7.0 is sending to the panel right now."));
             return;
         }
-        com.mrgregles.bsp_staff_panel.act.Actions.Answer ans = act.ask(server, me.mcName, me.rank.name(), f);
+        int wait = "inv_take".equals(str(f, "action")) ? com.mrgregles.bsp_staff_panel.act.Actions.LONG_WAIT_SECONDS : com.mrgregles.bsp_staff_panel.act.Actions.WAIT_SECONDS; // an UNDO takes back slot by slot (audit)
+        com.mrgregles.bsp_staff_panel.act.Actions.Answer ans = act.ask(server, me.mcName, me.rank.name(), f, wait);
         if (!ans.ok() && ans.data() != null && ans.data().isJsonObject() && "ONLINE".equals(str(ans.data().getAsJsonObject(), "outcome"))) {
             String there = str(ans.data().getAsJsonObject(), "serverId");
             String live = feed.live().stream().filter(x -> x.equalsIgnoreCase(there)).findFirst().orElse(null);
             if (live != null) {
-                ans = act.ask(live, me.mcName, me.rank.name(), f); // they moved: once more, there
+                ans = act.ask(live, me.mcName, me.rank.name(), f, wait); // they moved: once more, there
             }
         }
         JsonObject o = new JsonObject();
@@ -1494,15 +1516,34 @@ public final class PanelServer {
             JsonObject d = ans.data().getAsJsonObject();
             o.addProperty("outcome", str(d, "outcome"));
             o.addProperty("hash", str(d, "hash"));
-            if (ans.ok() && d.has("undo") && d.get("undo").isJsonObject()) {
+            JsonObject undoFields = ans.ok() && d.has("undo") && d.get("undo").isJsonObject() ? undoFields(d.getAsJsonObject("undo")) : null;
+            if (undoFields != null) {
                 String token = com.mrgregles.bsp_staff_panel.crypto.Tokens.token();
-                undos.put(token, new Undo(me.id, p[0], p[1], d.getAsJsonObject("undo"), now + UNDO_MS));
+                undos.put(token, new Undo(me.id, p[0], p[1], undoFields, now + UNDO_MS));
                 o.addProperty("undo", token);
                 o.addProperty("until", now + UNDO_MS);
             }
         }
         store.log(new PanelStore.LogLine(now, me.email, what + (ans.ok() ? "" : "; refused: " + ans.message())));
         json(ex, 200, o);
+    }
+
+    /**
+     * An UNDO's fields from the game server's answer, kept only as an opposite items change (take or add, with its own
+     * fields): an answer can never turn an UNDO into another kind of action (audit). Null when it is anything else.
+     */
+    public static JsonObject undoFields(JsonObject u) {
+        String action = str(u, "action");
+        if (!action.equals("inv_take") && !action.equals("inv_add")) {
+            return null;
+        }
+        JsonObject out = new JsonObject();
+        for (String k : List.of("action", "area", "hash", "count", "item", "snbt", "version")) {
+            if (u.has(k) && u.get(k).isJsonPrimitive()) {
+                out.add(k, u.get(k));
+            }
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------ teleports (SU-43; D258, D344 to D349, D364 to D366)
@@ -1787,7 +1828,11 @@ public final class PanelServer {
             list = q.matches("[A-Za-z0-9_]{0,16}") ? store.bans(!str(b, "which").equals("past"), q, now, 200) : List.of();
         }
         JsonArray out = new JsonArray();
-        list.forEach(x -> out.add(banJson(x, now)));
+        for (PanelStore.Ban x : list) {
+            JsonObject j = banJson(x, now);
+            j.addProperty("staff", staffLevel(x.player(), x.name())); // UNBAN and EDIT dimmed for an Admin on a staff member's ban (D355, D427)
+            out.add(j);
+        }
         JsonObject o = ok();
         o.add("bans", out);
         o.addProperty("now", now);
@@ -1899,7 +1944,10 @@ public final class PanelServer {
             server = online == null ? null : str(online, "server");
             f.addProperty("ban", ban.get().id());
             f.addProperty("player", ban.get().player()); // the game server checks staff by it (D355, audit)
-            String not = path.endsWith("/lift") ? null : mayNotBan(me, ban.get().player(), ban.get().name());
+            String not = mayNotBan(me, ban.get().player(), ban.get().name());
+            if (not != null && path.endsWith("/lift")) {
+                not = ban.get().name() + " is staff: only the Owner lifts a ban on staff, as only the Owner gives one (D427).";
+            }
             if (not != null) {
                 json(ex, 200, refused(not)); // a staff member's ban is changed by the Owner alone, as it is given (D355, audit)
                 return;
@@ -1929,7 +1977,7 @@ public final class PanelServer {
             json(ex, 200, refused("No game server is sending to the panel right now: bans are written by a game server."));
             return;
         }
-        com.mrgregles.bsp_staff_panel.act.Actions.Answer ans = act.ask(server, me.mcName, me.rank.name(), f);
+        com.mrgregles.bsp_staff_panel.act.Actions.Answer ans = act.ask(server, me.mcName, me.rank.name(), f, com.mrgregles.bsp_staff_panel.act.Actions.LONG_WAIT_SECONDS); // written to the database first (audit)
         store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, what + (ans.ok() ? "" : "; refused: " + ans.message())));
         JsonObject o = new JsonObject();
         o.addProperty("ok", ans.ok());
@@ -2088,11 +2136,13 @@ public final class PanelServer {
                 }
             }
             String msg = null;
-            if (dirty || !gone.isEmpty()) {
+            if (!gone.isEmpty() || dirty && now - lastLive >= LIVE_EVERY_MS) {
+                // at most every 5 s (D251): seven servers' snapshots each set "dirty", which redrew every page every second (audit)
                 dirty = false;
+                lastLive = now;
                 msg = event();
             } else if (now - lastPing >= LIVE_PING_MS) {
-                msg = ": ping\n\n";
+                msg = "event: ping\ndata: {}\n\n"; // a named event, so the page sees the feed is alive (an SSE comment it cannot see; audit)
             }
             if (msg != null) {
                 lastPing = now;
@@ -2102,6 +2152,22 @@ public final class PanelServer {
             }
         } catch (Exception e) {
             System.err.println("[panel] live feed: " + e);
+        }
+    }
+
+    private final Map<String, Long> refusalsSaid = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Why Cloudflare's token was refused, in the console at most once a minute for each reason: a wrong cloudflare.aud
+     * or team name shows up there, not only as the same 403 for everyone (audit).
+     */
+    private void sayRefusal(String why) {
+        String key = String.valueOf(why);
+        long now = clock.getAsLong();
+        Long last = refusalsSaid.get(key);
+        if (refusalsSaid.size() < 100 && (last == null || now - last >= 60_000L)) {
+            refusalsSaid.put(key, now);
+            System.err.println("[panel] a request without a good Cloudflare Access token was refused: " + key);
         }
     }
 

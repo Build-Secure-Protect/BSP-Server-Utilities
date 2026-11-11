@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-11
+
+### Fixed
+- Audit of the whole staff panel (2026-11-11, the repository's docs/TESTING.md):
+  - A server started before its database answered read the whole notices table (up to a day) as new, showing old announcements, starting old item clears and kicking players named in old staff kicks; and it made no tables until a restart. The tables are now made, and the notices' place found, as soon as the database answers; table notices over 10 minutes old are skipped.
+  - Actions from the staff panel are carried out only while this server's Redis can carry the answer back (answers travel on Redis only): before, an action could happen with the panel told "no answer". `/su status` says when Redis is not connected; the feed says `answers: false`.
+  - An action that arrives after the panel stopped waiting for it (its `until`) is refused, so nothing happens that staff were told got no answer.
+  - Snapshots are timed by the clock, so a lagging server keeps sending every 5 s; `snapshotSeconds` is at most 10 (30 made servers flicker on the panel). A stopping server sends a last, empty snapshot, so the panel drops it at once.
+  - Network bans are also kept on each server's disk and read back at the next start, so a server started while the database is down still refuses banned players.
+  - A ban's staff note keeps its line breaks and up to 500 characters (it was cut to 256 on one line).
+  - Broadcasts and grave returns from the panel are checked for Admin rank on the game server too.
+  - A teleport's y must be within the world's build height (a typed -640 sent the player into the void).
+  - Every new table is utf8mb4, and the server log names older shared tables that are not, with the line that converts them.
+  - A market not read yet since a start is read rather than reported as "not connected"; BSP-Core's own connected state decides "not connected"; a plain market read is guarded like a REFRESH.
+  - `/su status` says when `webPanel.actionKey` is set but is not a key the panel made.
+
+### Changed
+- Actions and the notes counts from the staff web panel are checked with the panel's public key, `webPanel.panelKey` in the network config (an Ed25519 signature only the panel can make); without it no action is taken. `webPanel.actionKey` now signs only what this server sends to the panel. Nothing on a game server can order an action any more (owner decision D426).
+- Only the Owner lifts a network ban on staff, as only the Owner gives one (D427); `unban` names the ban's player.
+- `webPanel.snapshotSeconds` is 2 to 10.
+
 ## [0.10.0] - 2026-11-11
 
 ### Added

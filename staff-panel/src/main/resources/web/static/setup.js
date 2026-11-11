@@ -7,7 +7,16 @@
   const token = enrol ? hash.slice(6) : hash;
   let secret = "";
   if (!token) { say("err", "Open the link you were sent, or ask an Owner for one."); return; }
-  const info = await api(enrol ? "/api/enrol/info" : "/api/setup/info", { token });
+  // the token has left the address bar, so a failed read is tried again from here, not by reloading
+  let info;
+  for (;;) {
+    info = await call(enrol ? "/api/enrol/info" : "/api/setup/info", { token });
+    if (info.ok || !info.failed) break;
+    say("err", info.message);
+    const again = el("button", "btn sm ghost", "Try again"); again.type = "button"; $("err").after(again);
+    await new Promise((done) => again.addEventListener("click", done, { once: true }));
+    again.remove(); say("err", "");
+  }
   if (!info.ok) { say("err", info.message); return; }
   secret = info.secret;
   if (enrol) {
@@ -34,7 +43,7 @@
       if (!r.ok) { say("err", r.message); return; }
       showCodes(r.codes, r.email);
     } catch (e) {
-      say("err", "The panel could not be reached. Try again.");
+      say("err", failText(e, true) + (e.kind === "timeout" ? "" : " Try again."));
     } finally {
       $("go").disabled = false;
     }

@@ -98,11 +98,19 @@ class FeedAndConfigTest {
         assertTrue(first.getMessage().contains("fill in"));
         String text = Files.readString(f);
         assertTrue(text.contains("secretKey=") && !text.contains("secretKey=\n"), "the panel's key is made at once");
+        assertTrue(text.contains("signingKey=M") && text.matches("(?s).*panelKey=[A-Za-z0-9+/]{43}=.*"), "the panel's signing pair is made at once (D426): " + text);
+        assertTrue(text.contains("database.panelName=bsp_panel"), "the panel's own database (D425)");
         PanelConfig.NotReady missing = assertThrows(PanelConfig.NotReady.class, () -> PanelConfig.load(f));
         assertTrue(missing.getMessage().contains("cloudflare.teamDomain") && missing.getMessage().contains("cloudflare.aud"), missing.getMessage());
         Files.writeString(f, text.replace("cloudflare.teamDomain=", "cloudflare.teamDomain=https://BSP.cloudflareaccess.com/").replace("cloudflare.aud=", "cloudflare.aud=abc123")
                 .replace("database.password=", "database.password=hunter2-secret"));
+        PanelConfig.NotReady noHosts = assertThrows(PanelConfig.NotReady.class, () -> PanelConfig.load(f));
+        assertTrue(noHosts.getMessage().contains("database.host") && noHosts.getMessage().contains("redis.host"),
+                "localhost inside a container is the container itself: the hosts are asked for, not guessed (audit): " + noHosts.getMessage());
+        assertTrue(text.contains("listen.host=0.0.0.0"), "listening on the container's addresses; the allocation decides who reaches it");
+        Files.writeString(f, Files.readString(f).replace("database.host=\n", "database.host=172.18.0.1\n").replace("redis.host=\n", "redis.host=172.18.0.1\n"));
         PanelConfig c = PanelConfig.load(f);
+        assertEquals("0.0.0.0", c.listenHost());
         assertEquals("https://bsp.cloudflareaccess.com", c.issuer());
         assertEquals("bsp_su:network:web", c.webChannel());
         assertEquals(32, c.secretKey().length);

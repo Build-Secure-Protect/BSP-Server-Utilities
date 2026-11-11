@@ -27,6 +27,10 @@ import java.util.function.Supplier;
  * database (D350). Read from {@code <prefix>bans} when the server starts, every minute, and at once when another server
  * says a ban changed (notice {@link #KIND}). A banned player is refused at login on every server, with the reason, when it
  * ends (or that it is permanent) and the appeal line from the network config ({@code webPanel.banAppeal}).
+ *
+ * <p>Each good read is also kept on this server's disk ({@code serverconfig/bsp_server_utilities_bans.json} in the
+ * world), read back at the next start before the database answers: a server started while the database is down still
+ * refuses the banned (audit: they got in until the first good read).
  */
 public final class WebBans {
     public static final String KIND = "bans_changed";
@@ -47,6 +51,67 @@ public final class WebBans {
             return ServerUtilsNetworkConfig.WEB_BAN_APPEAL.get().trim();
         } catch (IllegalStateException e) {
             return "";
+        }
+    }
+
+    @Nullable
+    private static java.nio.file.Path cacheFile;
+    private static boolean cacheRead;
+
+    /** Where the copy on disk lives (tests use their own; the real one is set at the first tick). */
+    public static void useCacheForTests(@Nullable java.nio.file.Path file) {
+        cacheFile = file;
+        cacheRead = file != null;
+    }
+
+    /** The bans held now, from the copy on disk (at a start, before the database answers); how many. */
+    public static int readCache() {
+        java.nio.file.Path f = cacheFile;
+        if (f == null || !java.nio.file.Files.isRegularFile(f)) {
+            return 0;
+        }
+        try {
+            com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(f)).getAsJsonArray();
+            List<StorageBackend.Ban> list = new java.util.ArrayList<>();
+            for (com.google.gson.JsonElement e : arr) {
+                com.google.gson.JsonObject o = e.getAsJsonObject();
+                list.add(new StorageBackend.Ban(o.get("id").getAsLong(), UUID.fromString(o.get("player").getAsString()), o.get("name").getAsString(),
+                        o.get("reason").getAsString(), "", o.get("by").getAsString(), o.get("at").getAsLong(), o.get("until").getAsLong(), 0, "", 0));
+            }
+            if (ACTIVE.isEmpty()) {
+                list.forEach(WebBans::put); // only what is still in force; a database read since then wins
+            }
+            return list.size();
+        } catch (Exception e) {
+            BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: the bans kept on disk could not be read ({}): {}", f, e.toString());
+            return 0;
+        }
+    }
+
+    private static void writeCache(List<StorageBackend.Ban> list) {
+        java.nio.file.Path f = cacheFile;
+        if (f == null) {
+            return;
+        }
+        com.google.gson.JsonArray arr = new com.google.gson.JsonArray();
+        for (StorageBackend.Ban b : list) {
+            com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+            o.addProperty("id", b.id());
+            o.addProperty("player", b.player().toString());
+            o.addProperty("name", b.name());
+            o.addProperty("reason", b.reason()); // the staff note stays in the database only
+            o.addProperty("by", b.by());
+            o.addProperty("at", b.atMs());
+            o.addProperty("until", b.untilMs());
+            arr.add(o);
+        }
+        try {
+            java.nio.file.Files.createDirectories(f.getParent());
+            java.nio.file.Path tmp = f.resolveSibling(f.getFileName() + ".tmp");
+            java.nio.file.Files.writeString(tmp, arr.toString());
+            java.nio.file.Files.move(tmp, f, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (Exception e) {
+            BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: the bans could not be kept on disk ({}): {}", f, e.toString());
         }
     }
 
@@ -71,6 +136,7 @@ public final class WebBans {
         s.submit(() -> {
             List<StorageBackend.Ban> list = s.backend().loadActiveBans(clock.getAsLong());
             replace(list);
+            writeCache(list);
             if (server != null) {
                 server.execute(() -> sendOff(server));
             }
@@ -122,6 +188,14 @@ public final class WebBans {
 
     /** Every minute from the server tick: a reload when one is due. */
     public static void tick(MinecraftServer server) {
+        if (!cacheRead) {
+            cacheRead = true;
+            cacheFile = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("serverconfig").resolve("bsp_server_utilities_bans.json");
+            int n = readCache();
+            if (n > 0) {
+                BSPServerUtilities.LOGGER.info("BSP-Server Utilities: {} network bans read from this server's copy until the database answers", n);
+            }
+        }
         if (clock.getAsLong() - loadedAt >= RELOAD_MS) {
             loadedAt = clock.getAsLong();
             reload(server);

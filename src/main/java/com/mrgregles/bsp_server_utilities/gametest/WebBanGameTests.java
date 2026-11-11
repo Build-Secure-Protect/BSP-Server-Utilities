@@ -126,7 +126,7 @@ public class WebBanGameTests {
                     try {
                         h.assertTrue(edit.later().getNow(null) != null && edit.later().getNow(null).ok() && db.bans.get(0).untilMs() == 0 && db.bans.get(0).reason().equals("X-ray, twice"),
                                 "edited: permanent, a new reason: " + db.bans.get(0));
-                        WebActions.Answer lift = WebActions.handle(server, action("m5-" + m, now, "ADMIN", "unban", ",\"ban\":1"));
+                        WebActions.Answer lift = WebActions.handle(server, action("m5-" + m, now, "ADMIN", "unban", ",\"ban\":1,\"player\":\"" + vexa.getUUID() + "\""));
                         store.drain();
                         h.runAfterDelay(3, () -> {
                             hooks.run();
@@ -135,7 +135,7 @@ public class WebBanGameTests {
                                 WebActions.Answer l = lift.later().getNow(null);
                                 h.assertTrue(l != null && l.ok() && db.bans.get(0).liftedBy().equals("Ana_Admin"), "lifted, by whom: " + db.bans.get(0));
                                 h.assertTrue(WebBans.banOf(vexa.getUUID()) == null, "and may join again");
-                                WebActions.Answer again = WebActions.handle(server, action("m6-" + m, now, "ADMIN", "unban", ",\"ban\":1"));
+                                WebActions.Answer again = WebActions.handle(server, action("m6-" + m, now, "ADMIN", "unban", ",\"ban\":1,\"player\":\"" + vexa.getUUID() + "\""));
                                 store.drain();
                                 h.runAfterDelay(3, () -> {
                                     hooks.run();
@@ -185,6 +185,10 @@ public class WebBanGameTests {
             h.assertTrue(!admin.ok() && admin.message().contains("only the Owner"), "an Admin cannot ban staff who are not here (D355): " + admin.message());
             WebActions.Answer edit = WebActions.handle(server, action("s1-" + m, now, "ADMIN", "ban_edit", ",\"ban\":7,\"player\":\"" + helper + "\",\"lengthMs\":0,\"reason\":\"x\""));
             h.assertTrue(!edit.ok() && edit.message().contains("only the Owner"), "nor make a staff member's ban longer: " + edit.message());
+            WebActions.Answer lift = WebActions.handle(server, action("s1b-" + m, now, "ADMIN", "unban", ",\"ban\":7,\"player\":\"" + helper + "\""));
+            h.assertTrue(!lift.ok() && lift.later() == null && lift.message().contains("only the Owner lifts"), "nor lift it: only the Owner, who gives it (D427): " + lift.message());
+            WebActions.Answer liftNoPlayer = WebActions.handle(server, action("s1c-" + m, now, "OWNER", "unban", ",\"ban\":7"));
+            h.assertTrue(!liftNoPlayer.ok() && liftNoPlayer.later() == null, "a lift names the ban's player");
             WebActions.Answer noPlayer = WebActions.handle(server, action("s2-" + m, now, "OWNER", "ban_edit", ",\"ban\":7,\"lengthMs\":0,\"reason\":\"x\""));
             h.assertTrue(!noPlayer.ok(), "an edit names the ban's player");
             WebActions.Answer owner = WebActions.handle(server, action("s3-" + m, now, "OWNER", "ban", staff));

@@ -9,6 +9,7 @@ const MapView = (() => {
   let maps = null, mapsError = "", cur = null, follow = null, followName = "", trail = [], gold = null, gone = null;
   let filter = "", cardPos = null, itemsOpen = false, notesOpen = false, pinBox = null, lastLive = { servers: [], players: [] };
   let listOpen = false, sheetUp = false, fab = null, trailMap = null, lastSeen = null; // on a phone (SU-48; D393, D395 R4): the list and the card as sheets
+  let mq = null, mrows = null; // the list's search box, kept while typing, and its rows
   const show = { players: true, warps: true, spawns: true, graves: true };
 
   // ---------------------------------------------------------------- map ids, as the panel's MapLive makes them
@@ -30,12 +31,16 @@ const MapView = (() => {
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const bm = () => { try { return frame && frame.contentWindow && frame.contentWindow.bluemap; } catch (e) { return null; } };
 
+  // a map not set up (404) is kept for the session; any other failure is read again at the next try (audit)
   async function loadMaps() {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
-      const r = await fetch("/map/settings.json", { credentials: "same-origin" });
-      if (!r.ok) { mapsError = r.status === 404 ? "The map is not set up on this panel yet (map.root in panel.properties; BlueMap draws it)." : "The map could not be read (" + r.status + ")."; maps = []; return; }
+      const r = await fetch("/map/settings.json", { credentials: "same-origin", signal: ctl.signal });
+      if (r.status === 404) { mapsError = "The map is not set up on this panel yet (map.root in panel.properties; BlueMap draws it)."; maps = []; return; }
+      if (!r.ok) { mapsError = r.status >= 500 ? "The panel answered with an error (it is in the panel's console)." : "The map could not be read (" + r.status + ")."; maps = null; return; }
       const s = await r.json(); maps = Array.isArray(s.maps) ? s.maps : []; mapsError = maps.length ? "" : "BlueMap has drawn no maps yet.";
-    } catch (e) { maps = []; mapsError = "The map could not be read."; }
+    } catch (e) { maps = null; mapsError = ctl.signal.aborted ? "The panel did not answer in time." : "The map could not be read."; }
+    finally { clearTimeout(t); }
   }
 
   // ---------------------------------------------------------------- mounting (the frame lives while the tab is open)
@@ -48,7 +53,16 @@ const MapView = (() => {
     }
     main.appendChild(root);
     if (maps === null) await loadMaps();
-    if (!maps.length) { stage.textContent = ""; stage.appendChild(el("div", "note mnote", mapsError)); drawList(); return; }
+    if (host !== main) return; // another tab opened meanwhile
+    if (!maps || !maps.length) {
+      stage.textContent = ""; const n = el("div", "note mnote", mapsError); stage.appendChild(n);
+      if (!maps) {
+        const again = el("button", "btn sm ghost", "Try again"); again.type = "button";
+        again.addEventListener("click", () => { again.disabled = true; mount(main); });
+        n.appendChild(document.createElement("br")); n.appendChild(again);
+      }
+      drawList(); return;
+    }
     if (!frame || !stage.contains(frame)) {
       stage.textContent = "";
       cur = cur && maps.includes(cur) ? cur : (maps.find((m) => m.endsWith("__overworld")) || maps[0]);
@@ -56,7 +70,7 @@ const MapView = (() => {
       frame = el("iframe", "mframe"); frame.title = "Map"; frame.src = "/map/#" + cur;
       frame.addEventListener("load", setup);
       bar = el("div", "mbar"); cardBox = el("div", "mcardhost"); line = el("div", "mgold hidden");
-      fab = el("button", "mfab"); fab.type = "button"; fab.title = "Players"; fab.innerHTML = ICONS.Players; // a fixed icon of this page's own
+      fab = el("button", "mfab"); fab.type = "button"; fab.title = "Players"; fab.dataset.keep = "mfab"; fab.innerHTML = ICONS.Players; // a fixed icon of this page's own
       fab.addEventListener("click", () => { listOpen = !listOpen; drawList(); });
       stage.appendChild(frame); stage.appendChild(bar); stage.appendChild(line); stage.appendChild(cardBox); stage.appendChild(fab);
     }
@@ -185,7 +199,7 @@ const MapView = (() => {
       } else if (Date.now() - gone.at > GONE_MS) { stop(); return; }
     }
     drawTrail();
-    redraw();
+    redraw(true);
   }
 
   // the trail and a left player's place, as BlueMap markers in its popup set (which its marker file never clears)
@@ -207,67 +221,73 @@ const MapView = (() => {
   }
 
   // ---------------------------------------------------------------- drawing
-  // every live update redraws the card: its scroll and a field being typed in are kept, the bar is left alone while used (audit)
-  function redraw() {
+  // Every redraw keeps the card's scroll and the field or key in use (by its data-keep key); the bar is left alone while its
+  // server picker is open. tick: the live feed alone changed: while a field in the card is typed in or chosen, only where
+  // they are and their stats are drawn again, never the field (audit).
+  function redraw(tick) {
     if (!host) return;
+    const h = hold();
     drawList();
-    if (!frame) return;
-    const a = document.activeElement;
-    if (!(a && a.tagName === "SELECT" && bar.contains(a))) drawBar(); // the server picker open: not closed under the pointer; a tapped key does not hold the bar
-    drawGold();
-    const inCard = a && cardBox.contains(a) && a.classList.length ? a : null;
-    const sel = inCard ? "." + [...inCard.classList].join(".") : null, caret = inCard && typeof inCard.selectionStart === "number" ? inCard.selectionStart : null;
-    const old = cardBox.querySelector(".mcard"), sc = old ? old.scrollTop : 0;
-    drawCard();
-    const nu = cardBox.querySelector(".mcard"); if (nu) nu.scrollTop = sc;
-    if (sel) { const e = cardBox.querySelector(sel); if (e) { e.focus(); if (caret !== null) { try { e.setSelectionRange(caret, caret); } catch (x) { /* not a text field */ } } } }
-    drawPinBox();
+    if (frame) {
+      const a = document.activeElement;
+      if (!(a && a.tagName === "SELECT" && bar.contains(a))) drawBar(); // the server picker open: not closed under the pointer
+      drawGold();
+      const card = cardBox.querySelector(".mcard"), p = follow ? lastLive.players.find((x) => x.id === follow) : null;
+      if (tick && card && p && !gone && typingIn(card) && card.querySelector(".mlive")) card.querySelector(".mlive").replaceWith(livePart(p));
+      else drawCard();
+      drawPinBox();
+    }
+    give(h);
   }
+  // the list: its search box is made once and kept, so typing never loses it; the rows are drawn again
   function drawList() {
     if (!list) return;
-    const active = document.activeElement, keep = active && active.classList.contains("mq"), caret = keep ? active.selectionStart : 0, sy = list.scrollTop;
-    list.textContent = "";
     list.classList.toggle("open", listOpen);
     if (fab) fab.classList.toggle("on", listOpen);
-    const q = el("input", "search mq"); q.type = "search"; q.placeholder = "Find a player"; q.value = filter;
-    q.addEventListener("input", () => { filter = q.value; drawList(); });
-    list.appendChild(q);
+    if (!mq) {
+      mq = el("input", "search mq"); mq.type = "search"; mq.placeholder = "Find a player"; mq.dataset.keep = "mq";
+      mq.addEventListener("input", () => { filter = mq.value; drawList(); });
+      mrows = el("div", "mrows");
+    }
+    if (mq.parentNode !== list) { list.textContent = ""; list.appendChild(mq); list.appendChild(mrows); }
+    if (mq.value !== filter) mq.value = filter;
+    const sy = list.scrollTop;
+    mrows.textContent = "";
     const f = filter.trim().toLowerCase();
     lastLive.servers.forEach((s) => {
       const ps = lastLive.players.filter((p) => p.server === s.server && (!f || p.name.toLowerCase().includes(f)));
       if (!ps.length) return;
-      const g = el("div", "mgrp"); g.appendChild(el("span", null, s.server)); g.appendChild(el("span", null, String(ps.length))); list.appendChild(g);
+      const g = el("div", "mgrp"); g.appendChild(el("span", null, s.server)); g.appendChild(el("span", null, String(ps.length))); mrows.appendChild(g);
       ps.sort((a, b) => a.name.localeCompare(b.name)).forEach((p) => {
-        const r = el("button", "mrow" + (p.id === follow ? " on" : "")); r.type = "button";
+        const r = el("button", "mrow" + (p.id === follow ? " on" : "")); r.type = "button"; r.dataset.keep = "mrow:" + p.id;
         r.appendChild(Players.face(p, 18)); r.appendChild(el("span", "nm", p.name));
         const d = dimSlug(p.dim); r.appendChild(el("span", "d", d === "overworld" ? "OW" : d === "nether" ? "NETHER" : d === "end" ? "END" : dimLabel(d).toUpperCase()));
         r.addEventListener("click", () => { listOpen = false; sheetUp = false; start(p); });
-        list.appendChild(r);
+        mrows.appendChild(r);
       });
     });
-    if (!lastLive.players.length) list.appendChild(el("div", "note", "Nobody is online."));
+    if (!lastLive.players.length) mrows.appendChild(el("div", "note", "Nobody is online."));
     list.scrollTop = sy;
-    if (keep) { q.focus(); q.setSelectionRange(caret, caret); }
   }
   function drawBar() {
     bar.textContent = "";
     const name = (sl) => { const on = lastLive.servers.find((s) => slug(s.server) === sl); // a server not sending now: its id made readable
       return on ? on.server : sl.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "); };
     const servers = [...new Set(maps.map(serverOf))].sort((a, b) => name(a).localeCompare(name(b)));
-    const sel = el("select", "mc msel"); servers.forEach((sl) => { const o = el("option", null, name(sl)); o.value = sl; o.selected = sl === serverOf(cur); sel.appendChild(o); });
+    const sel = el("select", "mc msel"); sel.dataset.keep = "msel"; servers.forEach((sl) => { const o = el("option", null, name(sl)); o.value = sl; o.selected = sl === serverOf(cur); sel.appendChild(o); });
     sel.addEventListener("change", () => { stopQuiet(); const id = maps.find((m) => m === sel.value + "__overworld") || maps.find((m) => serverOf(m) === sel.value); if (id) switchTo(id, null); redraw(); });
     bar.appendChild(sel);
     const seg = el("div", "mseg");
     const rank = (m) => { const d = m.slice(m.indexOf("__") + 2); return d === "overworld" ? "0" : d === "nether" ? "1" : d === "end" ? "2" : "3" + d; };
     maps.filter((m) => serverOf(m) === serverOf(cur)).sort((a, b) => rank(a).localeCompare(rank(b))).forEach((m) => {
-      const b = el("button", m === cur ? "on" : "", dimLabel(m.slice(m.indexOf("__") + 2))); b.type = "button";
+      const b = el("button", m === cur ? "on" : "", dimLabel(m.slice(m.indexOf("__") + 2))); b.type = "button"; b.dataset.keep = "mdim:" + m;
       b.addEventListener("click", () => { if (m === cur) return; stopQuiet(); switchTo(m, null); redraw(); });
       seg.appendChild(b);
     });
     bar.appendChild(seg);
     const pins = el("div", "mc mpins");
     [["players", "Players"], ["warps", "Warps"], ["spawns", "Spawns"], ["graves", "Graves"]].forEach(([k, t]) => {
-      const l = el("label", "mtg"); const c = el("input"); c.type = "checkbox"; c.checked = show[k];
+      const l = el("label", "mtg"); const c = el("input"); c.type = "checkbox"; c.checked = show[k]; c.dataset.keep = "mpin:" + k;
       if (k === "graves") { c.disabled = true; l.title = "Graves show once BSP-InventorySync lists every grave (request SU-IS4)."; }
       c.addEventListener("change", () => { show[k] = c.checked; hook(); });
       l.appendChild(c); l.appendChild(document.createTextNode(t)); pins.appendChild(l);
@@ -275,8 +295,8 @@ const MapView = (() => {
     bar.appendChild(pins);
     if (follow) {
       const f = el("div", "mc mfol"); f.appendChild(document.createTextNode("Following ")); f.appendChild(el("b", null, followName));
-      if (!gone && !following()) { const c = el("button", "mcentre", "centre"); c.type = "button"; c.title = "Back to them"; c.addEventListener("click", () => { const p = lastLive.players.find((x) => x.id === follow); if (p) centre(p); redraw(); }); f.appendChild(c); }
-      const x = el("button", "mx", "✕"); x.type = "button"; x.title = "Stop following"; x.addEventListener("click", stop); f.appendChild(x);
+      if (!gone && !following()) { const c = el("button", "mcentre", "centre"); c.type = "button"; c.title = "Back to them"; c.dataset.keep = "mcentre"; c.addEventListener("click", () => { const p = lastLive.players.find((x) => x.id === follow); if (p) centre(p); redraw(); }); f.appendChild(c); }
+      const x = el("button", "mx", "✕"); x.type = "button"; x.title = "Stop following"; x.dataset.keep = "mx"; x.addEventListener("click", stop); f.appendChild(x);
       bar.appendChild(f);
     }
   }
@@ -292,32 +312,38 @@ const MapView = (() => {
     if (!follow) return;
     const p = lastLive.players.find((x) => x.id === follow);
     const box = el("div", "mcard" + (gone ? " left" : "") + (sheetUp ? " up" : "")); cardBox.appendChild(box); // "left", not "gone": the Staff tab styles that (audit)
-    const grab = el("button", "mgrab"); grab.type = "button"; grab.title = sheetUp ? "Down" : "Up for everything";
-    grab.addEventListener("click", () => { sheetUp = !sheetUp; drawCard(); }); box.appendChild(grab); // a phone's sheet: small, then pulled up (D393)
+    box.dataset.scroll = "mcard"; // its scroll kept through every redraw (audit)
+    const grab = el("button", "mgrab"); grab.type = "button"; grab.title = sheetUp ? "Down" : "Up for everything"; grab.dataset.keep = "mgrab";
+    grab.addEventListener("click", () => { sheetUp = !sheetUp; redraw(); }); box.appendChild(grab); // a phone's sheet: small, then pulled up (D393)
     if (cardPos) { box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; box.style.right = "auto"; box.style.bottom = "auto"; } // where it was dragged
     const top = el("div", "dtop"); const grip = el("div", "grip"); grip.title = "Drag"; top.appendChild(grip);
-    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Stop following"; x.addEventListener("click", stop);
+    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Stop following"; x.dataset.keep = "mclose"; x.addEventListener("click", stop);
     const who = el("div", "grow"); who.appendChild(el("div", "dname", followName));
     if (p) { const sub = el("div", "sub"); if (p.team) { const sq = el("span", "sq", "■"); sq.style.color = p.team.colour; sub.appendChild(sq); sub.appendChild(document.createTextNode(" " + p.team.name + " · ")); } sub.appendChild(document.createTextNode(p.ping + " ms")); who.appendChild(sub); who.appendChild(Tags.chips(p.id, 3)); }
     top.appendChild(Players.face(p || { id: follow, name: followName }, 36)); top.appendChild(who); top.appendChild(x); box.appendChild(top);
     drag(grip, box);
     if (!p) { box.appendChild(el("div", "note", "Not online now.")); return; }
-    const loc = el("div", "loc mono"); loc.appendChild(document.createTextNode(p.server + " · " + dimName(p.dim) + " · " + Math.round(p.x) + ", " + Math.round(p.y) + ", " + Math.round(p.z)));
-    if (dimSlug(p.dim) === "overworld" && p.y < 50) loc.appendChild(el("span", "ug", "underground"));
-    box.appendChild(loc);
-    box.appendChild(Players.stats(p));
-    const redrawCard = () => { if (host) drawCard(); };
+    box.appendChild(livePart(p));
+    const redrawCard = () => { if (host) redraw(); }; // its scroll and focus kept (audit)
     const more = el("div", "mmore"); // on a phone, only once the sheet is pulled up
     if (itemsOpen) more.appendChild(Items.section({ id: p.id, name: p.name, skin: p.skin }, { live: true, redraw: redrawCard })); // D395 R2
     else { const h = el("div", "sect"); h.appendChild(el("span", null, "HOTBAR")); more.appendChild(h); more.appendChild(Items.hotbar({ id: p.id, name: p.name }, { redraw: redrawCard })); }
     box.appendChild(more);
     const keys = el("div", "keys mkeys");
-    const it = el("button", "key" + (itemsOpen ? " on" : ""), itemsOpen ? "Hotbar" : "Items"); it.type = "button"; it.addEventListener("click", () => { itemsOpen = !itemsOpen; if (itemsOpen) sheetUp = true; drawCard(); });
-    const nt = el("button", "key" + (notesOpen ? " on" : ""), "Notes"); nt.type = "button"; nt.addEventListener("click", () => { notesOpen = !notesOpen; if (notesOpen) sheetUp = true; drawCard(); });
-    const sp = el("button", "key", "Stop following"); sp.type = "button"; sp.addEventListener("click", stop);
+    const it = el("button", "key" + (itemsOpen ? " on" : ""), itemsOpen ? "Hotbar" : "Items"); it.type = "button"; it.dataset.keep = "m:items"; it.addEventListener("click", () => { itemsOpen = !itemsOpen; if (itemsOpen) sheetUp = true; redraw(); });
+    const nt = el("button", "key" + (notesOpen ? " on" : ""), "Notes"); nt.type = "button"; nt.dataset.keep = "m:notes"; nt.addEventListener("click", () => { notesOpen = !notesOpen; if (notesOpen) sheetUp = true; redraw(); });
+    const sp = el("button", "key", "Stop following"); sp.type = "button"; sp.dataset.keep = "m:stop"; sp.addEventListener("click", stop);
     keys.appendChild(it); keys.appendChild(nt); keys.appendChild(sp); box.appendChild(keys);
     const acts = Players.actions(p, lastLive); acts.classList.add("mmore"); box.appendChild(acts); // Teleport, Graves, Kick, Ban, as in the player's card
     if (notesOpen) { const n = Notes.section(p); n.classList.add("mmore"); box.appendChild(n); }
+  }
+  // where they are (underground marked) and their stats: what the live feed changes
+  function livePart(p) {
+    const w = el("div", "mlive");
+    const loc = el("div", "loc mono"); loc.appendChild(document.createTextNode(p.server + " · " + dimName(p.dim) + " · " + Math.round(p.x) + ", " + Math.round(p.y) + ", " + Math.round(p.z)));
+    if (dimSlug(p.dim) === "overworld" && p.y < 50) loc.appendChild(el("span", "ug", "underground"));
+    w.appendChild(loc); w.appendChild(Players.stats(p));
+    return w;
   }
   function drag(grip, box) {
     grip.addEventListener("pointerdown", (e) => {
@@ -347,7 +373,7 @@ const MapView = (() => {
         go.addEventListener("click", async () => {
           if (box.busy) return; box.busy = true; go.disabled = true; // one move, though the box is drawn again meanwhile (audit)
           const body = pinBox.set === "bsp-spawns" ? { kind: "spawn", server: label.replace(/ spawn$/, "") } : { kind: "warp", warp: label };
-          let r; try { r = await api("/api/tp", Object.assign({ player: p.id }, body)); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+          const r = await call("/api/tp", Object.assign({ player: p.id }, body), true);
           box.busy = false; box.result = r; if (pinBox === box) drawPinBox(); // the answer on its own box only (audit)
         });
         b.appendChild(go);

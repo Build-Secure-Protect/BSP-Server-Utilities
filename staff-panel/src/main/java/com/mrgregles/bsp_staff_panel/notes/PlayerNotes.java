@@ -91,8 +91,28 @@ public final class PlayerNotes {
 
     // ------------------------------------------------------------------ notes
 
-    private static JsonObject json(PanelStore.Note n) {
+    /** A note as the pages get it, with its author's rank now (D320: the card shows it; nothing for a removed account). */
+    private JsonObject json(PanelStore.Note n) throws Exception {
+        return json(n, ranks());
+    }
+
+    private java.util.Map<Long, com.mrgregles.bsp_staff_panel.auth.Rank> ranks() throws Exception {
+        java.util.Map<Long, com.mrgregles.bsp_staff_panel.auth.Rank> r = new java.util.HashMap<>();
+        for (com.mrgregles.bsp_staff_panel.store.Account a : store.accounts()) {
+            if (a.active) {
+                r.put(a.id, a.rank);
+            }
+        }
+        return r;
+    }
+
+    private static JsonObject json(PanelStore.Note n, java.util.Map<Long, com.mrgregles.bsp_staff_panel.auth.Rank> ranks) {
         JsonObject o = new JsonObject();
+        com.mrgregles.bsp_staff_panel.auth.Rank rank = ranks.get(n.authorId());
+        if (rank != null) {
+            o.addProperty("authorRank", rank.name());
+            o.addProperty("authorRankLabel", rank.label());
+        }
         o.addProperty("id", n.id());
         o.addProperty("at", n.at());
         o.addProperty("authorId", n.authorId());
@@ -105,7 +125,8 @@ public final class PlayerNotes {
     /** A player's notes, oldest first. */
     public JsonArray notes(String playerId) throws Exception {
         JsonArray out = new JsonArray();
-        store.notesOf(player(playerId)).forEach(n -> out.add(json(n)));
+        java.util.Map<Long, com.mrgregles.bsp_staff_panel.auth.Rank> ranks = ranks();
+        store.notesOf(player(playerId)).forEach(n -> out.add(json(n, ranks)));
         return out;
     }
 

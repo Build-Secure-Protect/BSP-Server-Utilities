@@ -23,6 +23,10 @@ import java.util.function.LongSupplier;
  * {@code uid}). Only lines signed with this panel's key are shown. Kept 30 days (D263).
  */
 public final class Chat {
+    /** A line arriving live older than this is not shown live (it is in the history). */
+    public static final long LIVE_MAX_AGE_MS = 600_000L;
+    private static final int OVERLAP = 50;
+    private long startId;
     public static final long KEEP_MS = 30L * 24 * 60 * 60 * 1000;
     public static final int MAX_TEXT = 256, PAGE = 100, SEEN = 5000;
 
@@ -102,7 +106,7 @@ public final class Chat {
             return false;
         }
         JsonObject o = read(parts[4]);
-        if (o != null) {
+        if (o != null && o.get("at").getAsLong() >= clock.getAsLong() - LIVE_MAX_AGE_MS) { // an old signed line sent again is not news (audit)
             deliver(o); // the signature is the proof: every game server holds the same key, so which one carried it proves nothing (audit)
         }
         return true;
@@ -121,21 +125,30 @@ public final class Chat {
     public void poll() throws Exception {
         if (lastId < 0) {
             lastId = store.chatLastId();
+            startId = lastId;
             return;
         }
-        for (PanelStore.ChatRow r : store.chatAfter(lastId, 500)) {
+        long from = Math.max(startId, lastId);
+        // a little behind where it was: a line given a lower id but written after a higher one is still found (audit); uids drop repeats
+        for (PanelStore.ChatRow r : store.chatAfter(Math.max(startId, from - OVERLAP), 500)) {
             lastId = Math.max(lastId, r.id());
-            JsonObject o = read(r.line());
+            JsonObject o = row(r);
             if (o != null) {
                 deliver(o);
             }
         }
     }
 
+    /** A stored row's line, only when the row's own uid is the signed line's (a copy stored under another uid is dropped; audit). */
+    private JsonObject row(PanelStore.ChatRow r) {
+        JsonObject o = read(r.line());
+        return o != null && (r.uid() == null || r.uid().equals(o.get("uid").getAsString())) ? o : null;
+    }
+
     private List<JsonObject> lines(List<PanelStore.ChatRow> rows) {
         List<JsonObject> out = new ArrayList<>();
         for (PanelStore.ChatRow r : rows) {
-            JsonObject o = read(r.line());
+            JsonObject o = row(r);
             if (o != null) {
                 out.add(o);
             }
@@ -212,6 +225,10 @@ public final class Chat {
      */
     public static String clean(String raw) {
         String t = raw == null ? "" : raw.strip();
+        // invisible format characters (a right-to-left override) become spaces, as the game shows them (audit)
+        StringBuilder b = new StringBuilder(t.length());
+        t.codePoints().forEach(c -> b.appendCodePoint(Character.getType(c) == Character.FORMAT ? ' ' : c));
+        t = b.toString().strip();
         if (t.isEmpty() || t.length() > MAX_TEXT || t.indexOf('§') >= 0 || t.chars().anyMatch(Character::isISOControl)) {
             return null;
         }

@@ -13,7 +13,8 @@
       $("code").value = "";
       if (r.outcome === "WRONG") $("password").select();
     } catch (e) {
-      say("err", "The panel could not be reached. Try again.");
+      if (e.kind === "out") return;
+      say("err", failText(e) + (e.kind === "timeout" ? "" : " Try again."));
     } finally {
       $("go").disabled = false;
     }

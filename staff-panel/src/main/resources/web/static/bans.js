@@ -9,7 +9,7 @@ const Bans = (() => {
   const MS = { "1h": 3600000, "1d": 86400000, "7d": 7 * 86400000, "30d": 30 * 86400000, perm: 0 };
   let openFor = null, form = null, armed = 0, dialog = null, answer = null, busy = false;
   const history = new Map(); // player id -> list (or "loading")
-  const page = { which: "active", q: "", list: null, adding: null, addName: "", edit: null, armed: {}, msg: null };
+  const page = { which: "active", q: "", list: null, adding: null, addName: "", edit: null, armed: {}, busy: {}, msg: null, finding: false };
   const isAdmin = () => typeof me !== "undefined" && me && me.rank !== "MODERATOR";
   const isOwner = () => typeof me !== "undefined" && me && me.rank === "OWNER";
   const words = (ms) => { const m = Math.max(1, Math.round(ms / 60000)), h = Math.floor(m / 60), d = Math.floor(h / 24);
@@ -28,7 +28,8 @@ const Bans = (() => {
   async function loadHistory(id, redraw) {
     if (history.get(id) === "loading") return;
     history.set(id, "loading");
-    try { const r = await api("/api/ban/history", { player: id }); history.set(id, r.ok ? r.bans : []); levels.set(id, r.ok ? r.staff || 0 : 0); } catch (e) { history.set(id, []); }
+    const r = await call("/api/ban/history", { player: id });
+    history.set(id, r.ok ? r.bans : []); levels.set(id, r.ok ? r.staff || 0 : 0);
     redraw();
   }
 
@@ -36,7 +37,7 @@ const Bans = (() => {
   function key(p) {
     const staff = !!p.role;
     const why = !isAdmin() ? "Admin" : staff && !isOwner() ? "Owner" : "";
-    const b = el("button", "key danger" + (why ? " locked-item" : "") + (openFor === p.id ? " on" : ""), "Ban"); b.type = "button";
+    const b = el("button", "key danger" + (why ? " locked-item" : "") + (openFor === p.id ? " on" : ""), "Ban"); b.type = "button"; b.dataset.keep = "k:ban";
     if (why) b.appendChild(el("small", "keynote", why));
     b.addEventListener("click", () => {
       if (why) { alert(why === "Admin" ? "Bans are for Admins and Owners." : p.name + " is staff: only the Owner bans staff."); return; }
@@ -71,24 +72,24 @@ const Bans = (() => {
     w.appendChild(el("div", "lbl", editing ? "Change the end (from now)" : "How long"));
     const lens = el("div", "lens");
     (editing ? [["keep", "Keep the end"]].concat(LENS) : LENS).forEach(([k, t]) => {
-      const b = el("button", k === f.length ? "on" : "", t); b.type = "button"; b.addEventListener("click", () => { f.length = k; armed = 0; redraw(); }); lens.appendChild(b);
+      const b = el("button", k === f.length ? "on" : "", t); b.type = "button"; b.dataset.keep = "len:" + k; b.addEventListener("click", () => { f.length = k; armed = 0; redraw(); }); lens.appendChild(b);
     });
     w.appendChild(lens);
     if (f.length === "custom") {
       const two = el("div", "two");
-      [["days", "Days"], ["hours", "Hours"]].forEach(([k, t]) => { const l = el("label", "fld", t); const i = el("input", "bannum ban" + k); i.inputMode = "numeric"; i.value = f[k];
+      [["days", "Days"], ["hours", "Hours"]].forEach(([k, t]) => { const l = el("label", "fld", t); const i = el("input", "bannum ban" + k); i.type = "text"; i.inputMode = "numeric"; i.value = f[k]; i.dataset.keep = "ban" + k;
         i.addEventListener("input", () => { f[k] = i.value.replace(/[^0-9]/g, ""); }); l.appendChild(i); two.appendChild(l); });
       w.appendChild(two);
     }
     const rl = el("div", "lbl"); rl.appendChild(el("span", null, "Reason (they see it)")); const cnt = el("span", "mono", f.reason.length + "/160"); rl.appendChild(cnt); w.appendChild(rl);
-    const r = el("textarea", "ta banreason"); r.rows = 2; r.maxLength = 160; r.value = f.reason;
+    const r = el("textarea", "ta banreason"); r.rows = 2; r.maxLength = 160; r.value = f.reason; r.dataset.keep = "banreason:" + f.for;
     r.addEventListener("input", () => {
       f.reason = r.value; cnt.textContent = r.value.length + "/160";
       const pv = w.querySelector(".prevreason"); if (pv) pv.textContent = r.value.trim() || "(the reason)"; // the preview follows as they type
     });
     w.appendChild(r);
     w.appendChild(el("div", "lbl", "Note for staff (optional, never shown to them)"));
-    const n = el("textarea", "ta note bannote"); n.rows = 2; n.maxLength = 500; n.value = f.note; n.addEventListener("input", () => { f.note = n.value; }); w.appendChild(n);
+    const n = el("textarea", "ta note bannote"); n.rows = 2; n.maxLength = 500; n.value = f.note; n.dataset.keep = "bannote:" + f.for; n.addEventListener("input", () => { f.note = n.value; }); w.appendChild(n);
     if (!editing) {
       const h = history.get(target.id);
       if (h === undefined) loadHistory(target.id, redraw);
@@ -102,14 +103,18 @@ const Bans = (() => {
     const barred = !editing && (level === 2 ? target.name + " is an Owner of the panel: an Owner cannot be banned from here."
       : level === 1 && !isOwner() ? target.name + " is staff: only the Owner bans staff." : "");
     if (barred) w.appendChild(el("div", "err", barred)); // shown before the two checks, as the server would refuse it (audit)
-    const ready = f.reason.trim() && lengthMs(f) >= -1 && (editing || lengthMs(f) >= 0);
-    const sureNow = Date.now() - armed < 3000;
-    const go = el("button", "btn sm " + (editing ? "" : sureNow ? "sure" : "red"), editing ? "Save changes" : sureNow ? "Sure? Ban " + target.name + " for " + lenLabel(f) : "Ban " + target.name);
-    go.type = "button"; go.disabled = busy || !!barred;
+    // read when BAN is pressed, not when the form was drawn: typing changes the form without drawing it again (audit)
+    const ready = () => f.reason.trim() && lengthMs(f) >= -1 && (editing || lengthMs(f) >= 0);
+    const left = 3000 - (Date.now() - armed), plain = editing ? "Save changes" : "Ban " + target.name, plainCls = "btn sm " + (editing ? "" : "red");
+    const sureText = () => (f.length === "perm" ? "Sure? Ban " + target.name + " for good" : "Sure? Ban " + target.name + " for " + lenLabel(f));
+    const go = el("button", !editing && left > 0 ? "btn sm sure" : plainCls, !editing && left > 0 ? sureText() : plain);
+    go.type = "button"; go.disabled = busy || !!barred; go.dataset.keep = "bango:" + f.for;
+    if (!editing) unarm(go, left, plain, plainCls);
     go.addEventListener("click", async () => {
-      if (!ready) { alert(lengthMs(f) === -2 ? "Choose how long (at least an hour of your own)." : "Write the reason they will see."); return; }
+      if (busy) return;
+      if (!ready()) { alert(lengthMs(f) === -2 ? "Choose how long (at least an hour of your own)." : "Write the reason they will see."); return; }
       if (editing) { await send("/api/ban/edit", { ban: editing.id, length: f.length, days: f.days, hours: f.hours, reason: f.reason, note: f.note }, f.for, redraw); return; }
-      if (Date.now() - armed > 3000) { armed = Date.now(); redraw(); return; } // the first check: SURE? (D368)
+      if (Date.now() - armed > 3000) { armed = Date.now(); go.textContent = sureText(); go.className = "btn sm sure"; unarm(go, 3000, plain, plainCls); return; } // the first check: SURE? (D368), focus kept on it
       armed = 0; dialog = { target, f, typed: "", redraw }; drawDialog();
     });
     w.appendChild(go);
@@ -117,9 +122,9 @@ const Bans = (() => {
   }
 
   async function send(path, body, key, redraw) {
-    busy = true;
-    let r;
-    try { r = await api(path, body); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+    if (busy) return;
+    busy = true; redraw(); // its key off while it runs
+    const r = await call(path, body, true);
     busy = false; answer = { for: key, ok: r.ok, message: r.message };
     if (r.ok) { history.clear(); page.list = null; if (path.endsWith("/edit")) { page.edit = null; page.msg = answer; } }
     redraw();
@@ -135,7 +140,7 @@ const Bans = (() => {
     box2.appendChild(el("h3", null, "LAST CHECK"));
     box2.appendChild(el("div", null, "Ban " + d.target.name + " from the whole network " + (d.f.length === "perm" ? "for good" : "for " + lenLabel(d.f)) + "? If online, they leave the network now."));
     box2.appendChild(el("div", "lbl", "Type their name to go on"));
-    const i = el("input", "banconfirm"); i.autocapitalize = "off"; i.spellcheck = false; i.value = d.typed;
+    const i = el("input", "banconfirm"); i.type = "text"; i.autocapitalize = "off"; i.autocomplete = "off"; i.spellcheck = false; i.value = d.typed;
     const go = el("button", "btn sm red", "Ban " + d.target.name); go.type = "button"; go.disabled = d.typed.toLowerCase() !== d.target.name.toLowerCase();
     i.addEventListener("input", () => { d.typed = i.value.trim(); go.disabled = d.typed.toLowerCase() !== d.target.name.toLowerCase(); });
     go.addEventListener("click", async () => {
@@ -151,19 +156,20 @@ const Bans = (() => {
   // ---------------------------------------------------------------- More › Bans
   async function load() {
     page.list = "loading";
-    try { const r = await api("/api/bans", { which: page.which, q: page.q }); page.list = r.ok ? r : { bans: [], now: Date.now() }; } catch (e) { page.list = { bans: [], now: Date.now() }; }
+    const r = await call("/api/bans", { which: page.which, q: page.q });
+    page.list = r.ok ? r : { bans: [], now: Date.now(), error: r.message };
     App.refreshMore();
   }
   function view(main) {
     main.appendChild(el("h2", null, "Bans"));
     const seg = el("div", "seg");
-    [["active", "Active"], ["past", "Past"]].forEach(([k, t]) => { const b = el("button", page.which === k ? "on" : "", t); b.type = "button"; b.addEventListener("click", () => { page.which = k; page.list = null; App.refreshMore(); }); seg.appendChild(b); });
+    [["active", "Active"], ["past", "Past"]].forEach(([k, t]) => { const b = el("button", page.which === k ? "on" : "", t); b.type = "button"; b.dataset.keep = "bseg:" + k; b.addEventListener("click", () => { page.which = k; page.list = null; App.refreshMore(); }); seg.appendChild(b); });
     main.appendChild(seg);
     const bar = el("div", "banbar");
-    const s = el("input", "search banq"); s.type = "search"; s.placeholder = "Find a ban by name"; s.value = page.q;
+    const s = el("input", "search banq"); s.type = "search"; s.placeholder = "Find a ban by name"; s.value = page.q; s.dataset.keep = "banq";
     s.addEventListener("change", () => { page.q = s.value.trim(); page.list = null; App.refreshMore(); });
     bar.appendChild(s);
-    const add = el("button", "btn sm red" + (isAdmin() ? "" : " locked-item"), "+ Ban"); add.type = "button";
+    const add = el("button", "btn sm red" + (isAdmin() ? "" : " locked-item"), "+ Ban"); add.type = "button"; add.dataset.keep = "banadd";
     add.addEventListener("click", () => { if (!isAdmin()) { alert("Bans are for Admins and Owners."); return; } page.adding = page.adding ? null : { id: null, name: "" }; App.refreshMore(); });
     bar.appendChild(add); main.appendChild(bar);
     if (page.adding) main.appendChild(addBox());
@@ -171,19 +177,28 @@ const Bans = (() => {
     if (page.list === null) load();
     if (!page.list || page.list === "loading") { main.appendChild(el("div", "note", "Reading the bans…")); return; }
     const list = page.list.bans;
+    if (page.list.error) {
+      main.appendChild(el("div", "err", page.list.error));
+      const again = el("button", "btn sm ghost back", "Try again"); again.type = "button"; again.addEventListener("click", () => { page.list = null; App.refreshMore(); }); main.appendChild(again);
+      return;
+    }
     if (!list.length) main.appendChild(el("div", "note", page.which === "active" ? "Nobody is banned." : "No past bans."));
     list.forEach((b) => main.appendChild(card(b, page.list.now)));
   }
   function addBox() {
     const w = el("div", "banadd");
     if (!page.adding.id) {
-      const f = el("form", "gsearch"); const i = el("input", "search"); i.placeholder = "Their Minecraft name"; i.value = page.addName; i.maxLength = 16;
-      const go = el("button", "btn sm", "Next"); go.type = "submit";
+      const f = el("form", "gsearch"); const i = el("input", "search"); i.type = "text"; i.placeholder = "Their Minecraft name"; i.value = page.addName; i.maxLength = 16; i.dataset.keep = "banname";
+      i.autocapitalize = "off"; i.spellcheck = false;
+      const go = el("button", "btn sm", "Next"); go.type = "submit"; go.disabled = page.finding;
       f.appendChild(i); f.appendChild(go);
       f.addEventListener("submit", async (e) => {
-        e.preventDefault(); page.addName = i.value.trim();
-        let r;
-        try { r = await api("/api/players/find", { q: page.addName }); } catch (err) { alert("The panel could not be reached."); return; }
+        e.preventDefault(); if (page.finding) return;
+        page.addName = i.value.trim();
+        page.finding = true; go.disabled = true;
+        const r = await call("/api/players/find", { q: page.addName });
+        page.finding = false; go.disabled = false;
+        if (!r.ok && r.failed) { alert(r.message); return; }
         const hit = r.ok ? r.players.find((x) => x.name.toLowerCase() === page.addName.toLowerCase()) : null;
         if (!hit) { alert("Nobody called " + page.addName + " has played on the network."); return; }
         page.adding = { id: hit.id, name: hit.name }; form = null; App.refreshMore();
@@ -206,21 +221,30 @@ const Bans = (() => {
       + (b.liftedAt ? " · lifted " + when(b.liftedAt) + " by " + b.liftedBy : !b.active && b.until ? " · ended " + when(b.until) : "")));
     if (b.active) {
       const keys = el("div", "kk");
-      const un = el("button", isAdmin() ? "u" : "locked-item", Date.now() - (page.armed[b.id] || 0) < 3000 ? "Sure? Unban " + b.name : "Unban"); un.type = "button";
+      const left = 3000 - (Date.now() - (page.armed[b.id] || 0)), working = !!page.busy[b.id];
+      const ownerOnly = (b.staff || 0) >= 1 && !isOwner(); // a staff member's ban: changed and lifted by the Owner alone (D355, D427)
+      const may = isAdmin() && !ownerOnly, whyNot = ownerOnly ? b.name + " is staff: only the Owner lifts or changes a ban on staff." : "Bans are for Admins and Owners.";
+      const un = el("button", may ? "u" : "locked-item", working ? "Unbanning…" : left > 0 ? "Sure? Unban " + b.name : ownerOnly ? "Unban (Owner)" : "Unban"); un.type = "button"; un.dataset.keep = "unban:" + b.id;
+      un.disabled = working; // a redraw while it runs keeps the key off (audit)
+      if (!working) unarm(un, left, "Unban");
       un.addEventListener("click", async () => {
-        if (!isAdmin()) { alert("Bans are for Admins and Owners."); return; }
-        if (Date.now() - (page.armed[b.id] || 0) > 3000) { page.armed[b.id] = Date.now(); App.refreshMore(); return; } // SURE? (D356)
-        page.armed[b.id] = 0;
-        let r; try { r = await api("/api/ban/lift", { ban: b.id }); } catch (e) { r = { ok: false, message: "The panel could not be reached." }; }
+        if (!may) { alert(whyNot); return; }
+        if (page.busy[b.id]) return;
+        if (Date.now() - (page.armed[b.id] || 0) > 3000) { page.armed[b.id] = Date.now(); un.textContent = "Sure? Unban " + b.name; unarm(un, 3000, "Unban"); return; } // SURE? (D356), focus kept on it
+        page.armed[b.id] = 0; page.busy[b.id] = true; un.disabled = true; un.textContent = "Unbanning…";
+        const r = await call("/api/ban/lift", { ban: b.id }, true);
+        page.busy[b.id] = false;
         page.msg = r; page.list = null; history.clear(); App.refreshMore();
       });
-      const ed = el("button", isAdmin() ? "" : "locked-item", page.edit === b.id ? "Close" : "Edit"); ed.type = "button";
-      ed.addEventListener("click", () => { if (!isAdmin()) { alert("Bans are for Admins and Owners."); return; } page.edit = page.edit === b.id ? null : b.id; form = null; App.refreshMore(); });
+      const ed = el("button", may ? "" : "locked-item", page.edit === b.id ? "Close" : ownerOnly ? "Edit (Owner)" : "Edit"); ed.type = "button"; ed.dataset.keep = "banedit:" + b.id;
+      ed.addEventListener("click", () => { if (!may) { alert(whyNot); return; } page.edit = page.edit === b.id ? null : b.id; form = null; App.refreshMore(); });
       keys.appendChild(un); keys.appendChild(ed); c.appendChild(keys);
       if (page.edit === b.id) c.appendChild(formEl({ id: b.player, name: b.name }, () => App.refreshMore(), b));
     }
     return c;
   }
   function close() { openFor = null; form = null; answer = null; }
-  return { key, box, view, close, reset: () => { page.list = null; page.adding = null; page.msg = null; page.edit = null; } };
+  /** The answer to the newest ban of this player from their sheet: kept for the card once they have left (audit). */
+  function answerFor(id) { return answer && answer.for === id ? answer : null; }
+  return { key, box, view, close, answerFor, reset: () => { page.list = null; page.adding = null; page.msg = null; page.edit = null; } };
 })();

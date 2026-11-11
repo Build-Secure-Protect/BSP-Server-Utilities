@@ -31,6 +31,8 @@ import java.util.function.Consumer;
 public final class Storage {
     private static final int NOTICE_BATCH = 100, SEEN_LIMIT = 20_000;
     private static final long FLUSH_MS = 5000, PRUNE_EVERY_MS = 3_600_000L, NOTICE_KEEP_MS = 86_400_000L;
+    /** A notice read from the table older than this is skipped (Redis brings news at once; the table is a safety net of seconds, not hours). */
+    public static final long TABLE_NOTICE_MAX_AGE_MS = 600_000L;
     private static final Runnable STOP = () -> {
     };
     /** Handlers per notice kind, registered once by each feature; called on the server thread. */
@@ -97,10 +99,7 @@ public final class Storage {
         Storage s = new Storage(server, backend, settings.serverId(), settings.pollSeconds(), true);
         active = s;
         s.submit(() -> {
-            backend.init();
-            s.lastNoticeId = backend.latestNoticeId();
-            BSPServerUtilities.LOGGER.info("BSP-Server Utilities storage connected: {} (this server is '{}')", backend.describe(), s.serverId);
-        });
+        }); // the first task makes the tables and finds where the notices stand (ready()), retried by every later task until it works (audit)
         if (settings.redis() != null) {
             s.safetyPollSeconds = settings.safetyPollSeconds();
             s.connectRedis(settings.redis());
@@ -111,9 +110,7 @@ public final class Storage {
     public static Storage startWith(MinecraftServer server, StorageBackend backend, String serverId) {
         Storage s = new Storage(server, backend, serverId, 5, false);
         s.submit(() -> {
-            backend.init();
-            s.lastNoticeId = backend.latestNoticeId();
-        });
+        }); // ready() runs first
         return s;
     }
 
@@ -204,9 +201,29 @@ public final class Storage {
 
     // ------------------------------------------------------------------ the worker
 
+    /**
+     * Makes the tables and finds the newest notice, once; until that has worked, every task tries it first. A server
+     * started before its database answers thus never reads the day of notices already in the table as new (audit:
+     * they replayed old broadcasts, clears and kicks), and a fresh database gets its tables as soon as it answers.
+     */
+    private void ready() throws Exception {
+        if (lastNoticeId >= 0) {
+            return;
+        }
+        backend.init();
+        lastNoticeId = Math.max(0, backend.latestNoticeId());
+        BSPServerUtilities.LOGGER.info("BSP-Server Utilities storage connected: {} (this server is '{}')", backend.describe(), serverId);
+    }
+
+    /** Whether the tables are made and the notices' place is known (false while the database has not answered since the start). */
+    public boolean isReady() {
+        return lastNoticeId >= 0;
+    }
+
     public void submit(Task task) {
         work.add(() -> {
             try {
+                ready();
                 task.run();
             } catch (Exception e) {
                 errors++;
@@ -314,7 +331,7 @@ public final class Storage {
     private final java.util.concurrent.ConcurrentLinkedQueue<StorageBackend.WebChat> chatRows = new java.util.concurrent.ConcurrentLinkedQueue<>();
     private final java.util.concurrent.atomic.AtomicInteger chatWaiting = new java.util.concurrent.atomic.AtomicInteger();
     private final java.util.concurrent.atomic.AtomicBoolean chatQueued = new java.util.concurrent.atomic.AtomicBoolean();
-    private volatile long chatDropped;
+    private final java.util.concurrent.atomic.AtomicLong chatDropped = new java.util.concurrent.atomic.AtomicLong(); // chat arrives on Forge's background thread (audit)
 
     /**
      * A public chat line for the staff web panel (SU-36): on Redis's web channel at once, and into {@code <prefix>web_chat}
@@ -324,7 +341,7 @@ public final class Storage {
         publishWeb(kind, payload, false);
         if (chatWaiting.incrementAndGet() > MAX_CHAT_WAITING) {
             chatWaiting.decrementAndGet();
-            chatDropped++;
+            chatDropped.incrementAndGet();
             return;
         }
         chatRows.add(row);
@@ -344,7 +361,7 @@ public final class Storage {
                     for (StorageBackend.WebChat back : rows) {
                         if (chatWaiting.incrementAndGet() > MAX_CHAT_WAITING) {
                             chatWaiting.decrementAndGet();
-                            chatDropped++;
+                            chatDropped.incrementAndGet();
                         } else {
                             chatRows.add(back);
                         }
@@ -357,7 +374,7 @@ public final class Storage {
 
     /** Chat lines dropped because the database was too far behind (0 normally). */
     public long chatDropped() {
-        return chatDropped;
+        return chatDropped.get();
     }
 
     /** One message as it travels on Redis: id, time, source server, kind and payload on their own lines (the panel reads the same). */
@@ -389,8 +406,12 @@ public final class Storage {
     public void pollNotices() {
         submit(() -> {
             List<StorageBackend.Notice> rows = backend.fetchNoticesAfter(lastNoticeId, NOTICE_BATCH);
+            long oldest = System.currentTimeMillis() - TABLE_NOTICE_MAX_AGE_MS;
             for (StorageBackend.Notice n : rows) {
                 lastNoticeId = Math.max(lastNoticeId, n.id());
+                if (n.createdAt() < oldest) {
+                    continue; // a notice this old is history, not news (audit: a second guard against replaying the table)
+                }
                 server.execute(() -> handle(n));
             }
         });

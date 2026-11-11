@@ -176,7 +176,8 @@ public final class MarketDesk {
             return out;
         }
         String server = able.get(0);
-        Actions.Answer ans = act.read(server, me.mcName, me.rank.name(), f);
+        boolean slow = f.has("refresh"); // BSP-Core reads its whole database first (audit: 6 s was too short)
+        Actions.Answer ans = slow ? act.read(server, me.mcName, me.rank.name(), f, Actions.LONG_WAIT_SECONDS) : act.read(server, me.mcName, me.rank.name(), f);
         if (ans.data() != null && ans.data().isJsonObject()) {
             for (var e : ans.data().getAsJsonObject().entrySet()) {
                 out.add(e.getKey(), e.getValue());

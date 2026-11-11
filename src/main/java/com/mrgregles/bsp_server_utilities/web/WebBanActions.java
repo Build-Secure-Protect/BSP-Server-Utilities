@@ -43,6 +43,17 @@ public final class WebBanActions {
 
     private static final String NOT_ALLOWED = "Bans are for Admins and Owners.", NO_STORAGE = "Bans need the shared database: this server keeps its records alone.";
 
+    /**
+     * A ban's staff note: up to {@link #MAX_NOTE} characters with its line breaks kept (audit: it went through the chat
+     * cleaner, which cut it to 256 and joined the lines). Control and invisible format characters become spaces.
+     */
+    public static String cleanNote(String raw) {
+        String t = raw.replace("\r\n", "\n").replace('\r', '\n').replace('\u00a7', ' ');
+        StringBuilder b = new StringBuilder(t.length());
+        t.codePoints().forEach(c -> b.appendCodePoint(c == '\n' ? c : Character.isISOControl(c) || Character.getType(c) == Character.FORMAT ? ' ' : c));
+        return b.toString().strip();
+    }
+
     private static boolean admin(JsonObject a) {
         String r = str(a, "rank");
         return r.equals("ADMIN") || r.equals("OWNER");
@@ -65,7 +76,7 @@ public final class WebBanActions {
     public static WebActions.Answer ban(MinecraftServer server, JsonObject a, String id, String by) {
         Storage s = Storage.active();
         UUID who = uuid(str(a, "player"));
-        String reason = Broadcast.clean(str(a, "reason")).strip(), note = Broadcast.clean(str(a, "note")).strip(), name = str(a, "name");
+        String reason = Broadcast.clean(str(a, "reason")).strip(), note = cleanNote(str(a, "note")), name = str(a, "name");
         long length = number(a, "lengthMs");
         String why = !admin(a) ? NOT_ALLOWED : s == null ? NO_STORAGE : who == null || !name.matches("[A-Za-z0-9_]{1,16}") ? "No such player."
                 : reason.isEmpty() || reason.length() > MAX_REASON ? "A reason of 1 to " + MAX_REASON + " characters (they see it)."
@@ -101,13 +112,18 @@ public final class WebBanActions {
     public static WebActions.Answer unban(MinecraftServer server, JsonObject a, String id, String by) {
         Storage s = Storage.active();
         long banId = number(a, "ban");
-        if (!admin(a) || s == null || banId <= 0) {
+        UUID who = uuid(str(a, "player"));
+        if (!admin(a) || s == null || banId <= 0 || who == null) {
             return new WebActions.Answer(id, false, !admin(a) ? NOT_ALLOWED : s == null ? NO_STORAGE : "No such ban.");
+        }
+        if (!str(a, "rank").equals("OWNER") && staff(server, who)) {
+            return new WebActions.Answer(id, false, "They are staff: only the Owner lifts a ban on staff."); // as only the Owner gives one (D427)
         }
         long now = clock.getAsLong();
         return new WebActions.Answer(id, true, "", null, onStorage(server, s, () -> {
             StorageBackend.Ban b = s.backend().ban(banId);
-            return b != null && s.backend().liftBan(banId, by, now) ? b : null;
+            // the ban named must be that player's, so the staff check above was about the right person
+            return b != null && b.player().equals(who) && s.backend().liftBan(banId, by, now) ? b : null;
         }).handle((b, t) -> {
             if (t != null || b == null) {
                 return new WebActions.Answer(id, false, t != null ? "The ban could not be lifted: " + WebActions.cause(t) : "That ban was lifted or has ended already.");
@@ -124,7 +140,7 @@ public final class WebBanActions {
         Storage s = Storage.active();
         long banId = number(a, "ban"), length = number(a, "lengthMs");
         UUID who = uuid(str(a, "player"));
-        String reason = Broadcast.clean(str(a, "reason")).strip(), note = Broadcast.clean(str(a, "note")).strip();
+        String reason = Broadcast.clean(str(a, "reason")).strip(), note = cleanNote(str(a, "note"));
         String why = !admin(a) ? NOT_ALLOWED : s == null ? NO_STORAGE : banId <= 0 || who == null ? "No such ban."
                 : !str(a, "rank").equals("OWNER") && staff(server, who) ? "They are staff: only the Owner changes a ban on staff."
                 : reason.isEmpty() || reason.length() > MAX_REASON ? "A reason of 1 to " + MAX_REASON + " characters (they see it)."

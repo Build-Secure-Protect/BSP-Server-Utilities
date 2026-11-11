@@ -46,7 +46,7 @@ import java.util.function.Supplier;
  */
 public final class WebActions {
     public static final String KIND_ACTION = "web_action", KIND_ANSWER = "answer";
-    public static final long MAX_AGE_MS = 30_000L, KEEP_IDS_MS = 300_000L;
+    public static final long MAX_AGE_MS = 30_000L, KEEP_IDS_MS = 300_000L, UNTIL_GRACE_MS = 1_000L;
     public static final int MAX_REASON = 160;
 
     /**
@@ -62,6 +62,9 @@ public final class WebActions {
 
     private static final Map<String, Long> SEEN = new LinkedHashMap<>();
     private static Supplier<byte[]> key = WebActions::configKey;
+    /** How an action or a notice from the panel is checked: the panel's Ed25519 signature with {@code webPanel.panelKey} (D426); tests swap it. */
+    private static final java.util.function.Function<String, JsonObject> BY_CONFIG = WebActions::verifyWithConfigPanelKey;
+    private static java.util.function.Function<String, JsonObject> fromPanel = BY_CONFIG;
     private static LongSupplier clock = System::currentTimeMillis;
     private static BiFunction<MinecraftServer, UUID, ServerPlayer> lookup = (s, id) -> s.getPlayerList().getPlayer(id);
 
@@ -82,9 +85,105 @@ public final class WebActions {
         }
     }
 
-    /** Whether this server has a usable action key (for {@code /su status}). */
+    /** Whether {@code webPanel.actionKey} holds something that is not a key the panel made (for {@code /su status}). */
+    public static boolean keyIsMalformed() {
+        try {
+            return !ServerUtilsNetworkConfig.WEB_ACTION_KEY.get().trim().isEmpty() && configKey() == null;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    /** Whether this server has a usable action key and the panel's public key (for {@code /su status}). */
     public static boolean ready() {
-        return key.get() != null;
+        return key.get() != null && (fromPanel != BY_CONFIG || configPanelKey() != null);
+    }
+
+    private static java.security.PublicKey cachedPanelKey;
+    private static String cachedPanelKeyText = "";
+
+    /** {@code webPanel.panelKey} as a key, or null when it is empty or not one. */
+    @Nullable
+    public static java.security.PublicKey configPanelKey() {
+        try {
+            String t = ServerUtilsNetworkConfig.WEB_PANEL_KEY.get().trim();
+            if (!t.equals(cachedPanelKeyText)) {
+                cachedPanelKeyText = t;
+                cachedPanelKey = t.isEmpty() ? null : panelKey(t);
+            }
+            return cachedPanelKey;
+        } catch (IllegalStateException notLoaded) {
+            return null;
+        }
+    }
+
+    /** Whether {@code webPanel.panelKey} holds something that is not a public key the panel made. */
+    public static boolean panelKeyIsMalformed() {
+        try {
+            return !ServerUtilsNetworkConfig.WEB_PANEL_KEY.get().trim().isEmpty() && configPanelKey() == null;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private static final byte[] ED25519_SPKI = HexFormat.of().parseHex("302a300506032b6570032100");
+
+    /** The panel's public key from its 32 raw bytes in Base64 (what its console prints), or null. */
+    @Nullable
+    public static java.security.PublicKey panelKey(String base64) {
+        try {
+            byte[] raw = Base64.getDecoder().decode(base64.trim());
+            if (raw.length != 32) {
+                return null;
+            }
+            byte[] spki = new byte[ED25519_SPKI.length + 32];
+            System.arraycopy(ED25519_SPKI, 0, spki, 0, ED25519_SPKI.length);
+            System.arraycopy(raw, 0, spki, ED25519_SPKI.length, 32);
+            return java.security.KeyFactory.getInstance("Ed25519").generatePublic(new java.security.spec.X509EncodedKeySpec(spki));
+        } catch (IllegalArgumentException | GeneralSecurityException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static JsonObject verifyWithConfigPanelKey(String payload) {
+        return verifyPanel(configPanelKey(), payload);
+    }
+
+    /**
+     * An action or notice signed by the panel's private key (D426): its JSON in URL-safe Base64, a dot, the Ed25519
+     * signature of that Base64 text in URL-safe Base64. Only the panel holds the private key, so nothing on a game
+     * server (its files, another mod) can order an action. Null when it is not so signed.
+     */
+    @Nullable
+    public static JsonObject verifyPanel(@Nullable java.security.PublicKey panel, String payload) {
+        if (panel == null || payload == null) {
+            return null;
+        }
+        int dot = payload.indexOf('.');
+        if (dot <= 0) {
+            return null;
+        }
+        String body = payload.substring(0, dot);
+        try {
+            byte[] sig = Base64.getUrlDecoder().decode(payload.substring(dot + 1));
+            java.security.Signature v = java.security.Signature.getInstance("Ed25519");
+            v.initVerify(panel);
+            v.update(body.getBytes(StandardCharsets.US_ASCII));
+            if (sig.length != 64 || !v.verify(sig)) {
+                return null;
+            }
+            JsonElement e = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(body), StandardCharsets.UTF_8));
+            return e.isJsonObject() ? e.getAsJsonObject() : null;
+        } catch (GeneralSecurityException | RuntimeException bad) {
+            return null;
+        }
+    }
+
+    /** An action or notice from the panel, checked as {@link #verifyPanel} does (tests: as they set it). */
+    @Nullable
+    public static JsonObject fromPanel(String payload) {
+        return fromPanel.apply(payload);
     }
 
     /** The key, or null (the web agent signs what it sends with it). */
@@ -176,6 +275,13 @@ public final class WebActions {
 
     /** One notice: handled, and its answer sent (at once, or when an answer still on its way completes). */
     public static void dispatch(MinecraftServer server, com.mrgregles.bsp_server_utilities.storage.StorageBackend.Notice n) {
+        if (answerSink == null && !WebAgent.canAnswer()) {
+            JsonObject mine = fromPanel(n.payload());
+            if (mine != null && Storage.currentServerId().equalsIgnoreCase(str(mine, "server"))) {
+                warn("an action from the staff web panel was not carried out: this server's Redis is not connected, so no answer could reach the panel");
+            }
+            return; // answers travel on Redis only: carried out here, the panel would say "no answer" for something done (audit)
+        }
         Answer a = handle(server, n.payload());
         if (a != null && a.later() != null) {
             a.later().whenComplete((done, t) -> answer(done != null ? done : new Answer(a.id(), false, "It failed: " + (t == null ? "no answer" : t.getMessage()))));
@@ -225,9 +331,11 @@ public final class WebActions {
             warn("an action from the staff web panel was refused: no webPanel.actionKey in config/" + ServerUtilsNetworkConfig.FILE);
             return null; // without a key nothing can be trusted, not even which server it was for
         }
-        JsonObject a = verify(k, payload);
+        JsonObject a = fromPanel(payload);
         if (a == null) {
-            warn("an action with a wrong signature was refused (another action key, or changed on the way)");
+            warn(configPanelKey() == null && fromPanel == BY_CONFIG
+                    ? "an action from the staff web panel was refused: no webPanel.panelKey (the panel's public key) in config/" + ServerUtilsNetworkConfig.FILE
+                    : "an action with a wrong signature was refused (not signed by the panel's own key, or changed on the way)");
             return null;
         }
         if (!Storage.currentServerId().equalsIgnoreCase(str(a, "server"))) {
@@ -240,7 +348,9 @@ public final class WebActions {
         } catch (RuntimeException bad) {
             at = 0; // refused below as too old
         }
-        if (Math.abs(now - at) > MAX_AGE_MS) {
+        long until = a.has("until") && a.get("until").isJsonPrimitive() ? a.get("until").getAsLong() : Long.MAX_VALUE;
+        if (Math.abs(now - at) > MAX_AGE_MS || now - UNTIL_GRACE_MS > until) { // (no "until": Long.MAX_VALUE, never past)
+            // past "until" the panel has stopped waiting and told staff there was no answer: doing it now would surprise them (audit)
             return new Answer(id, false, "Refused: the request took too long to arrive (or the clocks differ). Try again.");
         }
         synchronized (SEEN) {
@@ -258,9 +368,9 @@ public final class WebActions {
         String by = str(a, "by");
         return switch (str(a, "action")) {
             case "kick" -> kick(server, a, id, by);
-            case "broadcast" -> broadcast(server, a, id, by);
+            case "broadcast" -> admin(a) ? broadcast(server, a, id, by) : new Answer(id, false, ADMINS_ONLY); // D250, checked here too (audit)
             case "graves" -> graves(a, id);
-            case "grave_return" -> graveReturn(server, a, id, by);
+            case "grave_return" -> admin(a) ? graveReturn(server, a, id, by) : new Answer(id, false, ADMINS_ONLY); // D296
             case "grave_items" -> graveItems(a, id);
             case "tp_places" -> WebTeleports.places(a, id);
             case "tp" -> WebTeleports.move(server, a, id, by);
@@ -277,6 +387,13 @@ public final class WebActions {
             case "lottery_draw" -> WebMarket.draw(server, a, id, by);
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
+    }
+
+    static final String ADMINS_ONLY = "Refused: only Admins and Owners may do that.";
+
+    private static boolean admin(JsonObject a) {
+        String r = str(a, "rank");
+        return r.equals("ADMIN") || r.equals("OWNER");
     }
 
     private static Answer kick(MinecraftServer server, JsonObject a, String id, String by) {
@@ -461,8 +578,14 @@ public final class WebActions {
         answerSink = sink;
     }
 
+    /** Tests: actions checked against this public key, as {@code webPanel.panelKey} would be (null: back to the config). */
+    public static void usePanelKeyForTests(@Nullable java.security.PublicKey panel) {
+        fromPanel = panel == null ? BY_CONFIG : payload -> verifyPanel(panel, payload);
+    }
+
     public static void useForTests(@Nullable byte[] testKey, @Nullable LongSupplier testClock, @Nullable BiFunction<MinecraftServer, UUID, ServerPlayer> find) {
         key = () -> testKey;
+        fromPanel = payload -> verify(testKey, payload); // tests sign with the shared key; the panel's real Ed25519 path has its own test
         if (testClock != null) {
             clock = testClock;
         }
@@ -473,6 +596,7 @@ public final class WebActions {
 
     public static void useReal() {
         key = WebActions::configKey;
+        fromPanel = BY_CONFIG;
         answerSink = null;
         clock = System::currentTimeMillis;
         lookup = (s, id) -> s.getPlayerList().getPlayer(id);

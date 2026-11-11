@@ -16,7 +16,7 @@ public final class ServerUtilsNetworkConfig {
     public static final String FILE = "bsp_server_utilities-network.toml";
 
     public static final ForgeConfigSpec SPEC;
-    public static final ForgeConfigSpec.ConfigValue<String> WEB_ACTION_KEY, WEB_BAN_APPEAL;
+    public static final ForgeConfigSpec.ConfigValue<String> WEB_ACTION_KEY, WEB_PANEL_KEY, WEB_BAN_APPEAL;
     public static final ForgeConfigSpec.ConfigValue<String> DB_HOST, DB_DATABASE, DB_USER, DB_PASSWORD, DB_TABLE_PREFIX, REDIS_HOST, REDIS_USERNAME, REDIS_PASSWORD;
     public static final ForgeConfigSpec.IntValue DB_PORT, REDIS_PORT;
     public static final ForgeConfigSpec.BooleanValue DB_SSL, WEB_ENABLED;
@@ -49,10 +49,13 @@ public final class ServerUtilsNetworkConfig {
                         "to the panel over the shared Redis and database. Nothing is sent while this is off. Needs shared storage.")
                 .push("webPanel");
         WEB_ENABLED = b.comment("Send this server's players to the staff web panel.").define("enabled", false);
-        WEB_SNAPSHOT_SECONDS = b.comment("How often, in seconds.").defineInRange("snapshotSeconds", 5, 2, 30);
-        WEB_ACTION_KEY = b.comment("The panel's action key (actionKey in its panel.properties; its console's action-key prints it).",
-                "Without it this server refuses every action from the panel (kicks, announcements). Keep it secret: anyone with it can kick players.")
+        WEB_SNAPSHOT_SECONDS = b.comment("How often, in seconds.").defineInRange("snapshotSeconds", 5, 2, 10);
+        WEB_ACTION_KEY = b.comment("The key this server signs what it sends to the panel with (actionKey in the panel's panel.properties).",
+                "Without it nothing is sent. Keep it secret: with it someone could show the panel made-up players or answers.")
                 .define("actionKey", "");
+        WEB_PANEL_KEY = b.comment("The panel's public key (panelKey in its panel.properties; its console's action-key prints it).",
+                "Only actions signed by the panel's own private key are carried out; without this line none are. It is public: it can only check.")
+                .define("panelKey", "");
         WEB_BAN_APPEAL = b.comment("A line added to the screen a banned player sees, such as where to appeal (\"Appeal on our Discord: discord.gg/...\").",
                 "Empty: no line. Use the same on every server.").define("banAppeal", "");
         b.pop();

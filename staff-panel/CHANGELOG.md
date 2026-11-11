@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-11
+
+### Fixed
+- Audit of the whole staff panel (2026-11-11, the repository's docs/TESTING.md):
+  - The Redis listener took a refused SUBSCRIBE (a wrong password, a Redis user without the channels) as listening, and nothing about Redis was ever printed: every action then said "No answer". It now checks Redis's replies, says each change of state once in the console (`status` shows it any time), never stops for good, and refuses a message over 8 MB.
+  - An action is sent only while the panel's Redis listener is subscribed and Redis took it (not through the table alone, which reached listening servers only every 30 s), and not to a game server whose snapshot says its answers cannot reach the panel: each refusal says why and nothing is sent.
+  - Each action carries `until`, the moment the panel stops waiting; an UNDO taking items back, a market REFRESH and bans wait 15 s instead of 6.
+  - An answer is taken only from the server asked; an action's own fields (an UNDO's, from a game server's answer) never replace who asked, their rank or the server; an UNDO is only ever an items change.
+  - Item data typed into an add is taken only when the item pictures list it for that item (the picker's potions and books).
+  - The live view goes to the pages at most every 5 s (D251; seven servers' snapshots redrew every page every second), with a named `ping` the page can watch.
+  - A server is held by its own snapshot interval and dropped at once when it says it is stopping; a server whose snapshots are not signed with the panel's key is named in the console once an hour; the servers' table error is printed once, not every 5 s; the reason Cloudflare's token was refused is printed once a minute.
+  - The database fails a request after 15 s instead of hanging every page; a database that cannot be used at start is said in one sentence.
+  - Graves and items are asked of a server whose BSP-InventorySync can answer when the player's own cannot.
+  - Chat: a stored row whose uid is not the signed line's is dropped; a signed line sent again live over 10 minutes late is not shown live; the table is read with an overlap so a line written out of order is not missed; invisible format characters become spaces, as in game.
+  - Over https the login cookie is `__Host-bsp_panel`, which no other page of the domain can set.
+  - `panel.properties` is written for a container: `listen.host=0.0.0.0`, `listen.port` empty for Pterodactyl's allocation, the database and Redis hosts asked for (localhost is the container itself); the action key's comment says all it can do.
+  - A request that sends its headers slowly is closed after 15 s.
+- The panel's own database (D425): accounts, logins, notes and the staff room in `database.panelName` (`bsp_panel`) with a user only the panel has; the shared tables are read through `database.name`. Anyone with the game servers' database password could make themselves Owner before. The guide gives the SQL.
+- The panel's own signing key (D426): `signingKey` (Ed25519, only in `panel.properties`) signs every action and the notes counts; game servers check them with `panelKey` (public). Both are written on the first start (or added to an older file). The console's `action-key` prints `panelKey` only.
+- Only the Owner lifts a ban on staff (D427); on More › Bans an Admin sees UNBAN and EDIT on a staff member's ban dimmed with "Owner".
+- A Moderator with the items power logs in for 48 hours, as Admins do; giving or taking the power ends their open logins (D428).
+- Note cards get their author's rank (D320).
+- The pages after the audit: nothing redraws under a field being typed in or a chooser being used (the Players tab, the sheet, Teleport, Find a player, the tag picker, chat search, the item picker, the map card); the ban form's BAN works after the reason is typed; chat adds new lines without rebuilding, and scrolls back past 1,500 lines; a watchdog says "Not live" after 45 s without a word from the panel; after a reconnect the notes, chat and staff room are read again; every request gives up after 20 s and says what went wrong in plain words (never a raw error page); sends cannot be done twice; 16 px fields and a ± key for coordinates on phones; the staff ⋯ menu is not cut off on a phone; the gold line no longer covers the "Not live" banner; cosmetic Curios slots are shown; a SURE? keeps the keyboard's focus.
+- The setup guides, read step by step against the code: Redis follows BSP-Core's settings; the `[webPanel]` lines edited in place (a second section stops a server); addresses as seen from a container; the allocation on 127.0.0.1 with cloudflared as a service; a Java egg to import; the jar under one name; the setup link opened again after Cloudflare's login; utf8mb4; the full BSP-Core jar; serverIds the same as BSP-InventorySync's and Velocity's; a "Running it" part (the off switch, a leaked key, backups, updates, restarts); BlueMap's resource packs kept by `rsync`.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added

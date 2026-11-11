@@ -5,7 +5,7 @@ const TABS = ["Players", "Chat", "Map", "Staff", "More"];
 let me = null, live = { servers: [], players: [], onPanel: [] }, tab = "Players";
 
 function nav() {
-  const bottom = $("tabs"), side = $("sidenav");
+  const bottom = $("tabs"), side = $("sidenav"), h = hold();
   bottom.textContent = ""; side.textContent = "";
   for (const t of TABS) {
     const b = el("button", t === tab ? "on" : ""); b.type = "button";
@@ -19,7 +19,9 @@ function nav() {
     // new chat while it is not on screen (D308): a red number for lines naming you or asking for staff, else a dot
     const bd = t === "Chat" && typeof ChatView !== "undefined" ? ChatView.badge() : t === "Staff" && typeof StaffView !== "undefined" ? StaffView.badge() : null;
     if (bd) { b.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); s.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); }
+    b.dataset.keep = "tab:" + t; s.dataset.keep = "nav:" + t;
   }
+  give(h);
 }
 
 function staffOnline() {
@@ -79,7 +81,12 @@ async function more(main) {
   g.appendChild(el("div", "nm", me.mcName)); g.appendChild(el("div", "sub", me.email + " · " + me.backupLeft + " backup codes left"));
   i.appendChild(g); i.appendChild(el("span", "rk " + me.rank, me.rankLabel));
   const out = el("button", "btn sm ghost", "Log out"); out.type = "button";
-  out.addEventListener("click", async () => { await api("/api/logout", {}); location.href = "/login"; });
+  out.addEventListener("click", async () => {
+    out.disabled = true;
+    const r = await call("/api/logout", {}, true);
+    if (r.failed) { out.disabled = false; alert(r.message); return; }
+    location.href = "/login";
+  });
   i.appendChild(out); mine.appendChild(i); main.appendChild(mine);
   // what does not fit in the tabs (the More list of the refined page); a rank's locked items stay, dimmed with the rank (D278)
   const menu = el("div", "list");
@@ -94,7 +101,7 @@ async function more(main) {
   const fp = el("button", "item menuitem"); fp.type = "button";
   const fg = el("div", "grow"); fg.appendChild(el("div", "nm", "Find a player")); fg.appendChild(el("div", "sub", "Anyone who has joined, online or not: items, graves, notes"));
   fp.appendChild(fg); fp.appendChild(el("span", "mu", "›"));
-  fp.addEventListener("click", () => { moreView = "find"; render(); });
+  fp.addEventListener("click", () => { moreView = "find"; render().then(() => FindPlayer.focus()); });
   menu.appendChild(fp);
   const gr = el("button", "item menuitem"); gr.type = "button";
   const gg = el("div", "grow"); gg.appendChild(el("div", "nm", "Graves")); gg.appendChild(el("div", "sub", "A player's graves, online or not; Admins return them"));
@@ -144,9 +151,13 @@ function status(s, now) {
 }
 
 async function staffAccounts(area) {
+  const r = await call("/api/staff");
   area.textContent = "";
-  const r = await api("/api/staff");
-  if (!r.ok) { area.appendChild(el("div", "err", r.message)); return; }
+  if (!r.ok) {
+    area.appendChild(el("div", "err", r.message));
+    const again = el("button", "btn sm ghost", "Try again"); again.type = "button"; again.addEventListener("click", () => staffAccounts(area)); area.appendChild(again);
+    return;
+  }
   const top = el("div", "actions"); const add = el("button", "btn sm", "+ Add staff"); add.type = "button";
   top.appendChild(add); area.appendChild(top);
   const form = addForm(area); form.classList.add("hidden"); add.addEventListener("click", () => form.classList.toggle("hidden"));
@@ -154,25 +165,32 @@ async function staffAccounts(area) {
   ["Name", "Rank", "Email", "Status", "Last login", ""].forEach((h) => head.appendChild(el("th", null, h)));
   table.appendChild(head);
   const list = el("div", "list stafflist");
-  r.staff.forEach((s) => {
+  r.staff.forEach((s, at) => {
     const [st, cls] = status(s, r.now);
     const last = s.lastLogin ? new Date(s.lastLogin).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "never";
     const tr = el("tr");
-    tr.appendChild(el("td", "nm", s.mcName)); const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) rk.appendChild(el("span", "pw", "ITEMS")); tr.appendChild(rk);
+    const nmc = el("td", "nm"); const nmw = el("span", "stname"); nmw.appendChild(staffFace(s.mcName, 20)); nmw.appendChild(el("span", null, s.mcName)); nmc.appendChild(nmw); tr.appendChild(nmc); // D291: name and face
+    const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) rk.appendChild(el("span", "pw", "ITEMS")); tr.appendChild(rk);
     tr.appendChild(el("td", "mu", s.email)); tr.appendChild(el("td", cls, st)); tr.appendChild(el("td", "mu", last));
     const m = el("td"); m.appendChild(menu(s, area)); tr.appendChild(m); table.appendChild(tr);
     const it = el("div", "item"); const g = el("div", "grow"); const n = el("div", "nm", s.mcName + " "); n.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) n.appendChild(el("span", "pw", "ITEMS"));
-    g.appendChild(n); g.appendChild(el("div", "sub", s.email)); g.appendChild(el("div", "sub " + cls, st)); it.appendChild(g); it.appendChild(menu(s, area)); list.appendChild(it);
+    g.appendChild(n); g.appendChild(el("div", "sub", s.email)); g.appendChild(el("div", "sub " + cls, st)); it.appendChild(g); it.appendChild(menu(s, area, r.staff.length > 3 && at >= r.staff.length - 2)); list.appendChild(it);
   });
   area.appendChild(table); area.appendChild(list);
   area.appendChild(el("div", "note", "Owners are added and reset from the panel's console. Every change here is written to the panel's log."));
 }
 
-function menu(s, area) {
+// a staff member's face: their own head while they are in game, else a plain one
+function staffFace(name, size) {
+  const p = live.players.find((x) => x.name.toLowerCase() === String(name).toLowerCase());
+  return Players.face(p || { name: String(name) }, size);
+}
+
+function menu(s, area, up) {
   const box = el("div", "menu");
   if (s.you || s.rank === "OWNER") return box;
-  const b = el("button", null, "⋯"); b.type = "button"; b.title = "Actions"; const pop = el("div", "pop hidden");
-  const acts = [];
+  const b = el("button", null, "⋯"); b.type = "button"; b.title = "Actions"; const pop = el("div", "pop hidden" + (up ? " up" : ""));
+  const acts = []; let busy = false;
   if (s.lockedUntil) acts.push(["Unlock now", "unlock"]);
   acts.push([s.rank === "ADMIN" ? "Make Moderator" : "Make Admin", "rank"]);
   if (s.rank === "MODERATOR") acts.push([s.itemsPower ? "May add and remove items ✓ (tap to take back)" : "May add and remove items", "items"]); // D335, D363
@@ -181,8 +199,11 @@ function menu(s, area) {
     const x = el("button", danger ? "danger" : "", label); x.type = "button";
     let armed = 0;
     x.addEventListener("click", async () => {
-      if (Date.now() - armed > 3000) { armed = Date.now(); x.textContent = label + ": sure?"; return; } // two taps within 3 s
-      const r = await api("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN", on: !s.itemsPower });
+      if (busy) return;
+      if (Date.now() - armed > 3000) { armed = Date.now(); x.textContent = label + ": sure?"; unarm(x, 3000, label); return; } // two taps within 3 s
+      busy = true; pop.querySelectorAll("button").forEach((k) => { k.disabled = true; });
+      const r = await call("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN", on: !s.itemsPower }, true);
+      busy = false; armed = 0; x.textContent = label; pop.querySelectorAll("button").forEach((k) => { k.disabled = false; });
       if (!r.ok) { alert(r.message); return; }
       if (r.link) showLink(area, "New setup link for " + s.mcName + ", valid 15 minutes and once:", r.link);
       else await staffAccounts(area);
@@ -205,7 +226,10 @@ function addForm(area) {
   const err = el("div", "err hidden"); f.appendChild(err);
   f.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const r = await api("/api/staff/add", { email: email.value, mcName: name.value, rank: rank.value });
+    if (go.disabled) return; // one account per press, though Enter is pressed twice
+    go.disabled = true;
+    const r = await call("/api/staff/add", { email: email.value, mcName: name.value, rank: rank.value }, true);
+    go.disabled = false;
     if (!r.ok) { err.textContent = r.message; err.classList.remove("hidden"); return; }
     showLink(area, "Send this to " + name.value + ". It works once, within 15 minutes, signed in to Cloudflare as " + email.value + ":", r.link);
   });
@@ -258,90 +282,167 @@ addEventListener("resize", () => { clearTimeout(resizing); resizing = setTimeout
 // a name tapped in chat opens that player's sheet (D304)
 function openPlayerSheet(id) { tab = "Players"; Players.open(id); render(); }
 
-// Redraws the Players tab in place: the scroll position, the search box's focus and caret, and an open player kept.
 // the Graves key in a player's sheet or card opens the Graves page for them (D297)
 function openGraves(name) { tab = "More"; moreView = "graves"; render().then(() => Graves.look(name)); }
 // the market line in a player's sheet opens the market filtered to them (D405, D415 R2)
 function openMarket(p) { tab = "More"; moreView = "market"; Market.forPlayer(p); render(); }
+// a player who is not online opens on their Find a player page (D304, D311, D415 R2)
+function openOffline(p) { FindPlayer.open(p); tab = "More"; moreView = "find"; render(); }
+
+// A press under way: the live feed's redraw waits for it to end, so a tap is never lost on a key drawn again under it.
+let pressing = 0, tickWaiting = false;
+addEventListener("pointerdown", () => { pressing = Date.now(); }, true);
+["pointerup", "pointercancel"].forEach((t) => addEventListener(t, () => {
+  pressing = 0;
+  if (tickWaiting) { tickWaiting = false; setTimeout(() => App.tick(), 60); }
+}, true));
 
 const App = {
+  // Drawn again for staff or for an answer that arrived: the Players tab and an open player, or the Map's card, or an
+  // offline player's page (More › Find a player: their items or notes). Focus, caret and scrolling are kept.
   refresh() {
-    if (tab === "More" && moreView === "find") { App.refreshMore(); return; } // an offline player's items or notes arrived (SU-39)
-    if (tab === "Map") { MapView.redraw(); return; } // the map's card and list (SU-47); the map itself is never redrawn
+    if (tab === "More") { if (moreView === "find") App.refreshMore(); return; }
+    if (tab === "Map") { MapView.redraw(); return; }
     if (tab !== "Players") return;
-    const main = $("main"), active = document.activeElement;
-    const keep = active && (active.classList.contains("search") ? ".search" : active.classList.contains("reason") ? ".reason" : active.classList.contains("noteinput") ? ".noteinput" : active.classList.contains("additem") ? ".additem" : active.classList.contains("addcount") ? ".addcount" : active.classList.contains("pickq") ? ".pickq" : active.classList.contains("tpq") ? ".tpq" : active.classList.contains("tpx") ? ".tpx" : active.classList.contains("tpy") ? ".tpy" : active.classList.contains("tpz") ? ".tpz" : active.classList.contains("banreason") ? ".banreason" : active.classList.contains("bannote") ? ".bannote"
-      : active.classList.contains("bandays") ? ".bandays" : active.classList.contains("banhours") ? ".banhours" : null);
-    const caret = keep ? active.selectionStart : 0, sy = window.scrollY, my = main.scrollTop;
-    nav(); main.textContent = ""; Players.view(main, live); Players.detail(live);
-    window.scrollTo(0, sy); main.scrollTop = my;
-    if (keep) { const s = document.querySelector(keep); if (s) { s.focus(); s.setSelectionRange(caret, caret); } }
+    const h = hold();
+    Players.view($("main"), live); Players.detail(live);
+    give(h);
+  },
+  // The live feed (at most every 5 s): the Players tab, with only what the feed changes in an open player's sheet, or the
+  // Map tab. More pages are never drawn again by it.
+  tick() {
+    if (pressing && Date.now() - pressing < 8000) { tickWaiting = true; return; }
+    if (tab === "Map") { MapView.live(live); return; }
+    if (tab !== "Players") return;
+    const h = hold();
+    Players.view($("main"), live); Players.detail(live, true);
+    give(h);
   },
   async refreshMore() {
     if (tab !== "More") return; // an answer arriving after staff moved to another tab draws nothing (audit)
-    const main = $("main"), sy = window.scrollY; main.textContent = ""; await more(main); window.scrollTo(0, sy);
+    const g = ++moreGen, h = hold(), main = $("main");
+    main.textContent = ""; await more(main);
+    if (g === moreGen && tab === "More") give(h);
   },
 };
+let moreGen = 0;
 
 // The live feed. The browser retries by itself after a network error, but not after a refusal (an ended login, the
-// Cloudflare session running out, too many pages): then the page says so, checks why and reconnects or goes to log in (audit).
-let connected = false;
+// Cloudflare session running out, too many pages): then the page says so, checks why and reconnects or goes to log in
+// (audit). The panel sends something at least every 20 s (a "ping" when nothing else): 45 s of silence is a dead line,
+// such as a phone in a tunnel, and is treated as one.
+let connected = false, feed = null, lastEvent = 0, feedErrors = 0;
+const SILENT_MS = 45000;
+function drop(es) { try { es.close(); } catch (e) { /* closed */ } if (feed === es) feed = null; }
 function connect() {
+  if (feed) drop(feed);
   const es = new EventSource("/api/live");
-  es.addEventListener("open", () => {
-    offline(false);
-    if (connected) { ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); } // what was sent while the page was away (audit)
+  feed = es; lastEvent = Date.now(); feedErrors = 0;
+  const on = (name, fn) => es.addEventListener(name, (e) => { if (feed !== es) return; lastEvent = Date.now(); fn(e); });
+  on("open", () => {
+    feedErrors = 0; offline(false);
+    if (connected) afterGap(); // what was sent while the page was away (audit)
     connected = true;
   });
+  on("ping", () => { /* the line is alive */ });
   let servers = "";
-  es.addEventListener("live", (e) => {
+  on("live", (e) => {
     live = JSON.parse(e.data);
     staffOnline();
     Lottery.onLive(live); // a draw counting somewhere (D411)
-    if (tab === "Map") MapView.live(live); else App.refresh();
+    App.tick();
     const now = live.servers.map((s) => s.server + ":" + s.count).join(",");
-    if (now !== servers) { servers = now; ChatView.redraw(); } // the server chips and the TO list
+    if (now !== servers) { servers = now; ChatView.serversChanged(); } // the server chips and the TO list
   });
-  es.addEventListener("chat", (e) => JSON.parse(e.data).lines.forEach((l) => ChatView.incoming(l)));
-  es.addEventListener("room", (e) => StaffView.room(JSON.parse(e.data)));
-  es.addEventListener("messages", () => StaffView.messagesChanged());
-  es.addEventListener("notes", (e) => Notes.changed(JSON.parse(e.data).player));
-  es.addEventListener("tags", () => Tags.changed());
-  es.addEventListener("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
-  es.addEventListener("ended", () => { es.close(); location.href = "/login"; });
+  on("chat", (e) => ChatView.incoming(JSON.parse(e.data).lines)); // a batch, drawn once
+  on("room", (e) => StaffView.room(JSON.parse(e.data)));
+  on("messages", () => StaffView.messagesChanged());
+  on("notes", (e) => Notes.changed(JSON.parse(e.data).player));
+  on("tags", () => Tags.changed());
+  on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
+  on("ended", () => { drop(es); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
-  es.addEventListener("replaced", () => { es.close(); replaced(); });
+  on("replaced", () => { drop(es); replaced(); });
   es.onerror = () => {
-    offline(true);
-    if (es.readyState === EventSource.CLOSED) setTimeout(() => recheck(), 3000);
+    if (feed !== es) return;
+    offline(true); feedErrors++;
+    // closed by the browser, or retrying without getting anywhere (a login page in the way): check why
+    if (es.readyState === EventSource.CLOSED || feedErrors >= 3) { drop(es); setTimeout(() => recheck(), 3000); }
   };
+}
+setInterval(() => {
+  if (feed && Date.now() - lastEvent > SILENT_MS) { drop(feed); offline(true); recheck(); }
+}, 5000);
+
+// after a gap in the feed: the chat, the room and messages, tags, the lottery and notes read again
+function afterGap() {
+  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset();
 }
 
 function replaced() {
   offline(true);
   const b = $("offline"); b.textContent = "Open on another page or device: tap here to use this one."; b.classList.add("tap");
-  b.onclick = () => { b.onclick = null; b.classList.remove("tap"); b.textContent = "Not live: reconnecting…"; connect(); };
+  b.tabIndex = 0; b.setAttribute("role", "button"); placeGold();
+  const use = () => {
+    b.onclick = null; b.onkeydown = null; b.classList.remove("tap"); b.removeAttribute("role"); b.removeAttribute("tabindex");
+    b.textContent = "Not live: reconnecting…"; connect();
+  };
+  b.onclick = use;
+  b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); use(); } };
 }
 
 function offline(on) {
   let b = $("offline");
   if (!b) { b = el("div", "offline", "Not live: reconnecting…"); b.id = "offline"; document.body.appendChild(b); }
+  if (on && !b.classList.contains("tap")) b.textContent = "Not live: reconnecting…";
   b.classList.toggle("hidden", !on);
+  document.body.classList.toggle("notlive", on);
+  placeGold();
+}
+// the lottery's gold line sits below the "Not live" line (however many lines that takes), never over it (audit)
+function placeGold() {
+  const g = $("goldline"), b = $("offline");
+  if (!g) return;
+  g.style.top = b && !b.classList.contains("hidden") ? Math.round(b.getBoundingClientRect().bottom + 6) + "px" : "";
 }
 
+let rechecking = false;
 async function recheck() {
+  if (rechecking || feed) return;
+  rechecking = true;
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {
-    const r = await fetch("/api/me", { credentials: "same-origin", redirect: "manual" });
+    const r = await fetch("/api/me", { credentials: "same-origin", redirect: "manual", signal: ctl.signal });
+    clearTimeout(t); rechecking = false;
     if (r.type === "opaqueredirect" || r.status === 0) { location.reload(); return; } // Cloudflare wants its login again
     if (r.status === 401) { location.href = "/login"; return; }
     connect();
   } catch (e) {
+    clearTimeout(t); rechecking = false;
     setTimeout(() => recheck(), 10000);
   }
 }
 
+// The start: who is logged in. A failed first read says so and tries again, never a blank page.
+async function whoAmI() {
+  let wait = 2000;
+  for (;;) {
+    try { return await api("/api/me"); } catch (e) {
+      if (e.kind === "out") return null;
+      const main = $("main"); main.textContent = "";
+      main.appendChild(el("div", "err", failText(e) + " Trying again in " + Math.round(wait / 1000) + " s."));
+      const now = el("button", "btn sm ghost back", "Try now"); now.type = "button"; main.appendChild(now);
+      await new Promise((done) => { const t = setTimeout(done, wait); now.addEventListener("click", () => { clearTimeout(t); done(); }); });
+      main.textContent = ""; main.appendChild(el("div", "note", "Reading your login…"));
+      wait = Math.min(wait * 2, 30000);
+    }
+  }
+}
+
 (async () => {
-  me = await api("/api/me");
+  me = await whoAmI();
+  if (!me) return;
+  $("main").textContent = "";
   const m = $("me"); m.textContent = ""; m.appendChild(el("span", "nm", me.mcName + " ")); m.appendChild(el("span", "rk " + me.rank, me.rankLabel));
   if (me.rank === "MODERATOR" && me.itemsPower) m.appendChild(el("span", "pw", "ITEMS"));
   $("chatbtn").addEventListener("click", () => { chatOpen = !chatOpen; placeChat(); });

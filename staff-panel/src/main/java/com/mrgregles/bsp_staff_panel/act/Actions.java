@@ -28,6 +28,10 @@ import java.util.function.LongSupplier;
 public final class Actions {
     public static final String KIND_ACTION = "web_action", KIND_ANSWER = "answer", SOURCE = "panel";
     public static final int WAIT_SECONDS = 6;
+    /** For actions that take longer on the game server: an UNDO taking items back slot by slot, a market REFRESH, bans waiting on the database (audit). */
+    public static final int LONG_WAIT_SECONDS = 15;
+    /** The fields every action carries; an action's own fields never replace them (audit: an UNDO's fields came from a game server's answer). */
+    private static final java.util.Set<String> ENVELOPE = java.util.Set.of("v", "id", "at", "until", "by", "rank", "server");
 
     /** Where actions go: the servers' channel on Redis, and the notices table. */
     public interface Bus {
@@ -41,9 +45,15 @@ public final class Actions {
     }
 
     private final byte[] key;
+    /** Signs what the panel sends: the panel's Ed25519 key (D426) on the network; the shared key in the demo and tests. */
+    private volatile java.util.function.UnaryOperator<String> signer;
     private final Bus bus;
     private final LongSupplier clock;
     private final Map<String, CompletableFuture<Answer>> waiting = new ConcurrentHashMap<>();
+    /** Which server each waiting action was sent to: only that server's answer is taken (audit). */
+    private final Map<String, String> askedOf = new ConcurrentHashMap<>();
+    /** Why a server cannot be asked now (its snapshot says its answers cannot reach the panel), or null (audit). */
+    private volatile java.util.function.Function<String, String> refuse = server -> null;
     private final int waitSeconds;
     /** At most four actions waiting at once, and ten a minute for each staff member (audit). */
     private final java.util.concurrent.Semaphore busy = new java.util.concurrent.Semaphore(4);
@@ -59,9 +69,22 @@ public final class Actions {
     /** With another wait (tests). */
     public Actions(byte[] key, Bus bus, LongSupplier clock, int waitSeconds) {
         this.key = key.clone();
+        byte[] k = this.key;
+        this.signer = json -> sign(k, json);
         this.bus = bus;
         this.clock = clock;
         this.waitSeconds = waitSeconds;
+    }
+
+    /** Signs every action and notice with the panel's own private key (D426): the game servers check it with webPanel.panelKey. */
+    public Actions signWith(com.mrgregles.bsp_staff_panel.crypto.PanelSigner panel) {
+        signer = panel::sign;
+        return this;
+    }
+
+    /** Sets the check made before anything is sent to a server: a reason it cannot answer now, or null. */
+    public void refuseWhen(java.util.function.Function<String, String> reason) {
+        refuse = reason;
     }
 
     public static String sign(byte[] key, String json) {
@@ -81,7 +104,12 @@ public final class Actions {
      * @param fields the action's own fields: {@code action} and what it needs
      */
     public Answer ask(String server, String by, String rank, JsonObject fields) {
-        return askAll(java.util.List.of(server), by, rank, fields).get(server);
+        return ask(server, by, rank, fields, waitSeconds);
+    }
+
+    /** The same with its own wait in seconds ({@link #LONG_WAIT_SECONDS} for the slow ones). */
+    public Answer ask(String server, String by, String rank, JsonObject fields, int wait) {
+        return askAll(java.util.List.of(server), by, rank, fields, by, PER_MINUTE, "actions", wait).get(server);
     }
 
     /**
@@ -89,17 +117,35 @@ public final class Actions {
      * each server's answer by its name, all within {@link #WAIT_SECONDS}.
      */
     public Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields) {
-        return askAll(servers, by, rank, fields, by, PER_MINUTE, "actions");
+        return askAll(servers, by, rank, fields, by, PER_MINUTE, "actions", waitSeconds);
     }
 
     /** A read that changes nothing on the game server (SU-39), counted apart from actions, {@link #READS_PER_MINUTE} a minute. */
     public Answer read(String server, String by, String rank, JsonObject fields) {
-        return askAll(java.util.List.of(server), by, rank, fields, "read:" + by, READS_PER_MINUTE, "reads").get(server);
+        return read(server, by, rank, fields, waitSeconds);
     }
 
-    private Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields, String budget, int perMinute, String what) {
+    /** A read with its own wait (a market REFRESH). */
+    public Answer read(String server, String by, String rank, JsonObject fields, int wait) {
+        return askAll(java.util.List.of(server), by, rank, fields, "read:" + by, READS_PER_MINUTE, "reads", wait).get(server);
+    }
+
+    private Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields, String budget, int perMinute, String what, int wait) {
         long now = clock.getAsLong();
         Map<String, Answer> out = new java.util.LinkedHashMap<>();
+        java.util.List<String> able = new java.util.ArrayList<>();
+        for (String server : servers) {
+            String why = refuse.apply(server);
+            if (why != null) {
+                out.put(server, new Answer(false, why));
+            } else {
+                able.add(server);
+            }
+        }
+        if (able.isEmpty()) {
+            return out;
+        }
+        servers = able;
         java.util.ArrayDeque<Long> mine = recent.computeIfAbsent(budget, k -> new java.util.ArrayDeque<>());
         synchronized (mine) {
             while (!mine.isEmpty() && mine.peekFirst() < now - 60_000L) {
@@ -126,19 +172,23 @@ public final class Actions {
                 a.addProperty("by", by);
                 a.addProperty("rank", rank);
                 a.addProperty("server", server);
+                a.addProperty("until", now + wait * 1000L); // past this the panel has stopped waiting: the game server refuses it then (audit)
                 for (Map.Entry<String, JsonElement> e : fields.entrySet()) {
-                    a.add(e.getKey(), e.getValue());
+                    if (!ENVELOPE.contains(e.getKey())) {
+                        a.add(e.getKey(), e.getValue());
+                    }
                 }
                 waiting.put(id, new CompletableFuture<>());
+                askedOf.put(id, server);
                 ids.put(server, id);
                 try {
-                    bus.send(id, now, KIND_ACTION, sign(key, a.toString()));
+                    bus.send(id, now, KIND_ACTION, signer.apply(a.toString()));
                 } catch (Exception e) {
                     waiting.remove(id).complete(new Answer(false, "The request could not be sent: " + e.getMessage()));
                     out.put(server, new Answer(false, "The request could not be sent: " + e.getMessage()));
                 }
             }
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(waitSeconds);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(wait);
             for (Map.Entry<String, String> e : ids.entrySet()) {
                 if (out.containsKey(e.getKey())) {
                     continue;
@@ -147,7 +197,7 @@ public final class Actions {
                 try {
                     out.put(e.getKey(), f.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
                 } catch (java.util.concurrent.TimeoutException t) {
-                    out.put(e.getKey(), new Answer(false, "No answer from " + e.getKey() + " in " + waitSeconds + " seconds. It may still have happened (answers are lost while Redis is down): check the LOG tab in game before trying again."));
+                    out.put(e.getKey(), new Answer(false, "No answer from " + e.getKey() + " in " + wait + " seconds. It may still have happened: check the LOG tab in game before trying again."));
                 } catch (Exception x) {
                     out.put(e.getKey(), new Answer(false, "The request could not be sent: " + x.getMessage()));
                 }
@@ -155,6 +205,7 @@ public final class Actions {
             return out;
         } finally {
             ids.values().forEach(waiting::remove);
+            ids.values().forEach(askedOf::remove);
             busy.release();
         }
     }
@@ -166,7 +217,7 @@ public final class Actions {
     public void notice(String kind, JsonObject json) throws Exception {
         long now = clock.getAsLong();
         json.addProperty("at", now);
-        bus.send(UUID.randomUUID().toString(), now, kind, sign(key, json.toString()));
+        bus.send(UUID.randomUUID().toString(), now, kind, signer.apply(json.toString()));
     }
 
     /** A message from the web channel; true when it was an answer to one of ours. */
@@ -181,9 +232,14 @@ public final class Actions {
                 return true; // an answer not signed with our key: dropped (audit)
             }
             JsonObject o = JsonParser.parseString(text).getAsJsonObject();
-            CompletableFuture<Answer> f = waiting.get(o.get("id").getAsString());
+            String id = o.get("id").getAsString();
+            CompletableFuture<Answer> f = waiting.get(id);
             if (f == null) {
                 return true; // too late, or another panel's
+            }
+            String asked = askedOf.get(id), from = o.has("server") ? o.get("server").getAsString() : "";
+            if (asked == null || !from.isEmpty() && !asked.equalsIgnoreCase(from)) {
+                return true; // another game server answering for the one asked: not taken (audit; every game server names itself)
             }
             f.complete(new Answer(o.get("ok").getAsBoolean(), o.has("message") ? o.get("message").getAsString() : "", o.get("data")));
             return true;

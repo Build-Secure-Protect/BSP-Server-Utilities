@@ -23,25 +23,37 @@ import java.util.Properties;
  * authenticator again). The file holds passwords: it is made readable by its owner only where the system allows.
  */
 public record PanelConfig(String listenHost, int listenPort, String publicUrl, String teamDomain, String aud,
-                          String dbHost, int dbPort, String dbName, String dbUser, String dbPassword, boolean dbSsl, String tablePrefix,
+                          String dbHost, int dbPort, String dbName, String dbPanelName, String dbUser, String dbPassword, boolean dbSsl, String tablePrefix,
                           String redisHost, int redisPort, String redisUser, String redisPassword, String redisChannel,
-                          byte[] secretKey, byte[] actionKey, String mapRoot) {
+                          byte[] secretKey, byte[] actionKey, byte[] signingKey, String panelKey, String mapRoot) {
     public static final String FILE = "panel.properties";
 
     private static final String ACTION_KEY_LINES = """
 
-            # The key the game servers check the panel's actions with (kicks, announcements). Copy it into every game
-            # server's config/bsp_server_utilities-network.toml as webPanel.actionKey. Anyone with it can kick players.
+            # The key the game servers sign what they send to the panel with (their players, chat, answers). Copy it into every
+            # game server's config/bsp_server_utilities-network.toml as webPanel.actionKey. With it someone could show the
+            # panel made-up players or answers (not order anything: that takes signingKey). Keep it in these files only.
             actionKey=%s
+            """;
+
+    private static final String SIGNING_KEY_LINES = """
+
+            # The panel's own signing key (D426): every action the panel sends is signed with signingKey, which only this file
+            # holds; the game servers check it with panelKey. Copy panelKey (public, it can only check) into every game
+            # server's config/bsp_server_utilities-network.toml as webPanel.panelKey. Never copy signingKey anywhere.
+            signingKey=%s
+            panelKey=%s
             """;
 
     private static final String TEMPLATE = """
             # BSP staff web panel settings. Fill these in, then start the panel again.
             # This file holds passwords and the panel's key: keep it private and back it up.
 
-            # Where the panel listens. Cloudflare's tunnel (cloudflared) connects here; never open this port to the internet.
-            listen.host=127.0.0.1
-            listen.port=8100
+            # Where the panel listens inside its container: 0.0.0.0 (every address of the container). Who can reach it is
+            # decided by the server's allocation in Pterodactyl (127.0.0.1 on the node is best); never open it to the internet.
+            # listen.port empty: the allocation's port (Pterodactyl's SERVER_PORT).
+            listen.host=0.0.0.0
+            listen.port=
             # The address staff open, exactly as in the browser (no slash at the end).
             publicUrl=https://staff.buildsecureprotect.com
 
@@ -50,17 +62,22 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
             cloudflare.teamDomain=
             cloudflare.aud=
 
-            # The network's MySQL / MariaDB: the same database and table prefix as BSP-Server Utilities on the game servers.
-            database.host=localhost
+            # The network's MySQL / MariaDB. database.name: the game servers' shared database (BSP-Server Utilities' tables,
+            # same table prefix). database.panelName: the panel's own database for its accounts, notes and staff room, with
+            # database.user a user only the panel has (the setup guide's SQL); never the game servers' user, whose password
+            # sits on every game server. Seen from inside the panel's container: localhost is the container itself.
+            database.host=
             database.port=3306
             database.name=bsp
-            database.user=bsp
+            database.panelName=bsp_panel
+            database.user=bsp_panel
             database.password=
             database.ssl=false
             database.tablePrefix=bsp_su_
 
             # The network's Redis, and the channel the game servers use (storage.redis.channel in their server config).
-            redis.host=localhost
+            # Seen from inside the container, as above; plain TCP (not TLS).
+            redis.host=
             redis.port=6379
             redis.username=
             redis.password=
@@ -83,7 +100,9 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
     public static PanelConfig load(Path file) throws IOException, NotReady {
         if (!Files.exists(file)) {
             String key = Base64.getEncoder().encodeToString(SecretBox.newKey());
-            Files.writeString(file, TEMPLATE.formatted(key, Base64.getEncoder().encodeToString(SecretBox.newKey())), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+            String[] pair = com.mrgregles.bsp_staff_panel.crypto.PanelSigner.newPair();
+            Files.writeString(file, TEMPLATE.formatted(key, Base64.getEncoder().encodeToString(SecretBox.newKey())) + SIGNING_KEY_LINES.formatted(pair[0], pair[1]),
+                    StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
             ownerOnly(file);
             throw new NotReady("Wrote " + file.toAbsolutePath() + ": fill in the Cloudflare, database and Redis settings, then start the panel again.");
         }
@@ -96,6 +115,21 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
             Files.writeString(file, ACTION_KEY_LINES.formatted(made), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
             p.setProperty("actionKey", made);
         }
+        if (p.getProperty("signingKey", "").isBlank()) { // made on the first start, or added to a file from before D426
+            String[] pair = com.mrgregles.bsp_staff_panel.crypto.PanelSigner.newPair();
+            Files.writeString(file, SIGNING_KEY_LINES.formatted(pair[0], pair[1]), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+            p.setProperty("signingKey", pair[0]);
+            p.setProperty("panelKey", pair[1]);
+            System.out.println("Made the panel's signing key: put panelKey from " + FILE + " (or the console's action-key) in every game server's webPanel.panelKey.");
+        }
+        byte[] signingKey;
+        try {
+            signingKey = Base64.getDecoder().decode(p.getProperty("signingKey").trim());
+            new com.mrgregles.bsp_staff_panel.crypto.PanelSigner(signingKey);
+        } catch (IllegalArgumentException e) {
+            throw new NotReady("signingKey is not a key this panel made. Empty signingKey and panelKey to make a new pair (then copy panelKey to every game server again).");
+        }
+        String panelKey = p.getProperty("panelKey", "").trim();
         byte[] actionKey;
         try {
             actionKey = Base64.getDecoder().decode(p.getProperty("actionKey").trim());
@@ -126,12 +160,17 @@ public record PanelConfig(String listenHost, int listenPort, String publicUrl, S
         if (actionKey.length != SecretBox.KEY_BYTES) {
             throw new NotReady("actionKey is not a key this panel made. Empty it to make a new one (then copy it to every game server again).");
         }
-        return new PanelConfig(p.getProperty("listen.host", "127.0.0.1").trim(), number(p, "listen.port", 8100), publicUrl, team, aud,
-                p.getProperty("database.host", "localhost").trim(), number(p, "database.port", 3306), p.getProperty("database.name", "bsp").trim(),
+        String allocated = System.getenv("SERVER_PORT"); // Pterodactyl's allocation, when listen.port is left empty
+        int defaultPort = allocated != null && allocated.matches("\\d{2,5}") ? Integer.parseInt(allocated) : 8100;
+        if (p.getProperty("database.host", "").isBlank() || p.getProperty("redis.host", "").isBlank()) {
+            throw new NotReady("database.host and redis.host are empty in " + FILE + ": fill in the addresses the game servers use (seen from this container), then start the panel again.");
+        }
+        return new PanelConfig(p.getProperty("listen.host", "0.0.0.0").trim(), number(p, "listen.port", defaultPort), publicUrl, team, aud,
+                p.getProperty("database.host", "localhost").trim(), number(p, "database.port", 3306), p.getProperty("database.name", "bsp").trim(), p.getProperty("database.panelName", p.getProperty("database.name", "bsp")).trim(),
                 p.getProperty("database.user", "bsp").trim(), p.getProperty("database.password", ""), Boolean.parseBoolean(p.getProperty("database.ssl", "false").trim()),
                 p.getProperty("database.tablePrefix", "bsp_su_").trim(),
                 p.getProperty("redis.host", "localhost").trim(), number(p, "redis.port", 6379), p.getProperty("redis.username", "").trim(),
-                p.getProperty("redis.password", ""), p.getProperty("redis.channel", "network").trim(), key, actionKey,
+                p.getProperty("redis.password", ""), p.getProperty("redis.channel", "network").trim(), key, actionKey, signingKey, panelKey,
                 p.getProperty("map.root", "").trim());
     }
 

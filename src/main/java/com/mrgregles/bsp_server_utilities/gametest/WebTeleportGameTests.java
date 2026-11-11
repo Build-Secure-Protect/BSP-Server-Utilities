@@ -115,6 +115,8 @@ public class WebTeleportGameTests {
             arriving.clear();
             WebActions.Answer bad = WebActions.handle(server, action("a4-" + m, now, "tp", who + ",\"to\":{\"world\":\"not a world\",\"x\":1,\"y\":64,\"z\":1}"));
             h.assertTrue(!bad.ok() && tp.moves.isEmpty(), "not a place: refused");
+            WebActions.Answer deep = WebActions.handle(server, action("a4b-" + m, now, "tp", who + ",\"to\":{\"world\":\"minecraft:overworld\",\"x\":1,\"y\":-640,\"z\":1}"));
+            h.assertTrue(!deep.ok() && deep.message().contains("between -64 and 320") && tp.moves.isEmpty(), "y below the world (a typo for -64): refused, not into the void (audit): " + deep.message());
 
             WebActions.Answer here = WebActions.handle(server, action("a5-" + m, now, "tp", who + ",\"name\":\"Vexa\",\"to\":{\"server\":\"moongrove\",\"world\":\"minecraft:overworld\",\"x\":10.5,\"y\":64,\"z\":-3.5,\"what\":\"10, 64, -3 (" + m + ")\"}"));
             Move mv = tp.moves.get(0);
