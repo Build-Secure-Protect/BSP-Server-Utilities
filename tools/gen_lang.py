@@ -49,7 +49,7 @@ STATUS = {
     "web_off": "Staff web panel: off (webPanel.enabled in config/bsp_server_utilities-network.toml).",
     "web_actions_on": "Staff web panel: what this server sends is signed, and the panel's actions are taken (webPanel.actionKey).",
     "web_actions_off": "Staff web panel: nothing is sent and no action is taken until webPanel.actionKey is set.",
-    "web_actions_bad": "Staff web panel: webPanel.actionKey is not a key the panel made (copy it again from the panel's console, action-key); nothing is sent and no action is taken.",
+    "web_actions_bad": "Staff web panel: webPanel.actionKey is not a key the panel made (copy it again from actionKey= in the panel's panel.properties); nothing is sent and no action is taken.",
     "web_panel_key_off": "Staff web panel: what this server sends is signed, but no action from the panel is taken until webPanel.panelKey (the panel's public key, from its console's action-key) is set.",
     "web_panel_key_bad": "Staff web panel: webPanel.panelKey is not the panel's public key (copy it again from the panel's console, action-key); no action from the panel is taken.",
     "web_no_answers": "Staff web panel: Redis is not connected here, so the panel's actions are not taken (their answers travel on Redis).",

@@ -932,3 +932,41 @@ reach other files on those disks (`.25` already holds the database, Redis and th
 **Untested:** everything on the network, as above. Added checks: Stop BSP-Map: its console says `Saving...` then
 `Stopped.` within a few seconds; restart `.25` with `.28` off: `.25` starts normally, and after `.28` is back the
 guide's step brings Moongrove and Stormfall back.
+
+## 2026-11-11: audit of the panel setup guide (`docs/STAFF_PANEL_SETUP.md`)
+Two reviewers, given the guide, the code and D420 to D430 (not conclusions): one against the code (every key, file,
+command and quoted line), one against Pterodactyl, Wings, MariaDB and Cloudflare's own documentation and source. Every
+finding checked before fixing; Wings' `environment/allocations.go` read here.
+
+Fixed:
+- **The tunnel pointed at nothing.** Wings publishes a `127.0.0.1` allocation on pterodactyl0's address (normally
+  `172.18.0.1`; `DockerBindings`: "replaces any reference to 127.0.0.1"), so `http://127.0.0.1:8100` gave every visitor
+  Bad gateway. The route is now `http://172.18.0.1:8100` (checked with `ip -4 addr show pterodactyl0`), with a `curl`
+  check and separate 1033 and 502 rows.
+- **The panel's database login.** From its container on `.25` MariaDB sees `172.18.x.x`, not the `bsp` user's host:
+  `bsp_panel` is now created for `172.18.%` (from pterodactyl0's address), and the Access-denied row says how to rename it.
+- Locking down the game servers' logins: every login in their files is checked (not only `bsp`; LuckPerms has its
+  own), `REVOKE ALL PRIVILEGES, GRANT OPTION`, and every database it used is granted back so nothing else loses access.
+- **Code:** the panel's console and the mod's `web_actions_bad` status line told the owner to copy `actionKey` from
+  the console's `action-key`, which prints `panelKey` only (an owner following them broke that server's feed). Both
+  now say `actionKey=` in `panel.properties`; the guide says what `action-key` prints.
+- The egg: the exact file (`egg-pterodactyl-java-generic.json`, not the `.yaml`), the nest made first, **Java 17**
+  from the egg's list, the startup command always set with `-Xmx512M` (without it Java takes a quarter of the memory),
+  **Start Server when Installed** unticked (also in the map guide); no staff member a Pterodactyl admin.
+- Cloudflare: a team name of your own (`bsp` is likely taken), "Create a tunnel" and the one **Service URL** field;
+  a leaked tunnel token means deleting the tunnel (a refreshed token leaves a running copy connected), the install
+  command typed after a space (kept out of the history); removing someone needs **Revoke existing tokens** too.
+- Velocity Additions' network kick: three cases by the proxy's console line, and the newer build if it says neither.
+- `USE bsp;` before the utf8mb4 `ALTER TABLE` lines (they name tables without the database); the Redis row has
+  WRONGPASS; a missing `bsp` grant shows as `[panel] reading the ... table`; the storage line's real ending; the
+  start-up lines' order not fixed; the Redis settings' files named; backups with `umask 077`, `--single-transaction`,
+  `mysqldump` and Docker forms (the root password read inside the container, never typed).
+- The values at the top (and the map guide's world folders) were read from older copies of the servers, which the
+  owner says differ from the live ones: each now says where to check it on the live servers.
+
+Checked and right: every `panel.properties` key and default; the panel's first-start, refusal and start-up lines; the
+console commands; the grants match what `JdbcStore` uses; the mod's `[webPanel]` keys and `su status` lines; the
+done text and Stop Command; the Access JWT checks (team domain, AUD); One-time PIN; no `X-Forwarded-Proto` needed.
+
+**Untested:** all of it on the network. Added checks: `curl -sI http://172.18.0.1:8100` on `.25` answers 403; the
+panel's console shows no `Access denied` for `bsp_panel`; `SHOW GRANTS` for `bsp` has no `ON *.*`.

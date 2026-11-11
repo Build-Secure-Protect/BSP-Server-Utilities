@@ -67,7 +67,7 @@ public final class Feed {
             if (said == null || clock.getAsLong() - said > 3_600_000L) { // named once an hour, so the one server with another key is found (audit)
                 unsignedSaid.put(server, clock.getAsLong());
                 System.err.println("[panel] a snapshot said to be from " + server.replaceAll("[^A-Za-z0-9_.-]", "?")
-                        + " is not signed with this panel's action key: put the key the console's action-key prints in that server's webPanel.actionKey");
+                        + " is not signed with this panel's action key: put actionKey= from panel.properties in that server's webPanel.actionKey");
             }
             return false; // not signed with this panel's key: dropped (audit)
         }

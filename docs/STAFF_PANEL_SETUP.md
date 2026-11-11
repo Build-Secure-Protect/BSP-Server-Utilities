@@ -20,7 +20,7 @@ Set aside **an evening**. Part 3 restarts every game server, so choose a quiet h
 ```
 phone / computer ──https──> Cloudflare (Access: staff emails only) ──tunnel──> cloudflared (on 192.168.1.25)
                                                                                      │
-                                                         the panel (Pterodactyl, 127.0.0.1:8100 on 192.168.1.25)
+                                                            the panel (Pterodactyl, 172.18.0.1:8100 on 192.168.1.25)
                                                                                      │ MariaDB and Redis (192.168.1.25)
                                                   game servers (BSP-Server Utilities) ┘
 ```
@@ -32,6 +32,9 @@ phone / computer ──https──> Cloudflare (Access: staff emails only) ─�
   network has servers on four machines: `192.168.1.25`, `.26`, `.27` and `.28`. MariaDB and Redis are on
   `192.168.1.25`, so the panel goes there too.
 - **Allocation**: an address and port Pterodactyl gives a server, such as `127.0.0.1:8100`.
+- **pterodactyl0**: the small private network Pterodactyl makes on each machine for its containers, normally
+  `172.18.0.1` for the machine itself and `172.18.0.x` for the containers. Pterodactyl puts a server with a
+  `127.0.0.1` allocation on `172.18.0.1` instead: only that machine and its containers can reach it.
 - **Egg**: a Pterodactyl template saying how to start a kind of server (which program, which Java).
 - **Container**: the closed box Pterodactyl runs each server in. Inside it, `localhost` means the box itself, not the
   machine around it. That is why addresses here are written out (`192.168.1.25`).
@@ -51,18 +54,21 @@ phone / computer ──https──> Cloudflare (Access: staff emails only) ─�
   Microsoft Authenticator, 1Password, Aegis...).
 
 ## Your network's values
-These come from your servers' current settings. The steps use them.
+The steps use these values. They were read from older copies of your servers' files, so **check each against the live
+servers before you start** (the right-hand column says where), and use the live value wherever it differs.
 
-| What | Value |
-|---|---|
-| Machine for the panel, MariaDB and Redis | `192.168.1.25` |
-| MariaDB | `192.168.1.25`, port `3306`, shared database `bsp`, the game servers' user `bsp` |
-| BSP-Server Utilities' table prefix | `bsp_su_` |
-| Redis | `192.168.1.25`, port `6379`, no TLS; its password is in every game server's `config/bsp_core-network.toml`, `[redis]` `password` |
-| Redis channel | `network` |
-| The panel's address | `https://staff.buildsecureprotect.com` |
-| The panel's port on the machine | `8100` (on `127.0.0.1`) |
-| Server names | `BSP-Spawn`, `BSP-SafeRoom`, `BSP-Sanctuary`, `BSP-Frostwarf`, `BSP-Boulderbrook`, `BSP-Moongrove`, `BSP-Stormfall` (Velocity's names; BSP-Core's `serverId` on each) |
+| What | Value | Where to check it on the live servers |
+|---|---|---|
+| Machine for the panel, MariaDB and Redis | `192.168.1.25` | where MariaDB and Redis run (the next two rows) |
+| MariaDB | `192.168.1.25`, port `3306`, shared database `bsp`, the game servers' user `bsp` | a game server's `config/bsp_core-network.toml`, `[database]` (host, port, database, user) |
+| BSP-Server Utilities' table prefix | `bsp_su_` | a game server's `config/bsp_server_utilities-network.toml`, `[database]` `tablePrefix` (part 3, step 4's `su status` shows it too) |
+| Redis | `192.168.1.25`, port `6379`, no TLS; its password is in every game server's `config/bsp_core-network.toml`, `[redis]` `password` | the same file, `[redis]` |
+| Redis channel | `network` | `su status` in part 3 shows `channel bsp_su:<this>` |
+| The panel's address | `https://staff.buildsecureprotect.com` | your choice |
+| The panel's port on the machine | `8100`, on pterodactyl0's address (normally `172.18.0.1`; part 6, step 2 checks it) | part 5, step 3 |
+| Server names | `BSP-Spawn`, `BSP-SafeRoom`, `BSP-Sanctuary`, `BSP-Frostwarf`, `BSP-Boulderbrook`, `BSP-Moongrove`, `BSP-Stormfall` | the proxy's `velocity.toml`, `[servers]`; each must equal BSP-Core's `serverId` on that server (part 3, step 4) |
+
+If a value differs (another host, user or channel), use the live one everywhere the steps show this one.
 
 Keep a private note open (not a chat, not a screenshot you share) for the passwords and keys you will make: the
 panel's database password (part 5), the two keys (part 7), and your panel password and backup codes (part 11).
@@ -81,20 +87,35 @@ You need these files. They are already built on your Mac:
 1. **Players' modpack first.** BSP-Server Utilities 0.10.1 speaks network protocol 6: a player whose game has an
    older version is turned away, told the mod's version differs. Put the new jars (the first three rows) into the
    modpack and publish it the way you always do, so players can update before or as the servers change.
-2. **Velocity Additions on the proxy.** Your proxy already has `bsp_velocity_additions-0.2.0.jar` in `plugins/`.
-   Check it: open the proxy's server in Pterodactyl, then **Console**. When the proxy starts it says
-   `Network kicks: on, listening on bsp_server_utilities:proxy (BSP-Server Utilities)`. If it says off: **Files** ›
-   `plugins/bsp_velocity_additions/config.toml`, set `enabled = true` under `[networkKick]`, **Save Content**, then
-   restart the proxy. Without this, a kick may move a player to another server instead of off the network.
+2. **Velocity Additions on the proxy.** A kick from the panel needs Velocity Additions' **network kick**, which is
+   only in its newer build. Check: open the proxy's server in Pterodactyl, then **Console**, and look at its start
+   (or restart it at a quiet moment). Three cases:
+   - It says `Network kicks: on, listening on bsp_server_utilities:proxy (BSP-Server Utilities)`: nothing to do.
+   - It says `networkKick.enabled is false; ...`: **Files** › `plugins/bsp_velocity_additions/config.toml`, set
+     `enabled = true` under `[networkKick]`, **Save Content**, restart the proxy.
+   - It says neither: the proxy has an older build without the network kick.
+     The newer one is on your Mac at `Github/BSP-Velocity Additions/build/libs/bsp_velocity_additions-0.2.0.jar`
+     (dated 8 November; same version number). Proxy › **Files** › `plugins/`: delete the old jar, upload that one,
+     restart the proxy, and check for the `Network kicks: on` line. It also brings Velocity Additions' other changes
+     since 0.2.0 (its changelog's "Unreleased": the tab list, rank refresh, JourneyMap ids), untested on your proxy.
+   Without this, a kick may move a player to another server instead of off the network.
 
 ## 2. Back up first
 On each game server, before changing anything: Pterodactyl › the server › **Backups** › **Create Backup** (if your
 servers have backups enabled), or at least download its `config/` folder and its world's `serverconfig/` folder from
 **Files**. And the database: on `192.168.1.25` (part 5, step 1 says how to get there),
-`sudo mariadb-dump bsp > bsp-before-panel.sql`.
+`umask 077` (so only you can read the files you make next), then `sudo mariadb-dump --single-transaction bsp > bsp-before-panel.sql`
+(if `mariadb-dump` is not found: the same with `mysqldump`; if `sudo mariadb` needs a password in part 5, step 2, add
+`-u root -p` after `mariadb-dump`; if MariaDB runs in Docker,
+`sudo docker exec <its name> sh -c 'exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction bsp' > bsp-before-panel.sql`,
+which reads the root password inside the container so it is never typed).
+The file holds the shared tables: keep it private.
 
 ## 3. Update every game server (quiet hour)
-Do this for each of the seven servers. One at a time is fine: the others keep running.
+Do this for each of the seven servers. One at a time is fine: the others keep running. If the proxy's
+`velocity.toml` lists any other server (a test server, for example) that runs the BSP mods on the same database,
+update its jars the same way (steps 1 to 3) so it matches the others, and leave its `webPanel` off (skip step 5)
+unless you want it in the panel too.
 
 1. Pterodactyl › the server › **Console** › **Stop**. Wait until it says it is offline.
 2. **Files** › `mods/`. Tick the old `bsp-server-utilities-*.jar`, `bsp-core-*.jar`, `bsp-inventorysync-*.jar` and
@@ -102,7 +123,7 @@ Do this for each of the seven servers. One at a time is fine: the others keep ru
 3. **Console** › **Start**. Wait until it says `Done`. This first start writes the new settings into the config files.
 4. Type in the console (no slash in the console): `su status`. Find these lines:
    - `Shared storage: mysql 192.168.1.25:3306/bsp as bsp, prefix bsp_su_, this server 'BSP-Frostwarf', ...` and, at its
-     end, `redis 192.168.1.25:6379, channel bsp_su:network: connected`. The name in quotes must be this server's
+     end, `redis 192.168.1.25:6379, channel bsp_su:network: connected; sent N, received N, not sent N`. The name in quotes must be this server's
      Velocity name. If it says `Records are kept on this server only`, or Redis is `down` or missing, stop here: see
      **When something does not work**.
    - `Staff web panel: off (webPanel.enabled in config/bsp_server_utilities-network.toml).` That is expected for now.
@@ -133,21 +154,33 @@ to make themselves Owner of the panel.
      IMAGE says `mariadb` and copy its NAME; then `sudo docker exec -it <that name> mariadb -u root -p` and type the
      MariaDB root password.
    - If `sudo mariadb` says `Access denied`, use `sudo mariadb -u root -p` and type the MariaDB root password.
-3. See which address the game servers' user is allowed from. Type, then press Enter:
+3. **Where the panel connects from.** The panel runs in a container on this machine, so MariaDB sees it coming from
+   pterodactyl0's network, not from `192.168.1.25`. In a second Terminal window, `ssh` to `192.168.1.25` again and
+   type `ip -4 addr show pterodactyl0`. The line with `inet` shows an address like `172.18.0.1/16`. Take its first two
+   numbers and add `.%`: normally **`172.18.%`**. That is `<host>` below. (If the command says the device does not
+   exist, Wings uses another name: `ip -4 addr | grep 172.` shows it.)
+   Then check that no login written in the game servers' files is allowed everything: `bsp` (BSP-Core and this mod)
+   and any other a plugin or mod on them uses, such as LuckPerms' (`username` under `data:` in a game server's
+   `config/luckperms/config.yml`; often `luckperms`). Back in MariaDB, every login there is:
    ```sql
-   SELECT user, host FROM mysql.user WHERE user = 'bsp';
+   SELECT user, host FROM mysql.user;
    ```
-   Note the `host` value (for example `%` or `192.168.1.%`). The panel's user gets the same one below, written where
-   the steps say `<host>`. Also check the game servers' user is not allowed everything:
+   Leave out `root`, `mariadb.sys` and `bsp_panel` (if you are doing this again). For the others the game servers use:
+   For **each** row it lists, with that row's user and host in place of `<user>` and `<its host>`:
    ```sql
-   SHOW GRANTS FOR 'bsp'@'<host>';
+   SHOW GRANTS FOR '<user>'@'<its host>';
    ```
-   If a line says `ON *.*` with `ALL PRIVILEGES`, that user can reach every database, the panel's too. Change it
-   (at a quiet moment):
+   If a line says `ON *.*` with `ALL PRIVILEGES`, that login can reach every database, the panel's too, and anyone
+   who reads a game server's files could make themselves Owner. Change it at a quiet moment (game servers stopped is
+   safest). First see which databases exist: `SHOW DATABASES;`. Then, for that login:
    ```sql
-   REVOKE ALL PRIVILEGES ON *.* FROM 'bsp'@'<host>';
-   GRANT ALL PRIVILEGES ON bsp.* TO 'bsp'@'<host>';
+   REVOKE ALL PRIVILEGES, GRANT OPTION FROM '<user>'@'<its host>';
+   GRANT ALL PRIVILEGES ON <its database>.* TO '<user>'@'<its host>';
    ```
+   where `<its database>` is the database that login's config names (`bsp` for `bsp`; for LuckPerms, `database:` in
+   the same file). If the list showed other databases
+   (not `information_schema`, `mysql`, `performance_schema`, `sys`) that a plugin may use with the same login, add
+   one more `GRANT ALL PRIVILEGES ON <name>.* TO ...` line for each, so nothing else loses its access.
 4. Make a long new password for the panel (for example, on your Mac in another Terminal window: `openssl rand -base64 24`).
    Note it in your private note. Then, in MariaDB, one line at a time (each ends with `;`), putting your password and
    `<host>` in:
@@ -170,33 +203,38 @@ to make themselves Owner of the panel.
    ALTER DATABASE bsp CHARACTER SET utf8mb4;
    ```
    Then look at a game server's console from part 3: if it printed `shared tables are not utf8mb4 ... Once, with the
-   servers stopped: ALTER TABLE ...`, copy those `ALTER TABLE` lines and run them here at a quiet hour with the game
-   servers stopped (they can take a minute on a big Action Log).
+   servers stopped: ALTER TABLE ...`, run them here at a quiet hour with the game servers stopped (they can take a
+   minute on a big Action Log): first `USE bsp;` (the lines name the tables without their database), then paste
+   those `ALTER TABLE` lines.
 6. Type `exit` to leave MariaDB. Stay logged in to the machine for part 9.
 
 ## 6. The panel's server in Pterodactyl
 1. **A Java egg** (once). Pterodactyl does not come with a plain "run this Java program" egg.
-   - In a browser, open <https://github.com/pelican-eggs/generic>, then the `java` folder, then the egg file there
-     (a `.json` file named like `egg-generic-java.json`), then **Download raw file**.
-   - Pterodactyl › Admin area › **Nests** › **Import Egg**: choose that file, put it in any nest (for example a new
-     nest called `Programs`: **Nests** › **Create New**), **Import**.
+   - In a browser, open <https://github.com/pelican-eggs/generic>, then the `java` folder, then the file
+     `egg-pterodactyl-java-generic.json` (the `.json` one; the `.yaml` beside it is for another panel and does not
+     import), then **Download raw file**.
+   - A nest to put it in: Pterodactyl › Admin area › **Nests** › **Create New**, name `Programs`, **Save**.
+   - Admin area › **Nests** › **Import Egg**: choose that file, **Associated Nest** `Programs`, **Import**.
    - Open the imported egg › **Configuration**: set **Stop Command** to `stop`, and under **Start Configuration** the
      started text to `BSP staff panel listening` (the field reads like `{"done": "..."}`: put that text where the dots
      are). **Save**. This tells Pterodactyl when the panel is up and how to stop it cleanly.
-2. **An allocation on 127.0.0.1** (once). Admin area › **Nodes** › the node for `192.168.1.25` › **Allocation**. On the
-   right, **Assign New Allocations**: **IP Address** `127.0.0.1`, **Ports** `8100`, **Submit**. An allocation on
-   `127.0.0.1` can be reached only from that machine itself (where cloudflared will run), not from your network or
-   the internet.
+2. **An allocation on 127.0.0.1** (once). Admin area › **Nodes** › the node for `192.168.1.25` (the **FQDN** column
+   shows each node's address) › **Allocation**. On the right, **Assign New Allocations**: **IP Address** `127.0.0.1`,
+   **Ports** `8100`, **Submit**. Pterodactyl puts such a server on pterodactyl0's address (normally `172.18.0.1`, the
+   one you found in part 5, step 3, without the `/16`): it can be reached from that machine (where cloudflared will
+   run) and from the containers on it, not from your network or the internet. Note that address: part 9 uses it.
 3. **Create the server.** Admin area › **Servers** › **Create New**:
    - **Server Name** `BSP-Staff-Panel`, **Server Owner** you.
    - **Node**: the one for `192.168.1.25`. **Default Allocation**: `127.0.0.1:8100`.
    - **Memory** `1024` MB, **Disk** `2048` MB, **CPU** `100` (one core). Database and backup limits as you like.
-   - **Nest** and **Egg**: the ones from step 1. **Docker Image**: `ghcr.io/pterodactyl/yolks:java_17`.
-   - **Startup**: if the egg asks for the jar's name (a variable such as `JARFILE` or "Jar File"), type
-     `bsp-staff-panel.jar`. If it shows the startup command instead, make it
-     `java -Xms128M -Xmx512M -jar bsp-staff-panel.jar`.
+   - **Nest** `Programs`, **Egg** the one from step 1. **Docker Image**: choose **Java 17** from the list.
+   - **Startup Command**: replace it with
+     `java -Xms128M -Xmx512M -Dterminal.jline=false -Dterminal.ansi=true -jar {{JARFILE}}` (without `-Xmx` Java would
+     use only a quarter of the memory). The jar's name (**JARFILE** or "Jar File") below it: `bsp-staff-panel.jar`.
+   - Untick **Start Server when Installed** (there is no jar to start yet).
    - **Create Server**. Wait until its install finishes (the server page shows it).
-   - **Subusers**: none on this server, ever. Whoever can read its files or console can read its keys.
+   - **Subusers**: none on this server, ever. Whoever can read its files or console can read its keys. And no staff
+     member is ever a Pterodactyl admin: every admin can read every server's files, this one's keys included.
 4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.2.1.jar`.
    Then on the uploaded file, the **⋯** menu › **Rename** to `bsp-staff-panel.jar` (one fixed name, so a later
    update is only a new file with the same name).
@@ -235,6 +273,7 @@ to make themselves Owner of the panel.
    **Save Content**.
 2. **The two keys to every game server.** In `panel.properties`, copy the value after `actionKey=` and the value after
    `panelKey=` (everything after the `=`, nothing else) into your private note. Never copy `signingKey` anywhere.
+   (The panel's console command `action-key` prints `panelKey` only; `actionKey` is read from this file.)
 3. On **each** of the seven game servers: **Files** › `config/bsp_server_utilities-network.toml`, in the existing
    `[webPanel]` section, set the two lines (keep the quotes):
    ```toml
@@ -257,8 +296,8 @@ Do this **before** the tunnel (part 9), so the address is never open to anyone. 
 
 1. **Open Zero Trust.** Log in at <https://dash.cloudflare.com> with the account that holds `buildsecureprotect.com`.
    In the left menu, **Zero Trust**.
-   - The first time, it asks for a **team name**: type `bsp` (or any short name; your **team domain** becomes
-     `bsp.cloudflareaccess.com`). Note the team domain.
+   - The first time, it asks for a **team name**: any short name nobody else has taken (for example `bsp-staff`; if
+     it is taken, it says so: try another). Your **team domain** becomes `<team name>.cloudflareaccess.com`. Note it.
    - It asks for a plan: choose **Zero Trust Free** (up to 50 users). It asks for payment details even for Free;
      nothing is charged.
    - Later the team name is under **Zero Trust › Settings**.
@@ -278,38 +317,43 @@ Do this **before** the tunnel (part 9), so the address is never open to anyone. 
    - **Session Duration** `1 week`.
    - **Create** (or **Save**). Anything not allowed is refused.
 5. **The two values the panel needs.**
-   - The **team domain**, like `bsp.cloudflareaccess.com` (step 1).
+   - The **team domain**, like `bsp-staff.cloudflareaccess.com` (step 1).
    - The **Application Audience (AUD) Tag**: **Access controls › Applications** › on `BSP Staff Panel` **Edit** (or
      **Configure**) › **Additional settings** (or **Overview**) › copy **Application Audience (AUD) Tag** (a long
      row of letters and digits).
-   - In Pterodactyl › BSP-Staff-Panel › **Files** › `panel.properties`: `cloudflare.teamDomain=bsp.cloudflareaccess.com`
+   - In Pterodactyl › BSP-Staff-Panel › **Files** › `panel.properties`: `cloudflare.teamDomain=<your team domain>`
      and `cloudflare.aud=<the tag>`. **Save Content**.
 
 ## 9. The tunnel (Cloudflare to the panel)
 The tunnel is Cloudflare's program **cloudflared**, running on `192.168.1.25`. It keeps an outgoing connection to
 Cloudflare and passes the address's visitors to the panel. Nothing comes in through your router.
 
-1. **Make the tunnel.** Cloudflare dashboard (the main one, not Zero Trust) › **Networking › Tunnels** › **Create
-   Tunnel** (if asked for a type: **Cloudflared**). Name `bsp-staff` › **Create Tunnel**.
+1. **Make the tunnel.** Cloudflare dashboard (the main one, not Zero Trust) › **Networking › Tunnels** › **Create a
+   tunnel** (if asked for a type: **Cloudflared**). Name `bsp-staff` › **Save tunnel** (or **Create Tunnel**).
 2. **Install cloudflared on 192.168.1.25.** The next page, **Setup Environment** (or "Install and run a connector"):
    choose **Debian** (choose this for Ubuntu too) and **64-bit**. It shows commands in two boxes.
    - In your Terminal, logged in to `192.168.1.25` (part 5), paste the first box (it adds Cloudflare's package
      source and installs `cloudflared`) and press Enter. It asks for your password (sudo).
-   - Then paste the second box, `sudo cloudflared service install <token>`. This makes cloudflared start by itself
-     after a reboot.
+   - Then the second box, `sudo cloudflared service install <token>`: type **one space first**, then paste it (a
+     command that starts with a space is not kept in the machine's command history). This makes cloudflared start
+     by itself after a reboot.
    - The `<token>` (a long `eyJ…` text) **is the key to your tunnel**: anyone with it can run it. Keep it out of
-     chats and screenshots. If it ever leaks: the tunnel's page › **Rotate token**, then run the new install command.
+     chats and screenshots. If it ever leaks: on `.25`, `sudo cloudflared service uninstall`; in the dashboard,
+     **delete** the tunnel and make a new one (this part again, steps 1 to 4). Only deleting it stops a copy someone
+     else already runs.
    - Check: `sudo systemctl status cloudflared` says `active (running)`. Press `q` to leave that view.
 3. Back on the dashboard, the connector appears: **Continue**. The tunnel shows **Healthy**.
 4. **The route to the panel.** **Networking › Tunnels** › `bsp-staff` › **Routes** (or **Public Hostname**) › **Add
    route** › **Published application**:
    - **Subdomain** `staff`, **Domain** `buildsecureprotect.com`, no path.
-   - **Service**: type **HTTP**, URL `127.0.0.1:8100` (so `http://127.0.0.1:8100`). Plain http is right: the tunnel
-     encrypts everything between Cloudflare and the machine, and this last step never leaves the machine.
+   - **Service URL**: `http://172.18.0.1:8100` (the address you noted in part 6, step 2; if a form has a separate
+     type box, **HTTP** and `172.18.0.1:8100`). Not `127.0.0.1`: nothing listens there. Plain http is right: the
+     tunnel encrypts everything between Cloudflare and the machine, and this last step never leaves the machine.
    - **Add route** (or **Save**). Cloudflare makes the address's DNS record itself.
 
 ## 10. Start the panel
-1. Pterodactyl › BSP-Staff-Panel › **Console** › **Start**. Within a few seconds it shows, in this order:
+1. Pterodactyl › BSP-Staff-Panel › **Console** › **Start**. Within a few seconds it shows these lines (the Redis
+   line may come before or after the last two):
    - `Starting the panel on 0.0.0.0:8100 for https://staff.buildsecureprotect.com, ...`
    - `Cloudflare Access: 2 signing keys read.` (the number may differ)
    - `[panel] Redis 192.168.1.25:6379: listening on bsp_su:network:web`
@@ -346,7 +390,8 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
    ban, add and remove items, return graves, broadcast, speak as [Server] and draw the lottery; **Owners** also add
    and remove staff, and are the only ones who ban staff or lift or change a ban on staff. In a Moderator's **⋯**
    menu, an Owner can tick "May add and remove items" for one they trust; their logins then last 48 hours, as Admins'.
-4. Someone leaves the team: their **⋯** › **Remove** on the panel, and take their email out of the Access policy.
+4. Someone leaves the team: their **⋯** › **Remove** on the panel, and take their email out of the Access policy
+   (then **Revoke existing tokens**, as in **Running it**, if they should be out at once).
 
 ## 13. Afterwards (optional)
 - **Item pictures**: an Admin or Owner types `/su icons` once in their own game with the full modpack; the panel then
@@ -371,14 +416,16 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
 | What you see | Why, and what to do |
 |---|---|
 | A game server's `su status` says `Records are kept on this server only` | BSP-Server Utilities is not using the shared database: in the world's `serverconfig/bsp_server_utilities-server.toml`, `[storage] mode` should be `auto` (it follows BSP-Core's `mysql`); BSP-Core must be the **full** jar (not `-slim`) |
-| `su status`: Redis `down`, or no Redis in the storage line | BSP-Server Utilities uses BSP-Core's Redis settings: BSP-Core's server config `[storage.redis] enabled = true`, and `config/bsp_core-network.toml` `[redis]` host, port and password, no TLS. Without Redis the panel's actions are not taken on that server |
+| `su status`: Redis `down`, or no Redis in the storage line | BSP-Server Utilities uses BSP-Core's Redis settings: in the world's `serverconfig/bsp_core-server.toml`, `[storage.redis] enabled = true`; in `config/bsp_core-network.toml`, `[redis]` host, port and password, no TLS; and in the world's `serverconfig/bsp_server_utilities-server.toml`, `useBspCoreRedis = true`. Without Redis the panel's actions are not taken on that server |
 | `su status`: "Redis is not connected here, so the panel's actions are not taken" | the same as above |
 | A game server will not start after editing the network file | a second `[webPanel]` line was added: open the file, keep one `[webPanel]` section with all its lines, delete the copy |
 | The panel stops with `Fill in cloudflare.teamDomain, cloudflare.aud ...` | part 8, step 5 |
 | The panel stops with `database.host and redis.host are empty` | part 7, step 1 |
-| `The panel cannot use its database: ...` | the address, user or password in `panel.properties` (part 7), or a grant missing (part 5); `Access denied ... bsp_panel` means the user's `<host>` in part 5 does not match where the panel's container connects from: use the same `host` as the `bsp` user |
-| The panel's console: `Redis ...: not listening (Redis refused to subscribe: NOAUTH ...)` | `redis.password` is empty or wrong (part 7). Actions answer "the panel is not connected to Redis" until it listens |
-| Cloudflare's page "Bad gateway" or error 1033 | the panel is stopped, or the tunnel's route is not `http://127.0.0.1:8100` (part 9), or cloudflared is not running on `192.168.1.25` (`sudo systemctl status cloudflared`) |
+| The panel's console: `[panel] reading the servers' table: ...` or `[panel] reading the chat table: ...` with `command denied` | a grant on the shared `bsp` tables is missing (part 5, step 4): run the `GRANT` lines again |
+| `The panel cannot use its database: ...` | the address, user or password in `panel.properties` (part 7), or a grant missing (part 5); `Access denied for user 'bsp_panel'@'172.18.0.5'` (some address) means the user's `<host>` in part 5 does not cover that address: in MariaDB, `RENAME USER 'bsp_panel'@'<old host>' TO 'bsp_panel'@'<first two numbers of that address>.%';` |
+| The panel's console: `Redis ...: not listening (Redis refused to subscribe: NOAUTH ...)` or `(Redis refused the login: WRONGPASS ...)` | `redis.password` is empty (NOAUTH) or wrong (WRONGPASS) (part 7). Actions answer "the panel is not connected to Redis" until it listens |
+| Cloudflare's error 1033 | cloudflared is not running on `192.168.1.25`: `sudo systemctl status cloudflared`, and `sudo journalctl -u cloudflared -n 50` for why |
+| Cloudflare's page "Bad gateway" (502) | cloudflared cannot reach the panel: the panel is stopped, or the route is not `http://172.18.0.1:8100` (part 9, step 4). On `.25`, `curl -sI http://172.18.0.1:8100` must answer `HTTP/1.1 403` (the panel refusing a visitor without Cloudflare); `Connection refused` means the panel is not there; `sudo journalctl -u cloudflared -n 50` shows the address cloudflared tried |
 | "Access denied" from Cloudflare, or no code arrives | the email is not in the policy, or One-time PIN is not added or not ticked on the application (part 8) |
 | The panel answers "Open this panel through its address, signed in to Cloudflare." | `cloudflare.teamDomain` or `cloudflare.aud` is not this application's; the panel's console says which once a minute; fix `panel.properties` and restart the panel |
 | The panel opens but no servers show | a game server's `webPanel.enabled` is off, its `actionKey` differs (the panel's console names a server whose snapshots are not signed with its key), or Redis is not connected (`status` in the panel's console) |
@@ -396,7 +443,9 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
 ## Running it
 - **Turning it off at once.** One game server: `webPanel.enabled = false` in its network file (read again by itself
   within seconds): it sends nothing and takes no action. The whole panel: **Stop** BSP-Staff-Panel. Nobody at all:
-  in Cloudflare, remove the emails from the `BSP staff` policy.
+  in Cloudflare, remove the emails from the `BSP staff` policy **and** end the logins already made: Zero Trust ›
+  Access controls › Applications › `BSP Staff Panel` › **Edit** › **Revoke existing tokens** (without it, someone
+  already in keeps Cloudflare's pass for up to a week).
 - **A key leaked** (a file shared, a screenshot):
   - `signingKey` (the serious one: it can order actions): in `panel.properties` empty both `signingKey=` and
     `panelKey=`, **Restart** the panel (it writes a new pair and says so), then put the new `panelKey` on every game
@@ -405,7 +454,8 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
     new one), put it on every game server.
   - The tunnel's token: part 9, step 2.
 - **Backups.** `panel.properties` (keep the copy as private as the file). The panel's whole database `bsp_panel`
-  (`sudo mariadb-dump bsp_panel > bsp_panel.sql` on `192.168.1.25`), and in `bsp` the tables `bsp_su_bans`,
+  (`umask 077`, then `sudo mariadb-dump --single-transaction bsp_panel > bsp_panel.sql` on `192.168.1.25`, in the same
+  forms as part 2; private, as it holds password hashes and the sealed authenticator secrets), and in `bsp` the tables `bsp_su_bans`,
   `bsp_su_log` and `bsp_su_players`. `bsp_su_web_item_parts` is large and need not be backed up: `/su icons` makes it
   again.
 - **Updating the panel.** **Stop** it, **Upload** the new jar, delete the old `bsp-staff-panel.jar`, rename the new

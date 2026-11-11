@@ -42,7 +42,9 @@ long id like `3f9a2c1b-7d4e-4a0b-9c11-2b7f6e8d1a90`.
 
 1. Pterodactyl › Admin area › **Servers** › click a server. Its page shows its **UUID** (the long one, not the short
    8-character id). Copy it into your private note with the server's name and machine.
-2. Do that for all seven. Their world folders (each server's `level-name` in `server.properties`) are:
+2. Do that for all seven. Their machines and world folders (each server's `level-name` in `server.properties`) were
+   read from older copies of the servers, so check each on the live server (its **Files** › `server.properties`,
+   the `level-name=` line) and use the live value wherever it differs:
 
    | Server | Machine | World folder |
    |---|---|---|
@@ -109,7 +111,7 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
 ## 4. BlueMap's own server (BSP-Map)
 1. **A BlueMap egg** (once). The panel's egg does not fit: BlueMap ignores anything typed into its console, so its
    **Stop** has to be a signal, and its started text is its own.
-   - Pterodactyl › Admin area › **Nests** › **Import Egg**: choose the same `egg-generic-java.json` you downloaded for
+   - Pterodactyl › Admin area › **Nests** › **Import Egg**: choose the same `egg-pterodactyl-java-generic.json` you downloaded for
      the panel (its guide, part 6, step 1; download it again the same way if it is gone), the same nest.
    - Open the new egg (the second one with that name) › rename it `BlueMap` › **Save**. Then **Configuration**:
      **Stop Command** `^C` (a caret and a capital C: Pterodactyl sends the stop signal, and BlueMap saves and stops),
@@ -126,6 +128,7 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
      (`-v 1.20.1` the game's version, `-n` the mods for block colours, `-g` write BlueMap's page, `-u` draw everything
      and then keep the map up to date). Later changes to it are made only in Admin area › **Servers** › BSP-Map ›
      **Startup**.
+   - Untick **Start Server when Installed** (it must not start before its settings are in place).
    - **Create Server**. **Subusers**: none, ever: whoever can change BSP-Map's files can change the page the panel
      shows under its own address.
    - Note BSP-Map's **UUID** (its page in Admin area › Servers, the long id) with the others.
