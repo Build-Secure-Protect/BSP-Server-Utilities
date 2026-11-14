@@ -111,6 +111,11 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_item_parts (export BIGINT NOT NULL, part INT NOT NULL, data MEDIUMBLOB NOT NULL, PRIMARY KEY (export, part)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "chunk_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "afk_settings (id INT NOT NULL PRIMARY KEY, enabled BOOLEAN NOT NULL, afk_minutes INT NOT NULL, kick BOOLEAN NOT NULL, kick_minutes INT NOT NULL, message VARCHAR(320) NOT NULL, revision BIGINT NOT NULL, macros BOOLEAN NOT NULL DEFAULT TRUE) DEFAULT CHARSET=utf8mb4");
+            // Compact Machines rooms (SU-54): one row per room per server; a room is (server, x, z), never the chunk alone
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "cm_rooms (server VARCHAR(64) NOT NULL, x INT NOT NULL, z INT NOT NULL, owner CHAR(36) NOT NULL,"
+                    + " size INT NOT NULL, name VARCHAR(64) NOT NULL, machine VARCHAR(160) NOT NULL, machines INT NOT NULL, state VARCHAR(16) NOT NULL,"
+                    + " grace_until BIGINT NOT NULL, reason VARCHAR(32) NOT NULL, told BOOLEAN NOT NULL, owner_name VARCHAR(16) NOT NULL DEFAULT '', PRIMARY KEY (server, x, z), KEY owner (owner)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "cm_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, heard_at BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             warnCharsets();
             if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
                 st.executeUpdate("ALTER TABLE " + prefix + "afk_settings ADD COLUMN macros BOOLEAN NOT NULL DEFAULT TRUE");
@@ -838,6 +843,114 @@ public final class JdbcBackend implements StorageBackend {
             }
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------ Compact Machines rooms (SU-54)
+
+    @Override
+    public void saveRooms(String server, long atMs, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow> rows) throws SQLException {
+        Connection c = conn();
+        boolean auto = c.getAutoCommit();
+        c.setAutoCommit(false);
+        try {
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + prefix + "cm_rooms WHERE server = ?")) {
+                ps.setString(1, server);
+                ps.executeUpdate();
+            }
+            if (!rows.isEmpty()) {
+                try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "cm_rooms (server, x, z, owner, size, name, machine, machines, state, grace_until, reason, told, owner_name)"
+                        + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                    for (com.mrgregles.bsp_server_utilities.rooms.RoomRow r : rows) {
+                        ps.setString(1, r.server());
+                        ps.setInt(2, r.x());
+                        ps.setInt(3, r.z());
+                        ps.setString(4, r.owner().toString());
+                        ps.setInt(5, r.size());
+                        ps.setString(6, r.name());
+                        ps.setString(7, r.machine());
+                        ps.setInt(8, r.machines());
+                        ps.setString(9, r.state());
+                        ps.setLong(10, r.graceUntil());
+                        ps.setString(11, r.reason());
+                        ps.setBoolean(12, r.told());
+                        ps.setString(13, r.ownerName());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+            touchRooms(c, server, atMs);
+            c.commit();
+        } catch (SQLException | RuntimeException e) {
+            c.rollback(); // any failure: the old rows stay, never a server with none
+            throw e;
+        } finally {
+            c.setAutoCommit(auto);
+        }
+    }
+
+    @Override
+    public void touchRooms(String server, long atMs) throws SQLException {
+        touchRooms(conn(), server, atMs);
+    }
+
+    private void touchRooms(Connection c, String server, long atMs) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "cm_servers (server, heard_at) VALUES (?, ?) ON DUPLICATE KEY UPDATE heard_at = VALUES(heard_at)")) {
+            ps.setString(1, server);
+            ps.setLong(2, atMs);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public int forgetRooms(String server) throws SQLException {
+        Connection c = conn();
+        boolean auto = c.getAutoCommit();
+        c.setAutoCommit(false);
+        try {
+            int n;
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + prefix + "cm_rooms WHERE server = ?")) {
+                ps.setString(1, server);
+                n = ps.executeUpdate();
+            }
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + prefix + "cm_servers WHERE server = ?")) {
+                ps.setString(1, server);
+                ps.executeUpdate();
+            }
+            c.commit();
+            return n;
+        } catch (SQLException | RuntimeException e) {
+            c.rollback();
+            throw e;
+        } finally {
+            c.setAutoCommit(auto);
+        }
+    }
+
+    @Override
+    public com.mrgregles.bsp_server_utilities.rooms.RoomTable loadRooms() throws SQLException {
+        Map<String, Long> heard = new HashMap<>();
+        List<com.mrgregles.bsp_server_utilities.rooms.RoomRow> rows = new ArrayList<>();
+        try (Statement st = conn().createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT server, heard_at FROM " + prefix + "cm_servers")) {
+                while (rs.next()) {
+                    heard.put(rs.getString(1), rs.getLong(2));
+                }
+            }
+            try (ResultSet rs = st.executeQuery("SELECT server, x, z, owner, size, name, machine, machines, state, grace_until, reason, told, owner_name FROM " + prefix + "cm_rooms")) {
+                while (rs.next()) {
+                    UUID owner;
+                    try {
+                        owner = UUID.fromString(rs.getString(4));
+                    } catch (IllegalArgumentException e) {
+                        continue; // not a row this mod wrote
+                    }
+                    rows.add(new com.mrgregles.bsp_server_utilities.rooms.RoomRow(rs.getString(1), rs.getInt(2), rs.getInt(3), owner, rs.getInt(5), rs.getString(6),
+                            rs.getString(7), rs.getInt(8), rs.getString(9), rs.getLong(10), rs.getString(11), rs.getBoolean(12), rs.getString(13)));
+                }
+            }
+        }
+        return new com.mrgregles.bsp_server_utilities.rooms.RoomTable(heard, rows);
     }
 
     @Override

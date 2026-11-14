@@ -8,7 +8,9 @@
     "CreativeSlotMixin",
     "ContainerClickMixin",
     "ExperienceOrbAccess",
-    "PlayerListLoginMixin"
+    "PlayerListLoginMixin",
+    "ItemEntityHurtMixin",
+    "EntityBelowWorldMixin"
   ],
   "server": [],
   "client": [

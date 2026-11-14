@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-12
+
+### Added
+- Every server's Compact Machines rooms are shared through the network database (`<prefix>cm_rooms`, `<prefix>cm_servers`, notice `cm_rooms`; docs/API.md), so a player's rooms can count across the network. New server config section `[rooms]`: `limit` (0: no limit, only counted), `scope` (`network` or `server`), `exemptGroup`, `graceDays` (7).
+- The room limit: with `[rooms] limit` set, a player at or over it cannot make a new Compact Machines room (the Personal Shrinking Device's first click on a new machine is refused, with a line saying how many to give back); entering existing rooms always works, and an owner over the limit is reminded in chat at most once a minute. Operators and `exemptGroup` are never limited.
+- A Compact Machines room whose machine item is destroyed (burnt, blown up, on a cactus, crushed, into the void, despawned or cleared from the ground) stops counting at once and waits `graceDays` (7) before it is cleared, unless a machine bound to it is placed again or another placed machine is still bound to it. Only the room's own server acts (BSP-InventorySync's home mark; other servers send it the loss). Its owner is told at once when on that server, otherwise at their next login anywhere. When the grace ends the room is cleared: players inside are sent to their respawn point, everything inside is removed (nothing drops), and the room's place is kept for nobody so it is never reused; the rooms of machines that stood inside go into grace themselves; a machine still bound to a cleared room works as a new one.
+- `/su rooms`, for every player where Compact Machines runs: their rooms on every server as tiles drawn to each room's size, the count against the limit, rooms waiting to be cleared with how long is left, and GIVE BACK (with SURE?) for an empty room on this server with no machine placed. Players see the dimension their machines are placed in, never the coordinates (staff see them on the ROOMS tab). While a player is at or over the limit, the machine of one of their rooms waiting to be cleared cannot be placed again (it would bring the room back past the limit). A room given back waits the grace days like a lost one and is written to the Action log (a new kind, Compact Machine rooms, for staff).
+- A ROOMS tab in the admin panel (`/su`, operators and BSP-Core admins): every owner of Compact Machines rooms with their count against the limit, how many over (or exempt) and on how many servers, most over the limit first, with a search; the picked owner's rooms on every server (size, name, server, machine placed or not, waiting to be cleared with days left; hover for the position and the machine's place); FREE with SURE? for an empty room on this server, which waits the grace days like a lost one, tells its owner "Staff freed your room" without naming the staff member, and is written to the Action log under the staff member's name. Servers not heard from for five minutes are named in amber in the footer; their rooms still count. The shared room rows now carry the owner's name (`owner_name`).
+- `/su rooms forget <server>` (operators and BSP-Core admins): drops a renamed or retired server's Compact Machines rooms from the shared list, so they stop counting; refused for this server and for a server heard from in the last 5 minutes; written to the Action log.
+
+### Changed
+- Compact Machines rooms need Compact Machines exactly 6.0.3 (the pack's version; with any other version the rooms are neither read nor limited and the server log says so) and BSP-InventorySync 0.8.0 on every server for losses on another server (owner decisions D437 to D454).
+- `/su` and `/serverutils` are open to every player on a server running Compact Machines 6.0.3, who are shown `/su rooms` only; every other subcommand keeps its own check.
+- The network protocol is 7 (the rooms page and the ROOMS tab): players need this version of the mod in their game to join, and 0.10.x clients are refused until they update.
+
 ## [0.10.1] - 2026-11-11
 
 ### Fixed

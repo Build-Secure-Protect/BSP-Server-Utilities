@@ -401,6 +401,45 @@ public final class MemoryBackend implements StorageBackend {
         return log.size();
     }
 
+    private final Map<String, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow>> rooms = new java.util.LinkedHashMap<>();
+    private final Map<String, Long> roomsHeard = new java.util.LinkedHashMap<>();
+
+    @Override
+    public synchronized void saveRooms(String server, long atMs, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow> rows) throws Exception {
+        check();
+        rooms.put(server, List.copyOf(rows));
+        roomsHeard.put(server, atMs);
+    }
+
+    @Override
+    public synchronized void touchRooms(String server, long atMs) throws Exception {
+        check();
+        roomsHeard.put(server, atMs);
+    }
+
+    @Override
+    public synchronized int forgetRooms(String server) throws Exception {
+        check();
+        int n = 0;
+        for (java.util.Iterator<Map.Entry<String, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow>>> it = rooms.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow>> e = it.next();
+            if (e.getKey().equalsIgnoreCase(server)) { // as MySQL compares the key
+                n += e.getValue().size();
+                it.remove();
+            }
+        }
+        roomsHeard.keySet().removeIf(k -> k.equalsIgnoreCase(server));
+        return n;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.rooms.RoomTable loadRooms() throws Exception {
+        check();
+        List<com.mrgregles.bsp_server_utilities.rooms.RoomRow> all = new ArrayList<>();
+        rooms.values().forEach(all::addAll);
+        return new com.mrgregles.bsp_server_utilities.rooms.RoomTable(Map.copyOf(roomsHeard), List.copyOf(all));
+    }
+
     @Override
     public String describe() {
         return "memory";

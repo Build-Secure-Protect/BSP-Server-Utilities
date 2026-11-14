@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}) and SERVERS ({@link ServersTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}) and ROOMS ({@link RoomsTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,7 +54,7 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
@@ -63,6 +63,7 @@ public class AdminScreen extends Screen {
     private final DropsTab drops = new DropsTab(this);
     private final ClientsTab clients = new ClientsTab(this);
     private final ServersTab servers = new ServersTab(this);
+    private final RoomsTab rooms = new RoomsTab(this);
     /** The setup guide, while the panel shows it (D156). */
     @Nullable
     private SetupGuide guide;
@@ -259,6 +260,10 @@ public class AdminScreen extends Screen {
         servers.accept(p);
     }
 
+    void acceptRooms(com.mrgregles.bsp_server_utilities.network.AdminRoomsPacket p) {
+        rooms.accept(p);
+    }
+
     /** Whether the panel shows the setup guide (a tab drawn in it leaves the footer to the guide's keys). */
     boolean inGuide() {
         return guide != null;
@@ -339,6 +344,8 @@ public class AdminScreen extends Screen {
             clients.open();
         } else if (tab == SERVERS) {
             servers.open();
+        } else if (tab == ROOMS) {
+            rooms.open();
         }
     }
 
@@ -389,6 +396,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == SERVERS) {
             return; // no boxes: the list, the previews and REFRESH are drawn
+        }
+        if (tab == ROOMS) {
+            rooms.addWidgets(left(), top());
+            return;
         }
         int x = left() + PANE_X, y = top();
         loading = true;
@@ -453,6 +464,9 @@ public class AdminScreen extends Screen {
         if (tab == SERVERS) {
             servers.tick();
         }
+        if (tab == ROOMS) {
+            rooms.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -493,10 +507,10 @@ public class AdminScreen extends Screen {
         g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
         String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
-                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers")};
+                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(28, Ui.width(font, tabs[i], TINY) + 6); // narrower keys, so eight fit beside the title (D191)
+            int tabW = Math.max(24, Ui.width(font, tabs[i], TINY) + 6); // narrower keys, so nine fit beside the title (D191; ROOMS, SU-59)
             tx -= tabW;
             boolean on = i == litTab();
             g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
@@ -507,7 +521,7 @@ public class AdminScreen extends Screen {
             }
             tx -= 2;
         }
-        // the title in the room the tabs leave, smaller when eight tabs need it
+        // the title in the room the tabs leave, smaller when nine tabs need it
         String title = Tr.t("admin.title");
         float titleScale = Math.min(1f, (tx - x - PAD - 2) / (float) Math.max(1, Ui.width(font, title, 1f)));
         Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
@@ -552,6 +566,11 @@ public class AdminScreen extends Screen {
         if (tab == SERVERS) {
             servers.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial);
+            return;
+        }
+        if (tab == ROOMS) {
+            rooms.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the search box
             return;
         }
         if (tab == CLIENTS) {
@@ -796,6 +815,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == SERVERS) {
             return servers.scroll(delta);
+        }
+        if (tab == ROOMS) {
+            return rooms.scroll(mx, delta);
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {

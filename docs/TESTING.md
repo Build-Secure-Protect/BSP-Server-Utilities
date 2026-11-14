@@ -970,3 +970,313 @@ done text and Stop Command; the Access JWT checks (team domain, AUD); One-time P
 
 **Untested:** all of it on the network. Added checks: `curl -sI http://172.18.0.1:8100` on `.25` answers 403; the
 panel's console shows no `Access denied` for `bsp_panel`; `SHOW GRANTS` for `bsp` has no `ON *.*`.
+
+## 2026-11-11: SU-53, the Compact Machines adapter (the room limit, R-2)
+The first task of the room limit (owner decisions D437 to D453): `compat/CompactMachines`, which reads Compact Machines
+6.0.3's own saved data and stands aside with any other version or without the mod. Nothing a player sees yet.
+
+Build: compiled against the pack's exact file (`curse.maven:compact-machines-224218:6000230`, compile only). The mod
+loads in a dev run only with `-PwithCm`, and that run keeps a world of its own, `run/world_cm`: Compact Machines
+writes its room dimension into `level.dat`, and a world that has it cannot load without the mod. Count a `-PwithCm`
+run as passed only by its own "All N required tests passed" line (Gradle exits 0 when the world fails to load).
+
+GameTests (`CompactMachinesGameTests`):
+- `./gradlew runGameTestServer`: only 6.0.3 is read (absent, another build); rooms are counted per owner, and a slot
+  kept for nobody (the placeholder owner, D447) counts for no one; `room_pos` is read as chunk x and z, and a missing,
+  malformed or wrongly typed tag is no room; an item that is not a machine names no room whatever its tag; a chest or no
+  block entity is bound to nothing; outside the room dimension nothing is a room; without the mod every answer is nothing.
+- `./gradlew runGameTestServer -PwithCm`: a real room made for a mock player counts for them and for nobody else, and
+  reads back with its owner and inside size 7; a placed machine bound to it names it, an unbound one names none, and the
+  room's placed machines are found (and no longer found once the block is broken); a position inside the room is in
+  it, a chunk with no room is not; a machine item bound with Compact Machines' own `setRoom` names its room; the
+  Personal Shrinking Device is recognised; the room still counts after its machine is broken.
+
+**Untested:** a real server with players; the rooms the network's servers already have (counts read from them only in
+later tasks).
+
+## 2026-11-11: SU-54, the network room list and the settings (R-2)
+The server config gains `[rooms]`: `limit` (0, no limit: rooms are only counted, D437), `scope` (`network` or `server`,
+D438), `exemptGroup` (empty, D441), `graceDays` (7, D446). Every server with Compact Machines 6.0.3 reads its rooms each
+minute (and at once after a change), writes them to `<prefix>cm_rooms` when they changed and tells the others (notice
+`cm_rooms`), or else only records that it was heard from (`<prefix>cm_servers`); see `docs/API.md`. Nothing is limited
+yet (SU-55), and nothing a player sees.
+
+GameTests (`RoomListGameTests`):
+- `./gradlew runGameTestServer`: the defaults (no limit, network, 7 days, no group); a count is this server's rooms
+  plus one for each counting row on another server, never this server's own rows from the table nor a room in grace
+  nor a slot for nobody, and this server's alone per server; servers not heard from for 5 minutes are stale, never
+  this one; a server's rows are replaced as a whole, each server's last word is kept with or without rows; the table
+  read back counts another server's room, and a notice from another server reads it again; without Compact Machines
+  this server writes nothing.
+- `./gradlew runGameTestServer -PwithCm`: a real room is written under this server with its placed machine
+  (`minecraft:overworld x y z`, one machine) and the time, and the other servers are told once; read again unchanged,
+  only the time is written and nobody is told; with another server's row the player's count is 2; with its machine
+  broken and the change marked, the room is written with none placed and the others are told again.
+
+**Untested:** a real MySQL (the two tables' SQL runs first on the network) and two real servers sharing their rooms.
+
+## 2026-11-11: SU-55, the room limit (R-2)
+With `[rooms] limit` set, a right click with the Personal Shrinking Device in the main hand on a Compact Machine that
+has no room is refused at or over the limit (D437, D438): Forge's `RightClickBlock` is cancelled before Compact
+Machines' `use` runs, so no room is made and the machine stays unbound, and the player reads one action-bar line at most
+once a second (D442: "You own 5 of 5 Compact Machine rooms. Give one back in /su rooms to make another.", or how many
+to give back when over). Both hands' events are looked at, since Compact Machines reads the main hand whichever hand
+clicks. Entering a machine that has a room is never refused; an owner over the limit entering their own room is told
+in chat, at most once a minute, how far over they are (D440, Z5). Operators and `exemptGroup` are never limited (D441).
+`/su rooms`, named in the lines, comes in SU-58.
+
+GameTests (`RoomLimitGameTests`):
+- `./gradlew runGameTestServer`: refused at and over the limit, never without one or when exempt; give back down to
+  one under the limit; operators and the configured group (case ignored) exempt; the two refusal lines' keys and the
+  number to give back; a click on a chest does nothing.
+- `./gradlew runGameTestServer -PwithCm`, through Forge's real event on real machines: the first room passes and
+  marks the room list for a refresh; at the limit the next is cancelled, nothing is bound and no room made; the line
+  at most once a second; the off hand's event refused too, the device in the off hand alone refused nothing; entering
+  a bound machine allowed at and over the limit; the warning over the limit only, once a minute, never for someone
+  else's room; an operator not refused; another player's count their own; a room on another server counts in network
+  scope and not per server; no limit refuses nothing.
+
+Checked broken: with the handler looking at the main hand's event only, the `-PwithCm` test fails on the off hand.
+
+**Untested:** a real client (the action-bar line and the chat warning as players see them, the client's arm swing and
+any flicker after a refused click) and LuckPerms groups on a real server.
+
+## 2026-11-12: SU-56, losses and the grace list (R-2)
+A dropped item bound to a room, fully destroyed, puts the room into grace (D444, D446): `ItemEntity.hurt` (a mixin, HEAD
+and RETURN: alive before, removed after) gives burnt, exploded, cactus, crushed or destroyed by the damage; the void (a
+mixin on `Entity.onBelowWorld`); vanilla's expiry (`ItemExpireEvent` at the lowest priority, not cancelled); this
+mod's despawn timer, in its check and when an item that ran out while unloaded comes back, and its clear (both a
+hook before the item goes). The room's server is the item's `bsp_inventorysync:home`: this one acts, another is sent
+`cm_lost`, an unmarked item is ignored where BSP-InventorySync runs (D451). The room is not put in grace when a placed
+machine is still bound to it. In grace it stops counting at once, its shared row says `grace` with when and why, and
+placing a machine bound to it takes it out (checked at the next tick after a machine is placed, and every minute).
+Owners are told at once when online on the room's server, otherwise three seconds after their next login anywhere;
+a server telling an owner about another server's room sends that server `cm_told` (Z6). Clearing is SU-57.
+
+GameTests (`RoomLossGameTests`):
+- `./gradlew runGameTestServer`: the route (here, case ignored; forwarded; ignored unmarked with BSP-InventorySync;
+  here unmarked without it); the reason words for fire, lava, an explosion, a cactus, an anvil and anything else; days
+  left rounded up, at least 1; the grace list through a save and a load, marked told, a room leaving it; a non-machine
+  item frees nothing; another server's room in grace told once (not the told one nor an active one), that server told
+  back with the room, not told twice; `cm_told` from another server marks this server's room told; the lines wait 60
+  ticks after login.
+- `./gradlew runGameTestServer -PwithCm`, with real bound machine items: burnt (in grace for 7 days, not told, the
+  count down by one, not put in twice); blown up while a placed machine is still bound (nothing); discarded as a pickup
+  is (nothing); fallen into the void; expired by vanilla; despawned by this mod's timer; marked for beta and burnt in
+  lava (nothing here, beta sent `cm_lost`); `cm_lost` from beta (in grace here); five in grace, two count; the shared row
+  says grace, void, until when and not told; at login the owner is told five times and each is marked told; a machine
+  bound to a room in grace placed again revives it.
+
+Checked broken: without the hook in the despawn timer's check, the `-PwithCm` test fails on "despawned by this mod's timer".
+
+**Untested:** the clear's and the unloaded-item paths of the despawn timer (the same one-line hook, read but not run in
+a test), real items burning in real lava over ticks, two real servers (`cm_lost` and `cm_told` across them), a loss
+whose home server is down for more than 10 minutes (the notice table's limit: it is not acted on), and the lines in a
+real client.
+
+## 2026-11-12: SU-57, clearing a room after its grace (R-2)
+Every minute, rooms whose grace has ended are cleared, at most four at a time, soonest first (D446). Each clear runs on
+the server thread: a room with a placed machine bound to it again is taken out of grace instead; otherwise its chunk is
+loaded, players inside go to their respawn point (Compact Machines' own eject), machines inside are noted and unbound,
+every block inside is removed with its block entity first (containers drop nothing, D449) and no neighbour updates,
+tunnels in the walls become plain wall, entities left inside are removed (a bound machine item among them counts as
+lost), Compact Machines forgets the room's tunnels, upgrades and graph node, and its record is replaced in the same tick
+by one owned by nobody (D447, the handoff's 7.1). The rooms of machines that stood inside go into grace (`inside`, D450).
+A player logging in inside a room kept for nobody is sent out. A machine bound to a cleared room is unbound when entered
+and makes a new room under the limit (Z8).
+
+Found while testing: removing a machine's block entity before its block skips Compact Machines' own unbinding, so the
+machine graph still listed the inner machine and its room was never put in grace. Each machine inside is now unbound
+explicitly first.
+
+GameTests (`RoomClearGameTests`):
+- `./gradlew runGameTestServer`: due rooms soonest first, four at a time, none before their time; nobody must leave a
+  place outside the room dimension; without Compact Machines nothing is cleared.
+- `./gradlew runGameTestServer -PwithCm`: a real room with a chest of 64 diamonds, a machine bound to another room, a
+  dropped machine item bound to a third, a tunnel in its east wall and the chunk-loading upgrade is cleared: chest and
+  machine gone, nothing dropped or left lying, the tunnel plain wall, the upgrade gone, the slot kept for nobody at size
+  7, the number of registered rooms unchanged, out of the grace list; the other two rooms in grace (`inside`); none of
+  the owner's rooms counts; a login in the cleared room must leave, in a room in grace not; the next new room lands on a
+  fresh position and is its maker's (the 7.1 regression); a machine bound to the cleared room is a fresh machine when
+  entered; a room with a placed machine bound to it is not cleared and leaves grace.
+
+Checked broken: with a bare remove instead of the slot kept for nobody, the `-PwithCm` test fails ("the slot is kept").
+That run made the hole in `run/world_cm`; the world was moved aside and the suite passed again on a fresh one.
+
+**Untested:** a player really inside a room being cleared (the eject's teleport) and one logging in there, rooms with
+modded blocks whose own removal does more than their block entity (AE2, Refined Storage, Create), a dense 13-block room's
+cost on a real server, and two real servers.
+
+## 2026-11-12: SU-58, the player's `/su rooms` page (R-2)
+`/su rooms` opens the page drawn in `tools/preview/rooms_refined.html` (look B, D452, D453). `/su` and `/serverutils`
+are now open to every player on a server running Compact Machines 6.0.3, who are shown `rooms` only (every other
+subcommand keeps its own staff or editor check; `/su` alone tells a player to use `/su rooms`). The page lists the
+player's rooms on this server and, with network scope, on the others (Z3), this server's first, then other servers',
+then rooms in grace, biggest first (R1). GIVE BACK, with SURE? within three seconds, is offered only for this server's
+rooms (Z4) that are not in grace, have no placed machine (R3: dimmed with "Pick up its machine first") and nobody
+inside; the server checks it all again, puts the room into grace (reason `given_back`), tells the owner and writes the
+Action log (kind `room`, staff only, D448). The protocol is 7.
+
+GameTests (`RoomsPageGameTests`):
+- `./gradlew runGameTestServer`: the page's order; the packet through the wire; a player who is not staff reaches
+  `/su rooms` exactly where Compact Machines runs, and never `/su status`.
+- `./gradlew runGameTestServer -PwithCm`: a player's real rooms (empty, with a placed machine, lost) and one on beta:
+  the settings, the count (3: the lost one does not count), four rooms with the lost one last and its time left,
+  beta's after this server's with its machine's place and given back only on beta, the placed one "pick it up first",
+  the empty one offered; give back refused for someone else's room, a placed machine, a room in grace; given back:
+  in grace, no longer counted, in the Action log as "Player"; twice does nothing more.
+
+Checked broken: without the owner check, the `-PwithCm` test fails (run in a throwaway `world_cm`).
+
+**Untested:** the screen itself in a client (it is compiled and its data tested; not seen), the scroll with many rooms,
+SURE? timing, someone inside a room (GIVE_INSIDE), the page refreshed after a give-back, the Action log's new kind in
+the LOG tab and on panels, and players on an older client (protocol 6 is refused at login, as for every version change).
+
+## 2026-11-12: SU-59, the admins' ROOMS tab (R-2)
+The admin panel (`/su`) has a ninth tab, ROOMS, after SERVERS (look A, D452; R4 to R7, D453), for operators and
+BSP-Core admins as the other tabs (R6). On the left every owner of rooms with a search: their rooms against the limit
+("7 / 5", or the count alone with no limit or when exempt), how many over (red) or "exempt", and on how many servers;
+most over the limit first, then most rooms (R4). On the right the picked owner's rooms on every server in the player
+page's order (size, name, server, machine placed or not, "grace · N d" in amber), with FREE for this server's rooms in
+use with no placed machine (SURE? within three seconds), "there" for another server's, a dimmed "free" with "Pick up its
+machine first" when a machine is placed; hovering a room shows its position, its machine's place and, in grace, why and
+how long. FREE is checked again on the server (still that owner's, not in grace, no placed machine), puts the room into
+grace (reason `freed`), tells the owner "Staff freed your Compact Machine room on <server> (<size>)" without the staff
+member's name (R7, at once or at their next login, as for losses) and writes the Action log (kind `room`) under the staff
+member. The footer: the limit, the scope, the owners, the rooms in grace, and any server not heard from for five minutes
+in amber with its minutes (R5). The tab refreshes every five seconds; REFRESH reads the shared table again. Room rows now
+carry the owner's name (`owner_name`, docs/API.md) so other servers' owners are named; an operator shows as exempt even
+offline, a LuckPerms exempt group only for players online here.
+
+GameTests (`RoomsAdminGameTests`):
+- `./gradlew runGameTestServer`: the owners' order (two over, exempt with nine, at the limit, on three servers, only
+  rooms in grace; with no limit, most rooms first), slots kept for nobody left out, names taken from any row; both
+  packets through the wire; FREE offered only for an empty room in use here (not placed, another server's, in grace);
+  the owner's line is `rooms.freed` with the server and size only; an offline operator exempt; a player who may not
+  edit gets no data and cannot FREE; an operator gets the tab.
+- `./gradlew runGameTestServer -PwithCm`: Ann with an empty room and one with a placed machine here and one on beta,
+  Bob with one: her row (three counted, two servers, two over, named from beta's row), the whole list in R4 order with
+  Ann before Bob, her three rooms with FREE, placed and "there", beta named as not heard from for 12 minutes; FREE by Bob
+  refused and nothing changed; refused for the placed room and for a room not the named owner's; freed by an operator:
+  in grace for seven days with the reason `freed`, the Action log entry under the operator ("Operator"), freeing twice
+  does nothing more, and her count drops to two with one room in grace.
+
+158/158 without and with `-PwithCm`, each twice. Checked broken: without the admin check in `RoomsAdmin.apply`, the
+plain test fails ("a player who may not edit gets no data"); run without Compact Machines, so `run/world_cm` is untouched.
+
+**Untested:** the tab in a client (compiled and its data tested; never seen): the nine tabs and the smaller title in the
+row, the columns' fit with long names, the search box, scrolling both lists, SURE? timing, the hover lines, the amber
+footer; the owner's chat line as seen; two real servers (other servers' rows and names, a stale server); real MySQL
+(the new `owner_name` column); LuckPerms exempt groups.
+
+## 2026-11-12: audit of the room limit (SU-53 to SU-59), before naming 0.11.0
+Four reviewers by area, given the code, the Compact Machines 6.0.3 jar and decisions D437 to D454 (not each other's
+findings): the adapter and clearing; losses, mixins and notices; the room list, the limit and storage; packets, pages,
+permissions and screens. Each finding was checked against the code before anything changed.
+
+**Fixed:**
+- Clearing a room stood the whole room limit aside until a restart: Compact Machines 6.0.3's own `disconnect` ends by
+  clearing a graph node that is null for an unbound machine or one in a chunk just loaded (as rooms being cleared
+  are), and the error made the adapter stop. The machine is now unbound as Compact Machines' own `onRemove` does (out
+  of the machine graph, its tunnels unregistered), and that one null is caught.
+- A clear that throws (another mod's block on removal) no longer reaches the server tick (a crash, then the same room
+  again after every restart): it is logged, the room stays in grace and is tried again after the next start. A room
+  whose record could not be kept for nobody stays in grace (counting for nobody) instead of counting again.
+- A room's entities load on another thread since 1.17: a room in an unloaded chunk was emptied of blocks while its
+  items, frames, mobs and bound machine items were not there to remove. The clear now asks for the chunk (a ticket of
+  our own) and clears at the next check, once its entities have loaded.
+- A room with tunnels stayed force-loaded for ever after its clear (Compact Machines only lets go when a bound machine
+  loads): the clear now lets it go.
+- A loss or "told" notice about another server's room was lost for good when that server was down or starting (a
+  starting server skips earlier notices). Each is kept (`RoomOutbox`) and sent again when that server has written its
+  rows well after the notice without showing it (in grace, a placed machine, or marked told), at most 10 times in a day.
+- BSP-InventorySync installed but not syncing on a server: lost machines there are unmarked and free nothing (as
+  before, D451), and the server log now says so once.
+- An unknown or overlong reason (from a notice) is stored and shown as "destroyed", never a raw key or a value longer
+  than its column. The player page no longer shows a raw key for an unknown reason, and says "Freed by staff" for a
+  freed room (it said "Lost · freed by staff").
+- This server's rows were sent to be written again only when they differed from the last write that finished: a change
+  undone before its write left the table wrong for a minute. They are compared with the last sent now, and written
+  again after a failed write. Any failure inside the rows' write rolls back (the server's rows were deleted on a
+  non-SQL error). Placing machines over and over rewrote the rows each tick: now at most every 5 seconds.
+- Server names compared ignoring case everywhere (the count and the stale list compared exactly; MySQL does not). A
+  machine's place is cut to its column (160).
+- Long server ids or names no longer make the page's and the tab's packets throw (cut to their limits).
+- FREE is null-safe on the room's owner. Give-backs from a modified client are taken at most twice a second, and only
+  where Compact Machines runs. The picked owner is always among the first 1,000 owners sent.
+- The ROOMS tab says in amber when, with network scope, the shared list has not been read since the start (its
+  database was down), so only this server's rooms are counted; before, nothing said so.
+
+**Tests:** `RoomAuditGameTests` (3: the notices sent again and when not; reasons, case and long strings; rewrites
+spaced, the picked owner kept, a player inside a room seen, give-backs spaced). `RoomClearGameTests` now has an unbound
+machine inside the room, a room force-loaded for its tunnels, and waits for the room's entities. `RoomsAdminGameTests`
+calls the real offline-operator check. `RoomsPageGameTests` checks ten staff subcommands are out of a player's reach.
+
+**Decided after the audit (defaults, asked in chat; the owner said "carry on"):**
+- D455: giving a room back, making a new one and placing the old machine again brought the old room back past the
+  limit, as often as wanted. Placing a machine bound to a room in grace is now refused while the room's owner is at or
+  over the limit (exempt owners never), with an action-bar line; the machine Compact Machines had just bound is unbound.
+- D456: a renamed or retired server's rows counted for ever (R5). `/su rooms forget <server>` (operators, BSP-Core
+  admins) drops them from both tables, refused for this server, a server heard from in the last 5 minutes and a name
+  the list lacks; action log; the ROOMS tab's stale line names the command.
+- D457: the player's page showed the coordinates of every machine bound to their room, also one another player placed.
+  Players now get the dimension only; staff still see the place on the ROOMS tab.
+- Tests: `RoomAuditGameTests` `owners_decisions_after_the_audit_d455_to_d457` (the rule, `dimensionOnly`, `mayForget`,
+  the memory backend's `forgetRooms` ignoring case, and the console's forget through storage) and
+  `with_compact_machines_a_given_back_room_is_not_placed_back_past_the_limit` (refused at the limit and unbound, placed
+  under it, a room in use never refused). Untested: the place event itself in a client (the refused block and item put
+  back by Forge), and `forget` against real MySQL.
+
+**Accepted limits (as designed, D444 to D451):** a room can be given back while another player carries its machine (only
+the owner is told); bound machines inside containers in a cleared room, or in a destroyed shulker or backpack, free
+nothing (their rooms keep counting until given back); a creative copy of a bound machine burnt while the real one sits
+in a chest puts the room in grace (the owner is told and can place it); notices kept for sending again are forgotten
+when this server restarts; players inside a room whose machine stood in a cleared room are not sent out; another mod's
+teardown in its block's removal may be skipped when its block entity goes first (AE2, Refined Storage, Create: the
+network checks' item 11); BSP-InventorySync and this mod must use the same server id (each has its own setting); a fake
+player with a fixed id owns the rooms it makes.
+
+**Untested:** a clear in a chunk that really was unloaded (the test's room is force-loaded), a clear that throws, a
+notice really missed by a restarting server, and everything in "SU-60 … checks on the network" below.
+
+## 2026-11-12: SU-60, release 0.11.0 (the room limit, R-2): checks on the network
+Nothing of SU-53 to SU-59 has run on the network, in a real client, against a real MariaDB or across two real servers;
+every server-side rule has its GameTest (163 after the audit and D455 to D457, passing twice without and twice with `-PwithCm`, the pack's real Compact
+Machines 6.0.3). Install first: Compact Machines exactly **6.0.3** on every server that has it (another version leaves
+the rooms off and logs it); BSP-InventorySync **0.8.0** on every server (the home mark, D451); Server Utilities
+**0.11.0** on every server and in the client pack (protocol 7: older clients are refused at login). Leave `[rooms]
+limit = 0` until checks 1 to 4 pass, and use a test player's rooms only: an emptied room cannot be brought back.
+
+1. Start every server: the log has no Compact Machines warning, and MariaDB has `<prefix>cm_rooms` (with `owner_name`)
+   and `<prefix>cm_servers`, one row per server running Compact Machines, `heard_at` moving every minute.
+2. As a player: `/su` says to use `/su rooms`; `/su rooms` lists your rooms on this server and the others (other
+   servers' with a dimmer square), with the dimension each machine is placed in and never its coordinates (D457). As an operator: the ROOMS tab lists every owner with
+   their names (an owner known only on another server too), and the footer says every server has been heard from.
+3. Stop one server running Compact Machines: after 5 minutes the ROOMS tab's footer names it in amber, and its rooms
+   still count. Start it: the name goes within a minute.
+4. Look at the ROOMS tab with long names and many owners: the columns fit, the search finds a name, both lists scroll.
+5. Set `limit = 2` on every server (the same values everywhere) and restart. A test player with two rooms right-clicks
+   a new machine with the Personal Shrinking Device: refused with one action-bar line, the machine stays unbound, no
+   flicker. With three rooms (made while `limit = 0`), entering one says in chat how far over, at most once a minute.
+   An operator is never refused; a player in `exemptGroup` is not either, and shows violet "exempt" while online.
+6. On server A, the test player gives back a room (its machine picked up, nobody inside) with GIVE BACK and SURE?: it
+   shows as given back with its days left, stops counting, and the LOG tab has the entry (kind `room`). From server B,
+   the same room shows "give back on A" and cannot be given back there.
+7. Drop a test machine item (bound, marked home A by BSP-InventorySync) into lava on server B: within seconds server A
+   puts its room into grace; the owner is told once: at once if they are on A, else at their next login anywhere.
+   Place a machine bound to it: the room is back, not in grace.
+8. On the ROOMS tab, FREE a test room on this server: the owner reads "Staff freed your Compact Machine room on …"
+   without the staff member's name; the LOG tab names the staff member. FREE on a room with its machine placed is
+   dimmed; on another server's room it says "there".
+9. Set `graceDays = 1` for a test room in grace with a chest of junk, a player standing inside and a machine placed
+   inside: after a day the room is emptied (the chest drops nothing), the player is sent to their respawn point, the
+   inner machine's room goes into grace (`inside`), Compact Machines' `/cm` commands still list the rooms right, and
+   the next new room is made in a fresh place. A player logging in where that room was is sent out too.
+10. A machine item bound to that emptied room, placed and entered: it makes a new room (counted under the limit).
+    With `limit = 2`, the test player gives back a room, makes a new one, then places the given-back room's machine:
+    refused with one action-bar line, the block and the item come back, the room stays in grace (D455).
+11. Put rooms with AE2, Refined Storage or Create inside one to be emptied, and watch the server's tick time at the
+    clear (a dense 13-block room).
+12. Rename a test server running Compact Machines (`storage.serverId`), restart it, and after 5 minutes type
+    `/su rooms forget <old name>`: the old name leaves the ROOMS tab's footer and its rooms stop counting on every
+    server; the LOG tab has the entry. The same for this server's own name, or a server just heard from: refused (D456).

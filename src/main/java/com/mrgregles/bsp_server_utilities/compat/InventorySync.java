@@ -237,6 +237,21 @@ public final class InventorySync {
     }
 
     @Nullable
+    /**
+     * Whether BSP-InventorySync runs its sync on this server (its {@code isEnabled}: a shared database in use), so it marks
+     * machine items with their home server; false when it is not installed or cannot say (Compact Machines rooms, D451).
+     */
+    public static boolean syncsHere() {
+        if (ModList.get() == null || !ModList.get().isLoaded(MODID)) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(Class.forName(API).getMethod("isEnabled").invoke(null));
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            return false;
+        }
+    }
+
     private static Method syncing;
     private static boolean syncingLooked;
     @Nullable

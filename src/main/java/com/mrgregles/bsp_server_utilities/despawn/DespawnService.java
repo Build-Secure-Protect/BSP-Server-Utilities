@@ -190,11 +190,13 @@ public final class DespawnService {
             long cleared = DespawnData.get(server).clearedBefore();
             boolean beforeClear = cleared > 0 && (!stamped || data.getLong(STAMP) < cleared);
             if (beforeClear && !clearKeeps(e, s)) {
+                com.mrgregles.bsp_server_utilities.rooms.RoomLosses.itemGone(e, "cleared"); // a bound Compact Machine's room (SU-56)
                 return false;
             }
             long limit = limitTicks(e, s);
             if (s.enabled() && stamped && limit >= 0 && now - data.getLong(STAMP) >= limit) {
                 count(server, e);
+                com.mrgregles.bsp_server_utilities.rooms.RoomLosses.itemGone(e, "despawned"); // a bound Compact Machine's room (SU-56)
                 return false;
             }
         }
@@ -230,6 +232,7 @@ public final class DespawnService {
             long age = now - e.getPersistentData().getLong(STAMP);
             if (age >= limit) {
                 count(server, e);
+                com.mrgregles.bsp_server_utilities.rooms.RoomLosses.itemGone(e, "despawned"); // a bound Compact Machine's room (SU-56)
                 e.discard();
                 DROPPED.remove(e);
                 gone++;

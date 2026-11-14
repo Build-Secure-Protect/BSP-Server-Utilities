@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rooms Page Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The owner's picks from set Z (D452) drawn as they would be built, with the points to confirm. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+<style>
+.cube{ display:inline-block; background:#19D3B0; opacity:.85; flex:none; }
+.cube.far{ background:#4f7f78; }
+.cube.lost{ background:transparent; box-shadow:inset 0 0 0 1px #F2B544; opacity:1; }
+.sz{ font:600 9px var(--mono); color:var(--M); }
+.tile{ width:96px; height:72px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:6px; box-sizing:border-box; display:flex; flex-direction:column; gap:3px; overflow:hidden; }
+.tile.sel{ box-shadow:inset 0 0 0 1.5px var(--Q); }
+.tile.grace{ box-shadow:inset 0 0 0 1px #6b5524; background:repeating-linear-gradient(135deg,#0C0E12 0 6px,#12100b 6px 12px); }
+.tile .nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.am{ color:#F2B544; }
+.tiles{ display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; overflow:hidden; }
+.ab{ font-family:var(--body); font-size:12px; color:#fff; text-shadow:0 1px 0 #000; text-align:center; padding:6px 0; }
+.lab{ font:600 11px var(--body); color:#ccc; letter-spacing:.06em; text-transform:uppercase; }
+.pill{ font-size:9px; padding:1px 5px; background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; }
+.callout{ font-size:12px; color:var(--muted); max-width:230px; align-self:center; }
+.callout b{ color:var(--fg); }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>The rooms page, refined</h1>
+<p class="lede">Your picks from set Z (D452): look B for the player's <code>/su rooms</code>, look A for the admins' ROOMS tab, and Z3 to Z8 at their defaults. Drawn as it would be built, in each state it can be in, with the points to confirm at the foot. Sample data: a limit of 5 and your seven server names.</p></header>
+
+<section><h2>1. The player's page</h2>
+<div class="card"><p>Opened with <code>/su rooms</code>. Tiles are ordered with this server's rooms first, then other servers' rooms (a dimmer square, since they are reached only on their own server), then lost rooms. Picking a tile shows its line at the foot: size, server, where its machine stands, and GIVE BACK when the room can be given back here.</p>
+<div class="stage">
+<div class="scr q" style="width:516px;height:315px">
+<div class="hd"><span class="ttl q" style="font-size:10.5px">Your Compact Machine rooms</span><span class="sm m">counted across the network</span></div>
+<div class="grow" style="display:flex;gap:10px">
+<div class="box" style="width:110px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+<div class="big qq">4<span class="m" style="font-size:16px"> / 5</span></div>
+<div class="sm m">rooms counted</div>
+<div class="seg"><i class="on" style="width:14px"></i><i class="on" style="width:14px"></i><i class="on" style="width:14px"></i><i class="on" style="width:14px"></i><i style="width:14px"></i></div>
+<div class="sm m">1 more before the limit.</div>
+<div class="sm m" style="margin-top:auto">A lost room does not count. Place its machine within 7 days to keep it.</div>
+</div>
+<div class="grow tiles">
+<div class="tile"><div class="hd"><span class="cube" style="width:22px;height:22px"></span><span class="sz">11</span></div><div class="nm">Ore processing</div><div><span class="srv">Frostwarf</span></div></div>
+<div class="tile sel"><div class="hd"><span class="cube" style="width:14px;height:14px"></span><span class="sz">7</span></div><div class="nm">Farm</div><div><span class="srv">Frostwarf</span></div></div>
+<div class="tile"><div class="hd"><span class="cube far" style="width:18px;height:18px"></span><span class="sz">9</span></div><div class="nm">Storage</div><div><span class="srv">Moongrove</span></div></div>
+<div class="tile"><div class="hd"><span class="cube far" style="width:10px;height:10px"></span><span class="sz">5</span></div><div class="nm m">(no name)</div><div><span class="srv">Spawn</span></div></div>
+<div class="tile grace"><div class="hd"><span class="cube lost" style="width:6px;height:6px"></span><span class="sz">3</span></div><div class="am b">Lost · burnt</div><div class="am sm">cleared in 5 days</div></div>
+</div></div>
+<div class="cardg" style="flex-direction:row;align-items:center;gap:8px;padding:6px 8px"><span class="b">Farm</span><span class="sm m grow">normal, 7 × 7 × 7 · Frostwarf (this server) · machine not placed · nobody inside</span><span class="key warn">Give back</span></div>
+<div class="hd"><span class="sm m">Click a tile for its details.</span><span class="keys"><span class="key ghost">Close</span></span></div>
+</div>
+</div></div>
+
+<div class="card"><p>The foot line for the other kinds of tile. GIVE BACK is shown only when it would work; otherwise the line says why not.</p>
+<div class="stage" style="flex-direction:column;align-items:center;gap:8px">
+<div class="scr q" style="width:516px;padding:6px 8px"><div class="cardg" style="flex-direction:row;align-items:center;gap:8px;padding:6px 8px"><span class="b">Ore processing</span><span class="sm m grow">giant, 11 × 11 × 11 · Frostwarf (this server) · machine at 1204 64 −388 (overworld)</span><span class="key lock">Give back</span></div><div class="sm m" style="padding:0 8px">Pick up its machine first: a room with a placed machine cannot be given back.</div></div>
+<div class="scr q" style="width:516px;padding:6px 8px"><div class="cardg" style="flex-direction:row;align-items:center;gap:8px;padding:6px 8px"><span class="b">Storage</span><span class="sm m grow">large, 9 × 9 × 9 · Moongrove · machine at −52 70 911 (overworld)</span><span class="sm m">give back on Moongrove</span></div></div>
+<div class="scr q" style="width:516px;padding:6px 8px"><div class="cardg" style="flex-direction:row;align-items:center;gap:8px;padding:6px 8px"><span class="am b">Lost room</span><span class="sm m grow">tiny, 3 × 3 × 3 · Frostwarf · its machine burnt on 9 Nov · cleared on 16 Nov unless a machine bound to it is placed</span></div></div>
+<div class="scr q" style="width:516px;padding:6px 8px"><div class="cardg" style="flex-direction:row;align-items:center;gap:8px;padding:6px 8px"><span class="b">Farm</span><span class="sm m grow">normal · Frostwarf (this server) · machine not placed · nobody inside</span><span class="key warn">Sure?</span></div><div class="sm m" style="padding:0 8px">A second click within three seconds gives it back; otherwise the key returns to GIVE BACK.</div></div>
+</div></div>
+
+<div class="card"><p>Over the limit, and with no rooms at all. Over the limit the count turns red and says by how many, as the chat warning does (D440).</p>
+<div class="stage">
+<div class="scr q" style="width:250px;height:200px">
+<div class="hd"><span class="ttl q" style="font-size:9.5px">Your rooms</span></div>
+<div class="box grow" style="padding:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+<div class="big r">7<span class="m" style="font-size:16px"> / 5</span></div>
+<span class="pill">2 over the limit</span>
+<div class="sm m">Give back 2 to come down to the limit. You can keep using your rooms, but you cannot make another until you are under it.</div>
+</div><div class="sm m">(the left column only; tiles as above)</div></div>
+<div class="scr q" style="width:250px;height:200px">
+<div class="hd"><span class="ttl q" style="font-size:9.5px">Your rooms</span></div>
+<div class="box grow" style="padding:10px;display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:center;text-align:center">
+<div class="big m">0<span style="font-size:16px"> / 5</span></div>
+<div class="sm m">You have no Compact Machine rooms. A room is made the first time someone enters a new machine with the Personal Shrinking Device, and it belongs to that player.</div>
+</div></div>
+</div></div>
+
+<div class="card"><p>With more rooms than fit (three tiles a row, two rows), the tiles scroll with the mouse wheel and a thin bar at the right edge, as the mod's other lists do.</p>
+<div class="stage"><div class="scr q" style="width:516px;height:200px">
+<div class="hd"><span class="ttl q" style="font-size:10.5px">Your Compact Machine rooms</span><span class="sm m">counted on this server only</span></div>
+<div class="grow" style="display:flex;gap:10px">
+<div class="box" style="width:110px;padding:8px;display:flex;flex-direction:column;gap:4px;align-items:flex-start"><div class="big qq">9<span class="m" style="font-size:16px"> / 12</span></div><div class="sm m">rooms counted</div></div>
+<div class="grow tiles" style="height:150px">
+<div class="tile"><div class="hd"><span class="cube" style="width:26px;height:26px"></span><span class="sz">13</span></div><div class="nm">Reactor</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:22px;height:22px"></span><span class="sz">11</span></div><div class="nm">Smeltery</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:14px;height:14px"></span><span class="sz">7</span></div><div class="nm">Bees</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:10px;height:10px"></span><span class="sz">5</span></div><div class="nm m">(no name)</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:18px;height:18px"></span><span class="sz">9</span></div><div class="nm">AE2</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:6px;height:6px"></span><span class="sz">3</span></div><div class="nm m">(no name)</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:14px;height:14px"></span><span class="sz">7</span></div><div class="nm">Mob farm</div></div>
+<div class="tile"><div class="hd"><span class="cube" style="width:10px;height:10px"></span><span class="sz">5</span></div><div class="nm">Spare</div></div>
+</div><div class="sb" style="height:150px"><i style="top:0;height:62%"></i></div></div>
+<div class="sm m">With the config set to per server, the header says "counted on this server only" and only this server's rooms are shown.</div>
+</div></div></div>
+</section>
+
+<section><h2>2. The admins' ROOMS tab</h2>
+<div class="card"><p>The seventh tab of the Server utilities panel (operators and BSP-Core admins, as the other tabs). Owners on the left, most over the limit first; the picked owner's rooms on the right with their state and FREE for rooms on this server. FREE asks SURE? within three seconds, puts the room into the 7 days' grace, tells the owner (Z6) and writes a line to the action log.</p>
+<div class="stage"><div class="scr v" style="width:516px;height:315px">
+<div class="hd"><span class="ttl v" style="font-size:10.5px">Server utilities</span><span class="tabs"><span class="tab" style="width:40px">Rules</span><span class="tab" style="width:40px">Staff</span><span class="tab" style="width:40px">Log</span><span class="tab" style="width:40px">AFK</span><span class="tab" style="width:40px">Chunks</span><span class="tab" style="width:40px">Drops</span><span class="tab on" style="width:40px">Rooms</span></span></div>
+<div class="grow" style="display:flex;gap:8px">
+<div class="box" style="width:236px;padding:3px;overflow:hidden">
+<div class="inp" style="margin:2px 2px 4px">find a player</div>
+<table class="tbl" style="font-size:9px">
+<tr class="m sm up"><td>Owner</td><td>Rooms</td><td>Over</td><td>Servers</td></tr>
+<tr style="background:#1b2230;box-shadow:inset 2px 0 0 #B58CFF"><td class="b">Steve_42</td><td class="mono">7 / 5</td><td class="r b">+2</td><td class="m">2</td></tr>
+<tr><td class="b">Rin</td><td class="mono">5 / 5</td><td class="m">·</td><td class="m">1</td></tr>
+<tr><td class="b">Alex_Builds</td><td class="mono">4 / 5</td><td class="m">·</td><td class="m">3</td></tr>
+<tr><td class="b">Pebble</td><td class="mono">1 / 5</td><td class="m">·</td><td class="m">1</td></tr>
+<tr><td class="b">Mod_Kai</td><td class="mono">9</td><td class="vv">exempt</td><td class="m">2</td></tr>
+<tr><td class="m">Offline_Ted</td><td class="mono">2 / 5</td><td class="m">·</td><td class="m">1</td></tr>
+</table></div>
+<div class="box grow" style="padding:4px 5px;display:flex;flex-direction:column;gap:4px;overflow:hidden">
+<div class="hd"><span class="vv sm up b">Steve_42 · 7 rooms</span><span class="sm r">2 over</span></div>
+<table class="tbl" style="font-size:8.6px">
+<tr><td class="mono">13</td><td class="b">Base</td><td><span class="srv">Frostwarf</span></td><td class="m">placed</td><td class="r">free</td></tr>
+<tr><td class="mono">13</td><td class="m">·</td><td><span class="srv">Frostwarf</span></td><td class="m">placed</td><td class="r">free</td></tr>
+<tr style="background:#1b2230"><td class="mono">9</td><td class="m">·</td><td><span class="srv">Frostwarf</span></td><td class="m">not placed</td><td><span class="key sm warn">Sure?</span></td></tr>
+<tr><td class="mono">3</td><td class="m">·</td><td><span class="srv">Frostwarf</span></td><td class="m">not placed</td><td class="r">free</td></tr>
+<tr><td class="mono">11</td><td class="b">Mine</td><td><span class="srv">Stormfall</span></td><td class="m">placed</td><td class="m sm">there</td></tr>
+<tr><td class="mono">7</td><td class="m">·</td><td><span class="srv">Stormfall</span></td><td class="m">placed</td><td class="m sm">there</td></tr>
+<tr><td class="mono">5</td><td class="m">·</td><td><span class="srv">Stormfall</span></td><td class="am">grace · 2 d</td><td class="m sm">·</td></tr>
+</table>
+<div class="sm m" style="margin-top:auto">Hover a room for its position, its machine's coordinates and, in grace, why and when.</div>
+</div></div>
+<div class="hd"><span class="sm m">Limit 5 · counted across the network · 31 owners · 3 rooms in grace · every server heard from under a minute ago</span><span class="keys"><span class="key ghost">Refresh</span></span></div>
+</div>
+<div class="callout"><b>A server not heard from</b> for over 5 minutes is named in the footer in amber ("Stormfall not heard from for 12 min: its rooms are counted as last heard"), and its rooms are still counted.</div>
+</div></div>
+</section>
+
+<section><h2>3. The lines in the game</h2>
+<div class="card"><p>Unchanged from set Z, with Z5 and Z6 applied.</p>
+<div class="stage" style="flex-direction:column;align-items:center">
+<div class="world" style="width:480px"><div class="lab">Refused: a new room at the limit (action bar, at most once a second)</div><div class="ab">You own <span style="color:#FFD23A">5 of 5</span> Compact Machine rooms. Give one back in <span style="color:#19D3B0">/su rooms</span> to make another.</div></div>
+<div class="world" style="width:480px"><div class="lab">Entering one of your rooms while over the limit (chat, at most once a minute)</div><div class="chat"><span style="color:#FFAA00">You own 7 Compact Machine rooms; the limit is 5, so you are 2 over.</span><span style="color:#FFAA00">Give back 2 in <span style="color:#19D3B0">/su rooms</span> to come down to the limit. You can keep using them, but you cannot make another until you are under it.</span></div></div>
+<div class="world" style="width:480px"><div class="lab">A room loses its last machine (chat: at once if online on that server, else at the next login anywhere)</div><div class="chat"><span style="color:#FFAA00">The machine of your Compact Machine room on Frostwarf (tiny) was destroyed (burnt).</span><span style="color:#AAAAAA">It no longer counts against your limit. Its contents are cleared in 7 days unless a machine bound to it is placed again.</span></div></div>
+<div class="world" style="width:480px"><div class="lab">Freed by staff (to the owner, same timing)</div><div class="chat"><span style="color:#FFAA00">Staff freed your Compact Machine room on Frostwarf (large).</span><span style="color:#AAAAAA">It no longer counts against your limit. Its contents are cleared in 7 days unless a machine bound to it is placed again.</span></div></div>
+<div class="world" style="width:480px"><div class="lab">Giving back</div><div class="chat"><span style="color:#AAAAAA">You gave back your room "Farm" on Frostwarf. It no longer counts; it and everything in it are cleared in 7 days unless you place its machine again.</span></div></div>
+</div></div></section>
+
+<section><h2>To confirm</h2><div class="card"><ol>
+<li><b>R1 tile order:</b> this server's rooms first, then other servers' rooms, then lost rooms, each group biggest first (default); or simply biggest first throughout.</li>
+<li><b>R2 other servers' rooms:</b> a dimmer square on their tile, since they are reached only on their own server (default); or the same colour as this server's.</li>
+<li><b>R3 GIVE BACK on a room with a placed machine:</b> shown dimmed with the line "Pick up its machine first" (default); or not shown at all.</li>
+<li><b>R4 the admins' owner list:</b> sorted most over the limit first, then most rooms (default); or by name.</li>
+<li><b>R5 a server not heard from:</b> after 5 minutes it is named in amber in the footer and its last figures still count (default); or its rooms stop counting until it is heard from again.</li>
+<li><b>R6 who sees the ROOMS tab:</b> operators and BSP-Core admins, as the other tabs of the panel (default); or operators only.</li>
+<li><b>R7 the staff notice:</b> the owner is told "Staff freed your room" without the staff member's name (default); or with the name.</li>
+</ol></div></section>
+</div></body></html>

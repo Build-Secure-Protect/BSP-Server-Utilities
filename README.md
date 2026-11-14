@@ -12,6 +12,7 @@ Features:
 - **AFK detection**: players idle for 5 minutes are marked AFK (staff show as away on the staff panels, and their machines' chunks unload like those of players who left). With kicking on, a player AFK too long gets a presence check, a card asking them to click a named word within 2 minutes, and is kicked if they do not answer; admins and operators are never checked, other staff never kicked. Macros (the same few inputs again and again, with even timing, the same head angles or in one spot) do not count as activity, so they go AFK and are checked like anyone idle; each unanswered check is in the Action Log with what was seen.
 - **Client check**: every client says, while it logs in, which mods, resource packs and shader it has, its brightness, and whether common stone blocks still look solid; a player with a blocked mod or pack, or a see-through stone pack, is refused with a list of what to remove. Admins see everyone's setup, what differs from a trusted setup, and can kick with a reason. A deterrent, not proof: a client built to lie can lie.
 - **Action log**: every command staff run (private messages never), items they take from the creative menu or give, and game-mode changes, kept for a week and shared across the servers. Admins switch single commands off; every switch change is logged. Players read it with coordinates hidden.
+- **Compact Machines rooms**: with Compact Machines 6.0.3, every player sees their rooms across the network in `/su rooms`, and admins can set how many rooms each player may own (a network total or per server). A room whose machine is certainly destroyed, or that its owner gives back or staff free, stops counting at once and is emptied after a grace period unless its machine is placed again. Admins see every owner in the ROOMS tab.
 
 The mod is in development and has not yet been tried on a live server.
 
@@ -20,6 +21,7 @@ The mod is in development and has not yet been tried on a live server.
 - `/rules`: the rules, read only (everyone).
 - `/actionlog`: the newest 100 log entries, coordinates hidden (everyone).
 - `/serverutils` or `/su`: the admin panel with the RULES, STAFF and LOG tabs (operators and BSP-Core admins); `/su status`, `/su rules ...`.
+- `/su rooms`: your Compact Machines rooms, with GIVE BACK (everyone, on servers running Compact Machines 6.0.3); `/su rooms forget <server>`: drop a renamed or retired server's rooms from the shared list (operators, BSP-Core admins).
 - `/su away`: show as away on the staff panels (staff).
 - `/afk`: mark yourself AFK until your next action (everyone).
 - `/su clearitems here | all | <server>`: clear dropped items after a 60-second warning (operators, BSP-Core admins).
@@ -30,7 +32,7 @@ The mod is in development and has not yet been tried on a live server.
 ## Requirements
 
 - Minecraft 1.20.1 with Forge 47.4.10 or newer (the network runs 47.4.23). On the servers, BSP-Core's full jar (not -slim) provides the MySQL driver for shared storage.
-- Optional: BSP-Core 1.4.0 or newer (its database settings, server id and Score Screens are used when it is there), LuckPerms (staff groups).
+- Optional: BSP-Core 1.4.0 or newer (its database settings, server id and Score Screens are used when it is there), LuckPerms (staff groups), Compact Machines exactly 6.0.3 (the room limit; with BSP-InventorySync 0.8.0 on every server for losses on another server).
 
 ## Configuring
 
@@ -40,6 +42,7 @@ The server config is `serverconfig/bsp_server_utilities-server.toml` in each wor
 - **Staff**: `staff.groups` lists the LuckPerms groups that count as staff, highest first, as `group:Label:#RRGGBB` (for example `"admin:Admin:#B58CFF"`). `staff.operators` makes server operators staff too.
 - **Action log**: `log.keepDays` (7) is how long entries are kept on every server and in the shared table.
 - **Images**: Display Panels show pictures from a web address or from `config/bsp_server_utilities/images/` on that server. The server fetches the address itself (players never do), so only admins can set one; any address the server can reach is allowed, including ones on its own network. Limits are in the `[images]` section.
+- **Rooms**: the `[rooms]` section: `limit` (0: no limit, rooms only counted), `scope` (`network` or `server`), `exemptGroup` (a LuckPerms group never limited; operators never are), `graceDays` (7). Use the same values on every server.
 - `/serverutils status` (or `/su status`, operators and BSP-Core admins) shows what the server is using.
 
 ## Building
@@ -55,6 +58,8 @@ Headless tests:
 ```
 ./gradlew runGameTestServer
 ```
+
+`-PwithCm` also loads the pack's Compact Machines 6.0.3, so the room tests run against it (world `run/world_cm`).
 
 ## Documentation
 

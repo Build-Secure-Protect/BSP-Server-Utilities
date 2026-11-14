@@ -56,8 +56,17 @@ public final class ServerUtilsCommands {
 
     public static void onRegister(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> d = event.getDispatcher();
-        LiteralCommandNode<CommandSourceStack> root = d.register(Commands.literal("serverutils").requires(ServerUtilsCommands::editorOrStaff)
+        LiteralCommandNode<CommandSourceStack> root = d.register(Commands.literal("serverutils").requires(ServerUtilsCommands::editorStaffOrRooms)
                 .executes(ServerUtilsCommands::openPanel)
+                // a player's own Compact Machines rooms (SU-58, D443): for everyone where Compact Machines 6.0.3 runs
+                .then(Commands.literal("rooms").requires(s -> com.mrgregles.bsp_server_utilities.compat.CompactMachines.present()).executes(c -> {
+                    com.mrgregles.bsp_server_utilities.rooms.RoomsPage.open(c.getSource().getPlayerOrException());
+                    return 1;
+                })
+                        // a renamed or retired server's rooms dropped from the shared list (D456)
+                        .then(Commands.literal("forget").requires(Perms::canEdit)
+                                .then(Commands.argument("server", StringArgumentType.string())
+                                        .executes(c -> com.mrgregles.bsp_server_utilities.rooms.RoomsAdmin.forget(c.getSource(), StringArgumentType.getString(c, "server"))))))
                 .then(Commands.literal("away").requires(ServerUtilsCommands::staff).executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
                     boolean away = StaffDirectory.toggleAway(p);
@@ -128,7 +137,7 @@ public final class ServerUtilsCommands {
                                 .then(Commands.argument("player", StringArgumentType.word())
                                         .executes(c -> rulesReset(c.getSource(), StringArgumentType.getString(c, "player")))))
                         .then(Commands.literal("askagain").executes(c -> rulesAskAgain(c.getSource())))));
-        d.register(Commands.literal("su").requires(ServerUtilsCommands::editorOrStaff)
+        d.register(Commands.literal("su").requires(ServerUtilsCommands::editorStaffOrRooms)
                 .executes(ServerUtilsCommands::openPanel)
                 .redirect(root));
         com.mrgregles.bsp_server_utilities.announce.Broadcast.register(d); // /broadcast (D233 to D245)
@@ -156,9 +165,14 @@ public final class ServerUtilsCommands {
         return Perms.canEdit(source) || staff(source);
     }
 
+    /** {@code /su} also for every player where Compact Machines 6.0.3 runs, who are then shown {@code /su rooms} only (SU-58). */
+    private static boolean editorStaffOrRooms(CommandSourceStack source) {
+        return editorOrStaff(source) || com.mrgregles.bsp_server_utilities.compat.CompactMachines.present();
+    }
+
     private static int openPanel(com.mojang.brigadier.context.CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         if (!Perms.canEdit(c.getSource())) {
-            c.getSource().sendFailure(Component.translatable("message.bsp_server_utilities.staff.away_only"));
+            c.getSource().sendFailure(Component.translatable(staff(c.getSource()) ? "message.bsp_server_utilities.staff.away_only" : "message.bsp_server_utilities.rooms.only_rooms"));
             return 0;
         }
         AdminPanel.open(c.getSource().getPlayerOrException());

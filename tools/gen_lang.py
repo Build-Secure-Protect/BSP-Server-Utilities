@@ -97,6 +97,46 @@ RULES = {
     "asked_again": "Rules version %s: every player is asked to agree again.",
 }
 KEYS.update({"message.bsp_server_utilities.rules." + k: v for k, v in RULES.items()})
+# Compact Machines rooms: the limit (SU-55, D440, D442)
+ROOMS = {
+    "refused_full": "You own %s of %s Compact Machine rooms. Give one back in /su rooms to make another.",
+    "refused_over": "You own %s Compact Machine rooms and the limit is %s. Give back %s in /su rooms to make another.",
+    "over": "You own %s Compact Machine rooms; the limit is %s, so you are %s over.",
+    "over_hint": "Give back %s in /su rooms to come down to the limit. You can keep using them, but you cannot make another until you are under it.",
+    # a room's last machine lost (SU-56, D444, D446, Z6): "on <server> (<size>) ... (<reason>)"
+    "lost": "The machine of your Compact Machine room on %s (%s) was destroyed (%s).",
+    "lost_hint": "It no longer counts against your limit. Its contents are cleared in %s days unless a machine bound to it is placed again.",
+    "size.3": "tiny",
+    "size.5": "small",
+    "size.7": "normal",
+    "size.9": "large",
+    "size.11": "giant",
+    "size.13": "maximum",
+    "reason.burnt": "burnt",
+    "reason.exploded": "blown up",
+    "reason.cactus": "on a cactus",
+    "reason.crushed": "crushed",
+    "reason.destroyed": "destroyed",
+    "reason.despawned": "despawned",
+    "reason.cleared": "cleared from the ground",
+    "reason.void": "fell into the void",
+    "reason.inside": "inside a room that was cleared",
+    "reason.given_back": "given back",
+    "reason.freed": "freed by staff",
+    # giving a room back (SU-58, D448), and /su typed by a player who is not staff
+    "given_back": "You gave back your Compact Machine room on %s (%s).",
+    "only_rooms": "Use /su rooms to see your Compact Machine rooms.",
+    # freed by staff from the ROOMS tab (SU-59, D453 R7: without the staff member's name)
+    "freed": "Staff freed your Compact Machine room on %s (%s).",
+    "revive_refused_own": "You own %s of %s Compact Machine rooms: give one back in /su rooms before placing this room's machine again.",
+    "revive_refused": "This machine's room is waiting to be cleared, and its owner has %s of %s Compact Machine rooms: it cannot be placed until they give one back.",
+    "forget_storage": "There is no shared storage here, so there are no other servers' rooms to forget.",
+    "forget_self": "%s is this server: its rooms are read live and cannot be forgotten.",
+    "forget_heard": "%s was heard from in the last 5 minutes: stop it first, or its rooms come straight back.",
+    "forget_unknown": "No server called %s has rooms in the shared list.",
+    "forgot": "Forgot %s's Compact Machine rooms (%s rooms): they no longer count.",
+}
+KEYS.update({"message.bsp_server_utilities.rooms." + k: v for k, v in ROOMS.items()})
 # Staff online
 KEYS.update({
     "message.bsp_server_utilities.staff.away": "You show as away on the staff panels. /su away again when you are back.",
@@ -485,6 +525,7 @@ GUI = {
     "admin.tab.drops": "DROPS",
     "admin.tab.clients": "CLIENTS",
     "admin.tab.servers": "SERVERS",
+    "admin.tab.rooms": "ROOMS",
     # the setup guide and its card
     "admin.setup.card.title": "CONFIGURE SERVER UTILITIES",
     "admin.setup.card.text": "Not set up on this network yet. You can keep playing; this stays until you choose.",
@@ -674,6 +715,88 @@ GUI = {
     "servers.folder": "Folder: config/%s/ \u00b7 %s files \u00b7 the network's set",
 }
 KEYS.update({"gui.bsp_server_utilities." + k: v for k, v in GUI.items()})
+# /su rooms, the player's page (SU-58, look B: D452, D453)
+ROOMS_GUI = {
+    "title": "YOUR COMPACT MACHINE ROOMS",
+    "scope_network": "counted across the network",
+    "scope_server": "counted on this server only",
+    "counted": "rooms counted",
+    "no_limit": "no limit",
+    "not_limited": "not limited",
+    "more": "%s more before the limit.",
+    "at_limit": "At the limit: give one back to make another.",
+    "over_pill": "%s over the limit",
+    "over_hint": "Give back %s to come down to the limit. You can keep using your rooms, but you cannot make another until you are under it.",
+    "lost_note": "A lost room does not count. Place its machine within %s days to keep it.",
+    "empty": "You have no Compact Machine rooms. A room is made the first time someone enters a new machine with the Personal Shrinking Device, and it belongs to that player.",
+    "no_name": "(no name)",
+    "lost": "Lost \u00b7 %s",
+    "given_back": "Given back",
+    "freed": "Freed by staff",
+    "cleared_in": "cleared in %s days",
+    "pick": "Click a tile for its details.",
+    "detail_size": "%s, %s \u00d7 %s \u00d7 %s",
+    "this_server": "%s (this server)",
+    "machine_at": "machine at %s",
+    "machine_in": "machine placed in the %s",
+    "machine_none": "machine not placed",
+    "machines_more": "%s machines placed",
+    "give_back": "Give back",
+    "sure": "Sure?",
+    "close": "Close",
+    "elsewhere": "give back on %s",
+    "note_ok": "Cleared in %s days; placing its machine before then keeps it.",
+    "note_sure": "Click again within three seconds to give it back.",
+    "note_placed": "Pick up its machine first: a room with a placed machine cannot be given back.",
+    "note_inside": "Someone is inside: it can be given back when the room is empty.",
+    "note_grace": "Place a machine bound to it within %s days to keep it.",
+}
+ROOMS_GUI.update({k: v for k, v in ROOMS.items() if k.startswith(("size.", "reason."))})
+KEYS.update({"gui.bsp_server_utilities.rooms." + k: v for k, v in ROOMS_GUI.items()})
+# the admins' ROOMS tab (SU-59, look A: D452, D453 R4 to R7)
+ROOMS_ADMIN = {
+    "find": "find a player",
+    "owner": "Owner",
+    "rooms": "Rooms",
+    "over": "Over",
+    "servers": "Servers",
+    "exempt": "exempt",
+    "unknown": "unknown player",
+    "none": "No Compact Machine rooms yet.",
+    "no_match": "No owner matches.",
+    "pick": "Pick an owner to see their rooms.",
+    "picked": "%s \u00b7 %s rooms",
+    "over_by": "%s over",
+    "placed": "placed",
+    "placed_n": "%s placed",
+    "not_placed": "not placed",
+    "grace": "grace \u00b7 %s d",
+    "free": "free",
+    "sure": "Sure?",
+    "there": "there",
+    "hover": "Hover a room for its position, its machine's coordinates and, in grace, why and when.",
+    "detail": "Room %s, %s on %s",
+    "detail_machine": "machine at %s",
+    "detail_machines": "%s machines; one at %s",
+    "detail_grace": "%s; cleared in %s days",
+    "why_placed": "Pick up its machine first: a placed machine keeps the room.",
+    "why_elsewhere": "Free it on %s.",
+    "foot": "Limit %s \u00b7 %s \u00b7 %s owners \u00b7 %s rooms in grace",
+    "no_limit": "no limit",
+    "scope_network": "counted across the network",
+    "scope_server": "counted on this server only",
+    "heard": "every server heard from in the last 5 minutes",
+    "unread": "other servers' rooms not read yet (the database): only this server's count",
+    "stale": "%s not heard from for %s min: its rooms are counted as last heard (gone for good: /su rooms forget %s)",
+    "refresh": "REFRESH",
+    "note_freed": "Freed: its owner is told, and it is cleared in %s days.",
+    "note_placed": "Not freed: a machine bound to it is placed.",
+    "note_grace": "Already in grace.",
+    "note_gone": "That room is no longer theirs here.",
+}
+KEYS.update({"gui.bsp_server_utilities.rooms_admin." + k: v for k, v in ROOMS_ADMIN.items()})
+# the Action log's kind for rooms given back and freed (staff only)
+KEYS["gui.bsp_server_utilities.panel.log.kind.room"] = "Compact Machine rooms"
 
 
 def main():

@@ -39,6 +39,8 @@ public final class ServerUtilsConfig {
     public static final ForgeConfigSpec.IntValue RULES_DELAY_TICKS, RULES_RESTORE_TIMEOUT_TICKS;
     public static final ForgeConfigSpec.IntValue IMAGES_MAX_DOWNLOAD_KB, IMAGES_TIMEOUT_SECONDS, IMAGES_PIXELS_PER_BLOCK, IMAGES_CACHE_MB;
     public static final ForgeConfigSpec.IntValue LOG_KEEP_DAYS;
+    public static final ForgeConfigSpec.IntValue ROOMS_LIMIT, ROOMS_GRACE_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> ROOMS_SCOPE, ROOMS_EXEMPT_GROUP;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -107,6 +109,17 @@ public final class ServerUtilsConfig {
                 "messages never; admins switch single commands off in the LOG tab), items they take from the creative menu, gives",
                 "and game-mode changes, shared by the network. Nobody can edit or delete an entry in game.").push("log");
         LOG_KEEP_DAYS = b.comment("Entries older than this are deleted (every hour, by every server).").defineInRange("keepDays", 7, 1, 90);
+        b.pop();
+
+        b.comment("Compact Machines rooms (owner decisions D437 to D453; Compact Machines 6.0.3 only): how many rooms each player owns,",
+                "and a limit on making more. A room belongs to the player who first enters a new machine with the Personal",
+                "Shrinking Device. Use the same values on every server.").push("rooms");
+        ROOMS_LIMIT = b.comment("The most rooms a player may own. 0: no limit; rooms are only counted.").defineInRange("limit", 0, 0, 10000);
+        ROOMS_SCOPE = b.comment("network: a player's rooms on every server count together (needs shared storage; without it, this server's).",
+                "server: each server counts only its own rooms.").define("scope", "network", o -> o instanceof String s && (s.equals("network") || s.equals("server")));
+        ROOMS_EXEMPT_GROUP = b.comment("A LuckPerms group whose members are never limited (operators never are). Empty: none.").define("exemptGroup", "");
+        ROOMS_GRACE_DAYS = b.comment("Days a room whose machine was lost, given back or freed by staff waits before it is cleared; it stops",
+                "counting at once, and placing a machine bound to it before then keeps it.").defineInRange("graceDays", 7, 1, 90);
         b.pop();
         SPEC = b.build();
     }

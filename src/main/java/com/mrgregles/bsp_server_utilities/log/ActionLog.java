@@ -61,6 +61,16 @@ public final class ActionLog {
                 player.getGameProfile().getName(), role.group(), role.label(), role.colour(), kind, text);
     }
 
+    /** An entry by any player: their staff role when they have one, else "Player" (Compact Machines rooms given back, SU-58). */
+    public static LogEntry entryForPlayer(ServerPlayer player, String kind, String text) {
+        Optional<Staff.Role> role = tracked(player);
+        if (role.isPresent()) {
+            return entryFor(player, role.get(), kind, text);
+        }
+        return new LogEntry(0, UUID.randomUUID().toString(), System.currentTimeMillis(), Storage.currentServerId(), player.getUUID().toString(),
+                player.getGameProfile().getName(), "player", "Player", 0x19D3B0, kind, text);
+    }
+
     public static LogEntry entryForServer(String who, String kind, String text) {
         return new LogEntry(0, UUID.randomUUID().toString(), System.currentTimeMillis(), Storage.currentServerId(), "", who, "console", who, CONSOLE_COLOUR, kind, text);
     }

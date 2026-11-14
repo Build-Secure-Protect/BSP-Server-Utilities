@@ -57,6 +57,13 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.web.WebChat.registerEvents();
         com.mrgregles.bsp_server_utilities.web.WebNotes.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebBans.registerNotices(); // network bans (SU-44)
+        com.mrgregles.bsp_server_utilities.rooms.RoomList.registerNotices(); // Compact Machines rooms (SU-54)
+        com.mrgregles.bsp_server_utilities.rooms.RoomLimit.registerEvents(); // the room limit (SU-55)
+        com.mrgregles.bsp_server_utilities.rooms.RoomLosses.registerEvents(); // lost machines and the grace list (SU-56)
+        com.mrgregles.bsp_server_utilities.rooms.RoomLosses.registerNotices();
+        com.mrgregles.bsp_server_utilities.rooms.RoomNotices.registerEvents();
+        com.mrgregles.bsp_server_utilities.rooms.RoomNotices.registerNotices();
+        com.mrgregles.bsp_server_utilities.rooms.RoomClearing.registerEvents(); // rooms cleared after their grace (SU-57)
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -71,6 +78,7 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.rooms.RoomList.onServerStarted(e.getServer());
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             com.mrgregles.bsp_server_utilities.web.WebAgent.farewell(e.getServer()); // the panel drops this server at once, not 20 s later (audit)
@@ -127,6 +135,10 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebNotes.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebBans.tick(e.getServer()); // the bans in force: read at start and every minute
+                com.mrgregles.bsp_server_utilities.rooms.RoomList.tick(e.getServer()); // this server's Compact Machines rooms, shared every minute
+                com.mrgregles.bsp_server_utilities.rooms.RoomNotices.tick(e.getServer()); // owners told of rooms in grace after login
+                com.mrgregles.bsp_server_utilities.rooms.RoomClearing.tick(e.getServer()); // rooms whose grace ended, cleared every minute
+                com.mrgregles.bsp_server_utilities.rooms.RoomOutbox.tick(e.getServer()); // notices about other servers' rooms, sent again when missed
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

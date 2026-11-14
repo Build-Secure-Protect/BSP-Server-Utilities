@@ -68,6 +68,12 @@ public final class ClientAdmin {
         }
     }
 
+    public static void rooms(com.mrgregles.bsp_server_utilities.network.AdminRoomsPacket packet) {
+        if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
+            screen.acceptRooms(packet);
+        }
+    }
+
     public static void servers(com.mrgregles.bsp_server_utilities.network.AdminServersPacket packet) {
         if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
             screen.acceptServers(packet);

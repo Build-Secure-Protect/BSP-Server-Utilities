@@ -97,6 +97,7 @@ public final class ClearService {
                 items++;
             }
             DespawnService.count(server, e);
+            com.mrgregles.bsp_server_utilities.rooms.RoomLosses.itemGone(e, "cleared"); // a bound Compact Machine's room (SU-56)
             e.discard();
             DespawnService.onLeave(e);
         }

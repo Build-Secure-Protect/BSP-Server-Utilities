@@ -41,11 +41,19 @@ minecraft {
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
+            if (project.hasProperty('withCm')) {
+                args '--world', 'world_cm'
+            }
         }
 
         // ./gradlew runGameTestServer: runs every registered GameTest headlessly and exits.
         gameTestServer {
             property 'forge.enabledGameTestNamespaces', mod_id
+            // Compact Machines adds a datapack dimension, which is written into the world's level.dat; a world that has it
+            // cannot load without the mod, so -PwithCm runs keep a world folder of their own (run/world_cm).
+            if (project.hasProperty('withCm')) {
+                args '--world', 'world_cm'
+            }
         }
 
         data {
@@ -69,6 +77,12 @@ repositories {
     flatDir { dirs bsp_core_libs }
     // Dev-run-only jars (LuckPerms for the GameTests), not shipped. See tools/make_luckperms_dev_jar.py in BSP Region Guard.
     flatDir { dirs 'libs' }
+    // CurseMaven: the exact Compact Machines file the pack ships (project and file id in gradle.properties).
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
 }
 
 dependencies {
@@ -89,6 +103,14 @@ dependencies {
     }
     if (file('libs/LuckPerms-Forge-dev-5.4.102.jar').exists()) {
         runtimeOnly files('libs/LuckPerms-Forge-dev-5.4.102.jar')
+    }
+
+    // Compact Machines, compiled against for the room limit; optional at runtime, read only when cm_version is loaded.
+    compileOnly fg.deobf("curse.maven:${cm_curse}")
+    // ./gradlew runGameTestServer -PwithCm: Compact Machines loads (the exact pack file), so the room tests call the real
+    // mod in a world of their own (run/world_cm); without it they check that the adapter stands aside.
+    if (project.hasProperty('withCm')) {
+        runtimeOnly fg.deobf("curse.maven:${cm_curse}")
     }
 }
 

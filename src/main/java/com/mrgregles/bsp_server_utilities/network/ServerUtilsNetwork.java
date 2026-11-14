@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "6"; // 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "7"; // 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -159,6 +159,20 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(IconsPartPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(IconsPartPacket::encode).decoder(IconsPartPacket::decode)
                 .consumerMainThread(IconsPartPacket::handle).add();
+        // Compact Machines rooms: /su rooms and giving a room back (SU-58, D443, D448).
+        CHANNEL.messageBuilder(RoomsViewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(RoomsViewPacket::encode).decoder(RoomsViewPacket::decode)
+                .consumerMainThread(RoomsViewPacket::handle).add();
+        CHANNEL.messageBuilder(RoomGiveBackPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(RoomGiveBackPacket::encode).decoder(RoomGiveBackPacket::decode)
+                .consumerMainThread(RoomGiveBackPacket::handle).add();
+        // The admins' ROOMS tab (SU-59, D452 look A, D453 R4 to R7); protocol 7 already marks this release.
+        CHANNEL.messageBuilder(AdminRoomsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminRoomsPacket::encode).decoder(AdminRoomsPacket::decode)
+                .consumerMainThread(AdminRoomsPacket::handle).add();
+        CHANNEL.messageBuilder(AdminRoomsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminRoomsEditPacket::encode).decoder(AdminRoomsEditPacket::decode)
+                .consumerMainThread(AdminRoomsEditPacket::handle).add();
     }
 
     /** Client to server. */

@@ -209,6 +209,20 @@ public interface StorageBackend {
     @org.jetbrains.annotations.Nullable
     Ban ban(long id) throws Exception;
 
+    // ------------------------------------------------------------------ Compact Machines rooms (SU-54, R-2)
+
+    /** Replaces every row of {@code server} in {@code <prefix>cm_rooms} with {@code rows}, and records that it wrote at {@code atMs}. */
+    void saveRooms(String server, long atMs, List<com.mrgregles.bsp_server_utilities.rooms.RoomRow> rows) throws Exception;
+
+    /** Records that {@code server} was heard from at {@code atMs}, its rows unchanged. */
+    void touchRooms(String server, long atMs) throws Exception;
+
+    /** Drops every row of {@code server} from both room tables (a server renamed or retired, D456); how many rooms were dropped. */
+    int forgetRooms(String server) throws Exception;
+
+    /** Every server's rooms and when each last wrote. */
+    com.mrgregles.bsp_server_utilities.rooms.RoomTable loadRooms() throws Exception;
+
     String describe();
 
     void close() throws Exception;
