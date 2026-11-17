@@ -4,6 +4,29 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-17
+
+The AFK and macro kick, checked against its design. Players need 0.11.1 too only for the card fixes; the network protocol is still 7, so 0.11.0 clients still join.
+
+### Changed
+- AFK macros: a pattern of head turns needs only 2 inputs in the 10 minutes (was 20), so a mouse jiggle once a minute, or every few minutes, is caught too; a pattern with clicks, uses, container opens or other actions needs 6 (about one every 100 seconds or faster), so a still player checking a furnace or reading a book every few minutes stays active. "macro?" and what was seen show only once the pattern has kept an input from counting, so a player who looked around twice and walked away is shown as idle, not as a macro.
+- AFK macros: steering counts towards a macro only at one spot (a boat against a wall), never on a long ride with the mouse still.
+- A presence check shows the HUD again if it was hidden with F1, so the card and the red line are seen.
+- The AFK tab shows a staff member's check countdown in gold: staff are checked but never kicked.
+- When the proxy does not take a kicked player off the network within 3 seconds, the server's console says so (BSP-Velocity Additions' network kick missing or off) as this server kicks them itself.
+
+### Fixed
+- AFK: a machine's fake player (Create's deployer reports its owner's UUID) no longer keeps its owner active, ends their presence check or brings their unloaded chunks back; only what the player does counts.
+- AFK macros: different chat lines, and the same command with different words, are different inputs, so a player chatting at one spot is not taken for a macro; the same line again and again still is.
+- AFK: a presence check under way ends when the rules popup holds the player, and after they agree a new check gives them the full 2 minutes, instead of kicking them at once.
+- AFK: after the hour's clearance, or the macros switch off and on, "what was seen" counts the minutes from when the pattern came back, not from before.
+- `/afk` typed just after moving the mouse is no longer undone a second later.
+- The presence check's card goes when the player joins or moves to another server of the network; it is placed again after the window or GUI scale changes, so it stays off the hotbar and crosshair; every click on it (any button, anywhere on the card) stays on it, before other mods' lists such as JEI; the release and drag of a button it took stay on it too, so a stack carried in a chest screen is never dropped or placed by a click on the card; it is drawn higher, above anything a screen draws before it.
+- The staff card reads "or you will stay AFK", as the chat line does.
+- An unanswered check after the rules popup logs the idle time from the player's last input, not from the rules.
+- The AFK tab's data cuts a server id over 64 characters and a description over 512, instead of failing to send.
+- The AFK and chunk settings written as the network's first copy at start are read on the server thread.
+
 ## [0.11.0] - 2026-11-12
 
 ### Added

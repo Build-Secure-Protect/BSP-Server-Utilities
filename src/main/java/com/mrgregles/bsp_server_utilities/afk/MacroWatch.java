@@ -19,11 +19,17 @@ import java.util.Set;
  * <p>A pattern holds when the player has been watched for the whole window, did at least {@value #MIN_INPUTS} things in
  * it, the same 1 to 3 keys make 90 % or more of them, and at least one of: the gaps between the same key hardly vary
  * (less than 20 % about their mean: a metronome), the same head angles again and again (to a thousandth of a degree, so
- * a float's rounding does not hide a macro), or every input within 8 blocks of their middle.
+ * a float's rounding does not hide a macro), or every input within 8 blocks of their middle. Steering is sampled once a
+ * second, so its beat is always even: a pattern with steering in it holds only at one spot (D465).
  */
 public final class MacroWatch {
     public static final long WINDOW_MS = 600_000L;
-    public static final int MIN_INPUTS = 20, MAX_INPUTS = 6000, MAX_KEYS = 3, MIN_GAPS = 5;
+    /**
+     * The fewest inputs for a pattern of head turns: as few as can keep a player from going AFK in the window, since no
+     * hand lands on the same exact angle again (D464). A pattern with any other action needs {@link #MIN_ACTIONS}, so a
+     * still player opening the same furnace every few minutes is not held back (D470).
+     */
+    public static final int MIN_INPUTS = 2, MIN_ACTIONS = 6, MAX_INPUTS = 6000, MAX_KEYS = 3, MIN_GAPS = 5;
     public static final double SHARE = 0.9, EVEN = 0.2, SPOT = 8.0;
     /** The same key again sooner than this is the same input (a click reaches the server once for each hand). */
     private static final long SAME_MS = 50;
@@ -81,6 +87,17 @@ public final class MacroWatch {
         }
     }
 
+    /** Not watched for now (the switch off, or cleared by a correct answer): forgets old inputs and when a pattern began. */
+    public void idle(long now) {
+        prune(now);
+        heldSince = 0;
+    }
+
+    /** Text as a short key, so the same chat line or command again is the same input and different ones are not. */
+    public static String same(String text) {
+        return Integer.toHexString(text.hashCode());
+    }
+
     /** Forgets inputs older than the window. */
     public void prune(long now) {
         while (!inputs.isEmpty() && inputs.peekFirst().atMs() < now - WINDOW_MS) {
@@ -123,6 +140,9 @@ public final class MacroWatch {
         }
         if (share < SHARE * n) {
             return null;
+        }
+        if (share < MIN_ACTIONS && !keys.stream().allMatch(k -> k.startsWith("turn:"))) {
+            return null; // a click, use or open every few minutes by a still player is a person (D470)
         }
 
         // the beat: every key with enough gaps keeps time, and at least one has them
@@ -184,6 +204,9 @@ public final class MacroWatch {
         if (!even && !sameAngles && !oneSpot) {
             return null;
         }
+        if (!oneSpot && keys.contains("steer")) {
+            return null; // a long ride with the mouse still is a ride, not a macro (D465)
+        }
         return new Pattern(keys, even, even ? everyS : 0, sameAngles, oneSpot, 0);
     }
 
@@ -202,7 +225,7 @@ public final class MacroWatch {
             case "place" -> "placing of " + what;
             case "toss" -> "drop of the " + what;
             case "chat" -> "chat line";
-            case "cmd" -> "command /" + target;
+            case "cmd" -> "command /" + (target.indexOf('#') < 0 ? target : target.substring(0, target.indexOf('#')));
             case "open" -> "container opening";
             case "click" -> "container click";
             case "steer" -> "steering";

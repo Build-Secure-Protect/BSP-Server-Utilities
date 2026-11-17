@@ -420,7 +420,7 @@ GUI = {
     # the presence check's card
     "afk.card.title": "STILL THERE?",
     "afk.card.click": "Click %s to stay, or you are kicked.",
-    "afk.card.click_staff": "Click %s to stay, or you stay AFK.",
+    "afk.card.click_staff": "Click %s to stay, or you will stay AFK.",
     "afk.card.hint": "Press T to use the mouse.",
     "afk.card.wrong": "Not that one: here is a new word.",
     "afk.card.word.oak": "Oak",

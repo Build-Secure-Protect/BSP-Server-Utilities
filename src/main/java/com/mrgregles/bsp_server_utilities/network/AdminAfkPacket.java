@@ -27,14 +27,14 @@ public record AdminAfkPacket(AfkSettings settings, List<Row> rows) {
         buf.writeVarInt(rows.size());
         for (Row r : rows) {
             buf.writeUtf(r.name(), 64);
-            buf.writeUtf(r.server(), 64);
+            buf.writeUtf(RoomsViewPacket.cut(r.server(), 64), 64);
             buf.writeVarLong(r.afkForMs());
             buf.writeBoolean(r.exempt());
             buf.writeInt(r.colour());
             buf.writeBoolean(r.typedAway());
             buf.writeBoolean(r.macro());
             buf.writeVarLong(r.checkLeftMs());
-            buf.writeUtf(r.seen(), 512);
+            buf.writeUtf(RoomsViewPacket.cut(r.seen(), 512), 512);
         }
     }
 

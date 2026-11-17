@@ -21,6 +21,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -77,7 +78,11 @@ public final class AfkService {
 
     private static final class Track {
         long lastActive, afkSince, clearedUntil;
+        /** The last input that counted: unlike {@code lastActive}, not moved while the rules popup holds the player (audit). */
+        long lastInput;
         boolean warned, checkedOut, macro;
+        /** An input did not count because of the pattern: only then is the player shown as a macro (D464). */
+        boolean blocked;
         float yaw, pitch;
         MacroWatch watch;
         @Nullable
@@ -130,6 +135,7 @@ public final class AfkService {
     private static BiConsumer<ServerPlayer, Component> kicker = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick; // off the network (D254)
     private static BiConsumer<ServerPlayer, AfkCheckPacket> sender = ServerUtilsNetwork::sendTo;
     private static Predicate<ServerPlayer> staff = Staff::isStaff;
+    private static Predicate<UUID> held = RulesService::isHeld;
 
     private AfkService() {
     }
@@ -183,6 +189,7 @@ public final class AfkService {
         return TRACKS.computeIfAbsent(p.getUUID(), id -> {
             Track t = new Track();
             t.lastActive = clock.getAsLong();
+            t.lastInput = t.lastActive;
             t.yaw = p.getYRot();
             t.pitch = p.getXRot();
             t.watch = new MacroWatch(t.lastActive);
@@ -201,7 +208,15 @@ public final class AfkService {
         return t == null || t.afkSince == 0 ? 0 : Math.max(0, clock.getAsLong() - t.afkSince);
     }
 
-    /** Whether a macro pattern holds for the player now (tests, the AFK tab). */
+    /**
+     * A macro as staff see it ("macro?", what was seen): a pattern holds and has kept an input from counting. Two different
+     * looks and then nothing fit a pattern too, but nothing was held back, so that player is only idle.
+     */
+    private static boolean shownMacro(Track t) {
+        return t.pattern != null && t.blocked;
+    }
+
+    /** Whether a macro pattern holds for the player now (tests). */
     public static boolean suspected(UUID player) {
         Track t = TRACKS.get(player);
         return t != null && t.pattern != null;
@@ -212,13 +227,14 @@ public final class AfkService {
      * watch, then active unless it is part of a macro pattern that holds (D217).
      */
     public static void input(ServerPlayer p, String kind, String target) {
-        if (!p.server.isSameThread()) {
-            return; // packet handlers run first on the network thread; the server thread's run counts
+        if (!p.server.isSameThread() || p instanceof FakePlayer) {
+            return; // packet handlers run first on the network thread (the server thread's run counts); a machine's fake player is not its owner (audit)
         }
         Track t = track(p);
         String key = target.isEmpty() ? kind : kind + ":" + target;
         t.watch.add(new MacroWatch.Input(key, clock.getAsLong(), p.getYRot(), p.getXRot(), p.getX(), p.getY(), p.getZ()));
         if (t.pattern != null && t.pattern.keys().contains(key)) {
+            t.blocked = true;
             return;
         }
         active(p);
@@ -226,14 +242,15 @@ public final class AfkService {
 
     /** The player is active: the idle clock starts again and, when they were AFK, they are back (a check under way ends). */
     public static void active(ServerPlayer p) {
-        if (!p.server.isSameThread()) {
-            return;
+        if (!p.server.isSameThread() || p instanceof FakePlayer) {
+            return; // Create's deployer reports its owner's UUID: its work is not the owner being here
         }
         back(p, track(p), "message.bsp_server_utilities.afk.back");
     }
 
     private static void back(ServerPlayer p, Track t, String messageKey) {
         t.lastActive = clock.getAsLong();
+        t.lastInput = t.lastActive;
         if (t.check != null) {
             t.check = null;
             sender.accept(p, AfkCheckPacket.HIDE);
@@ -256,6 +273,8 @@ public final class AfkService {
         }
         t.afkSince = clock.getAsLong();
         t.warned = false;
+        t.yaw = p.getYRot(); // a look just before /afk is not coming back (audit)
+        t.pitch = p.getXRot();
         p.sendSystemMessage(Component.translatable("message.bsp_server_utilities.afk.now").withStyle(ChatFormatting.GOLD));
         afkChanged(p.server);
     }
@@ -276,8 +295,9 @@ public final class AfkService {
         AfkSettings s = settings(server);
         for (ServerPlayer p : List.copyOf(localPlayers(server))) {
             Track t = track(p);
-            if (RulesService.isHeld(p.getUUID())) {
+            if (held.test(p.getUUID())) {
                 t.lastActive = now; // reading the rules is not idling
+                endCheck(server, p, t); // nor is a check's time running out behind the rules; after them a new check has its full 2 minutes (audit)
                 continue;
             }
             float yaw = p.getYRot(), pitch = p.getXRot();
@@ -293,11 +313,14 @@ public final class AfkService {
             if (s.enabled() && s.macros() && now >= t.clearedUntil) {
                 t.pattern = t.watch.find(now);
             } else {
-                t.watch.prune(now);
+                t.watch.idle(now); // not watched: a pattern found later counts from then (audit)
                 t.pattern = null;
             }
-            if (t.macro != (t.pattern != null)) {
-                t.macro = t.pattern != null;
+            if (t.pattern == null) {
+                t.blocked = false;
+            }
+            if (t.macro != shownMacro(t)) {
+                t.macro = shownMacro(t);
                 if (t.afkSince > 0) {
                     afkChanged(server); // the AFK tab's "macro?"
                 }
@@ -397,13 +420,14 @@ public final class AfkService {
         }
         t.clearedUntil = now + CLEAR_MS;
         t.pattern = null;
+        t.blocked = false;
         back(p, t, "message.bsp_server_utilities.afk.thanks");
         return true;
     }
 
     /** No answer in time: an Action Log entry with what was seen (D213), then the kick, or for staff AFK they stay (D218). */
     private static void unanswered(MinecraftServer server, ServerPlayer p, Track t, AfkSettings s, long now) {
-        String seen = t.pattern != null ? t.pattern.seen(now) : "no input for " + Math.max(1, Math.round((now - t.lastActive) / 60_000.0)) + " min";
+        String seen = shownMacro(t) ? t.pattern.seen(now) : "no input for " + Math.max(1, Math.round((now - t.lastInput) / 60_000.0)) + " min";
         boolean kick = !staff.test(p);
         ActionLog.record(server, ActionLog.entryForServer(CHECKER, LogEntry.AFK, p.getGameProfile().getName() + " did not answer the presence check: " + seen
                 + (kick ? "" : ". Left AFK: staff are never kicked")));
@@ -444,8 +468,8 @@ public final class AfkService {
             Track t = TRACKS.get(p.getUUID());
             if (t != null && t.afkSince > 0 && !p.getUUID().equals(leaving)) {
                 long left = t.check == null ? 0 : Math.max(1, t.check.deadline - now);
-                out.add(new Afk(p.getUUID(), p.getGameProfile().getName(), Math.max(0, now - t.afkSince), exempt(p), t.pattern != null, left,
-                        t.pattern == null ? "" : t.pattern.seen(now)));
+                out.add(new Afk(p.getUUID(), p.getGameProfile().getName(), Math.max(0, now - t.afkSince), exempt(p), shownMacro(t), left,
+                        shownMacro(t) ? t.pattern.seen(now) : ""));
             }
         }
         return out;
@@ -523,6 +547,7 @@ public final class AfkService {
     public static void onLogin(ServerPlayer p) {
         TRACKS.remove(p.getUUID());
         track(p);
+        sender.accept(p, AfkCheckPacket.HIDE); // a card left from another server of the network goes (audit)
     }
 
     public static void onLogout(ServerPlayer p) {
@@ -547,12 +572,12 @@ public final class AfkService {
 
     /** The actions that count as active (D70), each with what it was done to; once, in the mod constructor. Container clicks come through a mixin. */
     public static void registerEvents() {
-        MinecraftForge.EVENT_BUS.addListener((ServerChatEvent e) -> input(e.getPlayer(), "chat", ""));
+        MinecraftForge.EVENT_BUS.addListener((ServerChatEvent e) -> input(e.getPlayer(), "chat", MacroWatch.same(e.getRawText()))); // different lines are different inputs (audit)
         MinecraftForge.EVENT_BUS.addListener((CommandEvent e) -> {
             ServerPlayer p = e.getParseResults().getContext().getSource().getPlayer();
             String root = LogText.root(e.getParseResults().getReader().getString());
             if (p != null && !root.equals("afk")) {
-                input(p, "cmd", root);
+                input(p, "cmd", root + "#" + MacroWatch.same(e.getParseResults().getReader().getString())); // the whole command: /tp a and /tp b differ
             }
         });
         MinecraftForge.EVENT_BUS.addListener((BlockEvent.BreakEvent e) -> {
@@ -612,10 +637,11 @@ public final class AfkService {
         StaffDirectory.setAutoAway(AfkService::isAfk);
         Storage s = Storage.active();
         if (s != null) {
+            AfkSettings ours = settings(server); // read here, on the server thread, not on the storage worker (audit)
             s.submit(() -> {
                 AfkSettings shared = s.backend().loadAfkSettings();
                 if (shared == null) {
-                    s.backend().saveAfkSettings(settings(server));
+                    s.backend().saveAfkSettings(ours);
                 } else {
                     server.execute(() -> apply(server, shared));
                 }
@@ -658,8 +684,14 @@ public final class AfkService {
         staff = isStaff;
     }
 
+    /** Who is held by the rules popup instead of the rules (tests). */
+    public static void heldForTests(Predicate<UUID> isHeld) {
+        held = isHeld;
+    }
+
     public static void useReal() {
         staff = Staff::isStaff;
+        held = RulesService::isHeld;
         clock = System::currentTimeMillis;
         playersOverride = null;
         kicker = com.mrgregles.bsp_server_utilities.web.ProxyKick::kick;

@@ -87,6 +87,10 @@ public final class ProxyKick {
             it.remove();
             ServerPlayer p = lookup.apply(server, e.getKey());
             if (p != null) {
+                // the proxy did not take them off the network: kicked from here only, Velocity may move them to another server (D466)
+                com.mrgregles.bsp_server_utilities.BSPServerUtilities.LOGGER.warn("{} was still on this server 3 s after the proxy was asked to kick them from the network: "
+                        + "kicked from this server only, so Velocity may move them to another server. Check that the proxy runs BSP-Velocity Additions "
+                        + "with its network kick and [networkKick] enabled = true.", p.getGameProfile().getName());
                 disconnect.accept(p, e.getValue().reason);
             }
         }

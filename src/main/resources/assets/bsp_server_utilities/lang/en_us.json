@@ -364,7 +364,7 @@
   "gui.bsp_server_utilities.afk.footer": "Saved for every server · admins and operators are never checked · other staff never kicked",
   "gui.bsp_server_utilities.afk.card.title": "STILL THERE?",
   "gui.bsp_server_utilities.afk.card.click": "Click %s to stay, or you are kicked.",
-  "gui.bsp_server_utilities.afk.card.click_staff": "Click %s to stay, or you stay AFK.",
+  "gui.bsp_server_utilities.afk.card.click_staff": "Click %s to stay, or you will stay AFK.",
   "gui.bsp_server_utilities.afk.card.hint": "Press T to use the mouse.",
   "gui.bsp_server_utilities.afk.card.wrong": "Not that one: here is a new word.",
   "gui.bsp_server_utilities.afk.card.word.oak": "Oak",

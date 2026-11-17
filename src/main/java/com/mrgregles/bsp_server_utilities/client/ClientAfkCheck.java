@@ -1,6 +1,5 @@
 package com.mrgregles.bsp_server_utilities.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mrgregles.bsp_server_utilities.network.AfkAnswerPacket;
 import com.mrgregles.bsp_server_utilities.network.AfkCheckPacket;
 import com.mrgregles.bsp_server_utilities.network.ServerUtilsNetwork;
@@ -13,6 +12,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.EventPriority;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -32,6 +32,8 @@ public final class ClientAfkCheck {
     private static final int W = 160, PAD = 6, EDGE = 8, KEY_H = 12;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     private static final int KEY_HOVER = 0xFF3A404C;
+    /** Above anything a screen or HUD draws before it (tooltips sit at 400): the GUI's depth test cannot be turned off from here. */
+    private static final float Z = 3000f;
     /** The eight woods, in the server's order (its word indexes). */
     private static final String[] WORD_KEYS = {"afk.card.word.oak", "afk.card.word.spruce", "afk.card.word.birch", "afk.card.word.jungle",
             "afk.card.word.acacia", "afk.card.word.dark_oak", "afk.card.word.mangrove", "afk.card.word.cherry"};
@@ -40,44 +42,72 @@ public final class ClientAfkCheck {
     @Nullable
     private static AfkCheckPacket card;
     private static long deadline;
-    private static int placedFor, x, y, sentRound = -1;
+    private static int placedFor, placedW, placedH, x, y, sentRound = -1;
+    /** Where the card was last drawn over a screen, so every click on it stays on it. */
+    private static int areaX, areaY, areaW, areaH;
+    /** The mouse button whose press the card took (-1: none): its drag and release are the card's too. */
+    private static int eaten = -1;
 
     private ClientAfkCheck() {
     }
 
     public static void accept(AfkCheckPacket p) {
         if (p.hide()) {
-            card = null;
-            HITS.clear();
+            clear();
             return;
         }
         card = p;
         deadline = System.currentTimeMillis() + p.msLeft();
         sentRound = -1;
+        Minecraft.getInstance().options.hideGui = false; // F1 would hide the card and the red line: a check shows the HUD again (D467)
+    }
+
+    private static void clear() {
+        card = null;
+        HITS.clear();
+        areaW = 0;
+        placedFor = 0; // the next check is placed afresh, even when another server's numbering gives it the same id
     }
 
     /** Once, at client set-up. */
     public static void register() {
-        MinecraftForge.EVENT_BUS.addListener((ScreenEvent.Render.Post e) -> {
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, (ScreenEvent.Render.Post e) -> { // after other mods' overlays
             if (card != null) {
                 drawOnTop(e.getGuiGraphics(), e.getMouseX(), e.getMouseY(), true);
+            } else {
+                areaW = 0;
             }
         });
-        MinecraftForge.EVENT_BUS.addListener((ScreenEvent.MouseButtonPressed.Pre e) -> {
-            if (card != null && e.getButton() == 0) {
+        // first, and even when another mod has already taken the click: a click on the card is the card's
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, (ScreenEvent.MouseButtonPressed.Pre e) -> {
+            double mx = e.getMouseX(), my = e.getMouseY();
+            if (card == null || areaW == 0 || mx < areaX || mx >= areaX + areaW || my < areaY || my >= areaY + areaH) {
+                return;
+            }
+            e.setCanceled(true); // nothing under the card is clicked: no slot, no link, no other mod's list
+            eaten = e.getButton(); // and its release is not either: a container drops or places a carried stack on release (audit)
+            if (e.getButton() == 0) {
                 for (Ui.Hit h : List.copyOf(HITS)) {
-                    if (h.contains(e.getMouseX(), e.getMouseY())) {
+                    if (h.contains(mx, my)) {
                         h.action().run();
-                        e.setCanceled(true);
                         return;
                     }
                 }
             }
         });
-        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> {
-            card = null;
-            HITS.clear();
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, (ScreenEvent.MouseDragged.Pre e) -> {
+            if (e.getMouseButton() == eaten) {
+                e.setCanceled(true);
+            }
         });
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, (ScreenEvent.MouseButtonReleased.Pre e) -> {
+            if (e.getButton() == eaten) {
+                eaten = -1;
+                e.setCanceled(true);
+            }
+        });
+        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> clear());
+        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn e) -> clear()); // a move to another server of the network
     }
 
     /** The card on the HUD while no screen is open (an open screen draws it over itself), last of all. */
@@ -90,10 +120,8 @@ public final class ClientAfkCheck {
 
     private static void drawOnTop(GuiGraphics g, int mx, int my, boolean clickable) {
         g.flush();
-        RenderSystem.disableDepthTest(); // nothing drawn before can cover it
         draw(g, mx, my, clickable);
-        g.flush();
-        RenderSystem.enableDepthTest();
+        g.flush(); // drawn now, before anything after it in the frame
     }
 
     private static void answer(int word) {
@@ -156,15 +184,23 @@ public final class ClientAfkCheck {
         boolean hint = mc.screen == null;
         List<FormattedCharSequence> body = body(font, c, hint);
         List<String> wrong = c.wrong() ? Ui.wrap(font, Tr.t("afk.card.wrong"), W - 2 * PAD, TINY) : List.of();
-        if (placedFor != c.id()) {
+        if (placedFor != c.id() || placedW != sw || placedH != sh) { // a new check, or the window or GUI scale changed
             placedFor = c.id();
+            placedW = sw;
+            placedH = sh;
             place(sw, sh, height(body(font, c, true).size(), 2)); // room for the hint and a wrong line
         }
         int h = height(body.size(), wrong.size());
         int cx = Math.max(EDGE, Math.min(x, sw - EDGE - W)), cy = Math.max(EDGE, Math.min(y, sh - EDGE - h));
 
         g.pose().pushPose();
-        g.pose().translate(0, 0, 500); // over the chat, the hotbar, other mods' HUDs and any screen
+        g.pose().translate(0, 0, Z); // over the chat, the hotbar, other mods' HUDs and any screen
+        if (clickable) {
+            areaX = cx;
+            areaY = cy;
+            areaW = W;
+            areaH = h;
+        }
         g.fill(cx, cy, cx + W, cy + h, Ui.PANEL);
         Ui.frame(g, cx, cy, W, h, Ui.TEAL);
         Ui.text(g, font, Component.literal(Ui.fit(font, Tr.t("afk.card.title"), W - 2 * PAD - 24, SMALL)).withStyle(ChatFormatting.BOLD), cx + PAD, cy + PAD, Ui.TEAL, SMALL);

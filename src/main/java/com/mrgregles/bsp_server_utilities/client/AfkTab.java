@@ -244,6 +244,9 @@ final class AfkTab {
                 long toCheck = settings.kickMs() - afkFor;
                 if (r.checkLeftMs() > 0) {
                     warn = Tr.t("afk.checked_left", clock(Math.max(0, r.checkLeftMs() - since)));
+                    if (r.exempt()) {
+                        warnColour = Ui.GOLD; // staff are checked but never kicked: no red (D468)
+                    }
                 } else if (r.exempt()) {
                     warn = Tr.t("afk.never_kicked");
                     warnColour = Ui.MUTED;

@@ -29,9 +29,18 @@ import net.minecraft.server.players.ServerOpListEntry;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.network.chat.Component;
+import com.mrgregles.bsp_server_utilities.web.ProxyKick;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -75,6 +84,11 @@ public class AfkGameTests {
         Map<UUID, List<AfkCheckPacket>> sent = new HashMap<>();
         AfkService.sendChecksForTests((pl, packet) -> sent.computeIfAbsent(pl.getUUID(), k -> new ArrayList<>()).add(packet));
         return sent;
+    }
+
+    /** Whether the player was ever sent a card to answer (a login's "take any card away" is not one). */
+    private static boolean shown(Map<UUID, List<AfkCheckPacket>> sent, ServerPlayer p) {
+        return sent.getOrDefault(p.getUUID(), List.of()).stream().anyMatch(c -> !c.hide());
     }
 
     private static AfkCheckPacket last(Map<UUID, List<AfkCheckPacket>> sent, ServerPlayer p) {
@@ -236,7 +250,7 @@ public class AfkGameTests {
             h.assertTrue(AfkService.isAfk(player.getUUID()) && AfkService.isAfk(staffer.getUUID()) && AfkService.isAfk(admin.getUUID()), "all AFK after five minutes");
             now.addAndGet(29 * MIN);
             AfkService.check(server);
-            h.assertTrue(AfkService.warned(player.getUUID()) && AfkService.warned(staffer.getUUID()) && cards.isEmpty(), "a minute before the kick time players and staff are warned of the check");
+            h.assertTrue(AfkService.warned(player.getUUID()) && AfkService.warned(staffer.getUUID()) && online.stream().noneMatch(p -> shown(cards, p)), "a minute before the kick time players and staff are warned of the check");
             h.assertFalse(AfkService.warned(admin.getUUID()), "an operator is never warned");
             now.addAndGet(MIN);
             AfkService.check(server);
@@ -247,7 +261,7 @@ public class AfkGameTests {
             AfkCheckPacket card = last(cards, player);
             h.assertTrue(card != null && card.id() == pc.id() && card.word() == pc.word() && card.keys().equals(pc.keys()) && !card.wrong(), "and is sent the card: " + card);
             h.assertTrue(sc != null && !sc.kick(), "staff are checked too, told they are not kicked (D218)");
-            h.assertTrue(AfkService.checkFor(admin.getUUID()) == null && last(cards, admin) == null && kicked.isEmpty(), "admins and operators are never checked (D212)");
+            h.assertTrue(AfkService.checkFor(admin.getUUID()) == null && !shown(cards, admin) && kicked.isEmpty(), "admins and operators are never checked (D212)");
 
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             card.encode(buf);
@@ -282,7 +296,7 @@ public class AfkGameTests {
             AfkService.check(server);
             now.addAndGet(40 * MIN);
             AfkService.check(server);
-            h.assertTrue(AfkService.checkFor(late.getUUID()) == null && last(cards, late) == null && !AfkService.warned(late.getUUID()), "with kicking off nothing is sent (D219)");
+            h.assertTrue(AfkService.checkFor(late.getUUID()) == null && !shown(cards, late) && !AfkService.warned(late.getUUID()), "with kicking off nothing is sent (D219)");
             AfkData.get(server).setSettings(settings(true, true, before.revision()));
             AfkService.check(server);
             h.assertTrue(AfkService.checkFor(late.getUUID()) != null, "turned on, a player past the time is checked at once");
@@ -341,7 +355,10 @@ public class AfkGameTests {
             AfkService.check(server);
             now.addAndGet(30 * MIN);
             AfkService.check(server);
-            h.assertTrue(AfkService.checkFor(p.getUUID()) != null, "checked again at the next kick time");
+            AfkService.CheckView again = AfkService.checkFor(p.getUUID());
+            h.assertTrue(again != null, "checked again at the next kick time");
+            now.addAndGet(AfkService.CHECK_MS);
+            h.assertFalse(AfkService.answer(p, again.id(), again.round(), again.word()), "the right word at the end of the 2 minutes is too late");
             use(p);
             h.assertTrue(!AfkService.isAfk(p.getUUID()) && AfkService.checkFor(p.getUUID()) == null && last(cards, p).hide(), "using an item brings them back and the card goes");
         } finally {
@@ -478,11 +495,20 @@ public class AfkGameTests {
                     h.assertTrue(AfkService.answer(present, c.id(), c.round(), c.word()), "the person at the keyboard answers");
                     clearedAt = s;
                 }
+                if (clearedAt > 0 && s == clearedAt + 60 * 60 - 1) {
+                    h.assertFalse(AfkService.suspected(present.getUUID()), "a second before the hour is up they are still cleared");
+                }
+                if (clearedAt > 0 && s == clearedAt + 60 * 60) {
+                    AfkService.Afk none = AfkService.localAfk(server).stream().filter(a -> a.id().equals(present.getUUID())).findFirst().orElse(null);
+                    h.assertTrue(AfkService.suspected(present.getUUID()) && none == null, "on the hour the signs count again (they are not AFK yet)");
+                }
                 if (clearedAt > 0 && s == clearedAt + 59 * 60) {
                     h.assertTrue(!AfkService.suspected(present.getUUID()) && !AfkService.isAfk(present.getUUID()), "for an hour after a correct answer their input counts (D214)");
                 }
                 if (clearedAt > 0 && s == clearedAt + 66 * 60) {
                     h.assertTrue(AfkService.suspected(present.getUUID()) && AfkService.isAfk(present.getUUID()), "after the hour the macro signs count again");
+                    AfkService.Afk row = AfkService.localAfk(server).stream().filter(a -> a.id().equals(present.getUUID())).findFirst().orElseThrow();
+                    h.assertTrue(row.seen().endsWith("for 16 min"), "what was seen counts from after the hour, not from before the answer (audit): " + row.seen());
                     break;
                 }
             }
@@ -523,6 +549,13 @@ public class AfkGameTests {
             w.add(new MacroWatch.Input("place:minecraft:dirt", t0 + s * 1000L - 200, 10f, 5f, 0, 64, 0));
         }
         h.assertTrue(w.find(t0 + 720_000) == null, "with a fourth key the three commonest are under 90 %");
+        MacroWatch edge = new MacroWatch(t0);
+        for (int s = 1; s <= 600; s++) {
+            edge.add(new MacroWatch.Input("attack:minecraft:zombie", t0 + s * 1000L, 10f, 5f, 0, 64, 0));
+        }
+        h.assertTrue(edge.find(t0 + MacroWatch.WINDOW_MS - 1) == null && edge.find(t0 + MacroWatch.WINDOW_MS) != null, "a millisecond short of ten minutes watched is not enough; ten minutes is (D209)");
+        h.assertTrue(MacroWatch.describe("cmd:home#1a2b3c").equals("command /home") && MacroWatch.describe("chat:" + MacroWatch.same("hi")).equals("chat line"),
+                "a command and a chat line in words, whatever they said");
         h.assertTrue(MacroWatch.describe("entity:minecraft:iron_golem").equals("right click on an iron golem") && MacroWatch.describe("block:minecraft:lever").equals("right click on the lever"),
                 "inputs in words");
         h.succeed();
@@ -618,6 +651,320 @@ public class AfkGameTests {
             Staff.useConfig();
             AfkData.get(server).setSettings(before);
             server.getPlayerList().getOps().remove(admin.getGameProfile());
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_machine_s_fake_player_never_keeps_its_owner_active(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer owner = TestPlayers.mockServerPlayer(h);
+        // Create's deployer is a fake player that reports its owner's UUID (DeployerFakePlayer.getUUID)
+        FakePlayer deployer = FakePlayerFactory.get(h.getLevel(), new GameProfile(owner.getUUID(), "[Deployer]"));
+        AtomicLong now = new AtomicLong(9_000_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> List.of(owner), (pl, w) -> { });
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(true, true, before.revision()));
+            AfkService.onLogin(owner);
+            h.assertTrue(deployer.getUUID().equals(owner.getUUID()), "the fake player carries the owner's UUID");
+            now.addAndGet(5 * MIN);
+            AfkService.check(server);
+            h.assertTrue(AfkService.isAfk(owner.getUUID()), "the owner idles and is AFK");
+            use(deployer);
+            AfkService.active(deployer);
+            AfkService.check(server);
+            h.assertTrue(AfkService.isAfk(owner.getUUID()), "the deployer using an item does not bring its owner back (D70: what the player does)");
+            now.addAndGet(30 * MIN);
+            AfkService.check(server);
+            AfkService.CheckView c = AfkService.checkFor(owner.getUUID());
+            use(deployer);
+            h.assertTrue(c != null && AfkService.checkFor(owner.getUUID()) != null, "and does not answer or end the owner's check");
+        } finally {
+            AfkService.forget(owner.getUUID());
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void different_chat_lines_and_commands_are_different_inputs_and_the_same_line_again_is_a_macro(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer talker = TestPlayers.mockServerPlayer(h);
+        ServerPlayer spammer = TestPlayers.mockServerPlayer(h);
+        ServerPlayer typist = TestPlayers.mockServerPlayer(h);
+        List<ServerPlayer> all = List.of(talker, spammer, typist);
+        AtomicLong now = new AtomicLong(9_500_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> all, (pl, w) -> { });
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(false, true, before.revision()));
+            for (ServerPlayer p : all) {
+                AfkService.onLogin(p);
+            }
+            for (int i = 1; i <= 16 * 3; i++) { // every 20 s for 16 minutes, standing still, never moving the mouse
+                now.addAndGet(20_000);
+                String line = "line number " + i + " about the farm";
+                MinecraftForge.EVENT_BUS.post(new ServerChatEvent(talker, line, Component.literal(line)));
+                MinecraftForge.EVENT_BUS.post(new ServerChatEvent(spammer, "Buy my stuff at /warp shop", Component.literal("Buy my stuff at /warp shop")));
+                command(server, typist, "say hello " + i);
+                AfkService.check(server);
+            }
+            h.assertTrue(!AfkService.suspected(talker.getUUID()) && !AfkService.isAfk(talker.getUUID()), "a player saying different things at one spot is not a macro (D208: the same inputs)");
+            h.assertTrue(!AfkService.suspected(typist.getUUID()) && !AfkService.isAfk(typist.getUUID()), "nor is one typing the same command with different words");
+            h.assertTrue(AfkService.suspected(spammer.getUUID()) && AfkService.isAfk(spammer.getUUID()), "the same line again and again is, and it stops counting");
+        } finally {
+            for (ServerPlayer p : all) {
+                AfkService.forget(p.getUUID());
+            }
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_check_behind_the_rules_popup_ends_and_comes_back_with_its_full_two_minutes(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer p = TestPlayers.mockServerPlayer(h);
+        AtomicLong now = new AtomicLong(9_700_000_000L);
+        List<UUID> kicked = new ArrayList<>();
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> List.of(p), (pl, w) -> kicked.add(pl.getUUID()));
+        Map<UUID, List<AfkCheckPacket>> cards = catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(true, true, before.revision()));
+            AfkService.onLogin(p);
+            now.addAndGet(5 * MIN);
+            AfkService.check(server);
+            now.addAndGet(30 * MIN);
+            AfkService.check(server);
+            h.assertTrue(AfkService.checkFor(p.getUUID()) != null, "checked at the kick time");
+            AfkService.heldForTests(id -> id.equals(p.getUUID())); // the rules were changed and everyone is asked again
+            now.addAndGet(30_000);
+            AfkService.check(server);
+            h.assertTrue(AfkService.checkFor(p.getUUID()) == null && last(cards, p).hide(), "held by the rules popup, the check ends and the card goes");
+            now.addAndGet(3 * MIN);
+            AfkService.check(server);
+            h.assertTrue(kicked.isEmpty(), "nobody is kicked while reading the rules");
+            AfkService.heldForTests(id -> false);
+            AfkService.check(server);
+            AfkService.CheckView c = AfkService.checkFor(p.getUUID());
+            h.assertTrue(c != null && c.msLeft() == AfkService.CHECK_MS && kicked.isEmpty(), "after agreeing, a new check with its full 2 minutes (D216): " + c);
+            now.addAndGet(AfkService.CHECK_MS);
+            AfkService.check(server);
+            String name = p.getGameProfile().getName();
+            h.assertTrue(kicked.contains(p.getUUID()) && ActionLog.recent(server, 20, false, List.of(LogEntry.AFK)).stream()
+                    .anyMatch(e -> e.text().equals(name + " did not answer the presence check: no input for 41 min")), "unanswered, the log counts the idle time from their last input, not from the rules (audit)");
+        } finally {
+            AfkService.forget(p.getUUID());
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void afk_typed_after_a_look_stays_a_login_takes_any_card_away_and_long_tab_fields_are_cut(GameTestHelper h) throws Exception {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer p = TestPlayers.mockServerPlayer(h);
+        AtomicLong now = new AtomicLong(9_800_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> List.of(p), (pl, w) -> { });
+        Map<UUID, List<AfkCheckPacket>> cards = catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(false, true, before.revision()));
+            AfkService.onLogin(p);
+            h.assertTrue(last(cards, p) != null && last(cards, p).hide(), "joining (or moving here from another server) takes away any card still showing");
+            p.setYRot(p.getYRot() + 40); // a look, then /afk within the same second
+            server.getCommands().getDispatcher().execute("afk", p.createCommandSourceStack());
+            AfkService.check(server);
+            h.assertTrue(AfkService.isAfk(p.getUUID()), "/afk is not undone by the look just before it (D77)");
+
+            AdminAfkPacket longOnes = new AdminAfkPacket(AfkService.settings(server), List.of(new AdminAfkPacket.Row("Pip", "s".repeat(100), MIN, false, 0, false, true, 0, "w".repeat(700))));
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            longOnes.encode(buf);
+            AdminAfkPacket.Row r = AdminAfkPacket.decode(buf).rows().get(0);
+            h.assertTrue(r.server().length() == 64 && r.seen().length() == 512, "a long server id or description is cut, so the AFK tab still gets its data");
+        } finally {
+            AfkService.forget(p.getUUID());
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void at_the_end_of_the_afk_time_an_unanswered_check_kicks_the_player_off_the_network(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer p = TestPlayers.mockServerPlayer(h);
+        AtomicLong now = new AtomicLong(10_000_000_000L);
+        List<byte[]> toProxy = new ArrayList<>();
+        List<String> kickedHere = new ArrayList<>();
+        AfkSettings before = AfkData.get(server).settings();
+        ProxyKick.useForTests((pl, b) -> toProxy.add(b), (pl, why) -> kickedHere.add(why.getString()), (srv, id) -> id.equals(p.getUUID()) ? p : null);
+        AfkService.useReal(); // the real kick: through the proxy (D254)
+        AfkService.useForTests(now::get, () -> List.of(p), null);
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(true, true, before.revision()));
+            AfkService.onLogin(p);
+            now.addAndGet(5 * MIN);
+            AfkService.check(server);
+            now.addAndGet(29 * MIN);
+            AfkService.check(server);
+            h.assertTrue(AfkService.isAfk(p.getUUID()) && AfkService.warned(p.getUUID()), "AFK, and warned a minute before the end of the AFK time");
+            now.addAndGet(MIN);
+            AfkService.check(server);
+            h.assertTrue(AfkService.checkFor(p.getUUID()) != null && toProxy.isEmpty(), "at the end of the AFK time, the check");
+            now.addAndGet(AfkService.CHECK_MS);
+            AfkService.check(server);
+            h.assertTrue(toProxy.size() == 1 && kickedHere.isEmpty(), "unanswered: the proxy is asked to take them off the network (D466)");
+            FriendlyByteBuf b = new FriendlyByteBuf(Unpooled.wrappedBuffer(toProxy.get(0)));
+            int version = b.readByte();
+            String kind = b.readUtf();
+            UUID who = b.readUUID();
+            String reason = b.readUtf(ProxyKick.MAX_REASON);
+            h.assertTrue(version == ProxyKick.VERSION && kind.equals(ProxyKick.KIND_KICK) && who.equals(p.getUUID()) && reason.contains("Idle too long"),
+                    "a network kick for that player with the AFK tab's message, as Velocity Additions reads it: " + reason);
+            for (int t = 1; t < ProxyKick.FALLBACK_TICKS; t++) {
+                ProxyKick.tick(server);
+            }
+            h.assertTrue(kickedHere.isEmpty(), "the proxy has 3 seconds");
+            ProxyKick.tick(server);
+            h.assertTrue(kickedHere.equals(List.of("Idle too long")), "a proxy without the network kick: this server kicks them itself 3 s later (and says so in the console)");
+        } finally {
+            ProxyKick.useReal();
+            AfkService.forget(p.getUUID());
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_slow_jiggle_is_caught_and_a_person_s_odd_look_or_two_different_turns_are_not(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer jiggler = TestPlayers.mockServerPlayer(h);
+        ServerPlayer person = TestPlayers.mockServerPlayer(h);
+        ServerPlayer leaver = TestPlayers.mockServerPlayer(h);
+        List<ServerPlayer> all = List.of(jiggler, person, leaver);
+        AtomicLong now = new AtomicLong(11_000_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> all, (pl, w) -> { });
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(false, true, before.revision()));
+            for (ServerPlayer p : all) {
+                AfkService.onLogin(p);
+            }
+            float base = jiggler.getYRot();
+            Random rnd = new Random(20261117L);
+            for (int sec = 1; sec <= 30 * 60; sec++) {
+                now.addAndGet(1000);
+                if (sec % 240 == 0) { // every 4 minutes: under the 5 AFK minutes, so each turn alone would keep them active
+                    jiggler.setYRot(base + (sec % 480 == 0 ? 2f : 0f));
+                    person.setYRot(person.getYRot() + 5 + rnd.nextInt(40));
+                }
+                if (sec == 60 || sec == 120) {
+                    leaver.setYRot(leaver.getYRot() + 30); // two looks, then away from the keyboard
+                }
+                AfkService.check(server);
+                if (sec == 11 * 60) {
+                    AfkService.Afk row = AfkService.localAfk(server).stream().filter(x -> x.id().equals(leaver.getUUID())).findFirst().orElse(null);
+                    h.assertTrue(row != null && !row.macro() && row.seen().isEmpty(), "two different looks and then nothing is idle: no \"macro?\" (nothing was held back): " + row);
+                }
+            }
+            h.assertTrue(AfkService.suspected(jiggler.getUUID()) && AfkService.isAfk(jiggler.getUUID()), "a jiggle between two exact angles every 4 minutes is caught (D464)");
+            h.assertTrue(AfkService.localAfk(server).stream().anyMatch(x -> x.id().equals(jiggler.getUUID()) && x.macro()), "and shown as \"macro?\"");
+            h.assertTrue(!AfkService.isAfk(person.getUUID()), "a person looking somewhere new every 4 minutes stays active: a new look is a new input, never held back");
+        } finally {
+            for (ServerPlayer p : all) {
+                AfkService.forget(p.getUUID());
+            }
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void steering_is_a_macro_only_at_one_spot(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer rider = TestPlayers.mockServerPlayer(h);
+        ServerPlayer stuck = TestPlayers.mockServerPlayer(h);
+        List<ServerPlayer> all = List.of(rider, stuck);
+        Boat b1 = new Boat(EntityType.BOAT, h.getLevel()), b2 = new Boat(EntityType.BOAT, h.getLevel());
+        AtomicLong now = new AtomicLong(12_000_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> all, (pl, w) -> { });
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(false, true, before.revision()));
+            rider.startRiding(b1, true);
+            stuck.startRiding(b2, true);
+            h.assertTrue(rider.isPassenger() && stuck.isPassenger(), "both in a boat");
+            for (ServerPlayer p : all) {
+                AfkService.onLogin(p);
+                p.zza = 1f; // W held, the mouse never touched
+            }
+            for (int sec = 1; sec <= 16 * 60; sec++) {
+                now.addAndGet(1000);
+                rider.setPos(rider.getX() + 0.4, rider.getY(), rider.getZ()); // a long straight ride on ice
+                AfkService.check(server);
+            }
+            h.assertTrue(!AfkService.suspected(rider.getUUID()) && !AfkService.isAfk(rider.getUUID()), "a long ride with the mouse still is not a macro (D465)");
+            h.assertTrue(AfkService.suspected(stuck.getUUID()) && AfkService.isAfk(stuck.getUUID()), "steering against a wall at one spot is");
+        } finally {
+            rider.stopRiding();
+            stuck.stopRiding();
+            for (ServerPlayer p : all) {
+                p.zza = 0f;
+                AfkService.forget(p.getUUID());
+            }
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_still_player_s_odd_action_counts_and_a_click_every_ninety_seconds_does_not(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer cook = TestPlayers.mockServerPlayer(h);
+        ServerPlayer clicker = TestPlayers.mockServerPlayer(h);
+        List<ServerPlayer> all = List.of(cook, clicker);
+        AtomicLong now = new AtomicLong(13_000_000_000L);
+        AfkSettings before = AfkData.get(server).settings();
+        AfkService.useForTests(now::get, () -> all, (pl, w) -> { });
+        catchCards();
+        try {
+            AfkData.get(server).setSettings(settings(false, true, before.revision()));
+            for (ServerPlayer p : all) {
+                AfkService.onLogin(p);
+            }
+            clicker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
+            for (int sec = 1; sec <= 25 * 60; sec++) {
+                now.addAndGet(1000);
+                if (sec % 200 == 0) { // the same furnace every 3 min 20 s, the mouse never touched
+                    MinecraftForge.EVENT_BUS.post(new PlayerContainerEvent.Open(cook, cook.inventoryMenu));
+                }
+                if (sec % 90 == 0) { // an auto-clicker, slow but steady
+                    use(clicker);
+                }
+                AfkService.check(server);
+            }
+            h.assertTrue(!AfkService.isAfk(cook.getUUID()), "a still player opening the same furnace every few minutes stays active (D470)");
+            h.assertTrue(AfkService.suspected(clicker.getUUID()) && AfkService.isAfk(clicker.getUUID()), "a click every 90 seconds is still a macro: 6 or more in ten minutes");
+        } finally {
+            for (ServerPlayer p : all) {
+                AfkService.forget(p.getUUID());
+            }
+            AfkService.useReal();
+            AfkData.get(server).setSettings(before);
         }
         h.succeed();
     }

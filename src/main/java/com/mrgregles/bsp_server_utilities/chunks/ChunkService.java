@@ -346,10 +346,11 @@ public final class ChunkService {
         ticks = 0;
         Storage s = Storage.active();
         if (s != null) {
+            ChunkSettings ours = settings(server); // read here, on the server thread, not on the storage worker
             s.submit(() -> {
                 ChunkSettings shared = s.backend().loadChunkSettings();
                 if (shared == null) {
-                    s.backend().saveChunkSettings(settings(server));
+                    s.backend().saveChunkSettings(ours);
                 } else {
                     server.execute(() -> apply(server, shared));
                 }
