@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 - Compact Machines rooms need Compact Machines exactly 6.0.3 (the pack's version; with any other version the rooms are neither read nor limited and the server log says so) and BSP-InventorySync 0.8.0 on every server for losses on another server (owner decisions D437 to D454).
+- Built and tested against BSP-Core 1.17.1 (dev runs and GameTests; the range stays `[1.4.0,)`). Servers running Compact Machines should run BSP-Core 1.17.1 or newer, which never lets a Shatter Totem stand in a room, so an emptied room never takes one with it.
 - `/su` and `/serverutils` are open to every player on a server running Compact Machines 6.0.3, who are shown `/su rooms` only; every other subcommand keeps its own check.
 - The network protocol is 7 (the rooms page and the ROOMS tab): players need this version of the mod in their game to join, and 0.10.x clients are refused until they update.
 

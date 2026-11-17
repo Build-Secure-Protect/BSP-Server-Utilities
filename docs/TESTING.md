@@ -1242,8 +1242,10 @@ notice really missed by a restarting server, and everything in "SU-60 … checks
 ## 2026-11-12: SU-60, release 0.11.0 (the room limit, R-2): checks on the network
 Nothing of SU-53 to SU-59 has run on the network, in a real client, against a real MariaDB or across two real servers;
 every server-side rule has its GameTest (163 after the audit and D455 to D457, passing twice without and twice with `-PwithCm`, the pack's real Compact
-Machines 6.0.3). Install first: Compact Machines exactly **6.0.3** on every server that has it (another version leaves
-the rooms off and logs it); BSP-InventorySync **0.8.0** on every server (the home mark, D451); Server Utilities
+Machines 6.0.3; and against BSP-Core 1.17.1). Install first: Compact Machines exactly **6.0.3** on every server that has it (another version leaves
+the rooms off and logs it); BSP-Core **1.17.1** or newer on every server that has Compact Machines (it keeps Shatter
+Totems out of rooms, so an emptied room never takes one with it: SU-BC2, D450); BSP-InventorySync **0.8.0** on every
+server (the home mark, D451); Server Utilities
 **0.11.0** on every server and in the client pack (protocol 7: older clients are refused at login). Leave `[rooms]
 limit = 0` until checks 1 to 4 pass, and use a test player's rooms only: an emptied room cannot be brought back.
 

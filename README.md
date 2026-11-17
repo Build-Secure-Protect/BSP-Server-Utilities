@@ -32,7 +32,7 @@ The mod is in development and has not yet been tried on a live server.
 ## Requirements
 
 - Minecraft 1.20.1 with Forge 47.4.10 or newer (the network runs 47.4.23). On the servers, BSP-Core's full jar (not -slim) provides the MySQL driver for shared storage.
-- Optional: BSP-Core 1.4.0 or newer (its database settings, server id and Score Screens are used when it is there), LuckPerms (staff groups), Compact Machines exactly 6.0.3 (the room limit; with BSP-InventorySync 0.8.0 on every server for losses on another server).
+- Optional: BSP-Core 1.4.0 or newer (its database settings, server id and Score Screens are used when it is there), LuckPerms (staff groups), Compact Machines exactly 6.0.3 (the room limit; with BSP-InventorySync 0.8.0 on every server for losses on another server, and BSP-Core 1.17.1 or newer where Compact Machines runs, which keeps Shatter Totems out of rooms).
 
 ## Configuring
 
