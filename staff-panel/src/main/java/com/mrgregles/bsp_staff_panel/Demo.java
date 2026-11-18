@@ -88,6 +88,17 @@ final class Demo {
                 }
                 extra = ",\"data\":{\"result\":\"" + (busy ? "busy" : "ok") + "\",\"server\":\"BSP-Spawn\"}";
             }
+            boolean refused = false;
+            if (what.equals("bank_read")) { // SU-72: a made-up bank and market, as BSP-Core 1.18's staff calls
+                extra = ",\"data\":" + demoBank(now, act.get("player").getAsString());
+            }
+            if (what.equals("bank_refund")) { // a payment also on the other player is refused once, to show the offer (D508)
+                refused = act.has("other") && act.get("other").getAsBoolean();
+                extra = ",\"data\":{\"result\":\"" + (refused ? "other_short" : "ok") + "\",\"withoutOther\":" + refused + "}";
+            }
+            if (what.equals("market_cancel_lot") || what.equals("market_cancel_order")) {
+                extra = ",\"data\":{\"result\":\"ok\",\"piecesBack\":" + (what.endsWith("order") ? 7200 : 0) + "}";
+            }
             if (what.equals("inv_read")) {
                 extra = ",\"data\":" + demoItems(com.google.gson.JsonParser.parseString(body).getAsJsonObject().get("player").getAsString(), now);
             }
@@ -98,11 +109,15 @@ final class Demo {
                     : what.equals("inv_remove") ? "Removed (demo: nothing was sent to a game server)." : what.equals("inv_take") ? "Took back all of it (demo: nothing was sent to a game server)."
                     : what.equals("grave_return") ? "Returned 14 stacks and 23 XP (demo: nothing was sent to a game server)."
                     : what.equals("say") ? "Shown to 3 players (demo: nothing was sent to a game server)."
-                    : what.equals("market_read") ? "demo market" : what.equals("lottery_read") ? "demo lottery"
+                    : what.equals("market_read") ? "demo market" : what.equals("lottery_read") ? "demo lottery" : what.equals("bank_read") ? "demo bank"
+                    : what.equals("bank_refund") ? (refused ? "The other player no longer has that much. Nothing changed: refund it without them if you mean to."
+                    : "Refunded (demo: nothing was sent to a game server). They are told in game.")
+                    : what.equals("market_cancel_lot") ? "Cancelled: the items go to their Collect box (demo: nothing was sent to a game server)."
+                    : what.equals("market_cancel_order") ? "Cancelled: 7,200 pieces went back to their bank (demo: nothing was sent to a game server)."
                     : what.equals("lottery_draw") ? (extra.contains("busy") ? "A draw is already running on the network." : "Drawn on BSP-Spawn: the countdown has begun on every server (demo: nothing was paid).")
                     : "Done (demo: nothing was sent to a game server).";
             holder[0].acceptMessage(com.mrgregles.bsp_staff_panel.act.Actions.line("a", at, "answer",
-                    com.mrgregles.bsp_staff_panel.crypto.Signed.seal(key, "{\"id\":\"" + uid + "\",\"ok\":" + !extra.contains("\"busy\"") + ",\"message\":\"" + msg + "\"" + extra + "}")));
+                    com.mrgregles.bsp_staff_panel.crypto.Signed.seal(key, "{\"id\":\"" + uid + "\",\"ok\":" + (!extra.contains("\"busy\"") && !refused) + ",\"message\":\"" + msg + "\"" + extra + "}")));
         }).start(); }, System::currentTimeMillis);
         return holder[0];
     }
@@ -412,6 +427,7 @@ final class Demo {
                 o.addProperty("tp", true);
                 o.addProperty("tpName", server[0]);
                 o.addProperty("market", true); // SU-51: BSP-Core 1.16 on every demo server
+                o.addProperty("bank", true); // SU-72: and 1.18's staff calls
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");
@@ -522,6 +538,37 @@ final class Demo {
         }
         o.addProperty("h", Integer.toHexString((id + n).hashCode()));
         return o;
+    }
+
+    /** A made-up bank and market for one player, as {@code bank_read} answers (SU-72). */
+    static String demoBank(long now, String player) {
+        long h = 3_600_000L;
+        String rows = String.join(",",
+                row(1234, now - 2 * 60_000, "PAID", "Steve_42", "for the diamonds", -320, -1, 0, "Frostwarf", 0, 0, 0, 320, 0, true),
+                row(1231, now - 100 * 60_000, "MARKET", "Mossy_Fen", "lot sold: Diamond Pickaxe", 4560, -1, 0, "Frostwarf", 0, 0, 0, 4560, 0, false),
+                row(1230, now - 100 * 60_000, "TAX", "", "market tax", -240, -1, 0, "Frostwarf", 0, 0, 0, 240, 0, false),
+                row(1200, now - 2 * h, "CONVERT", "", "", 900, 2, -3, "Frostwarf", 100, 1, 0, 800, 2, false),
+                row(1199, now - 20 * h, "LOTTERY", "", "a ticket", -50, -1, 0, "BSP-Spawn", 0, 0, 0, 50, 0, false),
+                row(1190, now - 26 * h, "REFUND", "Ana_Admin (panel)", "", -100, 2, 1, "Frostwarf", 0, 0, 1200, 0, 0, false),
+                row(1180, now - 27 * h, "BOUGHT", "Land Office", "plot 14", -1200, -1, 0, "BSP-Spawn", 0, 0, 0, 1200, 0, false),
+                row(1170, now - 30 * h, "RECEIVED", "Kestrel_88", "for the iron", 640, -1, 0, "Moongrove", 0, 0, 0, 640, 0, true),
+                row(1160, now - 33 * h, "DEPOSIT", "", "", 0, 1, 5, "Frostwarf", 0, 0, 0, 0, 0, false),
+                row(1150, now - 50 * h, "SHIPPING", "", "a type newer than this page", -20, -1, 0, "Frostwarf", 0, 0, 0, 20, 0, false));
+        return "{\"player\":{\"id\":\"" + player + "\",\"name\":\"?\",\"known\":true},\"pieces\":12400,\"coins\":[3,0,2,0,0],"
+                + "\"tiers\":[\"copper\",\"gold\",\"diamond\",\"netherite\",\"illyrium\"],\"server\":\"Frostwarf\",\"logDown\":false,\"log\":[" + rows + "],"
+                + "\"lots\":[{\"id\":\"lot-7\",\"price\":4800,\"listed\":" + (now - 2 * h) + ",\"ends\":" + (now + 140 * h) + ",\"server\":\"Frostwarf\",\"items\":["
+                + "{\"id\":\"minecraft:written_book\",\"n\":1,\"key\":\"item.minecraft.written_book\",\"name\":\"A long story\"},"
+                + "{\"id\":\"minecraft:shulker_box\",\"n\":1,\"key\":\"block.minecraft.shulker_box\"}]},"
+                + "{\"id\":\"lot-8\",\"price\":2000,\"listed\":" + (now - 30 * h) + ",\"ends\":" + (now + 50 * h) + ",\"server\":\"Moongrove\",\"items\":["
+                + "{\"id\":\"minecraft:bow\",\"n\":1,\"key\":\"item.minecraft.bow\",\"ench\":[[\"minecraft:power\",5]]}]}],"
+                + "\"orders\":[{\"id\":\"ord-3\",\"item\":{\"id\":\"minecraft:netherite_ingot\",\"n\":1,\"key\":\"item.minecraft.netherite_ingot\"},\"wanted\":4,\"filled\":1,"
+                + "\"each\":2400,\"placed\":" + (now - 5 * h) + ",\"ends\":" + (now + 120 * h) + ",\"server\":\"Frostwarf\"}],\"cut\":false,\"marketReadMs\":" + now + "}";
+    }
+
+    private static String row(long id, long ms, String type, String with, String detail, long pieces, int tier, int coins, String server, long rp, int rc, long of, long pl, int cl, boolean pay) {
+        return "{\"id\":" + id + ",\"ms\":" + ms + ",\"type\":\"" + type + "\",\"with\":\"" + with + "\",\"detail\":\"" + detail + "\",\"pieces\":" + pieces + ",\"tier\":" + tier
+                + ",\"coins\":" + coins + ",\"server\":\"" + server + "\",\"refundedPieces\":" + rp + ",\"refundedCoins\":" + rc + ",\"refundOf\":" + of + ",\"piecesLeft\":" + pl
+                + ",\"coinsLeft\":" + cl + ",\"payment\":" + pay + "}";
     }
 
     /** A made-up Market Board and Wanted Board, as {@code market_read} answers. */

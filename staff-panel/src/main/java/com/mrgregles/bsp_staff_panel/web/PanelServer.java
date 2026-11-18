@@ -198,6 +198,13 @@ public final class PanelServer {
 
     private volatile com.mrgregles.bsp_staff_panel.items.ItemPictures pictures;
     private volatile com.mrgregles.bsp_staff_panel.market.MarketDesk marketDesk;
+    private volatile com.mrgregles.bsp_staff_panel.market.BankDesk bankDesk;
+
+    /** A player's Bank & Market (SU-71; D502 to D511). */
+    public PanelServer withBank(com.mrgregles.bsp_staff_panel.market.BankDesk d) {
+        this.bankDesk = d;
+        return this;
+    }
 
     /** The market and the lottery (SU-51): a draw beginning or ending anywhere goes to every open page as a {@code lottery} event. */
     public PanelServer withMarket(com.mrgregles.bsp_staff_panel.market.MarketDesk d) {
@@ -448,6 +455,7 @@ public final class PanelServer {
             case "/api/tp/places" -> tpPlaces(ex, id);
             case "/api/tp" -> tp(ex, id, body);
             case "/api/market", "/api/lottery", "/api/lottery/draw" -> marketPost(ex, id, path, body);
+            case "/api/bank", "/api/bank/refund", "/api/bank/cancel" -> bankPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
             case "/api/staff/add" -> staffAdd(ex, id, body);
@@ -637,6 +645,7 @@ public final class PanelServer {
         o.addProperty("rankLabel", me.rank.label());
         o.addProperty("backupLeft", me.backup.size());
         o.addProperty("itemsPower", me.mayEditItems());
+        o.addProperty("bankPower", me.mayActOnBank());
         if (me.rank == Rank.OWNER) {
             JsonArray locks = new JsonArray();
             for (PanelStore.LogLine l : auth.lockoutsSince(me.previousLoginAt)) {
@@ -689,6 +698,7 @@ public final class PanelServer {
             o.addProperty("backupLeft", a.backup.size());
             o.addProperty("onPanel", on.contains(a.mcName));
             o.addProperty("itemsPower", a.itemsPower);
+            o.addProperty("bankPower", a.bankPower);
             list.add(o);
         }
         JsonObject o = ok();
@@ -734,6 +744,7 @@ public final class PanelServer {
                 case "remove" -> auth.remove(me.get(), target);
                 case "rank" -> auth.setRank(me.get(), target, "ADMIN".equals(str(b, "rank")) ? Rank.ADMIN : Rank.MODERATOR);
                 case "items" -> auth.setItemsPower(me.get(), target, bool(b, "on"));
+                case "bank" -> auth.setBankPower(me.get(), target, bool(b, "on"));
                 default -> {
                     json(ex, 200, refused("Not an action the panel knows."));
                     return;
@@ -1625,6 +1636,50 @@ public final class PanelServer {
                 json(ex, 200, o);
             }
         }
+    }
+
+    /**
+     * A player's Bank & Market (SU-71; D502 to D511): {@code /api/bank} reads for every rank; {@code /api/bank/refund} and
+     * {@code /api/bank/cancel} for Admins, Owners and Moderators with the bank power (403 otherwise, nothing sent); every
+     * refund and cancel tried is in the panel's log.
+     */
+    private void bankPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.market.BankDesk desk = bankDesk;
+        if (desk == null) {
+            json(ex, 200, refused("The bank is not set up on this panel."));
+            return;
+        }
+        Account me = a.get();
+        if (!path.equals("/api/bank") && !me.mayActOnBank()) {
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, "tried to " + (path.endsWith("/cancel") ? "cancel a lot or request" : "refund a bank row") + " without the bank power"));
+            json(ex, 403, refused(com.mrgregles.bsp_staff_panel.market.BankDesk.NOT_ALLOWED));
+            return;
+        }
+        String[] p = path.endsWith("/cancel") ? null : findPlayer(str(b, "player"));
+        if (p == null && !path.endsWith("/cancel")) {
+            if (path.endsWith("/refund")) {
+                store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, "tried to refund a bank row of " + str(b, "player") .replaceAll("[^A-Za-z0-9_.-]", "") + "; refused: nobody by that name")); // (audit)
+            }
+            json(ex, 200, refused("Nobody by that name has played on the network."));
+            return;
+        }
+        JsonObject o = switch (path) {
+            case "/api/bank" -> desk.read(me, p, bool(b, "refresh"));
+            case "/api/bank/refund" -> desk.refund(me, p, b);
+            default -> desk.cancel(me, b);
+        };
+        String log = o.has("panelLog") ? str(o, "panelLog") : null;
+        o.remove("panelLog");
+        if (log != null) {
+            String said = str(o, "message");
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (o.get("ok").getAsBoolean() ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
+        }
+        json(ex, 200, o);
     }
 
     private void tpPlaces(HttpExchange ex, AccessJwt.Identity id) throws Exception {

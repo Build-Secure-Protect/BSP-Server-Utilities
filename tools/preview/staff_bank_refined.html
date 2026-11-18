@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bank &amp; Market Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set AC, refined: look A with the defaults (D512 to D516); the concepts were three looks for a player's Bank & Market on the staff web panel (decisions D502 to D511). Sample data; names are made up.
+   Layout: a page of sections, each look on its own board of phone (and computer) frames; the frames use the panel's own tokens (panel.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1240px; margin:0 auto; padding-block:28px 56px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; text-wrap:balance; } h2{ font-size:18px; margin:0; color:var(--acc); text-wrap:balance; }
+.lede{ color:var(--muted); margin:0; max-width:82ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:86ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:1100px){ .stage{ justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:12px; max-width:90ch; } ol b{ color:var(--fg); }
+.opt{ display:block; margin-top:3px; color:var(--muted); }
+
+/* ---------- the panel (its own tokens, panel.css) ---------- */
+.ph,.pc{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; flex:none; }
+.ph{ width:340px; height:740px; border:8px solid #050608; border-radius:30px; }
+.pc{ width:1000px; height:620px; border:8px solid #050608; border-radius:10px; flex-direction:row; }
+.ph *,.pc *{ box-sizing:border-box; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); } .vi{ color:var(--vio); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.back{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; color:var(--soft); font-size:15px; }
+.grow{ flex:1; min-width:0; }
+.scroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px; padding:0 12px 12px; }
+.face{ width:36px; height:36px; border-radius:4px; flex:none; background:linear-gradient(135deg,#6b4a2f 0 45%,#c99a6b 45% 70%,#3a2a1c 70%); }
+.nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub{ font-size:11px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tiles{ display:grid; grid-template-columns:1.3fr 1fr; gap:6px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:7px 9px; font-size:10.5px; color:var(--mu); min-width:0; }
+.tile b{ display:block; font:600 19px var(--mono); color:var(--tx); }
+.coins{ display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+.coin{ display:inline-flex; align-items:center; gap:4px; font:600 11px var(--mono); color:var(--tx); }
+.coin i{ width:10px; height:10px; border-radius:50%; display:block; }
+.c0{ background:#c87533; } .c1{ background:#f2c94c; } .c2{ background:#6fe3e1; } .c3{ background:#4a4048; border:1px solid #7a6a72; } .c4{ background:#b58cff; }
+.keys{ display:flex; gap:6px; flex-wrap:wrap; }
+.key{ height:30px; border-radius:8px; padding:0 11px; display:inline-flex; align-items:center; gap:6px; background:var(--pn); border:1px solid var(--ln); font-size:12px; font-weight:600; color:var(--soft); white-space:nowrap; }
+.key.on{ background:#19d3b01c; border-color:#19d3b066; color:var(--teal); }
+.key.danger{ color:var(--coral); border-color:#5a2a2a; background:transparent; }
+.key.armed{ background:var(--coral); color:#10151c; border-color:var(--coral); }
+.key.go{ background:var(--teal); color:#0f1115; border-color:var(--teal); }
+.key small{ font:600 10px var(--mono); opacity:.8; }
+.chips{ display:flex; gap:5px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:3px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11px; color:var(--mu); white-space:nowrap; }
+.chip.on{ color:var(--tx); border-color:var(--soft); }
+.sect{ font:600 10px var(--body); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
+.list{ background:var(--bg2); border:1px solid var(--ln); border-radius:10px; overflow:hidden; }
+.lr{ display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px; padding:8px 10px; align-items:start; }
+.lr + .lr, .lr + .rf, .rf + .lr{ border-top:1px solid #20242d; }
+.lr.sel{ background:#19d3b00d; }
+.ty{ font:600 9.5px var(--mono); padding:2px 5px; border-radius:4px; background:#232733; color:var(--soft); letter-spacing:.04em; margin-top:1px; }
+.ty.pay{ background:#1d2a3d; color:var(--blue); } .ty.mk{ background:#2a2614; color:var(--gold); } .ty.st{ background:#271f38; color:var(--vio); } .ty.cv{ background:#14302b; color:#7fe0cf; }
+.amt{ font:600 13px var(--mono); text-align:right; white-space:nowrap; }
+.amt.in{ color:var(--teal); } .amt.out{ color:var(--coral); }
+.amt small{ display:block; font:500 10px var(--mono); color:var(--mu); }
+.what{ font-size:12px; min-width:0; }
+.what .sub{ white-space:normal; }
+.bar{ height:3px; background:#2a2f3a; border-radius:2px; margin-top:4px; overflow:hidden; } .bar i{ display:block; height:100%; background:var(--vio); }
+.rf{ background:#14181f; padding:10px; display:flex; flex-direction:column; gap:8px; border-left:3px solid var(--teal); }
+.fld{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mu); }
+.fld .in{ height:32px; flex:1; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; display:flex; align-items:center; font:600 13px var(--mono); color:var(--tx); justify-content:space-between; min-width:0; }
+.fld .in em{ font:400 11px var(--body); color:var(--mu); font-style:normal; }
+.fld .in.txt{ font:13px var(--body); color:var(--soft); }
+.sw{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); }
+.sw i{ width:30px; height:18px; border-radius:9px; background:var(--teal); position:relative; flex:none; } .sw i::after{ content:""; position:absolute; right:2px; top:2px; width:14px; height:14px; border-radius:50%; background:#0f1115; }
+.sw i.off{ background:#2a2f3a; } .sw i.off::after{ left:2px; right:auto; background:var(--mu); }
+.sure{ font-size:12px; color:#ffb4ab; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:8px 10px; line-height:1.4; }
+.sure b{ color:#ffd9d4; }
+.lot{ display:flex; gap:9px; padding:9px 10px; align-items:center; }
+.lot + .lot{ border-top:1px solid #20242d; }
+.pic{ width:30px; height:30px; border-radius:5px; background:#232733; display:grid; place-items:center; font:600 10px var(--mono); color:var(--soft); flex:none; position:relative; }
+.pic sup{ position:absolute; right:-3px; bottom:-4px; font:600 9px var(--mono); color:var(--tx); background:#0f1115; border-radius:3px; padding:0 2px; }
+.pic.en{ box-shadow:inset 0 0 0 1px #b58cff88; }
+.note{ font-size:11px; color:var(--mu); line-height:1.4; }
+.okm{ font-size:12px; color:#7fe0cf; background:#14302b; border:1px solid #24443f; border-radius:8px; padding:7px 10px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); }
+.tnav div.on{ color:var(--teal); } .tnav b{ width:18px; height:18px; border:2px solid currentColor; border-radius:5px; display:block; }
+.day{ font:600 10.5px var(--body); color:var(--mu); padding:2px 2px 0; display:flex; justify-content:space-between; }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:16px 16px 0 0; padding:10px 14px 18px; display:flex; flex-direction:column; gap:9px; box-shadow:0 -14px 30px #000a; }
+.grab{ width:36px; height:4px; border-radius:2px; background:#3a3f4a; margin:0 auto 2px; }
+.shade{ position:absolute; inset:0; background:#000a; }
+.big{ background:var(--pn); border:1px solid var(--ln); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.flow{ display:grid; grid-template-columns:1fr auto; gap:3px 10px; font-size:12.5px; }
+.flow b{ font:600 13px var(--mono); text-align:right; }
+/* the computer */
+.side{ width:58px; background:var(--bg2); border-right:1px solid var(--ln); flex:none; display:flex; flex-direction:column; align-items:center; gap:14px; padding-top:14px; }
+.side b{ width:20px; height:20px; border:2px solid var(--mu); border-radius:5px; display:block; } .side b.on{ border-color:var(--teal); }
+.cmain{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.ccols{ flex:1; display:grid; grid-template-columns:250px 1fr 300px; gap:12px; padding:0 14px 14px; min-height:0; }
+.ccol{ display:flex; flex-direction:column; gap:9px; min-width:0; overflow:hidden; }
+table.led{ width:100%; border-collapse:collapse; font-size:12px; }
+.led th{ text-align:left; font:600 9.5px var(--body); letter-spacing:.1em; color:var(--dim); text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--ln); position:sticky; top:0; background:var(--bg2); }
+.led td{ padding:6px 8px; border-bottom:1px solid #20242d; white-space:nowrap; vertical-align:top; }
+.led td.n{ text-align:right; font:600 12px var(--mono); }
+.led tr.sel td{ background:#19d3b012; }
+.led td .sub{ max-width:170px; }
+
+.err{ font-size:12px; color:#ff8f86; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:8px 10px; line-height:1.4; }
+.lock{ font-size:11.5px; color:var(--gold); background:#2a2614; border:1px solid #5a4a1a; border-radius:8px; padding:7px 10px; line-height:1.4; }
+.more{ text-align:center; font:600 11.5px var(--body); color:var(--teal); padding:9px; border-top:1px solid #20242d; }
+.pkeys{ display:flex; gap:6px; flex-wrap:wrap; }
+.mkline{ display:flex; gap:8px; align-items:center; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:7px 10px; font-size:12px; }
+.statrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.cw{ width:720px; margin:0 auto; display:flex; flex-direction:column; gap:10px; }
+.rnum{ font:600 10px var(--mono); color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Bank &amp; Market, refined (look A)</h1>
+    <p class="lede">Look A with the defaults you took (D512 to D516): one page per player with the money at the top, LOG, LOTS and REQUESTS, the refund under its row, signed amounts, part refunds as a violet bar, deposits marked as never refunded, and a line for staff who may only look. Below are the states to confirm and four small questions, R1 to R4. The data is made up.</p>
+  </header>
+  <section>
+    <h2>Opening it, the log, refunds</h2>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:41</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">online on frostwarf</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="list" style="padding:8px 10px;display:flex;flex-direction:column;gap:8px">
+              <div class="mono" style="font-size:11px;color:var(--mu)">health 20/20 · hunger 18/20 · armour 12</div>
+              <div class="keys"><span class="key">Teleport</span><span class="key">Graves</span><span class="key on">Bank &amp; Market</span><span class="key danger">Kick</span><span class="key danger">Ban</span></div>
+              <div class="mkline"><span class="gd">◆</span><span class="grow">On the market: 2 lots, 1 order</span><span class="tl">Open ›</span></div>
+            </div>
+            <div class="note">The player's sheet (the Players tab, or Find a player for someone offline) gets a <b>Bank &amp; Market</b> key beside Graves. It opens the page on LOG. The “On the market” line still opens the Market page filtered to them.</div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">1 · the key on a player's sheet (R1)</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:42</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">online on frostwarf · read 2 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="tiles">
+              <div class="tile">PIECES<b>12,400</b></div>
+              <div class="tile">COINS IN THE BANK<div class="coins"><span class="coin"><i class="c0"></i>3 copper</span><span class="coin"><i class="c2"></i>2 diamond</span></div></div>
+            </div>
+            <div class="pkeys"><span class="key on">LOG <small>214</small></span><span class="key">LOTS <small>2</small></span><span class="key">REQUESTS <small>1</small></span></div>
+            <div class="chips"><span class="chip on">All</span><span class="chip">Payments</span><span class="chip">Market</span><span class="chip">Shops</span><span class="chip">Coins</span><span class="chip">Staff &amp; refunds</span></div>
+            <div class="list">
+              <div class="lr"><span class="ty pay">PAID</span><div class="what">to Steve_42<div class="sub">for the diamonds · 21:40 · frostwarf</div></div><div class="amt out">−320</div></div>
+              <div class="lr"><span class="ty mk">MARKET</span><div class="what">lot sold to Mossy_Fen<div class="sub">Diamond Pickaxe · 20:02</div></div><div class="amt in">+4,560</div></div>
+              <div class="lr"><span class="ty mk">TAX</span><div class="what">market tax<div class="sub">on that sale · 20:02</div></div><div class="amt out">−240</div></div>
+              <div class="lr"><span class="ty cv">CONVERT</span><div class="what">3 diamond coins into pieces<div class="sub">19:10 · 100 pieces, 1 coin refunded</div><div class="bar"><i style="width:11%"></i></div></div><div class="amt in">+900<small class="rd">−3 ◆</small></div></div>
+              <div class="lr"><span class="ty">LOTTERY</span><div class="what">a ticket<div class="sub">yesterday 23:55</div></div><div class="amt out">−50</div></div>
+              <div class="lr"><span class="ty st">REFUND</span><div class="what">by Ana_Admin (panel)<div class="sub">of row 1200 · yesterday 18:00</div></div><div class="amt out">−100<small class="tl">+1 ◆</small></div></div>
+              <div class="lr"><span class="ty">DEPOSIT</span><div class="what">5 gold coins banked<div class="sub">their own coins · not refunded</div></div><div class="amt in"><small class="tl">+5 ●</small></div></div>
+              <div class="more">MORE · 50 of 214</div>
+            </div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">2 · LOG for an Admin: chips, a part-refunded row, its REFUND row, a deposit</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:43</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">online on frostwarf · read 40 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="pkeys"><span class="key on">LOG <small>214</small></span><span class="key">LOTS <small>2</small></span><span class="key">REQUESTS <small>1</small></span></div>
+            <div class="list">
+              <div class="lr sel"><span class="ty cv">CONVERT</span><div class="what">3 diamond coins into pieces<div class="sub">row 1200 · 19:10 · 800 pieces and 2 coins left</div><div class="bar"><i style="width:11%"></i></div></div><div class="amt in">+900<small class="rd">−3 ◆</small></div></div>
+              <div class="rf">
+                <div class="keys"><span class="key on">FULL REFUND</span><span class="key">AN AMOUNT</span></div>
+                <div class="fld" style="flex-direction:column;align-items:stretch;gap:4px">Give the coins back<span class="in">2 <em>of 2 diamond left</em></span></div>
+                <div class="fld" style="flex-direction:column;align-items:stretch;gap:4px">Take back the pieces it made<span class="in">800 <em>of 800 left</em></span></div>
+                <div class="fld"><span class="in txt">Converted by mistake, asked to undo</span></div>
+                <div class="sure">Sure? Give <b>Wren_88 2 diamond coins</b> back into their bank and take back <b>800 pieces</b> (row 1200).</div>
+                <div class="keys"><span class="key armed">SURE? REFUND</span><span class="key">CLOSE</span></div>
+              </div>
+              <div class="lr"><span class="ty">LOTTERY</span><div class="what">a ticket<div class="sub">yesterday 23:55</div></div><div class="amt out">−50</div></div>
+            </div>
+            <div class="note">FULL REFUND fills in everything left; AN AMOUNT lets either number go down to 0 (R3). The second tap within 3 s sends it; the SURE? line is built from the numbers in the boxes at that moment.</div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">3 · a conversion: coins and pieces apart, armed</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:44</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">online on frostwarf · read 3 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="pkeys"><span class="key on">LOG <small>214</small></span><span class="key">LOTS <small>2</small></span><span class="key">REQUESTS <small>1</small></span></div>
+            <div class="list">
+              <div class="lr sel"><span class="ty pay">PAID</span><div class="what">to Steve_42<div class="sub">row 1234 · 21:40 · 320 left</div></div><div class="amt out">−320</div></div>
+              <div class="rf">
+                <div class="keys"><span class="key on">FULL REFUND</span><span class="key">AN AMOUNT</span></div>
+                <div class="fld">Pieces<span class="in">320 <em>of 320 left</em></span></div>
+                <div class="sw"><i></i>Also take it back from Steve_42</div>
+                <div class="fld"><span class="in txt">Paid the wrong player by mistake</span></div>
+                <div class="err">The other player no longer has that much. Nothing changed: refund it without them if you mean to.</div>
+                <div class="keys"><span class="key go">REFUND WITHOUT STEVE_42</span><span class="key">CLOSE</span></div>
+              </div>
+            </div>
+            <div class="note">The offer turns the switch off and arms a fresh SURE?: “Sure? Give Wren_88 320 pieces back (row 1234). Steve_42 keeps them.”</div>
+            <div class="sect">After a refund</div>
+            <div class="okm">Refunded 320 pieces of Wren_88's row 1234, also on Steve_42. They are told in game.</div>
+            <div class="note">After every refund or cancel the page reads the player again, so the money, the row and what is left are fresh (R2).</div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">4 · a payment refused for the other player, and the offer (D508)</div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <h2>Looking only, cancels, a computer</h2>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:45</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">offline · read 1 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="lock">Refunds and cancels are for Admins, Owners and Moderators given the bank power.</div>
+            <div class="tiles">
+              <div class="tile">PIECES<b>12,400</b></div>
+              <div class="tile">COINS IN THE BANK<div class="coins"><span class="coin"><i class="c0"></i>3 copper</span><span class="coin"><i class="c2"></i>2 diamond</span></div></div>
+            </div>
+            <div class="pkeys"><span class="key">LOG <small>214</small></span><span class="key on">LOTS <small>2</small></span><span class="key">REQUESTS <small>1</small></span></div>
+            <div class="list">
+              <div class="lot"><span class="pic">WB</span><span class="pic">SB</span><div class="grow"><div class="nm">Written Book, Purple Shulker Box</div><div class="sub">4,800 · listed on frostwarf · ends in 6 d</div></div></div>
+              <div class="lot"><span class="pic en">BW<sup>1</sup></span><div class="grow"><div class="nm">Bow (Power V)</div><div class="sub">2,000 · listed on moongrove · ends in 2 d</div></div></div>
+            </div>
+            <div class="note">A Moderator without the power sees the same page: rows open nothing and there is no CANCEL.</div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">5 · a Moderator looking (D516), LOTS</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:46</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">online on frostwarf · read 1 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="pkeys"><span class="key">LOG <small>214</small></span><span class="key">LOTS <small>2</small></span><span class="key on">REQUESTS <small>1</small></span></div>
+            <div class="list">
+              <div class="lot"><span class="pic">NI<sup>4</sup></span><div class="grow"><div class="nm">Netherite Ingot</div><div class="sub">1 of 4 · 2,400 each · 7,200 held · ends in 5 d</div></div><span class="key danger">CANCEL</span></div>
+              <div class="rf">
+                <div class="fld"><span class="in txt">Duplicate request, they asked</span></div>
+                <div class="sure">Sure? Take <b>the Netherite Ingot request</b> off the Wanted Board. What it still holds goes back to <b>Wren_88's bank</b>.</div>
+                <div class="keys"><span class="key armed">SURE? CANCEL THE REQUEST</span><span class="key">BACK</span></div>
+              </div>
+            </div>
+            <div class="sect">After a cancel</div>
+            <div class="okm">Cancelled: 7,200 pieces went back to Wren_88's bank. They are told in game.</div>
+            <div class="note">The Market page (More › Market) gets the same CANCEL on every lot and request, for the same people (D507).</div>
+          </div>
+          <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">6 · REQUESTS, a cancel armed, then done</div>
+      </div>
+    </div>
+    <div class="stage">
+      <div>
+        <div class="pc">
+          <div class="side"><b class="on"></b><b></b><b></b><b></b><b></b></div>
+          <div class="cmain" style="overflow:hidden">
+            <div class="top" style="padding-top:12px"><span class="back">‹</span><div class="face"></div><div class="grow"><div class="nm">Wren_88 · Bank &amp; Market</div><div class="sub">online on frostwarf · read 2 s ago</div></div><span class="key">REFRESH</span></div>
+            <div class="cw">
+              <div class="statrow"><div class="tile">PIECES<b>12,400</b></div><div class="tile">COINS IN THE BANK<div class="coins"><span class="coin"><i class="c0"></i>3 copper</span><span class="coin"><i class="c2"></i>2 diamond</span></div></div><div class="tile">ON THE MARKET<b style="font-size:15px">2 lots · 1 request</b></div></div>
+              <div class="pkeys"><span class="key on">LOG <small>214</small></span><span class="key">LOTS <small>2</small></span><span class="key">REQUESTS <small>1</small></span></div>
+              <div class="chips"><span class="chip on">All</span><span class="chip">Payments</span><span class="chip">Market</span><span class="chip">Shops</span><span class="chip">Coins</span><span class="chip">Staff &amp; refunds</span></div>
+              <div class="list">
+                <div class="lr"><span class="ty pay">PAID</span><div class="what">to Steve_42 <span class="rnum">#1234</span><div class="sub">for the diamonds · today 21:40 · frostwarf · 320 left</div></div><div class="amt out">−320</div></div>
+                <div class="lr"><span class="ty mk">MARKET</span><div class="what">lot sold to Mossy_Fen <span class="rnum">#1231</span><div class="sub">Diamond Pickaxe · today 20:02 · frostwarf</div></div><div class="amt in">+4,560</div></div>
+                <div class="lr"><span class="ty mk">TAX</span><div class="what">market tax <span class="rnum">#1230</span><div class="sub">on that sale · today 20:02</div></div><div class="amt out">−240</div></div>
+                <div class="lr"><span class="ty cv">CONVERT</span><div class="what">3 diamond coins into pieces <span class="rnum">#1200</span><div class="sub">today 19:10 · 100 pieces, 1 coin refunded</div><div class="bar" style="max-width:240px"><i style="width:11%"></i></div></div><div class="amt in">+900<small class="rd">−3 ◆</small></div></div>
+                <div class="lr"><span class="ty">BOUGHT</span><div class="what">Land Office <span class="rnum">#1180</span><div class="sub">plot 14 · yesterday 18:20</div></div><div class="amt out">−1,200</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cap" style="max-width:none">7 · a computer: the same page in one column 720 px wide, with row numbers</div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <h2>To confirm</h2>
+    <div class="card">
+      <ol>
+        <li><b>R1 · Where the key sits.</b> Default: a <b>Bank &amp; Market</b> key on the player's sheet beside Graves, on the Players tab and on Find a player, opening LOG. The “On the market” line keeps opening the Market page.
+          <span class="opt">Or: the “On the market” line opens this page on LOTS instead, and the Market page is reached only from More.</span></li>
+        <li><b>R2 · Fresh numbers.</b> Default: the page reads the player when it opens, on REFRESH, and again after every refund or cancel, and shows how long ago it read (“read 40 s ago”); nothing re-reads by itself while a form is open.
+          <span class="opt">Or: it also re-reads every 30 seconds while open, closing any form that is open.</span></li>
+        <li><b>R3 · How the form starts.</b> Default: FULL REFUND is picked when a row opens, filling in everything left; AN AMOUNT lets each number be typed, never past what is left. For a payment, “Also take it back from &lt;other&gt;” starts on (D508), for PAID and RECEIVED rows alike.
+          <span class="opt">Or: AN AMOUNT is picked with the boxes empty, so every refund is typed.</span></li>
+        <li><b>R4 · The filter chips.</b> Default: Payments (PAID, RECEIVED), Market (MARKET, TAX), Shops (BOUGHT, SOLD, RENT, FEE, LOTTERY), Coins (DEPOSIT, CONVERT, WITHDRAW), Staff &amp; refunds (GRANT, ADMIN, REFUND); a type BSP-Core adds later shows under All only.
+          <span class="opt">Or: LOTTERY gets a chip of its own.</span></li>
+      </ol>
+    </div>
+  </section>
+</div>
+</body>
+</html>

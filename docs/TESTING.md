@@ -1340,3 +1340,58 @@ In game (an operator; a test chunk where items can pile up, e.g. a hopper-less m
 7. Arrows: a skeleton farm or dispensers firing into a chunk that does not tick entities; past 128 (or a lower number set) for the minutes: the oldest arrows go. A trident thrown into it is never touched.
 8. Set items to OFF: a chunk full of items is listed with "items off" and nothing goes.
 9. On another server, the same numbers; its crowded chunks appear in the list within a few seconds while the tab is open.
+
+## 2026-11-18: a player's Bank & Market on the staff panel, the agent (SU-69, SU-70)
+
+Built against BSP-Core 1.18.0 (its staff calls `BspBank.findPlayer/account/log/refund`, `BspMarket.lotsOf/ordersOf/cancelLot/cancelOrder`, checked with javap against its `docs/API.md`). GameTests: 183/183 twice, and twice with `-PwithCm`. `WebBankGameTests` (2): with a fake BSP-Core as strict as the real one (server thread only, no nulls, `by` at most 64 characters): the read by UUID and by name, the account, coin tiers, log rows with what is left, a long detail cut, an unknown type passed on, only the player's own lots as display copies (a 50-page book and a filled shulker box sent without pages or contents), their request; an unreadable log and the database down said as such; a Moderator refused a refund and a cancel even with a signed action, no reason refused, a Moderator with the BANK power allowed; BSP-Core given exactly the row, amounts, other and "Ana_Admin (panel)"; bad amounts, rows, players and lot ids refused before BSP-Core; all 14 refusal keys and the cancel keys worded with "Nothing changed"; the refund without the other player offered only for `other_short` and `other_row`; the Action Log (kind "Refunds & cancels") only on `ok`, with the reason. With the real BSP-Core 1.18 in the test server: 500 pieces credited to a new player, read, 200 refunded through `bank_refund`, 301 refused as `too_much`, `other` refused as `not_payment`, 300 left with a REFUND row naming the staff member, an unknown lot `gone`. Checked broken: letting every rank refund fails the Moderator assertion.
+
+**Not tested:** anything on a network (BSP-Core's refund transaction against real MySQL, two staff refunding one row from two servers, the next-login notice), and the panel's pages, which are not built yet (mock-up set AC, `tools/preview/staff_bank_concepts.html`).
+
+## 2026-11-18: the panel's side of Bank & Market (SU-71)
+
+GameTests 183/183 again both ways after the snapshot's `bank` flag. JUnit: 88/88 twice (`PanelServerTest.a_players_bank_is_read_by_everyone_and_refunds_and_cancels_need_admin_or_the_bank_power`): no server with BSP-Core 1.18 refused; `liveWithBank` connected first, then the busiest, none without the snapshot's `bank`; a Moderator reads a player's bank from the player's own server; nobody by that name refused; a Moderator without the power gets 403 for a refund and a cancel with nothing sent; the Owner gives the BANK power, which ends his logins and gives a 48-hour login, shown on /api/me and the staff page; a missing reason, negative, zero, non-numeric amounts and row 0 refused with nothing signed; a refund sent with `bank: true`, the row, amounts, other and reason, the game server's refusal passed on with `withoutOther`, the panel log line kept back from the page and written with the refusal; a cancel naming both a lot and a request refused; a request cancelled on the first able server; a change of rank ends the power, and an Admin is refused the power. Checked broken: every account allowed fails the test. The staff page's switch "May refund and cancel (bank & market)" and the BANK badge are built, **not seen in a browser yet**.
+
+## 2026-11-18: the Bank & Market page (SU-72)
+
+JUnit 88/88 twice. Checked in the browser pane on the demo panel (`--demo`, made-up bank answers in `Demo.demoBank`), on a computer and at phone width (375 px, no sideways scroll): the key on an online player's sheet and on an offline player's Find a player page; the money, the three page keys with counts, the six chips; rows of every kind (a payment both ways, market and tax, a conversion refunded in part with its violet bar, a REFUND row "of row 1200", a deposit "their own coins · not refunded", a type the page does not know shown as it is); a payment's refund (FULL REFUND filled, the other player's switch on, SURE? naming both sides, the demo's refusal for the other player, REFUND WITHOUT STEVE_42 arming a SURE? where Steve_42 keeps theirs, the answer, the page read again); a conversion's two amounts typed apart; a request's CANCEL with its reason and SURE?; a Moderator without the power (the gold line, no row opens, no CANCEL). **Not tested:** a real phone, a real game server's answers, BSP-Core's refunds on a network.
+
+In the panel (an Owner, a Moderator account, a test player with some bank history, BSP-Core 1.18.0 on the servers):
+1. Open a player's sheet: a Bank & Market key beside Graves. It opens their page: pieces, the coins in their bank, LOG with their rows newest first.
+2. The chips filter the log; MORE shows 50 more; REFRESH reads again ("read 0 s ago").
+3. As a Moderator without the power: the gold line, rows do not open, LOTS and REQUESTS have no CANCEL.
+4. As an Admin: tap a payment row. FULL REFUND fills what is left; the switch "Also take it back from <other>" is on; REFUND stays off until a reason is typed. Tap REFUND: "SURE? REFUND" and the red line naming both players; tap again within 3 s. The answer is green, the row shows the refund, a REFUND row appears, both players are told in game, the Action log (kind "Refunds & cancels") names you and the reason.
+5. Refund a payment when the other player has spent it: "The other player no longer has that much…" and REFUND WITHOUT <name>; taking it refunds only the player.
+6. A coin conversion: AN AMOUNT, give some coins back and take some pieces back; the bank shows both.
+7. LOTS: CANCEL a lot with a reason: the items are in the seller's Collect box at any Trade Post. REQUESTS: CANCEL a request: the held pieces are back in their bank.
+8. The Owner gives a Moderator the BANK power (staff page menu): they log in again, see BANK beside their rank, and may do 4 to 7.
+
+## 2026-11-18: CANCEL on the Market page (SU-73) and the audit of Bank & Market
+
+SU-73: More › Market shows CANCEL under every lot and request for those who may (D507), opening the Bank & Market page's own cancel box (reason, SURE? naming the items and the seller or buyer, the answer at the top, the market read again). Checked in the browser pane on the demo panel.
+
+Audit (an independent read of the mod and panel code; nothing serious in the rank checks, JDBC, callbacks, wording or escaping). Fixed:
+- Opening another player while a read ran left the page on "Reading their bank…": a read asked during another now runs after it, for the player on screen. Checked in the pane (Vexa then Kestrel_88 at once: Kestrel_88's page).
+- Opening the same player again showed the old read: it reads again on every opening (D518).
+- A refund or cancel waited 6 s; on a network a slow transaction could still happen after "No answer", and a second press on a partly left row refunded twice. Now 15 s, and the page reads the player again after any answer, refusals and no-answers included. The panel log says "no answer in time: it may still have happened" instead of "refused".
+- A refund or cancel now goes to the server the page read from while it can answer (row and lot ids are that server's database's), else as a read would; a server without BSP-Core 1.18 is never used.
+- A payment row without the other player's name never sends "also on the other player".
+- A null coin count from BSP-Core no longer stops the read's answer.
+- Every refund and cancel tried is in the panel's log, early refusals and the no-power 403 included.
+JUnit 88/88 twice (the bank test checks the chosen server and an early refusal logged). GameTests 183/183 twice, and twice with `-PwithCm`.
+
+## 2026-11-18: second audit of Bank & Market, before 0.13.0 / panel 0.3.0
+
+Two independent reads (the server side: mod and panel Java against BSP-Core 1.18's source; the pages and the docs against D502 to D523). Nothing serious in the rank and power checks, replays and late actions, JSON names, log text (reasons cleaned of the log's separator), the database column, or the snapshot. Fixed:
+- A refund or cancel is refused when the server the page read from has gone, never sent to another server (without BSP-Core's network database each server numbers its bank rows from 1, so row 1234 there could be another row).
+- One refund or cancel at a time from the panel's pages: while one waits, every other REFUND and CANCEL says "Waiting for another answer…". An answer is shown at once (the key no longer waits for the re-read), on the page it belongs to only; a form closed meanwhile has its answer shown at the top.
+- After every read an open refund follows its row: amounts kept within what is left (FULL REFUND refilled), the form closed when nothing is left.
+- A refused or unanswered cancel reads again too (the Bank & Market page and the Market page); a Market read asked during another runs after it.
+- A BSP-Core error during a refund or cancel is said as "may still have happened" and logged as such, never "Nothing changed" (it may throw after the money moved).
+- A read that fails after a refund keeps the refund's green answer and says the re-read failed beneath it.
+- Bedrock names behind Floodgate's "." are kept; a name the log cannot show is logged as the player's UUID; an unknown player's refund and a gone server are in the panel's log.
+- Wording: a deposit box's change (CONVERT with no coins) is named by its detail; the confirm line says "pieces" for the other player and "gets nothing back" for a RECEIVED payment refunded without them; a request's cancel says how many pieces go back, and names the count; coins show "−"; the part-refund bar follows pieces (or coins), not both added; "read N s ago" counts on its own; reopening a player opens LOG (D517).
+- Phone: lot pictures wrap within the row; sub-lines wrap beside CANCEL; the 45 % look of a disabled key is only on these pages.
+- Tests: GameTests check the read with REFRESH (the market read again first, the answer waiting for it), a BSP-Core error logged as unsure, Floodgate and unreadable names, a Moderator's cancel refused with its reason; JUnit checks a gone server refused with nothing sent and an unknown player logged.
+Checked in the browser pane on the demo panel: a second refund held while one waits, a refusal shown at once with REFUND WITHOUT, an answer after CLOSE shown at the top, reopening on LOG.
+
+Known limits (not changed): a partial refund retried after a 15 s timeout whose transaction was still running can be done twice (the answer says to check the bank first); four slow bank actions at once hold the panel's four action slots for up to 15 s; staff on a 0.12.0 client see "Refunds & cancels" entries labelled Commands.

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.mrgregles.bsp_staff_panel'
-version = '0.2.1'
+version = '0.3.0'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 

@@ -385,6 +385,10 @@ public final class WebActions {
             case "market_read" -> WebMarket.read(server, a, id);
             case "lottery_read" -> WebMarket.lottery(server, id);
             case "lottery_draw" -> WebMarket.draw(server, a, id, by);
+            case "bank_read" -> WebBank.read(server, a, id);
+            case "bank_refund" -> WebBank.refund(server, a, id, by);
+            case "market_cancel_lot" -> WebBank.cancelLot(server, a, id, by);
+            case "market_cancel_order" -> WebBank.cancelOrder(server, a, id, by);
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
     }

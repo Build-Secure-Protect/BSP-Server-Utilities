@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
+A player's Bank & Market (with BSP-Server Utilities 0.13.0 on the game servers, and BSP-Core 1.18.0 there for the bank calls).
+
+### Added
+- A player's Bank & Market page, opened by the Bank & Market key on their sheet (the Players tab, or Find a player for someone offline): their pieces and the coins in their bank; LOG (every row the bank keeps, newest first, 50 at a time, filter chips Payments, Market, Shops, Coins, Staff & refunds; amounts signed from the player's side; a part refund shown with a bar; deposits and withdrawals marked as never refunded), LOTS and REQUESTS. A row opens its refund under it: FULL REFUND or AN AMOUNT, a conversion's coins and pieces apart, a payment also on the other player (on to start; refused for them, the page offers the refund without them), a reason, and a SURE? within 3 s naming what goes out. Lots and requests have CANCEL the same way. Read when opened, on REFRESH and after every answer.
+- CANCEL on More › Market for every lot and request, with the same reason and SURE?.
+- The BANK power: an Owner gives it to a Moderator from the staff menu ("May refund and cancel"); a 48-hour login as with ITEMS; ended by a change of rank; shown as BANK. Admins and Owners always may; other Moderators look only.
+- `/api/bank`, `/api/bank/refund`, `/api/bank/cancel`: who may is checked before anything is signed (403 without the power), a reason is required, a refund or cancel goes to the server the page read from (refused when it has gone) and waits 15 s, one at a time from a page, and every attempt is in the panel's log.
+- The panel's database adds a `bank_power` column to its staff table by itself on start.
+- The demo (`--demo`) has a made-up bank and market for every player.
+
 ## [0.2.1] - 2026-11-11
 
 ### Fixed

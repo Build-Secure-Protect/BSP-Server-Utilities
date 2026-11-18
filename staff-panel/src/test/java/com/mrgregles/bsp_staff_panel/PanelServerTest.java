@@ -718,6 +718,103 @@ class PanelServerTest {
     }
 
     @Test
+    void a_players_bank_is_read_by_everyone_and_refunds_and_cancels_need_admin_or_the_bank_power() throws Exception {
+        String o = owner();
+        JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));
+        String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+        String kip = cookieOf(post("/api/setup", "kip@bsp.test", null,
+                "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+        long kipId = store.accountByEmail("kip@bsp.test").orElseThrow().id;
+        java.util.List<JsonObject> asked = new java.util.concurrent.CopyOnWriteArrayList<>();
+        com.mrgregles.bsp_staff_panel.act.Actions[] g = new com.mrgregles.bsp_staff_panel.act.Actions[1];
+        g[0] = new com.mrgregles.bsp_staff_panel.act.Actions(ActionsTest.KEY, (uid, at, kind, payload) -> {
+            JsonObject a = unsign(payload);
+            asked.add(a);
+            String reply = "{\"id\":\"" + uid + "\"," + switch (a.get("action").getAsString()) {
+                case "bank_read" -> "\"ok\":true,\"message\":\"Vexa: 1 log rows\",\"data\":{\"pieces\":12400,\"coins\":[3,0,2,0,0],\"log\":[{\"id\":1234,\"type\":\"PAID\"}],\"lots\":[],\"orders\":[]}";
+                case "bank_refund" -> "\"ok\":false,\"message\":\"The other player no longer has that much.\",\"data\":{\"result\":\"other_short\",\"withoutOther\":true}";
+                default -> "\"ok\":true,\"message\":\"Cancelled.\",\"data\":{\"result\":\"ok\",\"piecesBack\":7200}";
+            } + "}";
+            new Thread(() -> g[0].acceptMessage(com.mrgregles.bsp_staff_panel.act.Actions.line("x", at, "answer", com.mrgregles.bsp_staff_panel.crypto.Signed.seal(ActionsTest.KEY, reply)))).start();
+        }, clock::get, 2);
+        server.withActions(g[0]);
+        server.withBank(new com.mrgregles.bsp_staff_panel.market.BankDesk(feed, () -> g[0], clock::get));
+        String vexa = "11111111-2222-3333-4444-555555555555";
+        java.util.function.Consumer<Long> snapshots = at -> {
+            feed.accept("Frostwarf", at, "{\"v\":1,\"server\":\"Frostwarf\",\"at\":" + at + ",\"bank\":true,\"lotteryUp\":true,\"players\":[{\"id\":\"a1\",\"name\":\"A\"},{\"id\":\"a2\",\"name\":\"B\"}]}");
+            feed.accept("Moongrove", at, "{\"v\":1,\"server\":\"Moongrove\",\"at\":" + at + ",\"bank\":true,\"lotteryUp\":true,\"players\":[{\"id\":\"" + vexa + "\",\"name\":\"Vexa\"}]}");
+            feed.accept("Sanctuary", at, "{\"v\":1,\"server\":\"Sanctuary\",\"at\":" + at + ",\"players\":[{\"id\":\"d1\",\"name\":\"G\"},{\"id\":\"d2\",\"name\":\"H\"},{\"id\":\"d3\",\"name\":\"I\"}]}");
+        };
+        JsonObject noServer = json(post("/api/bank", "kip@bsp.test", kip, "{\"player\":\"Kip\"}"));
+        assertFalse(noServer.get("ok").getAsBoolean(), "nobody found, or no server: refused");
+        snapshots.accept(clock.get());
+        assertEquals(java.util.List.of("Frostwarf", "Moongrove"), feed.liveWithBank(), "servers with BSP-Core 1.18: connected first, then the busiest; none without it");
+
+        JsonObject read = json(post("/api/bank", "kip@bsp.test", kip, "{\"player\":\"Vexa\"}"));
+        assertTrue(read.get("ok").getAsBoolean() && read.get("pieces").getAsLong() == 12400 && read.getAsJsonArray("log").size() == 1, "a Moderator reads a player's bank (D502): " + read);
+        JsonObject r0 = asked.get(0);
+        assertEquals("bank_read", r0.get("action").getAsString());
+        assertEquals("Moongrove", r0.get("server").getAsString(), "asked of the player's own server");
+        assertEquals(vexa, r0.get("player").getAsString());
+        assertTrue(json(post("/api/bank", "kip@bsp.test", kip, "{\"player\":\"Nobody_Here\"}")).get("message").getAsString().contains("Nobody by that name"));
+
+        String refund = "{\"player\":\"Vexa\",\"row\":1234,\"type\":\"PAID\",\"with\":\"Steve_42\",\"pieces\":320,\"coins\":0,\"other\":true,\"reason\":\"Paid by mistake\"}";
+        int before = asked.size();
+        assertEquals(403, post("/api/bank/refund", "kip@bsp.test", kip, refund).statusCode(), "a Moderator without the bank power (D503)");
+        assertEquals(403, post("/api/bank/cancel", "kip@bsp.test", kip, "{\"lot\":\"lot-7\",\"reason\":\"x\"}").statusCode());
+        assertEquals(before, asked.size(), "nothing sent");
+        assertFalse(json(me("kip@bsp.test", kip)).get("bankPower").getAsBoolean());
+
+        assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + kipId + ",\"action\":\"bank\",\"on\":true}")).get("ok").getAsBoolean());
+        assertEquals(401, me("kip@bsp.test", kip).statusCode(), "giving the bank power ends his open logins (D504)");
+        clock.addAndGet(30_000);
+        snapshots.accept(clock.get());
+        HttpResponse<String> relogin = post("/api/login", "kip@bsp.test", null, "{\"password\":\"" + PW + "\",\"code\":\"" + code(ks) + "\"}");
+        assertTrue(relogin.headers().firstValue("Set-Cookie").orElse("").contains("Max-Age=" + Rank.ADMIN.session().toSeconds()), "48 hours with the power, as Admins");
+        kip = cookieOf(relogin);
+        assertTrue(json(me("kip@bsp.test", kip)).get("bankPower").getAsBoolean() && !json(me("kip@bsp.test", kip)).get("itemsPower").getAsBoolean(), "the bank power alone");
+        assertTrue(json(get("/api/staff", "owner@bsp.test", o)).getAsJsonArray("staff").asList().stream().anyMatch(x -> x.getAsJsonObject().get("bankPower").getAsBoolean()), "shown on the staff page");
+
+        before = asked.size();
+        for (String bad : java.util.List.of(refund.replace("Paid by mistake", "   "), refund.replace("\"pieces\":320", "\"pieces\":-5"), refund.replace("\"pieces\":320", "\"pieces\":0"),
+                refund.replace("\"row\":1234", "\"row\":0"), refund.replace("\"pieces\":320", "\"pieces\":\"lots\""))) {
+            assertFalse(json(post("/api/bank/refund", "kip@bsp.test", kip, bad)).get("ok").getAsBoolean(), bad);
+        }
+        assertEquals(before, asked.size(), "nothing malformed is signed");
+        assertTrue(store.log(0, 50).stream().anyMatch(l -> l.what().startsWith("tried to refund a row of Vexa; refused: Say why")), "an early refusal is in the panel's log too (audit)");
+        JsonObject done = json(post("/api/bank/refund", "kip@bsp.test", kip, refund));
+        assertTrue(!done.get("ok").getAsBoolean() && done.get("withoutOther").getAsBoolean() && !done.has("panelLog"), "the game server's answer passed on, the log line kept back: " + done);
+        JsonObject sent = asked.get(asked.size() - 1);
+        assertEquals("bank_refund", sent.get("action").getAsString());
+        assertEquals("Moongrove", sent.get("server").getAsString(), "no server named: her own");
+        json(post("/api/bank/refund", "kip@bsp.test", kip, refund.replace("}", ",\"server\":\"frostwarf\"}")));
+        assertEquals("Frostwarf", asked.get(asked.size() - 1).get("server").getAsString(), "the server the page read from, any case (audit)");
+        int n = asked.size();
+        JsonObject gone = json(post("/api/bank/refund", "kip@bsp.test", kip, refund.replace("}", ",\"server\":\"Sanctuary\"}")));
+        assertTrue(!gone.get("ok").getAsBoolean() && gone.get("message").getAsString().contains("is not sending") && asked.size() == n,
+                "the server read from cannot answer: refused, never sent to another server, whose row ids may differ (audit): " + gone);
+        assertTrue(store.log(0, 80).stream().anyMatch(l -> l.what().startsWith("tried to refund a row of Vexa; refused: Sanctuary")), "and logged");
+        json(post("/api/bank/refund", "kip@bsp.test", kip, refund.replace("Vexa", "Nobody_Here")));
+        assertTrue(store.log(0, 80).stream().anyMatch(l -> l.what().startsWith("tried to refund a bank row of Nobody_Here; refused")), "an unknown player is logged too (audit)");
+        assertTrue(sent.get("bank").getAsBoolean() && sent.get("other").getAsBoolean() && sent.get("pieces").getAsLong() == 320 && sent.get("row").getAsLong() == 1234
+                && sent.get("name").getAsString().equals("Vexa") && sent.get("reason").getAsString().equals("Paid by mistake") && sent.get("rank").getAsString().equals("MODERATOR"),
+                "the refund as shown, with the power: " + sent);
+        assertTrue(store.log(0, 50).stream().anyMatch(l -> l.what().startsWith("refunded row 1234 of Vexa (320 pieces, also on Steve_42): Paid by mistake; refused:")), "in the panel's log, refusal and all");
+
+        assertFalse(json(post("/api/bank/cancel", "kip@bsp.test", kip, "{\"lot\":\"lot-7\",\"order\":\"ord-3\",\"reason\":\"x\"}")).get("ok").getAsBoolean(), "a lot or a request, not both");
+        JsonObject c = json(post("/api/bank/cancel", "kip@bsp.test", kip, "{\"order\":\"ord-3\",\"name\":\"Vexa\",\"what\":\"4 Netherite Ingot\",\"reason\":\"Asked to\"}"));
+        assertTrue(c.get("ok").getAsBoolean() && c.get("piecesBack").getAsLong() == 7200, c.toString());
+        JsonObject cs = asked.get(asked.size() - 1);
+        assertTrue(cs.get("action").getAsString().equals("market_cancel_order") && cs.get("order").getAsString().equals("ord-3") && cs.get("server").getAsString().equals("Frostwarf"),
+                "a cancel goes to the first able server: " + cs);
+
+        assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + kipId + ",\"action\":\"rank\",\"rank\":\"ADMIN\"}")).get("ok").getAsBoolean());
+        assertFalse(store.accountByEmail("kip@bsp.test").orElseThrow().bankPower, "a rank change ends the bank power");
+        assertFalse(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + kipId + ",\"action\":\"bank\",\"on\":true}")).get("ok").getAsBoolean(), "an Admin needs no power");
+    }
+
+    @Test
     void a_game_server_that_does_not_answer_is_asked_once_not_by_every_page_and_the_busiest_draws() throws Exception {
         String o = owner();
         java.util.List<JsonObject> asked = new java.util.concurrent.CopyOnWriteArrayList<>();

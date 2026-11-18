@@ -43,15 +43,16 @@ function stackSlot(it, selected, onTap) {
 
 // ---------------------------------------------------------------- the market (D401 to D405, D412, D414, D415 R2, R3)
 const Market = (() => {
-  const st = { data: null, loading: false, triedAt: 0, board: "lots", q: "", sort: "new", who: null, tip: null, answer: null };
+  const st = { data: null, loading: false, triedAt: 0, board: "lots", q: "", sort: "new", who: null, tip: null, answer: null, cancel: null, done: null, again: false, againRefresh: false };
   const SORTS = [["new", "Newest"], ["ends", "Ending soon"], ["high", "Price high to low"], ["low", "Price low to high"]];
 
   async function load(refresh) {
-    if (st.loading) return;
+    if (st.loading) { st.again = true; st.againRefresh = st.againRefresh || !!refresh; return; } // asked while a read runs (a cancel's re-read): read once more after it (audit)
     st.loading = true; st.triedAt = Date.now();
     const r = await call("/api/market", refresh ? { refresh: true } : {});
     st.loading = false;
     if (r.ok || r.down || !st.data) st.data = r; else st.answer = r.message; // a refused REFRESH keeps the copy on screen
+    if (st.again) { const again = st.againRefresh; st.again = false; st.againRefresh = false; load(again); }
     if (tab === "More" && moreView === "market") { App.refreshMore(); return; }
     const a = document.activeElement; // a sheet's market line: drawn once nothing in the sheet is being typed in
     whenFree(a && a.closest ? a.closest("#pdetail, .offsheet, .mcard") : null, () => App.refresh());
@@ -87,7 +88,23 @@ const Market = (() => {
       const it = Object.assign({ i: st.tip.i }, l.items[st.tip.i]);
       const t = Items.describe(it, "lot"); t.classList.add("mktip"); c.appendChild(t);
     }
+    cancelPart(c, l.id, true, (l.items || []).map((it) => Items.name(it) + (it.n > 1 ? " × " + it.n : "")).join(", "), l.sellerName);
     return c;
+  }
+  // D507: CANCEL on every lot and order for Admins, Owners and Moderators with the bank power (the Bank & Market page's box)
+  function cancelPart(c, id, lot, what, owner, held) {
+    if (!Bank.mayAct()) return;
+    const part = el("div", "mkcx");
+    if (st.cancel && st.cancel.id === id) {
+      part.appendChild(Bank.cancelBox(st.cancel, { owner: owner || "?", server: st.data && st.data.server || "", refused: (msg) => { if (!st.cancel) st.answer = msg; App.refreshMore(); load(true); },
+        back: () => { st.cancel = null; App.refreshMore(); },
+        done: (msg) => { st.cancel = null; st.done = msg; load(true); App.refreshMore(); } }));
+    } else {
+      const k = el("button", "key danger bkcancel", "CANCEL"); k.type = "button"; k.dataset.keep = "mkcancel:" + id;
+      k.addEventListener("click", () => { st.cancel = { id, lot, what: what || "?", reason: "", armed: 0, busy: false, answer: null, held }; st.done = null; App.refreshMore(); });
+      part.appendChild(k);
+    }
+    c.appendChild(part);
   }
   function orderEl(o, now) {
     const c = el("div", "mkord");
@@ -101,6 +118,7 @@ const Market = (() => {
     const pr = el("div", "mkop"); const each = el("div"); each.appendChild(el("span", "mkprice", fmtN(o.each))); each.appendChild(el("span", "mu", " each")); pr.appendChild(each);
     pr.appendChild(el("div", "sub", fmtN(o.each * o.wanted) + " in all")); c.appendChild(pr);
     const who = personKey(o.buyer, o.buyerName, "mkw"); who.prepend(el("span", "mu", "for ")); c.appendChild(who);
+    cancelPart(c, o.id, false, (o.wanted > 1 ? o.wanted + " " : "") + Items.name(o.item), o.buyerName, Math.max(0, o.wanted - o.filled) * o.each);
     return c;
   }
 
@@ -139,6 +157,7 @@ const Market = (() => {
     rf.addEventListener("click", () => { st.answer = null; load(true); App.refreshMore(); });
     age.appendChild(rf); main.appendChild(age);
     if (st.answer) main.appendChild(el("div", "err", st.answer));
+    if (st.done) main.appendChild(el("div", "okm", st.done));
     if (d.down) { main.appendChild(el("div", "err", d.message + " An old copy is never shown in its place; REFRESH asks again.")); return; } // D414
     const box = el("div", "mklist");
     const draw = () => {
@@ -185,7 +204,7 @@ const Market = (() => {
     return b;
   }
   function forPlayer(p) { st.who = { id: p.id, name: p.name }; st.board = counts(p.id) && !counts(p.id).lots && counts(p.id).orders ? "orders" : "lots"; st.q = ""; st.tip = null; }
-  return { view, line, forPlayer, reset: () => { st.who = null; st.tip = null; st.answer = null; if (st.data && Date.now() - (st.data.at || 0) > 30_000) st.data = null; } };
+  return { view, line, forPlayer, reset: () => { st.who = null; st.tip = null; st.answer = null; st.cancel = null; st.done = null; if (st.data && Date.now() - (st.data.at || 0) > 30_000) st.data = null; } };
 })();
 
 // ---------------------------------------------------------------- the lottery (D408 to D411, D413, D415 R1, R3)

@@ -264,14 +264,17 @@ public final class Auth {
             throw new Refused("Owners are made from the panel's console.");
         }
         Rank was = t.rank;
-        boolean power = t.itemsPower && rank != was;
+        boolean power = t.itemsPower && rank != was, bank = t.bankPower && rank != was;
         t.rank = rank;
         if (power) {
             t.itemsPower = false; // a rank change ends the items power: an Admin made a Moderator again starts without it (audit)
         }
+        if (bank) {
+            t.bankPower = false; // and the bank power (D504)
+        }
         store.update(t);
         store.deleteSessionsOf(t.id); // logs in again at the new rank, for the new length
-        log(by.email, "changed " + t.email + " from " + was.label() + " to " + rank.label() + (power ? " (the items power ended)" : ""));
+        log(by.email, "changed " + t.email + " from " + was.label() + " to " + rank.label() + (power ? " (the items power ended)" : "") + (bank ? " (the bank power ended)" : ""));
     }
 
     /** An Owner gives a Moderator the power to add and remove players' items, or takes it back (D335, D363). */
@@ -286,6 +289,23 @@ public final class Auth {
                 store.update(t);
                 store.deleteSessionsOf(t.id); // logs in again for the login's new length (48 h with the power, D428)
                 log(by.email, (on ? "gave " : "took the items power from ") + t.email + (on ? " the items power" : ""));
+            }
+            return null;
+        });
+    }
+
+    /** An Owner gives a Moderator the power to refund bank rows and cancel market lots and requests, or takes it back (D504). */
+    public void setBankPower(Account by, long id, boolean on) throws Exception {
+        locked(id, () -> {
+            Account t = target(by, id);
+            if (t.rank != Rank.MODERATOR) {
+                throw new Refused("Admins refund and cancel already.");
+            }
+            if (t.bankPower != on) {
+                t.bankPower = on;
+                store.update(t);
+                store.deleteSessionsOf(t.id); // logs in again for the login's new length (48 h with a power, D428)
+                log(by.email, (on ? "gave " : "took the bank power from ") + t.email + (on ? " the bank power" : ""));
             }
             return null;
         });

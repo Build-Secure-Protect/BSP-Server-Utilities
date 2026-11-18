@@ -345,4 +345,230 @@ public final class BspCore {
         economyOverride = null;
         economyForced = false;
     }
+
+    // ------------------------------------------------------------------ a player's bank and market for staff (SU-69; BSP-Core 1.18's staff calls)
+
+    /** The oldest BSP-Core with the staff calls: {@code BspBank.account/log/refund/findPlayer}, {@code BspMarket.lotsOf/ordersOf/cancelLot/cancelOrder}. */
+    public static final String BANK_SINCE = "1.18.0";
+
+    /** A player found by name. */
+    public record Named(java.util.UUID id, String name) {
+    }
+
+    /** What the bank holds for a player: pieces, the coins kept in the bank by tier (cheapest first); {@code known} false: the bank never saw them. */
+    public record Account(java.util.UUID player, String name, long pieces, java.util.List<Integer> coins, boolean known) {
+    }
+
+    /**
+     * One bank log row, as BSP-Core's {@code BspBank.Row}, with what is left to refund and whether it is a payment read from
+     * BSP-Core itself ({@code piecesLeft}, {@code coinsLeft}, {@code payment}), so its rules are never copied here.
+     */
+    public record Row(long id, long ms, String type, String with, String detail, long pieces, int coinTier, int coinCount, String serverId,
+                      long refundedPieces, int refundedCoins, long refundOf, long piecesLeft, int coinsLeft, boolean payment) {
+    }
+
+    /** A staff cancel's answer: {@code key} ok, gone, unreachable (or failed: BSP-Core threw); the pieces a request gave back. */
+    public record Cancelled(String key, long piecesBack) {
+    }
+
+    /** What the staff panel's Bank & Market needs; the real one is BSP-Core 1.18+, tests give their own. Server thread only. */
+    public interface Bank {
+        /** {@code then} gets the player or null (nobody by that name); {@code failed} runs instead when BSP-Core failed. */
+        void findPlayer(net.minecraft.server.MinecraftServer server, String name, java.util.function.Consumer<Named> then, Runnable failed);
+
+        /** {@code then} gets null when the network's database is not connected; {@code failed} runs instead when BSP-Core failed. */
+        void account(net.minecraft.server.MinecraftServer server, java.util.UUID player, java.util.function.Consumer<Account> then, Runnable failed);
+
+        /** Newest first; {@code then} gets null when the database cannot be read; {@code failed} runs instead when BSP-Core failed. */
+        void log(net.minecraft.server.MinecraftServer server, java.util.UUID player, java.util.function.Consumer<java.util.List<Row>> then, Runnable failed);
+
+        /** Throws when BSP-Core failed. */
+        java.util.List<Lot> lotsOf(net.minecraft.server.MinecraftServer server, java.util.UUID seller);
+
+        /** Throws when BSP-Core failed. */
+        java.util.List<Order> ordersOf(net.minecraft.server.MinecraftServer server, java.util.UUID buyer);
+
+        /** The coin tiers' names, cheapest first (empty when not readable). */
+        java.util.List<String> tiers();
+
+        /** {@code then} gets BSP-Core's key (ok, or why nothing changed), or "failed". No permission check. */
+        void refund(net.minecraft.server.MinecraftServer server, java.util.UUID player, long rowId, long pieces, int coins, boolean alsoOther, String by,
+                    java.util.function.Consumer<String> then);
+
+        void cancelLot(net.minecraft.server.MinecraftServer server, String lotId, String by, java.util.function.Consumer<Cancelled> then);
+
+        void cancelOrder(net.minecraft.server.MinecraftServer server, String orderId, String by, java.util.function.Consumer<Cancelled> then);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static Bank bankOverride;
+    private static boolean bankForced;
+    private static Boolean bankChecked;
+
+    /** BSP-Core's staff bank and market calls, or null without BSP-Core 1.18.0 or newer. */
+    @org.jetbrains.annotations.Nullable
+    public static Bank bank() {
+        if (bankForced) {
+            return bankOverride;
+        }
+        return hasBank() ? RealBank.INSTANCE : null;
+    }
+
+    private static boolean hasBank() {
+        if (bankChecked != null) {
+            return bankChecked;
+        }
+        if (ModList.get() == null || !isLoaded()) {
+            return false; // not cached: asked again once mods are loaded
+        }
+        boolean ok;
+        try {
+            ok = ModList.get().getModContainerById(MODID)
+                    .map(c -> c.getModInfo().getVersion().compareTo(new org.apache.maven.artifact.versioning.DefaultArtifactVersion(BANK_SINCE)) >= 0)
+                    .orElse(false);
+            if (ok) {
+                Class.forName("com.mrgregles.bsp_core.api.BspBank$Row");
+                Class.forName("com.mrgregles.bsp_core.api.BspMarket$Cancelled");
+            }
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            ok = false;
+        }
+        bankChecked = ok;
+        return ok;
+    }
+
+    /** Loaded only once BSP-Core 1.18+ is known to be there. Failures answer once, never after BSP-Core answered (as {@link RealEconomy}). */
+    private static final class RealBank implements Bank {
+        static final Bank INSTANCE = new RealBank();
+
+        private static void failed(String what, Throwable e, java.util.concurrent.atomic.AtomicBoolean ran, Runnable fallback) {
+            if (ran.get()) {
+                BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: the staff panel's {} answer failed after BSP-Core answered: {}", what, e.toString());
+            } else {
+                BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: BSP-Core's {} failed: {}", what, e.toString());
+                fallback.run();
+            }
+        }
+
+        @Override
+        public void findPlayer(net.minecraft.server.MinecraftServer server, String name, java.util.function.Consumer<Named> then, Runnable fail) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspBank.findPlayer(server, name, n -> {
+                    ran.set(true);
+                    then.accept(n == null ? null : new Named(n.id(), n.name()));
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("player search", e, ran, fail);
+            }
+        }
+
+        @Override
+        public void account(net.minecraft.server.MinecraftServer server, java.util.UUID player, java.util.function.Consumer<Account> then, Runnable fail) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspBank.account(server, player, acc -> {
+                    ran.set(true);
+                    then.accept(acc == null ? null : new Account(acc.player(), acc.name(), acc.pieces(),
+                            acc.coins().stream().map(c -> c == null ? 0 : c).toList(), acc.known())); // a null tier never stops the answer (audit)
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("bank account read", e, ran, fail);
+            }
+        }
+
+        @Override
+        public void log(net.minecraft.server.MinecraftServer server, java.util.UUID player, java.util.function.Consumer<java.util.List<Row>> then, Runnable fail) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspBank.log(server, player, rows -> {
+                    ran.set(true);
+                    then.accept(rows == null ? null : rows.stream().map(r -> new Row(r.id(), r.ms(), r.type(), r.with(), r.detail(), r.pieces(), r.coinTier(),
+                            r.coinCount(), r.serverId(), r.refundedPieces(), r.refundedCoins(), r.refundOf(), r.piecesLeft(), r.coinsLeft(), r.payment())).toList());
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("bank log read", e, ran, fail);
+            }
+        }
+
+        @Override
+        public java.util.List<Lot> lotsOf(net.minecraft.server.MinecraftServer server, java.util.UUID seller) {
+            try {
+                return com.mrgregles.bsp_core.api.BspMarket.lotsOf(server, seller).stream()
+                        .map(l -> new Lot(l.id(), l.seller(), l.sellerName(), l.price(), l.listedMs(), l.endsMs(), l.serverId(), l.items())).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public java.util.List<Order> ordersOf(net.minecraft.server.MinecraftServer server, java.util.UUID buyer) {
+            try {
+                return com.mrgregles.bsp_core.api.BspMarket.ordersOf(server, buyer).stream()
+                        .map(o -> new Order(o.id(), o.buyer(), o.buyerName(), o.item(), o.wanted(), o.filled(), o.each(), o.placedMs(), o.endsMs(), o.serverId())).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public java.util.List<String> tiers() {
+            try {
+                return java.util.List.copyOf(com.mrgregles.bsp_core.api.BspCoins.tiers());
+            } catch (LinkageError | RuntimeException e) {
+                return java.util.List.of();
+            }
+        }
+
+        @Override
+        public void refund(net.minecraft.server.MinecraftServer server, java.util.UUID player, long rowId, long pieces, int coins, boolean alsoOther, String by,
+                           java.util.function.Consumer<String> then) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspBank.refund(server, player, rowId, pieces, coins, alsoOther, by, key -> {
+                    ran.set(true);
+                    then.accept(key == null ? "failed" : key);
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("refund", e, ran, () -> then.accept("failed"));
+            }
+        }
+
+        @Override
+        public void cancelLot(net.minecraft.server.MinecraftServer server, String lotId, String by, java.util.function.Consumer<Cancelled> then) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspMarket.cancelLot(server, lotId, by, c -> {
+                    ran.set(true);
+                    then.accept(c == null ? new Cancelled("failed", 0) : new Cancelled(c.key(), c.piecesBack()));
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("lot cancel", e, ran, () -> then.accept(new Cancelled("failed", 0)));
+            }
+        }
+
+        @Override
+        public void cancelOrder(net.minecraft.server.MinecraftServer server, String orderId, String by, java.util.function.Consumer<Cancelled> then) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspMarket.cancelOrder(server, orderId, by, c -> {
+                    ran.set(true);
+                    then.accept(c == null ? new Cancelled("failed", 0) : new Cancelled(c.key(), c.piecesBack()));
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("request cancel", e, ran, () -> then.accept(new Cancelled("failed", 0)));
+            }
+        }
+    }
+
+    /** Tests: the bank to use (null: none, as without BSP-Core 1.18). */
+    public static void useBankForTests(@org.jetbrains.annotations.Nullable Bank b) {
+        bankOverride = b;
+        bankForced = true;
+    }
+
+    public static void useRealBank() {
+        bankOverride = null;
+        bankForced = false;
+    }
 }

@@ -62,10 +62,11 @@ public final class WebMarket {
         return phaseSince;
     }
 
-    /** The snapshot's server fields: {@code market} (BSP-Core 1.16+ here), {@code lottery} (phase), {@code lotterySince}, {@code lotteryUp}. */
+    /** The snapshot's server fields: {@code market} (BSP-Core 1.16+ here), {@code bank} (1.18+), {@code lottery} (phase), {@code lotterySince}, {@code lotteryUp}. */
     public static void addTo(JsonObject server) {
         BspCore.Economy eco = BspCore.economy();
         server.addProperty("market", eco != null);
+        server.addProperty("bank", BspCore.bank() != null); // a player's Bank & Market (BSP-Core 1.18, SU-70)
         if (eco != null) {
             server.addProperty("lottery", eco.phase());
             server.addProperty("lotterySince", eco.phase().equals(phase) ? phaseSince : 0);

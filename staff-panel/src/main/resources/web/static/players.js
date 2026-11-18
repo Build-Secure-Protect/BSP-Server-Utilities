@@ -245,7 +245,7 @@ const Players = (() => {
     kick.addEventListener("click", () => { kickOpen = kickOpen === p.id ? null : p.id; result = null; App.refresh(); });
     const graves = el("button", "key", "Graves"); graves.type = "button"; graves.dataset.keep = "k:graves";
     graves.addEventListener("click", () => { openId = null; kickOpen = null; result = null; Players.leave(); openGraves(p.name); });
-    keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
+    keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(Bank.key(p)); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
     const tp = Teleport.box(p, lastLive); if (tp) wrap.appendChild(tp); // SU-43
     const bn = Bans.box(p); if (bn) wrap.appendChild(bn); // SU-44
     if (kickOpen === p.id) {

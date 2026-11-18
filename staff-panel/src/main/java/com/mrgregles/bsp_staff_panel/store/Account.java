@@ -26,10 +26,17 @@ public final class Account {
     public boolean active = true;
     /** A Moderator an Owner trusts to add and remove players' items (D335, D363); Admins and Owners always may. */
     public boolean itemsPower;
+    /** A Moderator an Owner trusts to refund bank rows and cancel market lots and requests (D504); Admins and Owners always may. */
+    public boolean bankPower;
 
-    /** How long a login lasts (D281): 48 hours for Admins and Owners, and for a Moderator with the items power (D428), else 7 days. */
+    /** How long a login lasts (D281): 48 hours for Admins and Owners, and for a Moderator with the items or bank power (D428, D504), else 7 days. */
     public java.time.Duration session() {
-        return itemsPower ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session().compareTo(rank.session()) < 0 ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session() : rank.session() : rank.session();
+        return itemsPower || bankPower ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session().compareTo(rank.session()) < 0 ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session() : rank.session() : rank.session();
+    }
+
+    /** Whether this account may refund bank rows and cancel market lots and requests (D503, D504). */
+    public boolean mayActOnBank() {
+        return rank.atLeast(Rank.ADMIN) || bankPower;
     }
 
     /** Whether this account may add and remove players' items. */
@@ -59,6 +66,7 @@ public final class Account {
         a.previousLoginAt = previousLoginAt;
         a.active = active;
         a.itemsPower = itemsPower;
+        a.bankPower = bankPower;
         return a;
     }
 }

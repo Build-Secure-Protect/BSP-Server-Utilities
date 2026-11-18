@@ -630,3 +630,52 @@ body.notlive .goldline { top: 50px; } /* below the "Not live" line, never over i
 @media (max-width: 899px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* a player's Bank & Market (SU-72; D512 to D520, look A of set AC); one column, 720 px at most on a computer */
+.bkpagewrap { display: flex; flex-direction: column; gap: 10px; max-width: 720px; width: 100%; }
+.bkhead { margin: 4px 0 0; } .bkhead .grow { flex: 1; min-width: 0; } .bkhead .dname { font-size: 16px; }
+.bktiles { display: grid; grid-template-columns: 1.2fr 1fr; gap: 6px; }
+.bktiles .tile { white-space: normal; }
+.bkcoins { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
+.bkcoin { display: inline-flex; align-items: center; gap: 4px; font: 600 12px var(--mono); color: var(--tx); white-space: nowrap; }
+.bkcoin i { width: 10px; height: 10px; border-radius: 50%; display: block; flex: none; }
+.bkchips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.bkpages { display: flex; gap: 6px; flex-wrap: wrap; }
+.bkpage { height: 34px; padding: 0 12px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px; }
+.bkpage small { font-size: 11px; opacity: .8; }
+.bklist { display: flex; flex-direction: column; }
+.bkrow { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; padding: 9px 12px; align-items: start; background: none; border: 0; color: inherit; text-align: left; width: 100%; font: inherit; }
+.bkrow + .bkrow, .bkform + .bkrow, .bkrow + .bkform, .bklot + .bklot, .bkform + .bklot, .bklot + .bkform, .bkrow + .bkmore { border-top: 1px solid #20242d; }
+.bkrow.tap { cursor: pointer; } .bkrow.tap:hover { background: #ffffff06; } .bkrow.sel { background: #19d3b00d; }
+.bkty { font: 600 9.5px var(--mono); padding: 2px 5px; border-radius: 4px; background: #232733; color: var(--soft); letter-spacing: .04em; margin-top: 2px; }
+.bkty.pay { background: #1d2a3d; color: var(--blue); } .bkty.mk { background: #2a2614; color: var(--gold); } .bkty.st { background: #271f38; color: var(--vio); } .bkty.cv { background: #14302b; color: #7fe0cf; }
+.bkwhat { min-width: 0; } .bkwhat .nm { white-space: normal; }
+.bkamt { font: 600 13.5px var(--mono); text-align: right; white-space: nowrap; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.bkamt .bkcoin { font-size: 11px; } .bkamt .tl { color: var(--teal); } .bkamt .rd { color: var(--coral); }
+.bkref { color: var(--vio); }
+.bkbar { height: 3px; background: #2a2f3a; border-radius: 2px; margin-top: 4px; overflow: hidden; max-width: 260px; } .bkbar i { display: block; height: 100%; background: var(--vio); }
+.bkmore { background: none; border: 0; color: var(--teal); font: 600 12px var(--body); padding: 10px; cursor: pointer; }
+.bkempty { padding: 12px; }
+.bkform { background: #14181f; border-left: 3px solid var(--teal); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.bkmodes { display: flex; gap: 6px; flex-wrap: wrap; }
+.bkmodes .key { height: 36px; padding: 0 12px; font-size: 12.5px; }
+.bkfld { gap: 4px; }
+.bkin { display: flex; align-items: center; gap: 8px; }
+.bknum { height: 38px; width: 130px; border-radius: 8px; background: var(--pn); border: 1px solid var(--ln); padding: 0 10px; font: 600 15px var(--mono); color: var(--tx); }
+.bknum:disabled { opacity: .75; }
+.bknum:focus { outline: none; border-color: var(--teal); }
+.bkwhy { height: 40px; border-radius: 8px; background: var(--pn); border: 1px solid var(--ln); padding: 0 10px; font-size: 14px; width: 100%; }
+.bkwhy:focus { outline: none; border-color: var(--teal); }
+.bksure { font-size: 12.5px; color: var(--mu); line-height: 1.4; }
+.bksure.armed { color: #ffb4ab; background: #3a1d1d; border: 1px solid #5a2a2a; border-radius: 8px; padding: 8px 10px; }
+.key.bkarmed { background: var(--coral); color: #10151c; border-color: var(--coral); }
+.key.bkgoal { color: var(--teal); border-color: #19d3b066; }
+.bkform .key:disabled, .bklot .key:disabled { opacity: .45; cursor: default; } /* these pages only (audit) */
+.bklot { display: flex; gap: 10px; align-items: center; padding: 9px 12px; }
+.bklot .grow { flex: 1; min-width: 0; } .bklot .nm { white-space: normal; }
+.bkcancel { height: 34px; padding: 0 10px; font-size: 12px; flex: none; }
+.bklock { font-size: 12.5px; }
+.mkcx { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: flex-end; } /* D507: CANCEL under a lot or order */
+.mkcx .bkform { align-self: stretch; border-radius: 8px; }
+.bklot .mks { display: flex; flex-wrap: wrap; gap: 2px; max-width: 40%; flex: none; } /* many stacks wrap instead of squeezing the name (audit) */
+.bklot .sub { white-space: normal; }

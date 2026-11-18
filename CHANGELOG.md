@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-18
+
+A player's Bank & Market on the staff web panel (with staff panel 0.3.0 and BSP-Core 1.18.0). The network protocol is still 8: players may stay on 0.12.0 (staff on 0.12.0 see the new Action log entries labelled Commands, and cannot filter them by their own kind).
+
+### Added
+- The staff web panel's agent reads a player's bank and market and acts on them through BSP-Core 1.18's staff calls: `bank_read` (their pieces, the coins in their bank, their bank log and their open lots and requests, lots as display copies), `bank_refund` (any bank row, in full or in part, coins and pieces apart, a payment also on the other player) and `market_cancel_lot` / `market_cancel_order`. Every rank reads; Admins, Owners and Moderators given the BANK power refund and cancel, with a reason; each refund and cancel is in the Action log (kind "Refunds & cancels", staff only). Needs BSP-Core 1.18.0 on the server; without it the panel says so.
+- Staff panel: an Owner can give a Moderator the BANK power (refunds and cancels; a 48-hour login, as with the ITEMS power; ended by a change of rank), shown as BANK beside their rank; the panel's `/api/bank`, `/api/bank/refund` and `/api/bank/cancel` check who may before anything is signed, need a reason, and write every refund and cancel tried to the panel's log. Game servers say in their snapshot (`bank`) whether they can answer. The panel's own database gets a `bank_power` column on its staff table by itself.
+- Staff panel: a player's Bank & Market page, opened by the Bank & Market key on their sheet (Players tab, or Find a player for someone offline). Their pieces and the coins in their bank at the top; LOG (every row the bank keeps, newest first, 50 at a time, filter chips Payments, Market, Shops, Coins, Staff & refunds; amounts signed from the player's side; a row refunded in part shows how much with a bar; deposits and withdrawals marked as their own coins, never refunded), LOTS and REQUESTS. Tapping a row opens its refund under it: FULL REFUND or AN AMOUNT, a conversion's coins and pieces apart, a payment also on the other player (on to start; when they no longer have it the page offers the refund without them), a reason, and a SURE? within 3 s naming what goes out. Lots and requests have CANCEL the same way. Staff who may only look see the page without them. The page reads the player when opened, on REFRESH and after each change. One refund or cancel at a time: while one waits for its answer (up to 15 seconds) no other can be sent from the panel page. It goes to the game server the page read from (refused, never sent elsewhere, when that server has gone), and the page reads the player again after any answer, so what is left on a row is current before another try. A refund or cancel during which BSP-Core fails is said and logged as one that may have happened.
+- Staff panel: More › Market has CANCEL on every lot and request for Admins, Owners and Moderators with the BANK power, with the same reason and SURE?.
+
+### Changed
+- Built and tested against BSP-Core 1.18.0 (dev runs and GameTests; the range stays `[1.4.0,)`).
+
 ## [0.12.0] - 2026-11-18
 
 Mob limits and crowded drops and arrows: the ENTITIES tab.
