@@ -798,6 +798,99 @@ KEYS.update({"gui.bsp_server_utilities.rooms_admin." + k: v for k, v in ROOMS_AD
 # the Action log's kind for rooms given back and freed (staff only)
 KEYS["gui.bsp_server_utilities.panel.log.kind.room"] = "Compact Machine rooms"
 
+# Mob limits (SU-62 to SU-65, D471 to D486): the MOBS tab, the refusal on the action bar, /su status
+MOBS_GUI = {
+    "every": "EVERY CHUNK",
+    "dims": "DIMENSIONS",
+    "dims_none": "None: every chunk's number applies.",
+    "chunks": "SINGLE CHUNKS",
+    "chunks_none": "None. HERE adds the chunk you stand in.",
+    "never": "NEVER COUNTED",
+    "never_none": "None: every mob counts.",
+    "never_hint": "a mob, e.g. villager",
+    "add": "ADD",
+    "here": "HERE",
+    "off": "OFF",
+    "more": "+%s more",
+    "dim.overworld": "Overworld",
+    "dim.nether": "The Nether",
+    "dim.end": "The End",
+    "dim.rooms": "Compact Machines rooms",
+    "dim_set": "set · %s",
+    "fullest": "FULLEST CHUNKS · EVERY SERVER",
+    "refreshed": "refreshed %s s ago",
+    "waiting": "asking the servers...",
+    "nothing": "No chunk holds 10 mobs or more on any server.",
+    "stale": "(not heard from for %s s)",
+    "room": "room · %s",
+    "place": "%s · %s %s",
+    "chunk_tip": "%s on %s: blocks %s %s to %s %s",
+    "picked_title": "%s on %s%s",
+    "this_server": " (this server)",
+    "picked_limit": "%s mobs, limit %s (%s)",
+    "picked_nolimit": "%s mobs, no limit",
+    "kept": "(%s named or tamed)",
+    "from_chunk": "its own",
+    "from_dim": "its dimension",
+    "from_every": "every chunk",
+    "remove": "REMOVE %s EXTRAS",
+    "sure": "SURE?",
+    "sure_text": "Click again within 3 s: removes %s, keeping %s.",
+    "remove_there": "Removing extras works on %s itself.",
+    "limit": "LIMIT",
+    "own_limit": "Its own limit: %s. Change it on the left.",
+    "footer": "Saved for every server · new mobs are refused at the limit, mobs already there stay",
+    "footer_off": "Saved for every server · no limits set: nothing is refused",
+    "note_removed": "Removed %s mobs.",
+    "note_none": "Nothing removed: the chunk is not over its limit here now.",
+    "note_no_mob": "No mob is called %s.",
+    "menu_more": "%s to %s of %s · scroll for more",
+    "page_mobs": "MOBS",
+    "page_drops": "DROPS & ARROWS",
+}
+# the DROPS & ARROWS page (SU-66 to SU-68, D487 to D501)
+DROPS_GUI = {
+    "items": "ITEMS PER CHUNK",
+    "arrows": "ARROWS PER CHUNK",
+    "over": "OVER FOR",
+    "min": "min",
+    "what": "Checked every 30 s. A chunk over a number for that long, without a break, is cleared down to it, oldest first. Players within 32 blocks are told; the LOG tab has each clear.",
+    "hour": "Last hour on this server: %s clears, %s items, %s arrows.",
+    "hour_none": "Last hour on this server: nothing cleared.",
+    "footer": "Saved for every server · kept: death drops, BSP-Core items, items a mod times, items set to never, tridents",
+    "nothing": "No chunk holds a quarter of a number or more (64 items or 32 arrows as they start).",
+    "items_short": "%s it.",
+    "arrows_short": "%s ar.",
+    "under": "under",
+    "items_off": "items off",
+    "arrows_off": "arrows off",
+    "picked": "%s items (limit %s), %s arrows (limit %s)",
+    "picked_over": "over for %s, cleared at %s",
+    "kept": "%s kept (death drops and kept items)",
+    "clear": "CLEAR NOW",
+    "what_items": "%s items",
+    "what_arrows": "%s arrows",
+    "what_both": "%s items and %s arrows",
+    "clear_text": "Down to the numbers: %s go, oldest first.",
+    "sure_text": "Click again within 3 s: %s go, oldest first; %s kept items stay.",
+    "clear_there": "Clearing now works on %s itself.",
+    "note_cleared": "Cleared %s.",
+    "note_none": "Nothing cleared: the chunk is not over its numbers here now.",
+}
+KEYS.update({"gui.bsp_server_utilities.crowd." + k: v for k, v in DROPS_GUI.items()})
+KEYS.update({"gui.bsp_server_utilities.mobs." + k: v for k, v in MOBS_GUI.items()})
+KEYS["gui.bsp_server_utilities.admin.tab.mobs"] = "ENTITIES"
+KEYS["gui.bsp_server_utilities.panel.log.kind.drops"] = "Drops cleared"
+KEYS["message.bsp_server_utilities.drops.cleared_items"] = "Items lying in a crowded chunk near you were cleared (%s): too many for %s min."
+KEYS["message.bsp_server_utilities.drops.cleared_arrows"] = "Arrows lying in a crowded chunk near you were cleared (%s): too many for %s min."
+KEYS["message.bsp_server_utilities.drops.cleared_staff_items"] = "Items lying in a crowded chunk near you were cleared by staff (%s)."
+KEYS["message.bsp_server_utilities.drops.cleared_staff_arrows"] = "Arrows lying in a crowded chunk near you were cleared by staff (%s)."
+KEYS["message.bsp_server_utilities.status.drops_crowded"] = "Crowded drops: %s items and %s arrows a chunk, cleared after %s min over; last hour %s clears, %s items, %s arrows."
+KEYS["gui.bsp_server_utilities.panel.log.kind.mob"] = "Mobs removed"
+KEYS["message.bsp_server_utilities.mobs.full"] = "This chunk is at its mob limit (%s)."
+KEYS["message.bsp_server_utilities.status.mobs"] = "Mob limits: every chunk %s, %s dimensions, %s single chunks; %s new mobs refused since the server started."
+KEYS["message.bsp_server_utilities.status.mobs_off"] = "Mob limits: none set (the MOBS tab)."
+
 
 def main():
     LANG.parent.mkdir(parents=True, exist_ok=True)

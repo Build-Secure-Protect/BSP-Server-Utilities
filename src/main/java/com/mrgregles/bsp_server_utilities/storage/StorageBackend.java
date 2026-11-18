@@ -99,6 +99,14 @@ public interface StorageBackend {
 
     void saveDespawnSettings(com.mrgregles.bsp_server_utilities.despawn.DespawnSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ mob limits (SU-62)
+
+    /** The network's mob limits, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.mobs.MobSettings loadMobSettings() throws Exception;
+
+    void saveMobSettings(com.mrgregles.bsp_server_utilities.mobs.MobSettings settings) throws Exception;
+
     // ------------------------------------------------------------------ the client check (SU-20)
 
     /** The network's client check rules, or null when none were ever saved. */

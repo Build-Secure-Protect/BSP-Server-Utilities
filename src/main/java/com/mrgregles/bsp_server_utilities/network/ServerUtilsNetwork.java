@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "7"; // 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "8"; // 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -173,6 +173,13 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminRoomsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminRoomsEditPacket::encode).decoder(AdminRoomsEditPacket::decode)
                 .consumerMainThread(AdminRoomsEditPacket::handle).add();
+        // The MOBS tab (SU-65, D480 look A, D481 to D486); protocol 8.
+        CHANNEL.messageBuilder(AdminMobsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminMobsPacket::encode).decoder(AdminMobsPacket::decode)
+                .consumerMainThread(AdminMobsPacket::handle).add();
+        CHANNEL.messageBuilder(AdminMobsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminMobsEditPacket::encode).decoder(AdminMobsEditPacket::decode)
+                .consumerMainThread(AdminMobsEditPacket::handle).add();
     }
 
     /** Client to server. */

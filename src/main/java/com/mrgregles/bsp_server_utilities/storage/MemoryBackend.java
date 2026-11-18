@@ -26,6 +26,7 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.afk.AfkSettings afkSettings;
     private com.mrgregles.bsp_server_utilities.chunks.ChunkSettings chunkSettings;
     private com.mrgregles.bsp_server_utilities.despawn.DespawnSettings despawnSettings;
+    private com.mrgregles.bsp_server_utilities.mobs.MobSettings mobSettings;
     private com.mrgregles.bsp_server_utilities.check.CheckRules checkRules;
     private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
     private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
@@ -323,6 +324,18 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void saveDespawnSettings(com.mrgregles.bsp_server_utilities.despawn.DespawnSettings settings) throws Exception {
         check();
         despawnSettings = settings;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.mobs.MobSettings loadMobSettings() throws Exception {
+        check();
+        return mobSettings;
+    }
+
+    @Override
+    public synchronized void saveMobSettings(com.mrgregles.bsp_server_utilities.mobs.MobSettings settings) throws Exception {
+        check();
+        mobSettings = settings;
     }
 
     @Override

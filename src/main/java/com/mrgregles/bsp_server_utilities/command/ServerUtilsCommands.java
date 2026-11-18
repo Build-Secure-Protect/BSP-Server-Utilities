@@ -464,6 +464,15 @@ public final class ServerUtilsCommands {
         com.mrgregles.bsp_server_utilities.despawn.DespawnSettings drops = com.mrgregles.bsp_server_utilities.despawn.DespawnService.settings(source.getServer());
         long[] gone = com.mrgregles.bsp_server_utilities.despawn.DespawnService.removedLastHour(source.getServer());
         source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.status.drops", drops.itemMinutes(), drops.deathMinutes(), gone[0], gone[1]), false);
+        com.mrgregles.bsp_server_utilities.mobs.MobSettings mobs = com.mrgregles.bsp_server_utilities.mobs.MobLimits.settings(source.getServer());
+        long refusedMobs = com.mrgregles.bsp_server_utilities.mobs.MobLimits.refused();
+        source.sendSuccess(() -> mobs.anyOn()
+                ? Component.translatable("message.bsp_server_utilities.status.mobs", mobs.every() > 0 ? Integer.toString(mobs.every()) : "off", mobs.dims().size(), mobs.chunks().size(), refusedMobs)
+                : Component.translatable("message.bsp_server_utilities.status.mobs_off"), false);
+        com.mrgregles.bsp_server_utilities.mobs.MobSettings.Drops crowd = mobs.drops();
+        long[] cleared = com.mrgregles.bsp_server_utilities.mobs.Crowding.lastHour();
+        source.sendSuccess(() -> Component.translatable("message.bsp_server_utilities.status.drops_crowded", crowd.items() > 0 ? Integer.toString(crowd.items()) : "off",
+                crowd.arrows() > 0 ? Integer.toString(crowd.arrows()) : "off", crowd.minutes(), cleared[0], cleared[1], cleared[2]), false);
         TrustedSetup setup = ClientCheckService.setup(source.getServer());
         Component which = Component.translatable(ClientCheckService.useOwn(source.getServer()) ? "message.bsp_server_utilities.status.check_own" : "message.bsp_server_utilities.status.check_network");
         Component taken = setup == null ? Component.translatable("message.bsp_server_utilities.status.check_no_setup")

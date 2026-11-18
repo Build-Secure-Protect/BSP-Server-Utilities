@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}) and ROOMS ({@link RoomsTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}) and MOBS ({@link MobsTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,7 +54,7 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
@@ -64,6 +64,7 @@ public class AdminScreen extends Screen {
     private final ClientsTab clients = new ClientsTab(this);
     private final ServersTab servers = new ServersTab(this);
     private final RoomsTab rooms = new RoomsTab(this);
+    private final MobsTab mobs = new MobsTab(this);
     /** The setup guide, while the panel shows it (D156). */
     @Nullable
     private SetupGuide guide;
@@ -79,12 +80,12 @@ public class AdminScreen extends Screen {
         return false;
     }
 
-    private int left() {
+    int left() {
         return (width - W) / 2;
     }
 
     /** The top of the tabs' drawing; in the guide the panel is taller and the body sits under the guide strip. */
-    private int top() {
+    int top() {
         int off = guide != null ? SetupGuide.OFFSET : 0;
         return (height - H - off) / 2 + off;
     }
@@ -264,6 +265,10 @@ public class AdminScreen extends Screen {
         rooms.accept(p);
     }
 
+    void acceptMobs(com.mrgregles.bsp_server_utilities.network.AdminMobsPacket p) {
+        mobs.accept(p);
+    }
+
     /** Whether the panel shows the setup guide (a tab drawn in it leaves the footer to the guide's keys). */
     boolean inGuide() {
         return guide != null;
@@ -346,6 +351,8 @@ public class AdminScreen extends Screen {
             servers.open();
         } else if (tab == ROOMS) {
             rooms.open();
+        } else if (tab == MOBS) {
+            mobs.open();
         }
     }
 
@@ -399,6 +406,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == ROOMS) {
             rooms.addWidgets(left(), top());
+            return;
+        }
+        if (tab == MOBS) {
+            mobs.addWidgets(left(), top());
             return;
         }
         int x = left() + PANE_X, y = top();
@@ -467,6 +478,9 @@ public class AdminScreen extends Screen {
         if (tab == ROOMS) {
             rooms.tick();
         }
+        if (tab == MOBS) {
+            mobs.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -507,10 +521,10 @@ public class AdminScreen extends Screen {
         g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
         String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
-                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms")};
+                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(24, Ui.width(font, tabs[i], TINY) + 6); // narrower keys, so nine fit beside the title (D191; ROOMS, SU-59)
+            int tabW = Math.max(22, Ui.width(font, tabs[i], TINY) + 4); // narrower keys, so ten fit beside the title (D191; ROOMS, SU-59; MOBS, D478)
             tx -= tabW;
             boolean on = i == litTab();
             g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
@@ -571,6 +585,11 @@ public class AdminScreen extends Screen {
         if (tab == ROOMS) {
             rooms.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the search box
+            return;
+        }
+        if (tab == MOBS) {
+            mobs.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the never-counted box
             return;
         }
         if (tab == CLIENTS) {
@@ -818,6 +837,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == ROOMS) {
             return rooms.scroll(mx, delta);
+        }
+        if (tab == MOBS) {
+            return mobs.scroll(mx, my, delta);
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {

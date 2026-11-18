@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crowded Drops Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Set AB: three looks for the DROPS & ARROWS page of the ENTITIES tab (D493). Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+.pface{ width:480px; height:240px; background:#0C0E12; box-shadow:0 0 0 4px #2A2F3A, 0 8px 22px rgba(0,0,0,.45); position:relative; box-sizing:border-box; padding:12px 14px; color:#E6EAF2; font-family:var(--body); overflow:hidden; display:flex; flex-direction:column; gap:6px; flex:none; }
+.pface::after{ content:""; position:absolute; right:6px; bottom:-3px; width:12px; height:2px; background:#19D3B0; }
+.wallbg{ background:repeating-linear-gradient(0deg,#5d5f66 0 16px,#666870 16px 32px); padding:22px; border-radius:3px; flex:none; }
+.dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; box-shadow:0 0 6px #8FE04A; } .dot.off{ background:#3a3f4a; } .dot.away{ background:#F2B544; }
+.ph{ font:700 15px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.srv{ font-size:9px; padding:0 4px; border-radius:2px; background:#1b2230; color:#9AA3B5; white-space:nowrap; }
+.lrow{ display:flex; gap:8px; align-items:center; font-size:10.5px; white-space:nowrap; overflow:hidden; }
+.mono{ font-family:var(--mono); }
+.tbl{ width:100%; border-collapse:collapse; font-size:9.5px; } .tbl td{ padding:2px 5px; white-space:nowrap; } .tbl tr+tr td{ border-top:1px solid #1c222c; }
+.toggle{ width:20px; height:10px; border-radius:6px; background:#2A2F3A; position:relative; flex:none; display:inline-block; } .toggle::after{ content:""; position:absolute; left:2px; top:2px; width:6px; height:6px; border-radius:50%; background:#9AA3B5; }
+.mini{ height:16px; padding:0 6px; display:grid; place-items:center; font:700 8.5px Oswald,var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); box-sizing:border-box; white-space:nowrap; }
+.mini.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.stage{ flex-wrap:wrap; }
+.toggle.on{ background:#3d2f5c; } .toggle.on::after{ left:12px; background:#B58CFF; }
+.step{ display:flex; align-items:center; gap:0; } .step .key{ width:18px; padding:0; height:17px; } .step .val{ min-width:34px; height:17px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); font:600 10px var(--mono); }
+.sec{ display:flex; flex-direction:column; gap:5px; }
+.big{ font:700 26px Oswald,var(--body); letter-spacing:.04em; line-height:1; }
+.cardg{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pchip{ display:inline-flex; gap:5px; align-items:center; font-size:9.5px; padding:2px 6px; background:#1b2230; white-space:nowrap; }
+.chat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.45); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; }
+.bar{ height:6px; background:var(--D); position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.ck{ width:9px; height:9px; display:inline-block; flex:none; }
+.grid{ display:grid; gap:1px; background:#0C0E12; }
+.grid i{ display:block; width:9px; height:9px; background:#161b23; }
+</style>
+<style>
+.cube{ display:inline-block; background:#19D3B0; opacity:.85; flex:none; }
+.cube.lost{ background:transparent; box-shadow:inset 0 0 0 1px #F2B544; opacity:1; }
+.sz{ font:600 9px var(--mono); color:var(--M); }
+.tile{ width:96px; height:78px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:6px; box-sizing:border-box; display:flex; flex-direction:column; gap:3px; overflow:hidden; }
+.tile.sel{ box-shadow:inset 0 0 0 1.5px var(--Q); }
+.tile.grace{ box-shadow:inset 0 0 0 1px #6b5524; background:repeating-linear-gradient(135deg,#0C0E12 0 6px,#12100b 6px 12px); }
+.am{ color:#F2B544; }
+.shd{ display:flex; align-items:center; justify-content:space-between; padding:3px 6px; background:#151a22; }
+.ab{ font-family:var(--body); font-size:12px; color:#fff; text-shadow:0 1px 0 #000; text-align:center; padding:6px 0; }
+.lab{ font:600 11px var(--body); color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+</style>
+<style>
+.tabs.ten .tab{ width:33px; font-size:8px; letter-spacing:.04em; }
+.meter{ width:70px; height:6px; background:var(--D); position:relative; flex:none; display:inline-block; vertical-align:middle; } .meter i{ position:absolute; left:0; top:0; bottom:0; display:block; }
+.over{ color:#FF6B5C; } .full{ color:#F2B544; }
+.mob{ font-size:9px; padding:1px 5px; background:#1b2230; color:#E6EAF2; white-space:nowrap; display:inline-flex; gap:4px; align-items:center; }
+.mob b{ color:#9AA3B5; font-weight:400; cursor:pointer; }
+.subtabs{ display:flex; gap:3px; } .subtab{ height:16px; padding:0 8px; display:grid; place-items:center; font:600 8.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.subtab.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.rulerow{ display:flex; align-items:center; gap:8px; padding:4px 6px; font-size:9.5px; white-space:nowrap; }
+.rulerow + .rulerow{ border-top:1px solid #1c222c; }
+.lvl{ width:46px; flex:none; font:600 8px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.wins{ font-size:8.5px; color:#19D3B0; }
+.lab{ font:600 11px var(--body); color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+.ab{ font-family:var(--body); font-size:12px; color:#fff; text-shadow:0 1px 0 #000; text-align:center; padding:6px 0; }
+.am{ color:#F2B544; }
+</style>
+<style>
+.timer{ width:46px; height:5px; background:#2A2F3A; position:relative; display:inline-block; vertical-align:middle; } .timer i{ position:absolute; left:0; top:0; bottom:0; display:block; background:#F2B544; }
+.pg{ display:flex; gap:3px; }
+.card2{ background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; padding:5px 6px; display:flex; flex-direction:column; gap:4px; min-width:0; overflow:hidden; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>Set AB: crowded drops and arrows</h1>
+<p class="lede">Three looks for the DROPS &amp; ARROWS page of the tab that was MOBS and is now ENTITIES, with two page keys (D493). The rules drawn are the ones you chose: dropped items and arrows, never a player's trident (D487); 256 items and 128 arrows a chunk, on from the start (D488); over for 5 minutes without a break, checked every 30 seconds (D489); cleared down to the number, oldest first (D490); death drops and what <code>/su clearitems</code> keeps never go (D491); the LOG tab and players within 32 blocks told (D492); one pair of numbers for every chunk on every server (D494). Sample data; nothing here is live.</p></header>
+<section><h2>The tab with its two pages</h2><div class="card"><p>The tab key reads ENTITIES; MOBS and DROPS &amp; ARROWS sit under the tab row, as the page keys of look B of set AA did. The MOBS page is as you confirmed it.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9.5px">Server utilities</span><span class="tabs ten"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab on" style="width:40px">Entities</span></span></div><div class="pg"><span class="subtab on">Mobs</span><span class="subtab">Drops &amp; arrows</span></div><div class="box grow" style="display:grid;place-items:center"><span class="sm m">the MOBS page as confirmed (D480 to D486), unchanged</span></div></div></div></div></section>
+<section><h2>Look A: two columns, like the MOBS page</h2><div class="card"><p>The three numbers on the left with what happens in words and the last hour's clears; on the right the fullest chunks on every server by items or arrows, with a bar filling towards the clear and the time over; the picked chunk below with CLEAR NOW (SURE?) on this server.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9.5px">Server utilities</span><span class="tabs ten"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab on" style="width:40px">Entities</span></span></div><div class="pg"><span class="subtab">Mobs</span><span class="subtab on">Drops &amp; arrows</span></div><div class="grow" style="display:flex;gap:8px">
+<div class="box" style="width:200px;padding:6px 7px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+<div class="hd"><span class="lbl">Items per chunk</span><span class="step"><span class="key">−</span><span class="val">256</span><span class="key">+</span></span></div>
+<div class="hd"><span class="lbl">Arrows per chunk</span><span class="step"><span class="key">−</span><span class="val">128</span><span class="key">+</span></span></div>
+<div class="hd"><span class="lbl">Over for</span><span style="display:flex;gap:4px;align-items:center"><span class="step"><span class="key">−</span><span class="val">5</span><span class="key">+</span></span><span class="sm m"> min</span></span></div>
+<div class="sm m" style="line-height:1.4">Checked every 30 s. A chunk over a number for that long, without a break, is cleared down to it, oldest first. Players within 32 blocks are told; the LOG tab has each clear.</div>
+<div class="sm m">Last hour: 3 clears, 2 914 items, 311 arrows.</div>
+</div>
+<div class="box grow" style="padding:3px 4px;display:flex;flex-direction:column;gap:4px;overflow:hidden">
+<div class="hd"><span class="lbl">Fullest chunks · every server</span><span class="sm m">refreshed 3 s ago</span></div>
+<table class="tbl" style="font-size:9px"><tr style="background:#1b2230;box-shadow:inset 2px 0 0 #B58CFF"><td><span class="srv">Frostwarf</span></td><td class="m">overworld · 120 −45</td><td class="mono over b">1 204 it.</td><td><span class="timer" style="width:22px"><i style="width:68%"></i></span> <span class="sm am">3:24</span></td></tr>
+<tr><td><span class="srv">Stormfall</span></td><td class="m">room · Rin</td><td class="mono over">311 ar.</td><td><span class="timer" style="width:22px"><i style="width:20%"></i></span> <span class="sm am">1:00</span></td></tr>
+<tr><td><span class="srv">Spawn</span></td><td class="m">overworld · −8 3</td><td class="mono">198 it.</td><td class="sm m">under</td></tr>
+<tr><td><span class="srv">Moongrove</span></td><td class="m">nether · 14 9</td><td class="mono">87 ar.</td><td class="sm m">under</td></tr></table>
+<div class="cardg" style="gap:4px;margin-top:auto"><div class="sm"><span class="b">Frostwarf · overworld 120 −45</span> <span class="m">· 1 204 items (limit 256), 3 arrows · over for 3:24, cleared at 5:00 · 41 kept (death drops)</span></div>
+<div class="keys"><span class="key warn sm">Clear now</span><span class="sm m">Down to 256: 948 items go, oldest first.</span></div></div>
+</div></div><div class="hd"><span class="sm m">Saved for every server · kept: death drops, BSP-Core items, items a mod times, items set to never, tridents</span></div></div></div></div></section>
+<section><h2>Look B: the numbers in one strip, a wide table</h2><div class="card"><p>Items, arrows and minutes side by side at the top; below, one wide table with items and arrows in their own columns, the time over, and CLEAR NOW on the row itself (drawn with SURE? showing).</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9.5px">Server utilities</span><span class="tabs ten"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab on" style="width:40px">Entities</span></span></div><div class="pg"><span class="subtab">Mobs</span><span class="subtab on">Drops &amp; arrows</span></div><div class="box" style="padding:5px 7px;display:flex;gap:14px;align-items:center">
+<span class="lbl">Items</span><span class="step"><span class="key">−</span><span class="val">256</span><span class="key">+</span></span><span class="lbl">Arrows</span><span class="step"><span class="key">−</span><span class="val">128</span><span class="key">+</span></span><span class="lbl">Over for</span><span class="step"><span class="key">−</span><span class="val">5</span><span class="key">+</span></span><span class="sm m">min</span></div>
+<div class="box grow" style="padding:3px 4px;overflow:hidden">
+<table class="tbl" style="font-size:9px">
+<tr class="m sm up"><td>Server</td><td>Where</td><td>Items</td><td>Arrows</td><td>Over for</td><td></td></tr>
+<tr style="background:#1b2230;box-shadow:inset 2px 0 0 #B58CFF"><td><span class="srv">Frostwarf</span></td><td class="m">overworld · 120 −45</td><td class="mono over b">1 204 / 256</td><td class="mono">3</td><td><span class="timer"><i style="width:68%"></i></span> <span class="sm am">3:24</span></td><td><span class="key warn sm">Sure?</span></td></tr>
+<tr><td><span class="srv">Stormfall</span></td><td class="m">room · Rin</td><td class="mono">0</td><td class="mono over">311 / 128</td><td><span class="timer"><i style="width:20%"></i></span> <span class="sm am">1:00</span></td><td class="sm m">on Stormfall</td></tr>
+<tr><td><span class="srv">Spawn</span></td><td class="m">overworld · −8 3</td><td class="mono">198</td><td class="mono">12</td><td class="sm m">under</td><td></td></tr>
+<tr><td><span class="srv">Moongrove</span></td><td class="m">nether · 14 9</td><td class="mono">4</td><td class="mono">87</td><td class="sm m">under</td><td></td></tr>
+<tr><td><span class="srv">Spawn</span></td><td class="m">overworld · 2 −1</td><td class="mono">140</td><td class="mono">0</td><td class="sm m">under</td><td></td></tr>
+</table></div>
+<div class="hd"><span class="sm r">Click again within 3 s: 948 of 1 204 items go, oldest first; 41 death drops stay.</span><span class="sm m">Last hour: 3 clears</span></div></div></div></div></section>
+<section><h2>Look C: an items card and an arrows card</h2><div class="card"><p>Each kind with its own number and its own fullest chunks; the minutes in the footer. Shorter rows, two lists to read.</p><div class="stage"><div class="scr v" style="width:516px;height:315px"><div class="hd"><span class="ttl v" style="font-size:9.5px">Server utilities</span><span class="tabs ten"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab on" style="width:40px">Entities</span></span></div><div class="pg"><span class="subtab">Mobs</span><span class="subtab on">Drops &amp; arrows</span></div><div class="grow" style="display:flex;gap:8px">
+<div class="card2 grow"><div class="hd"><span class="lbl">Items</span><span class="step"><span class="key">−</span><span class="val">256</span><span class="key">+</span></span></div>
+<div class="lrow"><span class="srv">Frostwarf</span><span class="grow m">120 −45</span><span class="mono over b">1 204</span><span class="timer"><i style="width:68%"></i></span></div>
+<div class="lrow"><span class="srv">Spawn</span><span class="grow m">−8 3</span><span class="mono">198</span><span class="timer"></span></div>
+<div class="lrow"><span class="srv">Spawn</span><span class="grow m">2 −1</span><span class="mono">140</span><span class="timer"></span></div>
+<div class="keys" style="margin-top:auto"><span class="key warn sm">Clear now</span><span class="sm m">Frostwarf 120 −45: 948 go</span></div></div>
+<div class="card2 grow"><div class="hd"><span class="lbl">Arrows</span><span class="step"><span class="key">−</span><span class="val">128</span><span class="key">+</span></span></div>
+<div class="lrow"><span class="srv">Stormfall</span><span class="grow m">room · Rin</span><span class="mono over b">311</span><span class="timer"><i style="width:20%"></i></span></div>
+<div class="lrow"><span class="srv">Moongrove</span><span class="grow m">nether 14 9</span><span class="mono">87</span><span class="timer"></span></div>
+<div class="keys" style="margin-top:auto"><span class="sm m">Clearing works on Stormfall itself.</span></div></div>
+</div>
+<div class="hd"><span style="display:flex;gap:6px;align-items:center;white-space:nowrap"><span class="lbl">Over for</span><span class="step"><span class="key">−</span><span class="val">5</span><span class="key">+</span></span><span class="sm m"> min · checked every 30 s</span></span><span class="sm m">Saved for every server</span></div></div></div></div></section>
+<section><h2>What players and the log see (every look)</h2><div class="card"><div class="stage">
+<div class="world" style="width:420px"><div class="lab" style="color:#ccc">Within 32 blocks of the chunk (chat)</div><div class="chat"><span style="color:#FFAA00">948 items lying in this chunk were cleared: too many for 5 minutes.</span></div></div>
+<div class="world" style="width:420px"><div class="lab" style="color:#ccc">The LOG tab, kind "Drops cleared"</div><div class="chat"><span style="color:#AAAAAA">01:42 · Server: 948 items cleared on Frostwarf, overworld 120 −45 (1 204 for 5 min, limit 256)</span></div></div>
+</div></div></section>
+<section><h2>To choose</h2><div class="card"><ol>
+<li><b>AB1 the page:</b> look A, two columns like the MOBS page (default); look B, the numbers in one strip over a wide table; look C, an items card and an arrows card.</li>
+<li><b>AB2 the time shown:</b> how long the chunk has been over, with a bar filling towards the clear, "3:24" (default); or how long until it is cleared, "cleared in 1:36".</li>
+<li><b>AB3 OFF:</b> each number goes down past 1 to OFF, so items or arrows alone can be left alone (default); or both are always on.</li>
+<li><b>AB4 the tab key:</b> ENTITIES (default); or MOBS kept as the key's name, with the pages under it.</li>
+</ol></div></section>
+</div></body></html>

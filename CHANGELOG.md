@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-18
+
+Mob limits and crowded drops and arrows: the ENTITIES tab.
+
+### Added
+- Mob limits (the MOBS page of the ENTITIES tab, the tenth of the admin panel): how many mobs one chunk may hold, as a number for every chunk, for each dimension, or for one chunk of one server, the most specific winning; every number starts OFF. One set for the network (`<prefix>mob_settings`, notice `mob_settings`). Mobs are anything alive but players and armour stands; a list of mob types is never counted.
+- At its limit a chunk refuses new mobs where the game asks whether to spawn them: natural spawns, spawners and mob-farm machines that spawn through the game, structures, mobs summoned by mobs, reinforcements, patrols, breeding, spawn eggs (kept, with an action-bar line "This chunk is at its mob limit (40)."; one fired from a dispenser is used up) and `/summon`. Never refused: mobs loaded with their chunk or moving between dimensions, mobs turning into another kind, mobs let out of a bucket, raiders, jockeys, mobs walking in, and mob types never counted.
+- The MOBS page lists the fullest chunks on every server (8 of 10 mobs or more, a Compact Machines room by its owner), asked for every 5 seconds while the tab is open; REMOVE EXTRAS (with SURE?) takes a chunk of this server down to its limit, the most numerous kind first, never tamed or name-tagged mobs, written to the Action log (kind "Mobs removed", staff only); LIMIT and HERE give a chunk its own number.
+- Crowded drops and arrows (the ENTITIES tab's DROPS & ARROWS page; the tab that was MOBS now reads ENTITIES, with MOBS and DROPS & ARROWS pages): every 30 seconds the loaded chunks are counted, and a chunk holding more than 256 dropped items or 128 arrows (normal and spectral; never a player's trident) for 5 minutes without a break is cleared down to the number, oldest first. Death drops and what `/su clearitems` keeps (BSP-Core's items, items a mod times, items set to never) stay. Players within 32 blocks are told in chat, and each clear is in the Action log (kind "Drops cleared", staff only). The numbers (each to OFF) and the minutes are one set for the network, saved with the mob limits; the page lists the crowded chunks on every server with how long they have been over, and CLEAR NOW (with SURE?) clears one on this server at once.
+- `/su status` has lines for mob limits and crowded drops.
+
+### Changed
+- The network protocol is 8 (the ENTITIES tab): players need this version to join.
+
 ## [0.11.1] - 2026-11-17
 
 The AFK and macro kick, checked against its design. Players need 0.11.1 too only for the card fixes; the network protocol is still 7, so 0.11.0 clients still join.

@@ -64,6 +64,9 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.rooms.RoomNotices.registerEvents();
         com.mrgregles.bsp_server_utilities.rooms.RoomNotices.registerNotices();
         com.mrgregles.bsp_server_utilities.rooms.RoomClearing.registerEvents(); // rooms cleared after their grace (SU-57)
+        com.mrgregles.bsp_server_utilities.mobs.MobLimits.registerNotices(); // mob limits (SU-62 to SU-64)
+        com.mrgregles.bsp_server_utilities.mobs.MobLimits.registerEvents();
+        com.mrgregles.bsp_server_utilities.mobs.Crowding.registerNotices(); // crowded drops and arrows (SU-66 to SU-68)
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -73,6 +76,8 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.afk.AfkService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.chunks.ChunkService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.mobs.MobLimits.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.mobs.Crowding.onServerStarted();
             com.mrgregles.bsp_server_utilities.despawn.ClearService.onServerStarted();
             com.mrgregles.bsp_server_utilities.check.ClientCheckService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
@@ -138,6 +143,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.rooms.RoomList.tick(e.getServer()); // this server's Compact Machines rooms, shared every minute
                 com.mrgregles.bsp_server_utilities.rooms.RoomNotices.tick(e.getServer()); // owners told of rooms in grace after login
                 com.mrgregles.bsp_server_utilities.rooms.RoomClearing.tick(e.getServer()); // rooms whose grace ended, cleared every minute
+                com.mrgregles.bsp_server_utilities.mobs.Crowding.tick(e.getServer()); // crowded drops and arrows, every 30 s
                 com.mrgregles.bsp_server_utilities.rooms.RoomOutbox.tick(e.getServer()); // notices about other servers' rooms, sent again when missed
             }
         });
