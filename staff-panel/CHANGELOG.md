@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-19
+
+Which maps each server shows on the Map tab, chosen by an Owner. Only the panel changes: the game servers stay on BSP-Server Utilities 0.14.0, nothing in the modpack.
+
+### Added
+- `GET /api/maps` and `POST /api/maps/set` (Owners only): every map BlueMap has drawn, by server, shown or hidden; a change of one map or a whole server's (ALL, NONE) saved together, with the last change's who and when. Every change, refusal and failed save is in the panel's log.
+- `/map/settings.json` leaves the hidden maps off its list, and a hidden map's files are refused, so a hidden map is not reachable by its address. Open pages get a `maps` event after a change. A map nobody chose is shown.
+- The panel's database makes a `panel_maps` table by itself on start.
+- `/map/` refuses an address with a `.` segment, so a hidden map cannot be reached that way either.
+- Map tab, for Owners: a violet MAPS key on the bar opens a sheet over the map's right side (from the bottom on a phone) listing every server with a chip per map; a tap hides or shows that map at once, ALL and NONE do a whole server, the line under the list says what was saved with UNDO for that change, a failed save turns the line red and leaves the map as it was, and the foot names the last change. With every map hidden the Map tab says "No maps are shown.", with the MAPS key for Owners.
+
+### Changed
+- Map tab: an Owner's change reaches every open page within moments, without a reload. Anyone on a map that gets hidden moves to that server's Overworld (or the first map shown) with the line "That map was hidden by an Owner."; the Owner who hid it reads it in the sheet's saved line. A map shown again is on the keys at once.
+- Map tab: choosing another server in the picker keeps the dimension when that server shows it (Nether to Nether), else its Overworld.
+- Map tab: opens on the map you looked at last in this browser.
+- Map tab: following a player into a dimension with no map shown says "which has no map shown".
+
 ## [0.4.1] - 2026-11-19
 
 The Map tab's players window and the chat's width. Only the panel's pages change: the game servers stay on BSP-Server Utilities 0.14.0, nothing in the modpack.

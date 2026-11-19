@@ -196,6 +196,19 @@ public final class PanelServer {
         return this;
     }
 
+    private volatile MapShown mapShown;
+
+    /** Which maps the Map tab shows (SU-83; D570 to D586): a change goes to every open page as a {@code maps} event, which reads the map list again. */
+    public PanelServer withMapShown(MapShown m) {
+        this.mapShown = m;
+        m.onChange(() -> {
+            for (Live l : live) {
+                write(l, "event: maps\ndata: {}\n\n");
+            }
+        });
+        return this;
+    }
+
     private volatile com.mrgregles.bsp_staff_panel.items.ItemPictures pictures;
     private volatile com.mrgregles.bsp_staff_panel.market.MarketDesk marketDesk;
     private volatile com.mrgregles.bsp_staff_panel.market.BankDesk bankDesk;
@@ -405,6 +418,7 @@ public final class PanelServer {
             case "/api/room" -> roomLines(ex, id);
             case "/api/messages" -> messages(ex, id);
             case "/api/notes", "/api/tags" -> notesGet(ex, id, path);
+            case "/api/maps" -> mapsSheet(ex, id);
             case "/api/items/exports" -> itemsExports(ex, id);
             case "/api/items/catalog" -> itemsCatalog(ex, id);
             case "/map" -> redirect(ex, "/map/"); // BlueMap's paths are relative to the folder
@@ -473,6 +487,7 @@ public final class PanelServer {
             case "/api/chat/say" -> chatSay(ex, id, body);
             case "/api/room/say", "/api/room/delete", "/api/messages/send", "/api/messages/read", "/api/messages/delete" -> talk(ex, id, path, body);
             case "/api/notes/add", "/api/notes/edit", "/api/notes/delete", "/api/tags/put", "/api/tags/take", "/api/tags/edit", "/api/tags/remove" -> notesPost(ex, id, path, body);
+            case "/api/maps/set" -> mapsSet(ex, id, body);
             default -> text(ex, 404, "Not found.");
         }
     }
@@ -2289,6 +2304,102 @@ public final class PanelServer {
         }
     }
 
+    // ------------------------------------------------------------------ which maps the Map tab shows (SU-83; D570 to D586)
+
+    /**
+     * BlueMap's own {@code settings.json} (its every map, none taken off), or null when the map is not set up or the file is
+     * missing. Unreadable JSON is an error: the panel never serves a list it could not filter.
+     */
+    private static JsonObject mapSettings(java.nio.file.Path root) throws IOException {
+        if (root == null) {
+            return null;
+        }
+        java.nio.file.Path f = root.resolve("settings.json");
+        if (!java.nio.file.Files.isRegularFile(f) || !f.toRealPath().startsWith(root.toRealPath())) {
+            return null;
+        }
+        JsonElement e = JsonParser.parseString(java.nio.file.Files.readString(f, StandardCharsets.UTF_8));
+        if (!e.isJsonObject()) {
+            throw new IOException("BlueMap's settings.json is not a JSON object");
+        }
+        return e.getAsJsonObject();
+    }
+
+    /** The ids of every map BlueMap has drawn (its {@code settings.json}), hidden ones too; empty when there is no map. */
+    private List<String> mapsDrawn() throws IOException {
+        JsonObject s = mapSettings(mapRoot);
+        List<String> out = new ArrayList<>();
+        if (s != null && s.has("maps") && s.get("maps").isJsonArray()) {
+            s.getAsJsonArray("maps").forEach(e -> {
+                if (e.isJsonPrimitive()) {
+                    out.add(e.getAsString());
+                }
+            });
+        }
+        return out;
+    }
+
+    /** A server's name as the feed has it, matched by its map id ("bsp_spawn": "BSP-Spawn"); one not sending now made readable. */
+    private java.util.function.Function<String, String> serverNames() {
+        Map<String, String> names = new java.util.HashMap<>();
+        JsonObject f = feed.json();
+        if (f.has("servers") && f.get("servers").isJsonArray()) {
+            f.getAsJsonArray("servers").forEach(e -> {
+                if (e.isJsonObject() && e.getAsJsonObject().has("server")) {
+                    String n = e.getAsJsonObject().get("server").getAsString();
+                    names.put(MapLive.mapId(n, "overworld").replaceFirst("__overworld$", ""), n);
+                }
+            });
+        }
+        return s -> names.getOrDefault(s, MapShown.readable(s));
+    }
+
+    private void mapsSheet(HttpExchange ex, AccessJwt.Identity id) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        MapShown m = mapShown;
+        if (m == null || mapRoot == null) {
+            json(ex, 200, refused("The map is not set up on this panel (map.root in panel.properties)."));
+            return;
+        }
+        try {
+            json(ex, 200, m.sheet(a.get(), mapsDrawn(), serverNames()));
+        } catch (MapShown.Refused r) {
+            json(ex, 200, refused(r.getMessage()));
+        }
+    }
+
+    private void mapsSet(HttpExchange ex, AccessJwt.Identity id, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        MapShown m = mapShown;
+        if (m == null || mapRoot == null) {
+            json(ex, 200, refused("The map is not set up on this panel (map.root in panel.properties)."));
+            return;
+        }
+        if (!b.has("show") || !b.get("show").isJsonPrimitive() || !b.get("show").getAsJsonPrimitive().isBoolean()) {
+            json(ex, 200, refused("Say whether to show or hide.")); // never hidden by a missing field (audit)
+            return;
+        }
+        List<String> ids = new ArrayList<>();
+        if (b.has("maps") && b.get("maps").isJsonArray()) {
+            for (JsonElement e : b.getAsJsonArray("maps")) {
+                ids.add(e.isJsonPrimitive() ? e.getAsString() : null);
+            }
+        }
+        try {
+            json(ex, 200, m.set(a.get(), mapsDrawn(), ids, bool(b, "show"), str(b, "how"), serverNames()));
+        } catch (MapShown.Refused r) {
+            json(ex, 200, refused(r.getMessage()));
+        }
+    }
+
     // ------------------------------------------------------------------ the map's files (SU-45)
 
     /**
@@ -2311,9 +2422,25 @@ public final class PanelServer {
         }
         String want = rest.isEmpty() ? "index.html" : rest;
         boolean page = want.endsWith(".html") || want.endsWith(".htm"), script = want.endsWith(".js") || want.endsWith(".mjs");
-        if (!want.matches("[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,12}") || want.length() > 300 || java.util.Arrays.asList(want.split("/")).contains("..")
+        if (!want.matches("[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,12}") || want.length() > 300 || java.util.Arrays.asList(want.split("/")).stream().anyMatch(s -> s.equals("..") || s.equals("."))
                 || page && !want.equals("index.html") || script && !want.startsWith("assets/")) { // only BlueMap's own page and scripts run here (audit)
             text(ex, 404, "Not found.");
+            return;
+        }
+        MapShown shown = mapShown;
+        java.util.Set<String> hidden = shown == null ? java.util.Set.of() : shown.hidden();
+        if (MapShown.hiddenPath(want, hidden)) { // a hidden map is not reachable by its address either (D572)
+            text(ex, 404, "Not found.");
+            return;
+        }
+        if (want.equalsIgnoreCase("settings.json") && shown != null) { // "." segments are refused above, so no other address reaches it (audit)
+            JsonObject settings = mapSettings(root);
+            if (settings == null) {
+                text(ex, 404, "Not found.");
+                return;
+            }
+            h.set("Cache-Control", "no-store");
+            json(ex, 200, MapShown.filterSettings(settings, hidden));
             return;
         }
         java.util.regex.Matcher live = MAP_LIVE.matcher(want);

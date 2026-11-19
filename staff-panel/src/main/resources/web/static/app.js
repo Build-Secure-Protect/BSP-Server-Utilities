@@ -439,6 +439,7 @@ function connect() {
   on("messages", () => StaffView.messagesChanged());
   on("notes", (e) => Notes.changed(JSON.parse(e.data).player));
   on("tags", () => Tags.changed());
+  on("maps", () => MapView.mapsChanged()); // an Owner changed the maps shown (D583)
   on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
   on("ended", () => { drop(es); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
@@ -456,7 +457,7 @@ setInterval(() => {
 
 // after a gap in the feed: the chat, the room and messages, tags, the lottery and notes read again
 function afterGap() {
-  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset();
+  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged();
 }
 
 function replaced() {

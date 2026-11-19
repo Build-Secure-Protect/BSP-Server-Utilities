@@ -184,6 +184,7 @@ public final class Main {
         final com.mrgregles.bsp_staff_panel.act.Actions marketActions = actions;
         PanelServer server = new PanelServer(host, port, publicUrl, gate, auth, store, feed, System::currentTimeMillis).withActions(actions).withChat(chat).withTalk(talk)
                 .withNotes(notes).withPictures(pictures).withMap(mapRoot.isEmpty() ? null : Path.of(mapRoot))
+                .withMapShown(new com.mrgregles.bsp_staff_panel.web.MapShown(store, System::currentTimeMillis))
                 .withMarket(new com.mrgregles.bsp_staff_panel.market.MarketDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBank(new com.mrgregles.bsp_staff_panel.market.BankDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis)).start();

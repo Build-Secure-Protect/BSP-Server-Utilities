@@ -734,3 +734,52 @@ body.notlive .goldline { top: 50px; } /* below the "Not live" line, never over i
 .bydim { opacity: .55; }
 .byunit { height: 38px; border-radius: 8px; background: var(--pn); border: 1px solid var(--ln); padding: 0 8px; font-size: 14px; color: var(--tx); }
 .bkmodes .key:disabled { opacity: .45; cursor: default; }
+
+/* ---------------------------------------------------------------- the Owner's MAPS sheet (SU-84; D578 to D582, D585) */
+.mkey { background: rgba(20,23,29,.93); color: var(--vio); border-color: #b58cff77; font: 700 11px var(--mono); letter-spacing: .12em; cursor: pointer; }
+.mkey svg { width: 13px; height: 13px; stroke: var(--vio); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mkey.on { background: #2a2340; border-color: var(--vio); } /* solid: it sits over the players window when the bar wraps */
+.mkey:focus-visible { outline: 2px solid var(--vio); outline-offset: 2px; }
+.mnote .mkey { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+.msheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 80%; z-index: 9; background: var(--bg2); border-top: 1px solid var(--ln);
+  border-radius: 18px 18px 0 0; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -12px 30px rgba(0,0,0,.5); outline: none; }
+.mshead { display: flex; align-items: center; gap: 8px; }
+.mshead .t { font: 700 11px var(--mono); color: var(--vio); letter-spacing: .12em; }
+.mshead .own { font: 600 9.5px var(--body); padding: 1px 7px; border-radius: 999px; background: #ffd23a22; color: var(--gold); border: 1px solid #ffd23a55; }
+.mshead .close { margin-left: auto; background: none; border: 0; color: var(--mu); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.mshead .close:hover { color: var(--tx); }
+.mshint { display: none; font-size: 11.5px; color: var(--mu); line-height: 1.4; }
+.mslist { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.mslist.busy .dc, .mslist.busy .lk { cursor: progress; }
+.mss { border-top: 1px solid #20242d; padding: 9px 0 6px; display: flex; flex-direction: column; gap: 6px; flex: none; }
+.msn { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+.msn .c { margin-left: auto; font: 600 10.5px var(--mono); color: var(--mu); white-space: nowrap; }
+.msn .lk { background: none; border: 0; padding: 2px; font: 600 11px var(--body); color: var(--teal); cursor: pointer; }
+.msn .lk:disabled { color: var(--dim); cursor: default; }
+.mss.msoff .nm { color: var(--mu); }
+.mchips { display: flex; gap: 5px; flex-wrap: wrap; }
+.mchips .dc { padding: 4px 9px; border-radius: 999px; font: 12px var(--body); display: flex; gap: 5px; align-items: center; border: 1px solid var(--ln); color: var(--mu);
+  background: transparent; cursor: pointer; text-decoration: line-through; text-decoration-color: #6b718099; }
+.mchips .dc i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); display: block; }
+.mchips .dc.on { border-color: #19d3b077; background: #19d3b01a; color: var(--tx); text-decoration: none; }
+.mchips .dc.on i { background: var(--teal); }
+.mchips .dc.hot { box-shadow: 0 0 0 2px var(--vio); }
+.mchips .dc:focus-visible, .msn .lk:focus-visible, .msaved .ud:focus-visible { outline: 2px solid var(--vio); outline-offset: 2px; }
+.msaved { font-size: 11.5px; color: #7fe0cf; background: #14302b; border: 1px solid #24443f; border-radius: 8px; padding: 6px 9px; flex: none; }
+.msaved.bad { color: #ffb3aa; background: #2e1614; border-color: #5a2a2a; }
+.msaved .ud { margin-left: 8px; background: none; border: 0; padding: 0; font: 700 10.5px var(--mono); letter-spacing: .08em; color: var(--teal); text-decoration: underline; cursor: pointer; }
+.msfoot { font-size: 11.5px; color: var(--mu); line-height: 1.4; flex: none; }
+@media (min-width: 900px) {
+  .msheet { top: 0; left: auto; width: 390px; max-height: none; border-radius: 0; border-top: 0; padding-right: 30px; /* clear of the CHAT tab on its edge */ border-left: 1px solid var(--ln); box-shadow: -14px 0 40px rgba(0,0,0,.5); }
+  .mshint { display: block; }
+  .sheeton .mbar { right: 400px; } /* the bar, its MAPS key and the followed name stay clear of the sheet */
+  .sheeton .mnote { max-width: max(160px, calc(100% - 694px)); } /* "No maps are shown." readable beside the sheet */
+  .sheeton .mcard:not([style*="left"]) { right: 400px; } /* the followed player's card beside the sheet, unless dragged elsewhere (audit) */
+  .sheeton .mgold { max-width: min(480px, calc(100% - 420px)); }
+}
+@media (min-width: 900px) and (max-width: 1299px) {
+  .msheet { width: 340px; }
+  .sheeton .mbar { right: 350px; }
+  .sheeton .mcard:not([style*="left"]) { right: 350px; }
+  .sheeton .mgold { max-width: min(480px, calc(100% - 370px)); }
+}

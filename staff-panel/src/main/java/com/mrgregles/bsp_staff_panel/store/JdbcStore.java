@@ -126,6 +126,8 @@ public final class JdbcStore implements PanelStore {
                     + " typed BOOLEAN NOT NULL, by_staff BIGINT NOT NULL, by_name VARCHAR(32) NOT NULL, at_ms BIGINT NOT NULL, UNIQUE KEY name (name)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_player_tags (player CHAR(36) NOT NULL, tag BIGINT NOT NULL, by_staff BIGINT NOT NULL, at_ms BIGINT NOT NULL,"
                     + " PRIMARY KEY (player, tag), KEY tag (tag)) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_maps (map VARCHAR(170) NOT NULL PRIMARY KEY, hidden BOOLEAN NOT NULL,"
+                    + " by_name VARCHAR(32) NOT NULL, at_ms BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4"); // SU-83
         }
     }
 
@@ -832,5 +834,49 @@ public final class JdbcStore implements PanelStore {
             }
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------ the maps shown on the Map tab (SU-83)
+
+    @Override
+    public synchronized List<MapChoice> mapChoices() throws SQLException {
+        List<MapChoice> out = new ArrayList<>();
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT map, hidden, by_name, at_ms FROM " + prefix + "panel_maps ORDER BY map")) {
+            while (rs.next()) {
+                out.add(new MapChoice(rs.getString(1), rs.getBoolean(2), rs.getString(3), rs.getLong(4)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized void putMapChoices(List<MapChoice> choices) throws SQLException {
+        Connection c = conn();
+        c.setAutoCommit(false);
+        try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "panel_maps (map, hidden, by_name, at_ms) VALUES (?, ?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE hidden = VALUES(hidden), by_name = VALUES(by_name), at_ms = VALUES(at_ms)")) {
+            for (MapChoice m : choices) {
+                ps.setString(1, m.map());
+                ps.setBoolean(2, m.hidden());
+                ps.setString(3, m.byName());
+                ps.setLong(4, m.at());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            c.commit();
+        } catch (SQLException e) {
+            try {
+                c.rollback();
+            } catch (SQLException ignored) {
+                // the connection is gone: nothing was kept
+            }
+            throw e;
+        } finally {
+            try {
+                c.setAutoCommit(true);
+            } catch (SQLException ignored) {
+                // reopened on the next call
+            }
+        }
     }
 }

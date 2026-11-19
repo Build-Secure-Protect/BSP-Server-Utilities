@@ -391,4 +391,31 @@ public final class MemoryStore implements PanelStore {
     public synchronized List<LogLine> log(long sinceMs, int limit) {
         return log.stream().filter(l -> l.at() >= sinceMs).sorted(Comparator.comparingLong(LogLine::at).reversed()).limit(limit).toList();
     }
+
+    // ------------------------------------------------------------------ the maps shown on the Map tab (SU-83)
+
+    private final Map<String, MapChoice> mapChoiceRows = new java.util.TreeMap<>();
+    /** Tests: the next saves of map choices fail, as a database that does not answer. */
+    public volatile boolean failMapSaves;
+    /** Tests: reading the map choices fails. */
+    public volatile boolean failMapReads;
+    /** Tests: how many times the map choices were read. */
+    public volatile int mapReads;
+
+    @Override
+    public synchronized List<MapChoice> mapChoices() throws java.sql.SQLException {
+        mapReads++;
+        if (failMapReads) {
+            throw new java.sql.SQLException("the test's database does not answer");
+        }
+        return List.copyOf(mapChoiceRows.values());
+    }
+
+    @Override
+    public synchronized void putMapChoices(List<MapChoice> choices) throws java.sql.SQLException {
+        if (failMapSaves) {
+            throw new java.sql.SQLException("the test's database does not answer");
+        }
+        choices.forEach(m -> mapChoiceRows.put(m.map(), m));
+    }
 }

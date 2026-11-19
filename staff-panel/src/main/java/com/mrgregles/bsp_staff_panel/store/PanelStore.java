@@ -236,4 +236,16 @@ public interface PanelStore {
     void playerTagAdd(String player, long tagId, long byId, long at) throws Exception;
 
     void playerTagRemove(String player, long tagId) throws Exception;
+
+    // ------------------------------------------------------------------ the maps shown on the Map tab (SU-83, D570 to D586)
+
+    /** An Owner's choice for one map ({@code <prefix>panel_maps}): hidden or shown, by whom (their name then) and when. A map with no row is shown (D573). */
+    record MapChoice(String map, boolean hidden, String byName, long at) {
+    }
+
+    /** Every map an Owner has ever hidden or shown again. */
+    List<MapChoice> mapChoices() throws Exception;
+
+    /** Saves these choices together, all or none (ALL and NONE are one change). */
+    void putMapChoices(List<MapChoice> choices) throws Exception;
 }

@@ -6,7 +6,7 @@
 const MapView = (() => {
   const TRAIL_MS = 120000, GONE_MS = 600000;
   let root = null, frame = null, stage = null, list = null, bar = null, cardBox = null, line = null, host = null;
-  let maps = null, mapsError = "", cur = null, follow = null, followName = "", trail = [], gold = null, gone = null;
+  let maps = null, mapsError = "", allHidden = false, cur = null, follow = null, followName = "", trail = [], gold = null, gone = null;
   let filter = "", cardPos = null, itemsOpen = false, notesOpen = false, pinBox = null, lastLive = { servers: [], players: [] };
   let listOpen = false, sheetUp = false, fab = null, trailMap = null, lastSeen = null; // on a phone (SU-48; D393, D395 R4): the list and the card as sheets
   let mq = null, mrows = null; // the list's search box, kept while typing, and its rows
@@ -42,20 +42,98 @@ const MapView = (() => {
   }
   const dimName = (d) => dimLabel(dimSlug(d)).replace(/^(Nether|End)$/, "the $1");
   const serverOf = (id) => id.slice(0, id.indexOf("__"));
+  const dimOf = (id) => id.slice(id.indexOf("__") + 2);
+  const dimRank = (m) => { const d = dimOf(m); return d === "overworld" ? "0" : d === "nether" ? "1" : d === "end" ? "2" : "3" + d; };
+  function serverName(sl) { // as the feed names it; a server not sending now: its id made readable
+    const on = lastLive.servers.find((s) => slug(s.server) === sl);
+    return on ? on.server : sl.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+  const mapLabel = (id) => serverName(serverOf(id)) + "'s " + dimLabel(dimOf(id));
+  const serversInOrder = () => [...new Set(maps.map(serverOf))].sort((a, b) => serverName(a).localeCompare(serverName(b)));
+  // the last map looked at, kept in this browser (D576)
+  const LAST_KEY = "bsp.mapLast";
+  function loadLast() { try { return localStorage.getItem(LAST_KEY) || ""; } catch (e) { return ""; } }
+  function saveLast(id) { try { localStorage.setItem(LAST_KEY, id); } catch (e) { /* kept for this page only */ } }
+  // where to go when the map shown is hidden (D583): that server's Overworld, else the first server's first shown map
+  function fallback(server) {
+    if (maps.includes(server + "__overworld")) return server + "__overworld";
+    const s = serversInOrder()[0];
+    return maps.filter((m) => serverOf(m) === s).sort((a, b) => dimRank(a).localeCompare(dimRank(b)))[0];
+  }
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const bm = () => { try { return frame && frame.contentWindow && frame.contentWindow.bluemap; } catch (e) { return null; } };
 
   // a map not set up (404) is kept for the session; any other failure is read again at the next try (audit)
-  async function loadMaps() {
+  async function readMaps() { // {maps, error, allHidden}; maps null when it could not be read
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
-      const r = await fetch("/map/settings.json", { credentials: "same-origin", signal: ctl.signal });
-      if (r.status === 404) { mapsError = "The map is not set up on this panel yet (map.root in panel.properties; BlueMap draws it)."; maps = []; return; }
-      if (!r.ok) { mapsError = r.status >= 500 ? "The panel answered with an error (it is in the panel's console)." : "The map could not be read (" + r.status + ")."; maps = null; return; }
-      const s = await r.json(); maps = Array.isArray(s.maps) ? s.maps : []; mapsError = maps.length ? "" : "BlueMap has drawn no maps yet.";
-    } catch (e) { maps = null; mapsError = ctl.signal.aborted ? "The panel did not answer in time." : "The map could not be read."; }
+      const r = await fetch("/map/settings.json", { credentials: "same-origin", signal: ctl.signal, cache: "no-store" });
+      if (r.status === 404) return { maps: [], error: "The map is not set up on this panel yet (map.root in panel.properties; BlueMap draws it).", allHidden: false };
+      if (!r.ok) return { maps: null, error: r.status >= 500 ? "The panel answered with an error (it is in the panel's console)." : "The map could not be read (" + r.status + ")." };
+      const s = await r.json(), m = Array.isArray(s.maps) ? s.maps : [];
+      const all = !m.length && s.bspHidden > 0; // an Owner hid every map (D585), not a map not drawn yet
+      return { maps: m, error: m.length ? "" : all ? "No maps are shown." : "BlueMap has drawn no maps yet.", allHidden: all };
+    } catch (e) { return { maps: null, error: ctl.signal.aborted ? "The panel did not answer in time." : "The map could not be read." }; }
     finally { clearTimeout(t); }
   }
+  async function loadMaps() { // a newer read (an Owner's change meanwhile) wins over this one (audit)
+    const g = ++mapsGen, r = await readMaps();
+    if (g !== mapsGen) return;
+    maps = r.maps; mapsError = r.error; allHidden = !!r.allHidden; mapsStale = false;
+  }
+
+  // ---------------------------------------------------------------- an Owner changed the maps shown (SU-85; D583, D584)
+  // The list is read again; a map gone from it is left for that server's Overworld (or the first shown map) with the gold
+  // line, or, for the Owner who hid it from this page, a word in the sheet's saved line; a map back on the list reloads
+  // BlueMap's page, which knows only the maps it started with.
+  // ownIds: the maps this page's sheet is saving (then the ones it changed, for 5 s): a move off one of them is this Owner's own
+  // (D584), told in the saved line; any other move is another Owner's, told by the gold line (audit)
+  let mapsStale = false, mapsGen = 0, ownIds = null, ownTimer = 0, retryIn = 0, retryTimer = 0;
+  async function mapsChanged() {
+    if (sheetBox && !sheetBusy) loadSheetQuiet(); // another Owner's change shows in an open sheet
+    if (!host) { maps = null; return; } // read when the tab opens
+    const g = ++mapsGen, r = await readMaps();
+    if (g !== mapsGen || !host) return; // a newer read is on its way
+    if (r.maps === null) { // kept as it is meanwhile, and read again soon, then less often (audit)
+      mapsStale = true; clearTimeout(retryTimer);
+      retryIn = Math.min(60000, retryIn ? retryIn * 2 : 5000); retryTimer = setTimeout(() => { if (host) mapsChanged(); }, retryIn);
+      return;
+    }
+    clearTimeout(retryTimer); retryIn = 0;
+    const old = maps || [], own = (id) => !!(ownIds && ownIds.has(id));
+    maps = r.maps; mapsError = r.error; allHidden = !!r.allHidden; mapsStale = false;
+    if (!maps.length || !frame || !stage.contains(frame)) { // to or from "No maps are shown."
+      if (!maps.length && frame) { frame.remove(); frame = null; resetSwitching(); }
+      if (!maps.length && cur && own(cur)) ownMoved(null);
+      mount(host); return;
+    }
+    let moved = null;
+    if (!maps.includes(cur)) { moved = cur; cur = fallback(serverOf(cur)); saveLast(cur); }
+    if (maps.some((m) => !old.includes(m))) reloadFrame(); // BlueMap's page learns the maps shown again
+    else if (moved) { stopTrailOnly(); switchTo(cur, null); }
+    if (moved) { if (own(moved)) ownMoved(cur); else gold = { text: "That map was hidden by an Owner.", at: Date.now() }; }
+    redraw();
+  }
+  // D584: said in the sheet's saved line, not the gold line; held while the save is under way, so it joins its own line
+  let ownMove, saving = false;
+  function ownMoved(to) { ownMove = { to }; if (!saving) applyOwnMove(); }
+  function applyOwnMove() {
+    const m = ownMove; ownMove = undefined;
+    if (!m) return;
+    if (sheetBox && sheetLine && !sheetLine.bad) {
+      sheetLine.text += m.to ? " You were on it, so the map moved to " + mapLabel(m.to) + "." : " You were on it; no map is shown now.";
+      drawSheet();
+    } else if (m.to) { // the sheet closed, or its line says the save failed (it was saved after all): the gold line says it (audit)
+      gold = { text: "That map was hidden by an Owner.", at: Date.now() }; if (host) redraw();
+    }
+  }
+  function reloadFrame() {
+    if (!frame) return;
+    resetSwitching();
+    const f = el("iframe", "mframe"); f.title = "Map"; f.src = "/map/#" + cur; f.addEventListener("load", setup);
+    frame.replaceWith(f); frame = f;
+  }
+  function stopTrailOnly() { trail = []; trailMap = null; drawTrail(); } // a trail never joins two worlds
 
   // ---------------------------------------------------------------- mounting (the frame lives while the tab is open)
   async function mount(main) {
@@ -68,10 +146,11 @@ const MapView = (() => {
       list.addEventListener("pointerdown", () => list.classList.add("front"), true); // last touched on top (D556)
     }
     main.appendChild(root);
-    if (maps === null) await loadMaps();
+    if (maps === null || mapsStale) await loadMaps();
     if (host !== main) return; // another tab opened meanwhile
     if (!maps || !maps.length) {
       stage.textContent = ""; const n = el("div", "note mnote", mapsError); stage.appendChild(n);
+      if (allHidden && owner()) { n.appendChild(document.createTextNode(" Choose them under ")); n.appendChild(mapsKey()); n.appendChild(document.createTextNode(".")); }
       if (!maps) {
         const again = el("button", "btn sm ghost", "Try again"); again.type = "button";
         again.addEventListener("click", () => { again.disabled = true; mount(main); });
@@ -81,7 +160,8 @@ const MapView = (() => {
     }
     if (!frame || !stage.contains(frame)) {
       stage.textContent = "";
-      cur = cur && maps.includes(cur) ? cur : (maps.find((m) => m.endsWith("__overworld")) || maps[0]);
+      const last = loadLast(); // the map looked at last, in this browser (D576); the first time, the first overworld as before
+      cur = cur && maps.includes(cur) ? cur : maps.includes(last) ? last : (maps.find((m) => m.endsWith("__overworld")) || maps[0]);
       resetSwitching(); // a switch left waiting in a removed frame never ends (audit)
       frame = el("iframe", "mframe"); frame.title = "Map"; frame.src = "/map/#" + cur;
       frame.addEventListener("load", setup);
@@ -94,12 +174,13 @@ const MapView = (() => {
     redraw();
   }
   function unmount(main) {
-    if (host && host === main) { main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
+    if (host && host === main) { closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
   }
 
   // BlueMap's own bar is hidden (the panel's replaces it); clicks on heads follow, clicks on pins open the panel's box
   function setup() {
     const d = frame.contentDocument; if (!d) return;
+    try { frame.contentWindow.addEventListener("keydown", escKey); } catch (e) { /* not the same site */ } // Esc with the map clicked (audit)
     const st = d.createElement("style");
     st.textContent = ".control-bar{display:none!important}.bm-marker-poi-label{display:none!important}";
     d.head.appendChild(st);
@@ -138,7 +219,7 @@ const MapView = (() => {
     const id = mapId(p.server, p.dim);
     if (id !== cur && maps.includes(id)) switchTo(id, p);
     else if (maps.includes(id)) centre(p);
-    else gold = { text: "There is no map of " + dimName(p.dim) + " on " + p.server + ".", at: Date.now() }; // not followed into nothing (audit)
+    else gold = { text: "There is no map of " + dimName(p.dim) + " shown on " + p.server + ".", at: Date.now() }; // not followed into nothing (audit); hidden or not drawn (D572)
     redraw();
   }
   function stop() {
@@ -158,7 +239,7 @@ const MapView = (() => {
   let switching = Promise.resolve(), busy = false, gen = 0;
   function resetSwitching() { switching = Promise.resolve(); busy = false; gen++; }
   function switchTo(id, p) {
-    cur = id; pinBox = null;
+    cur = id; pinBox = null; saveLast(id);
     const g = gen;
     switching = switching.then(async () => {
       const b = bm();
@@ -204,7 +285,7 @@ const MapView = (() => {
           gold = { text: p.name + " went to " + p.server + " · " + dimName(p.dim) + ": the map followed.", at: Date.now() };
           switchTo(id, p);
         } else if (id !== cur) {
-          gold = { text: p.name + " is in " + dimName(p.dim) + " on " + p.server + ", which has no map.", at: Date.now() };
+          gold = { text: p.name + " is in " + dimName(p.dim) + " on " + p.server + ", which has no map shown.", at: Date.now() }; // hidden or not drawn (D572)
         } else if (back) centre(p); // back within 10 minutes: followed again (D395 R3)
         else refollow(p);
         const last = trail[trail.length - 1];
@@ -374,18 +455,16 @@ const MapView = (() => {
   }
   function drawBar() {
     bar.textContent = "";
-    const name = (sl) => { const on = lastLive.servers.find((s) => slug(s.server) === sl); // a server not sending now: its id made readable
-      return on ? on.server : sl.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "); };
-    const servers = [...new Set(maps.map(serverOf))].sort((a, b) => name(a).localeCompare(name(b)));
-    const sel = el("select", "mc msel"); sel.dataset.keep = "msel"; servers.forEach((sl) => { const o = el("option", null, name(sl)); o.value = sl; o.selected = sl === serverOf(cur); sel.appendChild(o); });
+    const servers = serversInOrder();
+    const sel = el("select", "mc msel"); sel.dataset.keep = "msel"; servers.forEach((sl) => { const o = el("option", null, serverName(sl)); o.value = sl; o.selected = sl === serverOf(cur); sel.appendChild(o); });
     // the picker let go once a server is chosen (or left), so the bar is drawn for that server at once: while it kept the focus
     // the bar was never drawn again, and the dimension keys left over from the server before switched back to it (bug, SU-82)
-    sel.addEventListener("change", () => { stopQuiet(); const id = maps.find((m) => m === sel.value + "__overworld") || maps.find((m) => serverOf(m) === sel.value); if (id) switchTo(id, null); sel.blur(); redraw(); });
+    // the same dimension on the server chosen when it shows one, else its Overworld (D577)
+    sel.addEventListener("change", () => { stopQuiet(); const same = sel.value + "__" + dimOf(cur); const id = maps.includes(same) ? same : maps.find((m) => m === sel.value + "__overworld") || maps.filter((m) => serverOf(m) === sel.value).sort((a, b) => dimRank(a).localeCompare(dimRank(b)))[0]; if (id) switchTo(id, null); sel.blur(); redraw(); });
     sel.addEventListener("blur", () => setTimeout(() => { if (host && frame) redraw(); }, 0));
     bar.appendChild(sel);
     const seg = el("div", "mseg");
-    const rank = (m) => { const d = m.slice(m.indexOf("__") + 2); return d === "overworld" ? "0" : d === "nether" ? "1" : d === "end" ? "2" : "3" + d; };
-    maps.filter((m) => serverOf(m) === serverOf(cur)).sort((a, b) => rank(a).localeCompare(rank(b))).forEach((m) => {
+    maps.filter((m) => serverOf(m) === serverOf(cur)).sort((a, b) => dimRank(a).localeCompare(dimRank(b))).forEach((m) => {
       const b = el("button", m === cur ? "on" : "", dimLabel(m.slice(m.indexOf("__") + 2))); b.type = "button"; b.dataset.keep = "mdim:" + m;
       const dim = m.slice(m.indexOf("__") + 2);
       b.addEventListener("click", () => { // the dimension of the server shown now, never of the server the key was drawn for (SU-82)
@@ -405,6 +484,7 @@ const MapView = (() => {
       l.appendChild(c); l.appendChild(document.createTextNode(t)); pins.appendChild(l);
     });
     bar.appendChild(pins);
+    if (owner()) bar.appendChild(mapsKey());
     if (follow) {
       const f = el("div", "mc mfol"); f.appendChild(document.createTextNode("Following ")); f.appendChild(el("b", null, followName));
       if (!gone && !following()) { const c = el("button", "mcentre", "centre"); c.type = "button"; c.title = "Back to them"; c.dataset.keep = "mcentre"; c.addEventListener("click", () => { const p = lastLive.players.find((x) => x.id === follow); if (p) centre(p); redraw(); }); f.appendChild(c); }
@@ -417,6 +497,7 @@ const MapView = (() => {
     const g = gone ? { text: followName + " left the network at " + new Date(gone.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ". Shown where they were last; followed again when they come back." }
       : gold && Date.now() - gold.at < 20000 ? gold : null;
     line.textContent = g ? g.text : ""; line.classList.toggle("hidden", !g);
+    if (g && bar) line.style.top = Math.max(52, bar.offsetTop + bar.offsetHeight + 6) + "px"; // under a bar wrapped beside the open sheet (audit)
   }
   function drawCard() {
     cardBox.textContent = "";
@@ -495,6 +576,131 @@ const MapView = (() => {
     stage.appendChild(b);
   }
 
+
+  // ---------------------------------------------------------------- the Owner's MAPS sheet (SU-84; D570 to D586, look A of set AF)
+  // Every map BlueMap has drawn, by server in the picker's order, a chip each: lit shown, struck through hidden. A tap saves
+  // at once (D579); the line under the list names the change, with UNDO for that one change until the next or the sheet
+  // closes (D582); a save that fails leaves the chip as it was and turns the line red. Seen only by Owners.
+  let sheetBox = null, sheetData = null, sheetErr = "", sheetBusy = null, sheetLine = null;
+  const owner = () => typeof me !== "undefined" && !!me && me.rank === "OWNER";
+  function mapsKey() {
+    const k = el("button", "mc mkey" + (sheetBox ? " on" : "")); k.type = "button"; k.dataset.keep = "mkey";
+    k.title = sheetBox ? "Close the maps shown to staff" : "Choose which maps staff see (Owners)";
+    k.innerHTML = ICONS.Map; k.appendChild(document.createTextNode("MAPS")); // a fixed icon of this page's own
+    k.addEventListener("click", () => { if (sheetBox) closeSheet(); else openSheet(); });
+    return k;
+  }
+  function openSheet() {
+    if (!owner() || !root) return;
+    sheetBox = el("div", "msheet"); sheetBox.tabIndex = -1; sheetBox.setAttribute("role", "dialog"); sheetBox.setAttribute("aria-label", "Maps shown to staff");
+    root.appendChild(sheetBox); root.classList.add("sheeton");
+    sheetData = null; sheetErr = ""; sheetLine = null; drawSheet(); redrawKeys();
+    loadSheet();
+    const c = sheetBox.querySelector(".close"); if (c) c.focus();
+  }
+  function closeSheet() {
+    if (!sheetBox) return;
+    sheetBox.remove(); sheetBox = null; sheetLine = null; sheetBusy = null;
+    if (ownMove && !saving) applyOwnMove(); // a move not yet told: the gold line
+    if (root) root.classList.remove("sheeton");
+    redrawKeys();
+  }
+  function redrawKeys() { // the bar's key lit or not, and the no-map message's key
+    document.querySelectorAll(".mkey").forEach((k) => { k.classList.toggle("on", !!sheetBox); k.title = sheetBox ? "Close the maps shown to staff" : "Choose which maps staff see (Owners)"; });
+  }
+  async function loadSheet() {
+    const box = sheetBox;
+    const r = await call("/api/maps");
+    if (box !== sheetBox) return; // closed meanwhile
+    if (r.ok) { sheetData = r; sheetErr = ""; } else { sheetErr = r.message || "The maps could not be read."; }
+    drawSheet();
+  }
+  function escKey(e) {
+    if (e.key !== "Escape" || !sheetBox) return;
+    const t = e.target; // Esc in the players search or the server picker is theirs (audit)
+    if (t && t.closest && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !sheetBox.contains(t)) return;
+    e.preventDefault(); closeSheet(); keyFocus();
+  }
+  function keyFocus() { const k = document.querySelector(".mkey"); if (k) k.focus(); }
+  addEventListener("keydown", escKey);
+  function when(at) {
+    const d = new Date(at), now = new Date(), hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + hm;
+  }
+  function drawSheet() {
+    if (!sheetBox) return;
+    const old = sheetBox.querySelector(".mslist"), top = old ? old.scrollTop : 0, a = document.activeElement, keep = a && sheetBox.contains(a) ? a.dataset.keep : null;
+    sheetBox.textContent = "";
+    const head = el("div", "mshead"); head.appendChild(el("span", "t", "MAPS SHOWN TO STAFF")); head.appendChild(el("span", "own", "Owner"));
+    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close (Esc)"; x.dataset.keep = "msclose"; x.addEventListener("click", () => { closeSheet(); keyFocus(); }); head.appendChild(x);
+    sheetBox.appendChild(head);
+    sheetBox.appendChild(el("div", "mshint", "Tap a map to hide or show it on the Map tab for every staff member. Saved as you tap."));
+    if (sheetErr) {
+      const n = el("div", "note", sheetErr); const again = el("button", "btn sm ghost", "Try again"); again.type = "button";
+      again.addEventListener("click", () => { sheetErr = ""; drawSheet(); loadSheet(); });
+      n.appendChild(document.createElement("br")); n.appendChild(again); sheetBox.appendChild(n); return;
+    }
+    if (!sheetData) { sheetBox.appendChild(el("div", "note", "Reading the maps…")); return; }
+    const list = el("div", "mslist" + (sheetBusy ? " busy" : "")); list.setAttribute("aria-busy", sheetBusy ? "true" : "false"); // taps wait while one is saved
+    if (!sheetData.servers.length) list.appendChild(el("div", "note", "BlueMap has drawn no maps yet."));
+    sheetData.servers.forEach((s) => {
+      const on = s.maps.filter((m) => m.shown), row = el("div", "mss" + (on.length ? "" : " msoff")); // not "gone": the Staff tab styles that
+      const sn = el("div", "msn"); sn.appendChild(el("span", "nm", s.name)); sn.appendChild(el("span", "c", on.length + " of " + s.maps.length));
+      [["ALL", true], ["NONE", false]].forEach(([w, show]) => {
+        const b = el("button", "lk", w); b.type = "button"; b.dataset.keep = "mslk:" + s.id + ":" + w;
+        const ids = s.maps.filter((m) => m.shown !== show).map((m) => m.id);
+        b.disabled = !ids.length; b.title = (show ? "Show every map of " : "Hide every map of ") + s.name;
+        b.addEventListener("click", () => setMaps(ids, show, show ? "all" : "none"));
+        sn.appendChild(b);
+      });
+      row.appendChild(sn);
+      const chips = el("div", "mchips");
+      s.maps.forEach((m) => {
+        const b = el("button", "dc " + (m.shown ? "on" : "off") + (sheetBusy && sheetBusy.has(m.id) ? " hot" : "")); b.type = "button"; b.dataset.keep = "msmap:" + m.id;
+        b.setAttribute("aria-pressed", m.shown ? "true" : "false"); b.title = (m.shown ? "Shown: tap to hide " : "Hidden: tap to show ") + s.name + "'s " + m.label;
+        b.appendChild(el("i")); b.appendChild(document.createTextNode(m.label));
+        b.addEventListener("click", () => setMaps([m.id], !m.shown, "tap"));
+        chips.appendChild(b);
+      });
+      row.appendChild(chips); list.appendChild(row);
+    });
+    sheetBox.appendChild(list); list.scrollTop = top;
+    if (sheetLine) {
+      const l = el("div", "msaved" + (sheetLine.bad ? " bad" : ""), sheetLine.text); l.setAttribute("role", "status");
+      if (sheetLine.undo) { const u = el("button", "ud", "UNDO"); u.type = "button"; u.dataset.keep = "msundo"; u.addEventListener("click", () => setMaps(sheetLine.undo.maps, sheetLine.undo.show, "undo")); l.appendChild(u); }
+      sheetBox.appendChild(l);
+    }
+    const last = sheetData.last;
+    sheetBox.appendChild(el("div", "msfoot", (last ? "Last change: " + last.name + ", " + when(last.at) : "No change yet") + " · BSP-Map still draws hidden maps."));
+    if (keep) { const f = sheetBox.querySelector('[data-keep="' + keep + '"]'); if (f && !f.disabled) f.focus(); else sheetBox.focus(); } // a key gone (UNDO, an ALL with nothing left): the sheet keeps the focus
+  }
+  async function setMaps(ids, show, how) {
+    if (saving || !ids.length || !sheetData) return; // one save at a time from this page, the sheet closed and opened again too (audit)
+    const box = sheetBox;
+    saving = true; sheetBusy = new Set(ids); ownMove = undefined; drawSheet();
+    clearTimeout(ownTimer); ownIds = new Set(ids); // the "maps" event may come before the answer
+    const r = await call("/api/maps/set", { maps: ids, show, how }, true);
+    saving = false;
+    ownIds = r.ok ? new Set(r.changed || []) : null; ownTimer = setTimeout(() => { ownIds = null; }, 5000);
+    if (box !== sheetBox) { applyOwnMove(); return; } // closed meanwhile: the change stands or not, and the log has it; a move is told by the gold line
+    sheetBusy = null;
+    if (r.ok) {
+      sheetData.servers.forEach((s) => s.maps.forEach((m) => { if (ids.includes(m.id)) m.shown = show; }));
+      sheetData.last = r.last;
+      const changed = r.changed || [];
+      sheetLine = changed.length ? { text: "Saved: " + r.saved + ".", undo: how === "undo" ? null : { maps: changed, show: !show } } : { text: "Nothing to change." };
+      if (changed.length) { drawSheet(); await mapsChanged(); if (box !== sheetBox) return; applyOwnMove(); } // this page follows at once, not only on the event
+    } else {
+      sheetLine = { text: r.message || "Not saved.", bad: true }; // the chips stay as they were (D582)
+      applyOwnMove(); // the event moved this page all the same: it was saved after all
+      loadSheetQuiet(); // a change that timed out may have been saved after all: the sheet shows what is kept
+    }
+    drawSheet();
+  }
+  async function loadSheetQuiet() {
+    const box = sheetBox, r = await call("/api/maps");
+    if (box === sheetBox && r.ok && !sheetBusy) { sheetData = r; drawSheet(); }
+  }
   function redrawIfOpen() { if (host) redraw(); }
-  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId };
+  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged };
 })();

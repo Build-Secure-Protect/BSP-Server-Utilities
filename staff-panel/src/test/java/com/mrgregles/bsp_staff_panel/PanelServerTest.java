@@ -1107,6 +1107,79 @@ class PanelServerTest {
     }
 
     @Test
+    void an_owner_chooses_the_maps_shown_and_hidden_maps_are_off_the_list_and_unreachable() throws Exception {
+        java.nio.file.Path root = java.nio.file.Files.createTempDirectory("bluemap-web");
+        try {
+            java.nio.file.Files.writeString(root.resolve("index.html"), "<!doctype html><title>BlueMap</title>");
+            java.nio.file.Files.writeString(root.resolve("settings.json"), "{\"version\":\"5.4\",\"maps\":[\"bsp_spawn__overworld\",\"bsp_spawn__nether\",\"frostwarf__overworld\"]}");
+            java.nio.file.Path tiles = java.nio.file.Files.createDirectories(root.resolve("maps/bsp_spawn__nether/tiles/1/x0"));
+            java.nio.file.Files.write(tiles.resolve("z0.png"), new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+            java.nio.file.Files.writeString(root.resolve("maps/bsp_spawn__nether/settings.json"), "{}");
+            server.withMap(root).withMapShown(new com.mrgregles.bsp_staff_panel.web.MapShown(store, clock::get));
+            String o = owner();
+            JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"ADMIN\"}"));
+            String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+            String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+            String kip = cookieOf(post("/api/setup", "kip@bsp.test", null, "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+
+            feed.accept("BSP-Spawn", clock.get(), "{\"v\":1,\"server\":\"BSP-Spawn\",\"at\":1,\"players\":[]}"); // after the logins, which move the clock on
+            JsonObject sheet = json(get("/api/maps", "owner@bsp.test", o));
+            assertTrue(sheet.get("ok").getAsBoolean(), sheet.toString());
+            assertEquals("BSP-Spawn", sheet.getAsJsonArray("servers").get(0).getAsJsonObject().get("name").getAsString(), "named as the feed has it");
+            assertEquals("Frostwarf", sheet.getAsJsonArray("servers").get(1).getAsJsonObject().get("name").getAsString(), "a server not sending: its id made readable");
+            assertFalse(json(get("/api/maps", "kip@bsp.test", kip)).get("ok").getAsBoolean(), "an Admin gets no sheet");
+            JsonObject refusedSet = json(post("/api/maps/set", "kip@bsp.test", kip, "{\"maps\":[\"bsp_spawn__nether\"],\"show\":false,\"how\":\"tap\"}"));
+            assertFalse(refusedSet.get("ok").getAsBoolean(), "nor changes it");
+            assertEquals(3, json(get("/map/settings.json", "kip@bsp.test", kip)).getAsJsonArray("maps").size(), "nothing hidden yet");
+
+            HttpRequest req = HttpRequest.newBuilder(uri("/api/live")).header("Cf-Access-Jwt-Assertion", "good:kip@bsp.test").header("Cookie", PanelServer.SECURE_COOKIE + "=" + kip).GET().build();
+            HttpResponse<InputStream> r = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
+            BufferedReader in = new BufferedReader(new InputStreamReader(r.body(), StandardCharsets.UTF_8));
+            nextData(in); // the first live event
+            JsonObject saved = json(post("/api/maps/set", "owner@bsp.test", o, "{\"maps\":[\"bsp_spawn__nether\"],\"show\":false,\"how\":\"tap\"}"));
+            assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
+            assertEquals("BSP-Spawn's Nether hidden", saved.get("saved").getAsString());
+            String line;
+            boolean heard = false;
+            long until = System.currentTimeMillis() + 5000;
+            while (!heard && System.currentTimeMillis() < until && (line = in.readLine()) != null) {
+                heard = line.equals("event: maps");
+            }
+            assertTrue(heard, "another staff member's page is told at once (D583)");
+            r.body().close();
+
+            HttpResponse<String> list = get("/map/settings.json", "kip@bsp.test", kip);
+            assertEquals(200, list.statusCode());
+            assertEquals("no-store", list.headers().firstValue("Cache-Control").orElse(""), "never an old list from a cache");
+            assertEquals(java.util.List.of("bsp_spawn__overworld", "frostwarf__overworld"), json(list).getAsJsonArray("maps").asList().stream().map(x -> x.getAsString()).toList(),
+                    "the hidden map is off the list (D572)");
+            assertEquals("5.4", json(list).get("version").getAsString());
+            assertEquals(2, json(get("/map/settings.json", "owner@bsp.test", o)).getAsJsonArray("maps").size(), "for Owners too: hidden maps only in the sheet (D584)");
+            assertEquals(404, get("/map/maps/bsp_spawn__nether/tiles/1/x0/z0.png", "kip@bsp.test", kip).statusCode(), "nor reachable by its address");
+            assertEquals(404, get("/map/maps/bsp_spawn__nether/settings.json", "kip@bsp.test", kip).statusCode());
+            assertEquals(404, get("/map/maps/bsp_spawn__nether/live/players.json", "kip@bsp.test", kip).statusCode(), "nor its live data");
+            assertFalse(json(post("/api/maps/set", "owner@bsp.test", o, "{\"maps\":[\"moongrove__overworld\"],\"show\":false}")).get("ok").getAsBoolean(), "a map BlueMap has not drawn");
+            for (String sneaky : new String[]{"/map/./maps/bsp_spawn__nether/tiles/1/x0/z0.png", "/map/maps/./bsp_spawn__nether/tiles/1/x0/z0.png", "/map/./settings.json"}) {
+                assertEquals(404, get(sneaky, "kip@bsp.test", kip).statusCode(), "no way round by a \".\" in the address (audit): " + sneaky);
+            }
+            assertEquals(404, get("/map/./index.html", "kip@bsp.test", kip).statusCode(), "a \".\" is refused anywhere, not tidied away");
+            assertFalse(json(post("/api/maps/set", "owner@bsp.test", o, "{\"maps\":[\"frostwarf__overworld\"]}")).get("ok").getAsBoolean(), "without show: refused, never hidden (audit)");
+            assertEquals(2, json(get("/map/settings.json", "kip@bsp.test", kip)).getAsJsonArray("maps").size());
+            assertTrue(store.log(0, 50).stream().anyMatch(l -> l.what().equals("hid BSP-Spawn's Nether on the Map tab")), "in the panel's log (D586)");
+
+            assertTrue(json(post("/api/maps/set", "owner@bsp.test", o, "{\"maps\":[\"bsp_spawn__nether\"],\"show\":true,\"how\":\"undo\"}")).get("ok").getAsBoolean());
+            assertEquals(3, json(get("/map/settings.json", "kip@bsp.test", kip)).getAsJsonArray("maps").size(), "shown again");
+            assertEquals(200, get("/map/maps/bsp_spawn__nether/tiles/1/x0/z0.png", "kip@bsp.test", kip).statusCode());
+            java.nio.file.Files.writeString(root.resolve("settings.json"), "{not json");
+            assertEquals(500, get("/map/settings.json", "kip@bsp.test", kip).statusCode(), "a list it cannot read is never served unfiltered");
+        } finally {
+            try (java.util.stream.Stream<java.nio.file.Path> w = java.nio.file.Files.walk(root)) {
+                w.sorted(java.util.Comparator.reverseOrder()).forEach(x -> x.toFile().delete());
+            }
+        }
+    }
+
+    @Test
     void a_map_login_is_believed_only_under_its_own_cloudflare_identity() throws Exception {
         java.nio.file.Path root = java.nio.file.Files.createTempDirectory("bluemap-web");
         try {
