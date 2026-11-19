@@ -96,8 +96,10 @@ Do this on **each** of `192.168.1.26`, `.27` and `.28`.
    every line matters: without it, one mistyped UUID or a machine that is off stops `.25` from starting up properly
    (no SSH, no database, no panel). `soft`: if a machine goes off while BlueMap reads, BlueMap gets an error
    instead of hanging. Save (**Ctrl+O**, Enter, **Ctrl+X**).
-5. Check the file before anything else: `sudo findmnt --verify`. It ends with `0 parse errors, 0 errors` (warnings
-   about a source not found are fine only for a machine that is off). Fix any error before going on, and run this
+5. Check the file before anything else: `sudo findmnt --verify`. It ends with `0 parse errors, 0 errors`. Two
+   warnings are harmless: `non-bind mount source /swap.img is a directory or regular file` (Ubuntu's own swap line)
+   and `your fstab has been modified, but systemd still uses the old version` (the next step's `daemon-reload` clears
+   it). A warning that a source is not found is fine only for a machine that is off. Fix any error before going on, and run this
    again after every change to `/etc/fstab`.
 6. Mount everything now: `sudo systemctl daemon-reload` then `sudo mount -a`. No output is good.
 7. Check each: `ls /mnt/bsp-worlds/frostwarf/region | head` lists files like `r.0.0.mca`. Do it for all seven
@@ -115,7 +117,10 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
      the panel (its guide, part 6, step 1; download it again the same way if it is gone), the same nest.
    - Open the new egg (the second one with that name) › rename it `BlueMap` › **Save**. Then **Configuration**:
      **Stop Command** `^C` (a caret and a capital C: Pterodactyl sends the stop signal, and BlueMap saves and stops),
-     and the started text `Start updating` (where the dots are in `{"done": "..."}`). **Save**.
+     and the started text `Start updating` (where the dots are in `{"done": "..."}`). **Configuration Files** and
+     **Log Configuration** come in as `[]`: change each to `{}` (curly brackets), or creating BSP-Map fails with
+     "Could not establish a connection to the machine running this server" (the panel's guide, **When something does
+     not work**). **Save**.
 2. **Create the server.** Pterodactyl › Admin area › **Servers** › **Create New**:
    - **Server Name** `BSP-Map`, **Server Owner** you, **Node** the one for `192.168.1.25` (Admin area › **Nodes**
      shows each node's address under **FQDN**), **Default Allocation** any free one (nothing listens on it; never open
@@ -123,8 +128,8 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
    - **Memory** `4096` MB, **Disk** `20480` MB, **CPU** as many cores as you can spare (`400` for four).
    - **Nest** the one you chose, **Egg** `BlueMap`. **Docker Image**: java 25 is not in the egg's list, so type
      `ghcr.io/pterodactyl/yolks:java_25` into the box for your own image.
-   - **Startup**: if the egg asks for the jar's name, `bluemap-5.29-cli.jar`, and make the startup command
-     `java -Xms1G -Xmx3G -jar bluemap-5.29-cli.jar -c config -v 1.20.1 -n /mnt/bsp-worlds/mods -g -u`
+   - **Startup**: the jar's name (**JAR FILE**) `bluemap-5.29-cli.jar`, and make the startup command
+     `java -Xms1G -Xmx3G -jar {{JARFILE}} -c config -v 1.20.1 -n /mnt/bsp-worlds/mods -g -u`
      (`-v 1.20.1` the game's version, `-n` the mods for block colours, `-g` write BlueMap's page, `-u` draw everything
      and then keep the map up to date). Later changes to it are made only in Admin area › **Servers** › BSP-Map ›
      **Startup**.
@@ -144,7 +149,7 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
    ```
    (two spaces before each `-`, no `[]` left). Only BSP-Map's folder, never all of `volumes`: that would let a mount
    reach any server's files, passwords included. Save, then `sudo systemctl restart wings`, then
-   `sudo systemctl status wings` says `active (running)` (if not, the lines are mis-spaced: fix them and restart again).
+   `sudo systemctl status wings` says `active (running)` (it may say `activating` for the first 10 seconds or so) (if not, the lines are mis-spaced: fix them and restart again).
    Running servers on `.25` keep running.
 5. **The worlds into BSP-Map** (a Pterodactyl mount). Admin area › **Mounts** › **Create New**: **Name** `bsp-worlds`,
    **Source** `/mnt/bsp-worlds`, **Target** `/mnt/bsp-worlds`, **Read Only** on, **User Mountable** off, **Create**.
@@ -159,6 +164,9 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
 ## 5. BlueMap's settings, written by the script (on .25)
 1. Copy the script to `.25`. On your Mac, in **Terminal**:
    `scp "$HOME/Github/BSP-Server Utilities/tools/gen_bluemap.py" <your user>@192.168.1.25:~/`
+   (If your Mac cannot log in to `.25` that way, `Permission denied (publickey)`: upload the file to BSP-Map in
+   Pterodactyl (**Files** › **Upload**), then on `.25`
+   `sudo mv /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/gen_bluemap.py ~/ && sudo chown $USER: ~/gen_bluemap.py`.)
 2. On `.25`: check the script with `python3 ~/gen_bluemap.py --self-test`. It prints `self-test: ok`. (If
    `python3: command not found`: `sudo apt install python3`.)
 3. Write BlueMap's settings, all on one line or with the `\` line ends as shown (`--threads`: about half of BSP-Map's
@@ -183,7 +191,7 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
    sudo chown -R pterodactyl:pterodactyl /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/config
    ```
    (If `rsync: command not found`: `sudo apt install rsync`. If `chown` says the user is unknown, the files' owner is
-   shown by `ls -ln /var/lib/pterodactyl/volumes/<BSP-Map's UUID>`: use those numbers, as `sudo chown -R 988:988 ...`.)
+   shown by `sudo ls -ln /var/lib/pterodactyl/volumes/<BSP-Map's UUID>`: use those numbers, as `sudo chown -R 988:988 ...`.)
 
 ## 6. The first drawing
 1. Pterodactyl › BSP-Map › **Console** › **Start**. It downloads Mojang's 1.20.1 game files for the vanilla
@@ -213,7 +221,12 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
   `--ceiling allthemodium:the_other`): its roof is left out like the Nether's.
 - **Blocks in odd colours:** modded blocks drawn by code have no picture BlueMap can read; the worst ones are fixed
   later with a small resource pack (D387).
-- **BlueMap's newer versions:** upload the new jar and change its name in Admin area › Servers › BSP-Map › **Startup**; the settings stay.
+- **BlueMap's newer versions:** upload the new jar and change **JAR FILE** to its name in Admin area › Servers › BSP-Map › **Startup**; the settings stay.
+- **`/etc/pterodactyl/config.yml` replaced by hand** on `.25` (for example with the block from the node's
+  **Configuration** tab after resetting its key): that block has `allowed_mounts: []`, so put the two lines of part 4,
+  step 4 back and restart Wings, or BSP-Map and the panel lose their mounts. (A key reset that Pterodactyl sends to
+  Wings by itself keeps them, but it also sets Wings' port to the node's **Daemon Port** in Pterodactyl, used from
+  Wings' next restart: if a Cloudflare tunnel route reaches Wings on another port, change the route to that port.)
 
 ## If something is wrong
 - **"The map is not set up on this panel yet"**: `map.root` is not `/mnt/bsp-map/web`, the `bsp-map` mount is not on
@@ -236,5 +249,15 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
 - **BSP-Map does not see `/mnt/bsp-worlds`**: Wings' `allowed_mounts` (part 4, step 4) or the mount not added to
   BSP-Map (part 4, step 5); restart BSP-Map after adding it. On `.25`, `sudo journalctl -u wings | grep -i mount`
   shows a mount Wings refused and why (the server's console only says to ask an admin).
+- **Wings does not come back after its restart** (part 4, step 4; Pterodactyl says "We're having some trouble
+  connecting to your server" for every server on `.25`, though the games still run): `sudo journalctl -u wings -n 40
+  --no-pager` ends with `bind: address already in use` on Wings' port (443 here). Another program took the port
+  while Wings restarted: `sudo ss -ltnp | grep ':443 '` names it. On this network it was Tailscale Serve (`tailscale
+  serve status`); move it to another port (`sudo tailscale serve --bg --https=8443 <what it served>`, then
+  `sudo tailscale serve --https=443 off`), then `sudo systemctl reset-failed wings && sudo systemctl start wings`.
+  If Wings then runs but Pterodactyl still cannot reach it, and Cloudflare answers 502 for the node's address,
+  `sudo journalctl -u cloudflared -n 20 --no-pager` names the port the tunnel tries (`dial tcp 127.0.0.1:8080`):
+  make the tunnel route's Service URL the port Wings listens on (`sudo ss -ltnp | grep wings`). Wings' port comes from
+  the node's Daemon Port in Pterodactyl whenever the node's settings or key are saved.
 - **Stop does nothing, or BSP-Map shows Starting forever**: it is on the panel's egg, not `BlueMap` (part 4, step 1):
   Admin area › Servers › BSP-Map › **Startup** › choose the `BlueMap` egg.
