@@ -78,13 +78,13 @@ You need these files. They are already built on your Mac:
 
 | File | Where it is on your Mac | Where it goes |
 |---|---|---|
-| `bsp-server-utilities-0.10.1.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack |
-| `bsp-core-1.16.2.jar` (**not** the `-slim` one: it has no database driver) | `Github/BSP-Core/build/libs/` | every game server's `mods/`, and the modpack |
+| `bsp-server-utilities-0.13.0.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack |
+| `bsp-core-1.18.0.jar` (**not** the `-slim` one: it has no database driver) | `Github/BSP-Core/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-inventorysync-0.8.0.jar` | `Github/BSP-InventorySync/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-teleport-3.9.0.jar` | `Github/BSP-Teleport/build/libs/` | every game server's `mods/` |
-| `bsp-staff-panel-0.2.1.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
+| `bsp-staff-panel-0.3.0.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
 
-1. **Players' modpack first.** BSP-Server Utilities 0.10.1 speaks network protocol 6: a player whose game has an
+1. **Players' modpack first.** BSP-Server Utilities 0.13.0 speaks network protocol 8: a player whose game has an
    older version is turned away, told the mod's version differs. Put the new jars (the first three rows) into the
    modpack and publish it the way you always do, so players can update before or as the servers change.
 2. **Velocity Additions on the proxy.** A kick from the panel needs Velocity Additions' **network kick**, which is
@@ -197,7 +197,7 @@ to make themselves Owner of the panel.
    GRANT SELECT, INSERT, DELETE ON bsp.bsp_su_web_chat TO 'bsp_panel'@'<host>';
    ```
    Each answers `Query OK`. A `GRANT` that says `Table 'bsp.bsp_su_...' doesn't exist` means no game server has run
-   0.10.1 yet (part 3): do part 3 first, then run that line again.
+   0.13.0 yet (part 3): do part 3 first, then run that line again.
 5. **Emoji** (a ban reason typed on a phone may hold one). Make the shared database store them:
    ```sql
    ALTER DATABASE bsp CHARACTER SET utf8mb4;
@@ -235,7 +235,7 @@ to make themselves Owner of the panel.
    - **Create Server**. Wait until its install finishes (the server page shows it).
    - **Subusers**: none on this server, ever. Whoever can read its files or console can read its keys. And no staff
      member is ever a Pterodactyl admin: every admin can read every server's files, this one's keys included.
-4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.2.1.jar`.
+4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.3.0.jar`.
    Then on the uploaded file, the **⋯** menu › **Rename** to `bsp-staff-panel.jar` (one fixed name, so a later
    update is only a new file with the same name).
 5. **First start.** **Console** › **Start**. It prints a few lines and stops by itself with
@@ -434,7 +434,7 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
 | `su status`: "no action from the panel is taken until webPanel.panelKey ... is set", or "is not the panel's public key" | part 7, step 3 (`panelKey`) |
 | `su status`: "webPanel.actionKey is not a key the panel made" | part 7, step 3 (`actionKey`) |
 | A kicked player lands on another server | the proxy's Velocity Additions network kick is off (part 1, step 2) |
-| "Items need BSP-InventorySync 0.7.0" / "Teleports need BSP-Teleport (its API 2)" / "need BSP-Core 1.16.0" | that jar is missing or older on the server the panel asked (part 3) |
+| "Items need BSP-InventorySync 0.7.0" / "Teleports need BSP-Teleport (its API 2)" / "need BSP-Core 1.16.0" (the market and lottery) / "need BSP-Core 1.18.0" (a player's Bank & Market) | that jar is missing or older on the server the panel asked (part 3) |
 | An emoji is missing from the Action Log | part 5, step 5 |
 | A staff member lost their phone | they log in with a backup code; or an Owner uses their **⋯** › **Reset authenticator**; an Owner's own: `reset-owner <email>` in the panel's console |
 | Locked out after 5 wrong tries | wait 15 minutes, or an Owner uses **⋯** › **Unlock now** |
