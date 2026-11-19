@@ -90,7 +90,7 @@ def quote(s):
     return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def map_conf(world, dimension, name, sorting, ceiling):
+def map_conf(world, dimension, name, sorting, ceiling, roof_cut=90):
     d = dimension_slug(dimension)
     nether, end = d == "nether", d == "end"
     sky = "#290000" if nether else "#080010" if end else "#7dabff"
@@ -99,7 +99,9 @@ def map_conf(world, dimension, name, sorting, ceiling):
     caves = 55 if d == "overworld" else -10000
     mask = "  {\n  }\n"
     if nether or ceiling:
-        mask += "  {\n    subtract: true\n    min-y: 90\n    max-y: 127\n  }\n"  # the roof left out, as BlueMap's own Nether map
+        # Everything from roof_cut up is left out, to the top of the world: a Nether made taller by a mod (Amplified Nether:
+        # 256 high, its roof near the top) loses its roof too, not only the vanilla one at 123 to 127.
+        mask += f"  {{\n    subtract: true\n    min-y: {roof_cut}\n  }}\n"
     return f"""# Written by tools/gen_bluemap.py (BSP-Server Utilities, the staff panel's map). Write it again rather than editing it.
 world: {quote(world)}
 dimension: {quote(dimension)}
@@ -202,8 +204,12 @@ def self_test():
     for k, want, got in bad:
         print(f"map_id{k}: {got}, the panel says {want}")
     conf = map_conf("/w", "minecraft:the_nether", "N", 1, False)
-    if "enable-hires: false" not in conf or "subtract: true" not in conf:
-        bad.append(("nether map", "flat, roof left out", conf))
+    if "enable-hires: false" not in conf or "subtract: true" not in conf or "min-y: 90" not in conf or "max-y" in conf:
+        bad.append(("nether map", "flat, everything from y 90 to the top left out", conf))
+    if "min-y: 70" not in map_conf("/w", "allthemodium:the_other", "O", 1, True, 70):
+        bad.append(("a roofed modded dimension", "cut at the --roof-cut height", "not cut there"))
+    if "subtract" in map_conf("/w", "minecraft:overworld", "O", 1, False):
+        bad.append(("overworld", "nothing left out", "a cut"))
     import tempfile
     with tempfile.TemporaryDirectory() as t:  # a modded folder that cannot be read is left out, not a crash
         os.makedirs(os.path.join(t, "region"))
@@ -231,6 +237,8 @@ def main():
     a.add_argument("--server", action="append", default=[], metavar="ID=WORLD[=HERE]",
                    help="a game server's id (as the panel shows it), its world folder as BlueMap's container sees it, and optionally where this script can read it (on the host); repeat")
     a.add_argument("--ceiling", action="append", default=[], metavar="DIMENSION", help="a modded dimension with a roof to leave out, like the Nether")
+    a.add_argument("--roof-cut", type=int, default=90, metavar="Y",
+                   help="for the Nether and --ceiling dimensions: everything from this height to the top is left out (default 90)")
     a.add_argument("--self-test", action="store_true")
     o = a.parse_args()
     if o.self_test:
@@ -258,7 +266,7 @@ def main():
                 continue
             name = f"{server} · {dimension_label(dimension)}"
             with open(os.path.join(maps_dir, mid + ".conf"), "w", encoding="utf-8") as f:
-                f.write(map_conf(world, dimension, name, sorting, dimension in o.ceiling))
+                f.write(map_conf(world, dimension, name, sorting, dimension in o.ceiling, o.roof_cut))
             written.append(mid + ".conf")
             sorting += 1
     for name, text in (("core.conf", core_conf(o.data, o.threads)), ("webapp.conf", webapp_conf(o.web)),

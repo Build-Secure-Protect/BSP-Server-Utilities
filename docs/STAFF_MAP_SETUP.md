@@ -218,7 +218,13 @@ by itself, and BSP-Map (started again by Pterodactyl) does not see a share mount
   machine's address and UUID, `sudo findmnt --verify`, `sudo systemctl daemon-reload`, `sudo mount -a`, and restart
   BSP-Map.
 - **A modded dimension shows only its roof:** run the script again with `--ceiling <namespace:path>` (for example
-  `--ceiling allthemodium:the_other`): its roof is left out like the Nether's.
+  `--ceiling allthemodium:the_other`): its roof is left out like the Nether's. The Nether and these dimensions are drawn
+  from y 90 down (everything above is left out, to the top of the world, so a Nether made taller by Amplified Nether
+  loses its roof too); `--roof-cut <y>` moves that height for all of them.
+- **After the script changes a map's settings** (a roof, `--roof-cut`), the parts already drawn stay as they were:
+  stop BSP-Map, put the folder in place (part 5, step 4), delete those maps' drawings so they are drawn again
+  (`sudo rm -rf /var/lib/pterodactyl/volumes/<BSP-Map's UUID>/web/maps/<map id>`, for example
+  `…/web/maps/bsp_spawn__nether`), and start BSP-Map.
 - **Blocks in odd colours:** modded blocks drawn by code have no picture BlueMap can read; the worst ones are fixed
   later with a small resource pack (D387).
 - **BlueMap's newer versions:** upload the new jar and change **JAR FILE** to its name in Admin area › Servers › BSP-Map › **Startup**; the settings stay.
