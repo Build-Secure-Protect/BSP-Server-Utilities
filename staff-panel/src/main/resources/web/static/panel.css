@@ -275,24 +275,34 @@ select.small { height: 34px; font-size: 13px; width: auto; flex: 1 1 90px; paddi
 .res .w { font-size: 11px; color: var(--mu); }
 .res mark { background: #ffd23a33; color: var(--gold); border-radius: 2px; padding: 0 1px; }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #22262f; border: 1px solid var(--ln); border-radius: 10px; padding: 8px 14px; font-size: 13px; z-index: 40; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
-.chatcol, .chatbtn { display: none; }
+.chatcol, .chatbtn, .chatgrip, .chattag { display: none; }
 @media (min-width: 900px) {
   main.chatmain .chat { height: calc(100vh - 32px); }
   .pill { bottom: 100px; }
   .csheet { left: auto; right: 24px; bottom: 24px; width: 360px; border-radius: 14px; border: 1px solid var(--ln); }
-  .chatcol { width: 360px; flex: none; border-left: 1px solid var(--ln); background: var(--bg2); padding: 12px 14px 8px; height: 100vh; }
+  .chatcol { width: var(--chatw, 360px); flex: none; border-left: 1px solid var(--ln); background: var(--bg2); padding: 12px 14px 8px; height: 100vh; }
   .chatcol .chat { height: 100%; }
   .chatcol.open { display: flex; flex-direction: column; position: fixed; right: 0; top: 0; z-index: 12; box-shadow: -14px 0 40px rgba(0,0,0,.5); }
   .chatbtn { display: block; position: fixed; right: 0; top: 45%; z-index: 13; writing-mode: vertical-rl; background: var(--pn); color: var(--teal); border: 1px solid var(--ln); border-right: 0;
     border-radius: 8px 0 0 8px; padding: 12px 6px; font: 700 11px var(--mono); letter-spacing: .14em; cursor: pointer; }
-  .chatbtn.on { right: 360px; }
+  .chatbtn.on { right: var(--chatw, 360px); }
   body.chattab .chatbtn { display: none; }
+  /* the chat's width grip (SU-80; D557, D561, D566): on its left edge, the dotted pill at two-thirds of the height, below the CHAT tab */
+  .chatgrip.on { display: block; position: fixed; top: 0; bottom: 0; right: calc(var(--chatw, 360px) - 10px); width: 10px; z-index: 13; cursor: ew-resize; touch-action: none; }
+  .chatgrip::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: transparent; }
+  .chatgrip i { position: absolute; left: 0; top: 66%; transform: translateY(-50%); width: 9px; height: 38px; border-radius: 4px; background-color: #2a2f3a; border: 1px solid #3a404c;
+    background-image: radial-gradient(#9aa3b5 1px, transparent 1.3px); background-size: 4px 5px; background-position: 1px 2px; }
+  .chatgrip:hover::before, .chatgrip.drag::before { background: var(--teal); }
+  .chatgrip:hover i, .chatgrip.drag i { border-color: var(--teal); background-color: #19d3b033; }
+  .chattag:not(.hidden) { display: block; position: fixed; z-index: 14; font: 600 11px var(--mono); color: #0f1115; background: var(--teal); border-radius: 6px; padding: 2px 7px;
+    white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+  body.chatdrag { cursor: ew-resize; user-select: none; } body.chatdrag iframe, body.mapdrag iframe { pointer-events: none; } body.mapdrag { user-select: none; }
 }
 @media (min-width: 1300px) {
   .chatcol { display: flex; flex-direction: column; }
-  .pdetail { right: 400px; } /* the player's card opens beside the chat column, not over it (audit) */
-  .chatbtn { display: none !important; }
-  body.chattab .chatcol { display: none; }
+  .pdetail { right: calc(var(--chatw, 360px) + 40px); } /* the player's card opens beside the chat column, not over it (audit) */
+  body.chattab .chatcol, body.chatfold .chatcol { display: none; }
+  body.chatfold .pdetail { right: 40px; }
 }
 
 /* the Staff tab (D314, D327 to D329): room and messages under one switch on a phone, side by side on a computer */
@@ -534,22 +544,44 @@ select.mc { width: auto; flex: none; height: 30px; padding: 0 8px; color: var(--
 .mpin .close { background: none; border: 0; color: var(--mu); cursor: pointer; }
 @media (min-width: 900px) {
   .mapview { height: 100vh; }
-  .mlist { display: flex; flex-direction: column; width: 236px; flex: none; border-right: 1px solid var(--ln); background: var(--bg2); overflow-y: auto; padding: 12px 0 10px; }
-  .mlist .search { margin: 0 12px 6px; width: auto; }
-  .mgrp { display: flex; justify-content: space-between; padding: 8px 12px 3px; font: 600 11px var(--body); color: var(--mu); }
-  .mrow { display: flex; align-items: center; gap: 8px; padding: 4px 12px; background: none; border: 0; color: var(--tx); font-size: 12.5px; text-align: left; cursor: pointer; }
-  .mrow:hover { background: #ffffff08; }
-  .mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .mrow .d { font: 600 9.5px var(--mono); color: var(--dim); }
-  .mrow.on { background: #ffd23a14; box-shadow: inset 3px 0 0 var(--gold); }
+  /* the players as a window over the map (SU-79; D549 to D556, D560, D562 to D565, D567, D568; look A of set AE): placed by map.js */
+  .mlist, .mlist.open { display: flex; flex-direction: column; position: absolute; z-index: 4; left: 10px; top: 54px; right: auto; bottom: auto; width: 236px; height: 33vh;
+    max-height: none; overflow: hidden; padding: 0; background: rgba(20,23,29,.66); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.09); border-top: 1px solid rgba(255,255,255,.09); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  .mlist.front { z-index: 6; }
+  .mlist.solid { background: rgba(20,23,29,.97); -webkit-backdrop-filter: none; backdrop-filter: none; border-color: var(--ln); }
+  .mlist.folded { height: auto !important; }
+  .mlist.folded .search, .mlist.folded .mrows, .mlist.folded .mrz { display: none; }
+  .mft { display: flex; flex: none; align-items: center; gap: 8px; padding: 7px 7px 6px 8px; cursor: move; user-select: none; touch-action: none; }
+  .mft .gp { width: 10px; height: 16px; flex: none; background-image: radial-gradient(#8a91a0 1px, transparent 1.5px); background-size: 4px 4px; }
+  .mft .tt { font: 700 11px var(--mono); letter-spacing: .12em; color: var(--teal); }
+  .mft .ct { font: 600 11px var(--mono); color: var(--soft); }
+  .mmin { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; border: 0; background: rgba(255,255,255,.06); color: var(--soft); font: 600 15px/1 var(--body); cursor: pointer; padding: 0; }
+  .mmin:hover { color: var(--tx); background: rgba(255,255,255,.12); }
+  .mlist .search, .mlist.open .search { flex: none; margin: 0 8px 6px; width: auto; height: 30px; font-size: 12.5px; background: rgba(15,17,21,.55); border-color: rgba(255,255,255,.08); }
+  .mlist .search:focus { border-color: var(--teal); }
+  .mrows { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 8px; }
+  .mrz { position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; cursor: nwse-resize; touch-action: none; opacity: .8;
+    background: linear-gradient(135deg, transparent 52%, #9aa3b5 52%, #9aa3b5 60%, transparent 60%, transparent 72%, #9aa3b5 72%, #9aa3b5 80%, transparent 80%); }
+  .mtag { position: absolute; z-index: 9; font: 600 11px var(--mono); color: #0f1115; background: var(--teal); border-radius: 6px; padding: 2px 7px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+  .mgrp, .mlist.open .mgrp { display: flex; justify-content: space-between; padding: 6px 12px 2px; font: 600 11px var(--body); color: var(--mu); }
+  .mrow, .mlist.open .mrow { display: flex; align-items: center; gap: 8px; padding: 4px 12px; background: none; border: 0; color: var(--tx); font-size: 12.5px; text-align: left; cursor: pointer; }
+  .mrow:hover { background: #ffffff10; }
+  .mrow .nm, .mlist.open .mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .mrow .d, .mlist.open .mrow .d { font: 600 9.5px var(--mono); color: var(--soft); opacity: .75; }
+  .mrow.on, .mlist.open .mrow.on { background: #ffd23a1f; box-shadow: inset 3px 0 0 var(--gold); }
+  .mbar, .mgold, .mpin { z-index: 7; } /* over the players window: the bar when it wraps, the gold line, a pin's box (audit) */
+  .mnote { max-width: 440px; margin: 90px 24px 24px 270px; } /* right of the window where it starts, its Try again key clear (audit) */
 }
+.mft, .mrz, .mtag { display: none; } /* a phone: the list is the sheet behind the Players button */
+@media (min-width: 900px) { .mft { display: flex; } .mrz { display: block; } .mtag:not(.hidden) { display: block; } }
 .mcard .nums { display: none; }
 .mcard.up { max-height: 88%; }
 @media (max-width: 899px) { .mcard:not(.up) .mmore, .mcard:not(.up) .effects, .mcard:not(.up) .tagline, .mcard:not(.up) .tags { display: none; } }
 @media (min-width: 900px) {
   .mfab, .mgrab { display: none; }
   .mbar .mpins { display: flex; }
-  .mcard { left: auto; right: 14px; bottom: 14px; width: 300px; max-height: calc(100% - 106px); border-radius: 12px !important; }
+  .mcard { left: auto; right: 36px; bottom: 14px; width: 300px; max-height: calc(100% - 106px); border-radius: 12px !important; }
   .mcard .grip { display: block; }
 }
 

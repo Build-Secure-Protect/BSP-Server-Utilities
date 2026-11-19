@@ -282,19 +282,78 @@ async function render() {
 }
 
 // Where the chat is drawn (D292, D294): the Chat tab itself; else, on a computer, the column on the right (over 1300 px
-// always, 900 to 1300 px behind the CHAT button); on a phone nowhere (the tab's badge counts new lines).
+// unless folded away, 900 to 1300 px behind the CHAT button); on a phone nowhere (the tab's badge counts new lines).
+// Its width (SU-80; D557, D558, D561, D562, D566, D567): dragged by the grip on its left edge, 280 px to half the window,
+// a double-click back to 360; under 280 it folds into the CHAT tab, which sits on its edge on every computer screen.
+// The width and a wide screen's fold are kept in this browser; a smaller window narrows it without forgetting.
 let chatOpen = false;
+const CHAT_KEY = "bsp.chat", CHAT_MIN = 280, CHAT_START = 360;
+let chatPref = loadChat();
+function loadChat() {
+  try {
+    const s = JSON.parse(localStorage.getItem(CHAT_KEY) || "null");
+    if (s && typeof s.w === "number" && isFinite(s.w)) return { w: Math.max(CHAT_MIN, s.w), folded: !!s.folded };
+  } catch (e) { /* storage refused: 360 px, open */ }
+  return { w: CHAT_START, folded: false };
+}
+function saveChat() { try { localStorage.setItem(CHAT_KEY, JSON.stringify(chatPref)); } catch (e) { /* kept for this page only */ } }
+const chatWidth = () => Math.round(Math.max(CHAT_MIN, Math.min(chatPref.w, innerWidth / 2)));
+const wideScreen = () => matchMedia("(min-width: 1300px)").matches;
 function placeChat() {
-  const col = $("chatcol"), wide = matchMedia("(min-width: 1300px)").matches, mid = matchMedia("(min-width: 900px)").matches;
+  const col = $("chatcol"), wide = wideScreen(), mid = matchMedia("(min-width: 900px)").matches;
+  const shown = tab !== "Chat" && (wide ? !chatPref.folded : mid && chatOpen);
   document.body.classList.toggle("chattab", tab === "Chat");
+  document.body.classList.toggle("chatfold", wide && chatPref.folded);
+  document.documentElement.style.setProperty("--chatw", chatWidth() + "px");
   col.classList.toggle("open", mid && !wide && chatOpen && tab !== "Chat");
-  $("chatbtn").classList.toggle("on", chatOpen);
+  $("chatbtn").classList.toggle("on", shown);
+  $("chatbtn").title = shown ? "Fold the chat away" : "Open the chat";
+  $("chatgrip").classList.toggle("on", shown);
   if (tab === "Chat") { ChatView.unmount(col); col.textContent = ""; ChatView.mount($("main")); return; }
-  if (wide || (mid && chatOpen)) ChatView.mount(col);
+  if (shown) ChatView.mount(col);
   else { ChatView.unmount(col); col.textContent = ""; }
 }
+function toggleChat() {
+  if (wideScreen()) { chatPref.folded = !chatPref.folded; saveChat(); } else chatOpen = !chatOpen;
+  placeChat(); nav(); chatMoved();
+}
+// the Map tab keeps its players window inside the map when the chat changes width
+function chatMoved() { if (typeof MapView !== "undefined") MapView.redraw(); }
+function chatGrip() {
+  const g = $("chatgrip"), tag = $("chattag");
+  g.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const start = chatWidth(), sx = e.clientX; let raw = start;
+    g.setPointerCapture(e.pointerId); g.classList.add("drag"); document.body.classList.add("chatdrag");
+    const wasShown = g.classList.contains("on"); let done = false;
+    const move = (m) => {
+      raw = start + sx - m.clientX;
+      const w = Math.round(Math.max(CHAT_MIN, Math.min(raw, innerWidth / 2)));
+      document.documentElement.style.setProperty("--chatw", w + "px");
+      tag.textContent = raw < CHAT_MIN ? "let go to fold" : w + " px"; // D562
+      tag.style.right = (w + 16) + "px"; tag.style.top = Math.max(8, m.clientY - 12) + "px"; tag.classList.remove("hidden");
+    };
+    const up = () => {
+      if (done) return; done = true; // once, though capture is lost after the release too
+      ["pointermove", "pointerup", "pointercancel", "lostpointercapture"].forEach((t) => g.removeEventListener(t, t === "pointermove" ? move : up));
+      g.classList.remove("drag"); document.body.classList.remove("chatdrag"); tag.classList.add("hidden");
+      if (raw < CHAT_MIN) { if (wideScreen()) chatPref.folded = true; else chatOpen = false; saveChat(); placeChat(); nav(); chatMoved(); return; } // folded; the width before the drag kept (D558)
+      if (raw !== start) chatPref.w = Math.round(Math.min(raw, innerWidth / 2));
+      saveChat(); setChatWidth(wasShown);
+    };
+    g.addEventListener("pointermove", move); ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => g.addEventListener(t, up));
+  });
+  g.addEventListener("dblclick", () => { chatPref.w = CHAT_START; saveChat(); setChatWidth(true); });
+}
+// a new width for a chat already shown: only its width changes, never drawn again, so where it was read stays (audit)
+function setChatWidth(shown) {
+  if (!shown) { placeChat(); nav(); chatMoved(); return; }
+  document.documentElement.style.setProperty("--chatw", chatWidth() + "px");
+  chatMoved();
+}
 let resizing = 0;
-addEventListener("resize", () => { clearTimeout(resizing); resizing = setTimeout(() => { placeChat(); nav(); }, 150); });
+addEventListener("resize", () => { clearTimeout(resizing); resizing = setTimeout(() => { placeChat(); nav(); chatMoved(); }, 150); });
 
 // a name tapped in chat opens that player's sheet (D304)
 function openPlayerSheet(id) { tab = "Players"; Players.open(id); render(); }
@@ -468,7 +527,8 @@ async function whoAmI() {
   if (me.rank === "MODERATOR" && me.itemsPower) m.appendChild(el("span", "pw", "ITEMS"));
   if (me.rank === "MODERATOR" && me.bankPower) m.appendChild(el("span", "pw", "BANK"));
   if (me.rank === "MODERATOR" && me.bountyPower) m.appendChild(el("span", "pw", "BOUNTY"));
-  $("chatbtn").addEventListener("click", () => { chatOpen = !chatOpen; placeChat(); });
+  $("chatbtn").addEventListener("click", toggleChat);
+  chatGrip();
   await Tags.load();
   Pictures.load().then((c) => { if (c) App.refresh(); }); // item pictures and names (SU-41), when there are any
   await render();

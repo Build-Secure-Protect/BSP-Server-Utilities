@@ -1426,3 +1426,49 @@ Two independent reads (the server side against BSP-Core 1.19's source; the page 
 - Notes are no longer cut at 256 on the way (BSP-Core cuts to its own `bounty.notesMax`); the add form takes 512. A GameTest sends 400.
 - Page: both search boxes stay where they are drawn on a phone (`.search` has order 3 for the Players tab); the bounties line shows on an offline player's Find a player page; "… are told" names only who is there ("Vexa is told.", "the 1 hunter and Vexa are told."); HISTORY is read again after every change; every opening starts clean (chips, search, history row, add form); an answer for a bounty no longer on screen shows at the top; a failed history read keeps the last list; history wording (one hunter, a server bounty removed); a server bounty's poster shows its bonus; "under a minute", "2 diamond coins"; the add SURE? names the notes; history rows keep their dividers; chip rows keep their sideways scroll.
 - Not changed: the page's 30-day limit and "at least 1,000 pieces" follow BSP-Core's defaults (`bounty.maxDays`, `bounty.minPieces`): raise those and the page refuses what the server would take; countdowns tick on the next read, not while a reason is typed; up to 40 target checks per search.
+
+## 2026-11-19: the Map tab's player window (SU-79, staff panel 0.4.1)
+
+JUnit 89/89. Checked in the browser pane on the demo panel 0.4.1 (`--demo` with a stand-in map folder: a `settings.json` naming the demo servers' maps and a plain page in place of BlueMap) at 1440 × 860, 1000 × 560 and 375 px: on a computer the players float over the map, top-left under the bar, 236 px wide and a third of the page high (287 of 860), see-through with the map blurred behind; dragged by the PLAYERS strip (kept inside the map); sized from the corner (236 × 287 to 375 × 516, never past the map's bottom edge or two-thirds of the page; "308 × 409" shown while sizing, gone on release); "–" folds it to the strip ("+"), a click on the folded strip opens it; a row click follows the player and the window stays open; solid while over the followed player's card, see-through once moved off; the last touched of the two on top; at 1000 × 560 a 409 px window drawn 373 px (two-thirds) and inside the map, the 409 kept for when there is room; its place, size and fold kept across a reload (`localStorage` `bsp.mapWindow`); on a phone the Players button's sheet as before, no strip or corner. **Not tested:** over the real BlueMap page (pointer drags over its frame, BlueMap's own size after the stage widened), a browser with storage refused, the "map not set up" note's new place.
+
+In the panel (a computer, then a phone):
+1. Map tab: the players window top-left under the bar, a third of the page high; the map shows through, blurred.
+2. Drag it by the PLAYERS strip anywhere over the map: it never leaves the map. Drag its bottom-right corner: the size shows while dragging; it stops at a fifth and two-thirds of the page high.
+3. "–": only the strip is left with the number online; click the strip: it opens again.
+4. Follow a player, drag the window over their card: it turns solid; click the card: the card comes on top; move the window off: see-through again.
+5. Reload the page: the window is where you left it, at the size you left it.
+6. Make the browser window small: the window stays inside the map and shrinks; make it big again: back to your size.
+7. On a phone: the round Players button opens the list from the bottom as before.
+
+## 2026-11-19: the chat's width and the CHAT tab (SU-80, staff panel 0.4.1)
+
+JUnit 89/89. Checked in the browser pane on the demo panel 0.4.1 (stand-in map folder as for SU-79) at 1440 × 860, 1100 × 760, 900 × 700 and 375 px: on a wide screen the CHAT tab sits on the chat's left edge with the dotted grip below it at two-thirds of the height; the grip dragged 144 px left made the chat 504 px (kept in `localStorage` `bsp.chat`), the label "720 px" at the half-window limit and "let go to fold" under 280 px; let go there, the chat folded into the CHAT tab on the window's edge, the map took the whole width and the 504 px was kept; CHAT brought it back at 504 px; a double-click on the grip put it back to 360 px; the same width on the Players tab, with a player's card opening 40 px clear of a 500 px chat; at 1100 px the chat closed at first, CHAT slid it over the map at 500 px with the grip on its edge, dragging under 280 px closed it; the followed player's card 36 px from the map's edge, the CHAT tab clear of it; at 900 px a 500 px chat drawn 450 px (half), 500 kept; on a phone no tab, grip or column, no sideways scroll, the Chat tab as before. **Not tested:** over the real BlueMap page; storage refused; a wide screen's fold across a reload (read by the same code as the width).
+
+In the panel (a computer, then a phone):
+1. Any tab on a wide screen: the CHAT tab on the chat's left edge, a small dotted grip below it.
+2. Drag the grip left: the width shows beside the pointer; it stops at half the window. Reload: the same width, on every tab.
+3. Drag the grip right past 280 px: "let go to fold"; let go: the chat folds into the CHAT tab and the map or page takes the room. Click CHAT: it comes back at the width it had.
+4. Double-click the grip: back to 360 px.
+5. Map tab: follow a player; their card sits clear of the CHAT tab.
+6. A window between 900 and 1300 px wide: CHAT slides the chat over the page at the same width; the grip sizes it there too.
+7. A phone: the Chat tab as before; nothing on the page's edge.
+
+## 2026-11-19: audit of the Map window and the chat's width (SU-81, before staff panel 0.4.1)
+
+One independent read of `map.js`, `app.js`, `chat.js`, `panel.css` and `app.html` against D549 to D568. The phone sheet, bad or old stored values, tab changes, CSS order and a live update during a drag were found sound. Fixed:
+- On a computer the map's bar, the gold line ("… went to …", "… left the network …") and a pin's box sit above the players window (z-index 7): a bar wrapped to two rows on a narrow map, or the gold line under the window where it starts, was covered; a pin's box opened under a window last touched.
+- Resizing the chat by its grip or double-click no longer draws the chat again: where it was read stays (it jumped to the newest line).
+- After the browser window is resized the Map's players window is fitted again once the chat has its new width, so it never sits over the chat.
+- With no map set up, the message and its Try again key sit right of the window, not under it.
+- The chat's grip lies inside the chat column (it lay 4 px over the page, on its scrollbar).
+- Every drag (window, corner, chat grip) ends once even if the pointer's capture is lost, and the map's frame ignores the pointer during a window drag, so a lost release cannot leave a drag running.
+- Not changed: the chat's fold on a wide screen and the 900–1300 px slide-over stay two states (D566: CHAT folds on a wide screen, opens the slide-over below 1300 px); a player's card is still under the open slide-over between 900 and 1300 px, as before 0.4.1; the CHAT tab shows no unread count (the side menu's Chat does); the window's width runs 200 px to two-thirds of the map (D551's fifth taken for the height).
+Checked again on the demo panel 0.4.1: the chat's scroll kept through a grip drag (same element, not redrawn), two drags in a row, the grip inside the column, the bar and gold line at z 7 and the window at 4 on a computer, the bar at 3 under the phone sheet, a window drag's `mapdrag` class on and off, the no-map message clear of the window (1300 × 800). JUnit 89/89.
+
+## 2026-11-19: the Map tab's server picker (SU-82, bug, staff panel 0.4.1)
+
+The owner's report on the live 0.4.0: SafeRoom's Nether chosen, then BSP-Frostwarf in the picker: Frostwarf's overworld shown with "Nether" still lit; then Nether: SafeRoom's Nether again. Cause: the picker kept the keyboard's focus after a choice, and the bar is not drawn again while the picker has it (so an open picker is not closed under the pointer), so the dimension keys stayed SafeRoom's, each opening SafeRoom's map. Fixed in `map.js`: the picker lets go of the focus once a server is chosen or left, and the bar is drawn again at once; a dimension key opens that dimension of the server shown now. Checked on the demo panel 0.4.1 with a stand-in map that has BSP-Spawn's and Frostwarf's Nether and Frostwarf's End: Spawn › Nether shows `bsp_spawn__nether`; Frostwarf picked (with the picker focused, as a click leaves it): keys Overworld, Nether, End, Overworld lit, `frostwarf__overworld`; still so after a live update; Nether: `frostwarf__nether`. **Not tested:** the real BlueMap page.
+
+In the panel:
+1. Map tab: pick a server with a Nether, press Nether; pick another server with a Nether in the picker: its overworld shows, Overworld is lit, and the keys are that server's.
+2. Press Nether: that server's Nether shows (its name in the picker, Nether lit).

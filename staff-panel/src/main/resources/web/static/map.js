@@ -1,6 +1,6 @@
 "use strict";
 // The Map tab (SU-47; D259, D389 to D395): BlueMap's page from /map/ in a frame (the same site, so this page drives it
-// through window.bluemap), its own bar hidden; beside it everyone online by server; over it the panel's bar (server,
+// through window.bluemap), its own bar hidden; over it everyone online by server (a window on a computer, SU-79), the panel's bar (server,
 // dimension, pins, following) and the followed player's card. Following goes with the player across servers and
 // dimensions (D391), with a 2-minute trail (D392); a player who leaves is shown greyed where they were (D395 R3).
 const MapView = (() => {
@@ -11,6 +11,20 @@ const MapView = (() => {
   let listOpen = false, sheetUp = false, fab = null, trailMap = null, lastSeen = null; // on a phone (SU-48; D393, D395 R4): the list and the card as sheets
   let mq = null, mrows = null; // the list's search box, kept while typing, and its rows
   const show = { players: true, warps: true, spawns: true, graves: true };
+  // on a computer the list floats over the map (SU-79; D549 to D556, D560, D562 to D565, D567, D568): dragged by its strip,
+  // sized from its corner, folded with "–", solid while over the followed player's card; where it is kept in this browser
+  const WIN_KEY = "bsp.mapWindow", WMIN = 200;
+  let win = loadWin(), wft = null, wct = null, wmin = null, wrz = null, wtag = null;
+  const desk = () => matchMedia("(min-width: 900px)").matches;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  function loadWin() {
+    try {
+      const s = JSON.parse(localStorage.getItem(WIN_KEY) || "null"), n = (v) => typeof v === "number" && isFinite(v);
+      if (s && n(s.x) && n(s.y) && n(s.w) && n(s.h)) return { x: s.x, y: s.y, w: s.w, h: s.h, folded: !!s.folded };
+    } catch (e) { /* storage refused: the window starts where it always does */ }
+    return { x: 10, y: 54, w: 236, h: 0, folded: false }; // h 0: a third of the page (D550)
+  }
+  function saveWin() { try { localStorage.setItem(WIN_KEY, JSON.stringify(win)); } catch (e) { /* kept for this page only */ } }
 
   // ---------------------------------------------------------------- map ids, as the panel's MapLive makes them
   const slug = (s) => (String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) || "unknown";
@@ -50,6 +64,8 @@ const MapView = (() => {
     if (!root) {
       root = el("div", "mapview"); list = el("div", "mlist"); stage = el("div", "mstage");
       root.appendChild(list); root.appendChild(stage);
+      wtag = el("div", "mtag hidden"); root.appendChild(wtag); // the size while the window is dragged bigger (D562)
+      list.addEventListener("pointerdown", () => list.classList.add("front"), true); // last touched on top (D556)
     }
     main.appendChild(root);
     if (maps === null) await loadMaps();
@@ -70,6 +86,7 @@ const MapView = (() => {
       frame = el("iframe", "mframe"); frame.title = "Map"; frame.src = "/map/#" + cur;
       frame.addEventListener("load", setup);
       bar = el("div", "mbar"); cardBox = el("div", "mcardhost"); line = el("div", "mgold hidden");
+      cardBox.addEventListener("pointerdown", () => list.classList.remove("front")); // the card touched: it is on top (D556)
       fab = el("button", "mfab"); fab.type = "button"; fab.title = "Players"; fab.dataset.keep = "mfab"; fab.innerHTML = ICONS.Players; // a fixed icon of this page's own
       fab.addEventListener("click", () => { listOpen = !listOpen; drawList(); });
       stage.appendChild(frame); stage.appendChild(bar); stage.appendChild(line); stage.appendChild(cardBox); stage.appendChild(fab);
@@ -91,7 +108,7 @@ const MapView = (() => {
     if (follow) setTimeout(() => { const p = lastLive.players.find((x) => x.id === follow); if (p && mapId(p.server, p.dim) === cur) centre(p); }, 1500); // the tab opened again (audit)
   }
   function fit() { try { frame.contentWindow.dispatchEvent(new Event("resize")); } catch (e) { /* gone */ } }
-  addEventListener("resize", () => { if (host && frame) fit(); });
+  addEventListener("resize", () => { if (host) layoutWin(); if (host && frame) fit(); });
   function hook() {
     const b = bm(); if (!b || !b.mapViewer) return;
     if (!busy && cur && b.mapViewer.map && b.mapViewer.map.data.id !== cur && b.mapsMap && b.mapsMap.has(cur)) { // BlueMap shows another map: put it right
@@ -236,6 +253,7 @@ const MapView = (() => {
       if (tick && card && p && !gone && typingIn(card) && card.querySelector(".mlive")) card.querySelector(".mlive").replaceWith(livePart(p));
       else drawCard();
       drawPinBox();
+      solidCheck();
     }
     give(h);
   }
@@ -248,10 +266,12 @@ const MapView = (() => {
       mq = el("input", "search mq"); mq.type = "search"; mq.placeholder = "Find a player"; mq.dataset.keep = "mq";
       mq.addEventListener("input", () => { filter = mq.value; drawList(); });
       mrows = el("div", "mrows");
+      makeWin();
     }
-    if (mq.parentNode !== list) { list.textContent = ""; list.appendChild(mq); list.appendChild(mrows); }
+    if (mq.parentNode !== list) { list.textContent = ""; list.appendChild(wft); list.appendChild(mq); list.appendChild(mrows); list.appendChild(wrz); }
     if (mq.value !== filter) mq.value = filter;
-    const sy = list.scrollTop;
+    wct.textContent = String(lastLive.players.length); // everyone online, kept up to date (D568)
+    const sy = list.scrollTop, ry = mrows.scrollTop;
     mrows.textContent = "";
     const f = filter.trim().toLowerCase();
     lastLive.servers.forEach((s) => {
@@ -267,7 +287,90 @@ const MapView = (() => {
       });
     });
     if (!lastLive.players.length) mrows.appendChild(el("div", "note", "Nobody is online."));
-    list.scrollTop = sy;
+    list.scrollTop = sy; mrows.scrollTop = ry;
+    layoutWin();
+  }
+
+  // ---------------------------------------------------------------- the floating window (a computer only)
+  function makeWin() {
+    wft = el("div", "mft"); wft.title = "Drag to move";
+    wft.appendChild(el("div", "gp")); wft.appendChild(el("span", "tt", "PLAYERS")); wct = el("span", "ct"); wft.appendChild(wct);
+    wmin = el("button", "mmin"); wmin.type = "button"; wmin.dataset.keep = "mmin";
+    wmin.addEventListener("click", () => { win.folded = !win.folded; saveWin(); layoutWin(); });
+    wft.appendChild(wmin);
+    wrz = el("div", "mrz"); wrz.title = "Drag to size";
+    moveWin(); sizeWin();
+  }
+  // where it is drawn: as kept, but inside the map and within its limits (D551, D567); what was chosen is kept for later
+  function place() {
+    const W = root.clientWidth, H = root.clientHeight;
+    const hMin = Math.round(H / 5), hMax = Math.max(hMin, Math.round(H * 2 / 3)), wMax = Math.max(WMIN, Math.round(W * 2 / 3));
+    const h = clamp(win.h || Math.round(H / 3), hMin, hMax), w = clamp(win.w, WMIN, wMax);
+    const tall = win.folded ? (wft && wft.offsetHeight ? wft.offsetHeight + 2 : 36) : h;
+    return { x: clamp(win.x, 0, Math.max(0, W - w)), y: clamp(win.y, 0, Math.max(0, H - tall)), w, h, W, H, hMin, hMax, wMax };
+  }
+  function layoutWin() {
+    if (!list || !root || !wft) return;
+    list.classList.toggle("folded", !!win.folded);
+    wmin.textContent = win.folded ? "+" : "–"; wmin.title = win.folded ? "Open" : "Fold";
+    if (!desk() || !root.clientHeight) { ["left", "top", "width", "height"].forEach((k) => { list.style[k] = ""; }); return; } // a phone: the sheet
+    const g = place();
+    list.style.left = g.x + "px"; list.style.top = g.y + "px"; list.style.width = g.w + "px"; list.style.height = win.folded ? "" : g.h + "px";
+    solidCheck();
+  }
+  // solid while any part of it covers the followed player's card (D565)
+  function solidCheck() {
+    if (!list) return;
+    const c = cardBox && cardBox.querySelector(".mcard");
+    let on = false;
+    if (c && desk()) { const a = list.getBoundingClientRect(), b = c.getBoundingClientRect(); on = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom; }
+    list.classList.toggle("solid", on);
+  }
+  // dragged by its strip; a click on a folded strip opens it (D553, D554, D568)
+  function moveWin() {
+    wft.addEventListener("pointerdown", (e) => {
+      if (!desk() || e.button !== 0 || e.target.closest("button")) return;
+      const g = place(), sx = e.clientX, sy = e.clientY; let moved = false;
+      wft.setPointerCapture(e.pointerId); document.body.classList.add("mapdrag");
+      const move = (m) => {
+        const dx = m.clientX - sx, dy = m.clientY - sy;
+        if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+        moved = true; win.x = g.x + dx; win.y = g.y + dy;
+        const p = place(); win.x = p.x; win.y = p.y; layoutWin();
+      };
+      let done = false;
+      const up = () => {
+        if (done) return; done = true; document.body.classList.remove("mapdrag");
+        ["pointermove", "pointerup", "pointercancel", "lostpointercapture"].forEach((t) => wft.removeEventListener(t, t === "pointermove" ? move : up));
+        if (moved) saveWin(); else if (win.folded) { win.folded = false; saveWin(); layoutWin(); }
+      };
+      wft.addEventListener("pointermove", move); ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => wft.addEventListener(t, up));
+    });
+  }
+  // sized from its corner, a fifth to two-thirds of the page high (D551), never past the map's edge; the size shown meanwhile (D562)
+  function sizeWin() {
+    wrz.addEventListener("pointerdown", (e) => {
+      if (!desk() || e.button !== 0) return;
+      e.stopPropagation();
+      const g = place(), sx = e.clientX, sy = e.clientY;
+      wrz.setPointerCapture(e.pointerId); document.body.classList.add("mapdrag");
+      const move = (m) => {
+        win.x = g.x; win.y = g.y;
+        win.w = clamp(g.w + m.clientX - sx, WMIN, Math.max(WMIN, Math.min(g.wMax, g.W - g.x)));
+        win.h = clamp(g.h + m.clientY - sy, g.hMin, Math.max(g.hMin, Math.min(g.hMax, g.H - g.y)));
+        layoutWin();
+        wtag.textContent = Math.round(win.w) + " × " + Math.round(win.h);
+        wtag.style.left = Math.max(0, Math.min(g.W - 90, g.x + win.w - 40)) + "px"; wtag.style.top = Math.min(g.H - 26, g.y + win.h + 8) + "px";
+        wtag.classList.remove("hidden");
+      };
+      let done = false;
+      const up = () => {
+        if (done) return; done = true; document.body.classList.remove("mapdrag");
+        ["pointermove", "pointerup", "pointercancel", "lostpointercapture"].forEach((t) => wrz.removeEventListener(t, t === "pointermove" ? move : up));
+        wtag.classList.add("hidden"); saveWin();
+      };
+      wrz.addEventListener("pointermove", move); ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => wrz.addEventListener(t, up));
+    });
   }
   function drawBar() {
     bar.textContent = "";
@@ -275,13 +378,22 @@ const MapView = (() => {
       return on ? on.server : sl.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "); };
     const servers = [...new Set(maps.map(serverOf))].sort((a, b) => name(a).localeCompare(name(b)));
     const sel = el("select", "mc msel"); sel.dataset.keep = "msel"; servers.forEach((sl) => { const o = el("option", null, name(sl)); o.value = sl; o.selected = sl === serverOf(cur); sel.appendChild(o); });
-    sel.addEventListener("change", () => { stopQuiet(); const id = maps.find((m) => m === sel.value + "__overworld") || maps.find((m) => serverOf(m) === sel.value); if (id) switchTo(id, null); redraw(); });
+    // the picker let go once a server is chosen (or left), so the bar is drawn for that server at once: while it kept the focus
+    // the bar was never drawn again, and the dimension keys left over from the server before switched back to it (bug, SU-82)
+    sel.addEventListener("change", () => { stopQuiet(); const id = maps.find((m) => m === sel.value + "__overworld") || maps.find((m) => serverOf(m) === sel.value); if (id) switchTo(id, null); sel.blur(); redraw(); });
+    sel.addEventListener("blur", () => setTimeout(() => { if (host && frame) redraw(); }, 0));
     bar.appendChild(sel);
     const seg = el("div", "mseg");
     const rank = (m) => { const d = m.slice(m.indexOf("__") + 2); return d === "overworld" ? "0" : d === "nether" ? "1" : d === "end" ? "2" : "3" + d; };
     maps.filter((m) => serverOf(m) === serverOf(cur)).sort((a, b) => rank(a).localeCompare(rank(b))).forEach((m) => {
       const b = el("button", m === cur ? "on" : "", dimLabel(m.slice(m.indexOf("__") + 2))); b.type = "button"; b.dataset.keep = "mdim:" + m;
-      b.addEventListener("click", () => { if (m === cur) return; stopQuiet(); switchTo(m, null); redraw(); });
+      const dim = m.slice(m.indexOf("__") + 2);
+      b.addEventListener("click", () => { // the dimension of the server shown now, never of the server the key was drawn for (SU-82)
+        const id = serverOf(cur) + "__" + dim;
+        if (id === cur) return;
+        if (!maps.includes(id)) { redraw(); return; }
+        stopQuiet(); switchTo(id, null); redraw();
+      });
       seg.appendChild(b);
     });
     bar.appendChild(seg);
@@ -350,7 +462,7 @@ const MapView = (() => {
       const r = box.getBoundingClientRect(), s = stage.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
       grip.setPointerCapture(e.pointerId);
       const move = (m) => { cardPos = [Math.max(0, Math.min(s.width - r.width, m.clientX - s.left - ox)), Math.max(0, Math.min(s.height - 60, m.clientY - s.top - oy))];
-        box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; box.style.right = "auto"; box.style.bottom = "auto"; };
+        box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; box.style.right = "auto"; box.style.bottom = "auto"; solidCheck(); };
       const up = () => { grip.removeEventListener("pointermove", move); grip.removeEventListener("pointerup", up); };
       grip.addEventListener("pointermove", move); grip.addEventListener("pointerup", up);
     });

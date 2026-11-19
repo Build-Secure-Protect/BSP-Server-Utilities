@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-19
+
+The Map tab's players window and the chat's width. Only the panel's pages change: the game servers stay on BSP-Server Utilities 0.14.0, nothing in the modpack.
+
+### Changed
+- Map tab on a computer: the players float over the map in a see-through window instead of a column beside it, so the map has the room. It starts top-left under the bar, a third of the page high; drag it by its PLAYERS strip, size it from its corner (a fifth to two-thirds of the page high, the size shown while dragging), fold it to the strip with "–". It turns solid while over the followed player's card, and the last of the two touched is on top. Its place, size and fold are kept in the browser; a smaller browser window keeps it inside the map. Phones are as before.
+- The chat beside the pages, on a computer: drag the dotted grip on its left edge to make it wider or narrower (280 px to half the window, the width shown while dragging; a double-click puts it back to 360 px); the width is kept in the browser and is the same on every tab. Dragged under 280 px it folds away into the CHAT tab, on wide screens too, and the page takes the room; CHAT brings it back at its width. The CHAT tab sits on the chat's edge on every computer screen, and the followed player's card on the Map tab starts a little further in so the tab never covers it. A smaller browser window narrows the chat to half the window without forgetting its width.
+
+### Fixed
+- Map tab: after choosing another server in the picker, the Overworld, Nether, End… keys stayed those of the server before (the picker kept the keyboard's focus and the bar was not drawn again while it had it), so the lit key was wrong and a key switched back to the other server's map. The bar is drawn for the chosen server at once, and a key always opens that dimension of the server shown.
+
 ## [0.4.0] - 2026-11-19
 
 The Bounty Board (with BSP-Server Utilities 0.14.0 on the game servers, and BSP-Core 1.19.0 there).

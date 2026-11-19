@@ -82,7 +82,7 @@ You need these files. They are already built on your Mac:
 | `bsp-core-1.19.2.jar` (**not** the `-slim` one: it has no database driver) | `Github/BSP-Core/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-inventorysync-0.8.1.jar` | `Github/BSP-InventorySync/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-teleport-3.9.0.jar` | `Github/BSP-Teleport/build/libs/` | every game server's `mods/` |
-| `bsp-staff-panel-0.4.0.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
+| `bsp-staff-panel-0.4.1.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
 
 1. **The players' modpack.** A player can join only when their game's BSP-Server Utilities and BSP-Core speak the
    same network protocol as the server, exactly: BSP-Server Utilities 0.12.0 and newer speak protocol 8, BSP-Core
@@ -273,7 +273,7 @@ to make themselves Owner of the panel.
    - **Create Server**. Wait until its install finishes (the server page shows it).
    - **Subusers**: none on this server, ever. Whoever can read its files or console can read its keys. And no staff
      member is ever a Pterodactyl admin: every admin can read every server's files, this one's keys included.
-4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.4.0.jar`.
+4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.4.1.jar`.
    Then on the uploaded file, the **⋯** menu › **Rename** to `bsp-staff-panel.jar` (one fixed name, so a later
    update is only a new file with the same name).
 5. **First start.** **Console** › **Start**. It prints a few lines and stops by itself with
