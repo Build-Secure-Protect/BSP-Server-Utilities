@@ -483,6 +483,8 @@ const FindPlayer = (() => {
     const box = el("div", "offsheet");
     const ml = Market.line(p); // D405: their lots and orders, when they have any
     if (ml) box.appendChild(ml);
+    const bl = Bounties.line(p); // D528
+    if (bl) box.appendChild(bl);
     box.appendChild(Items.section(p, { live: false, redraw: () => App.refreshMore() }));
     box.appendChild(Notes.section(p));
     main.appendChild(box);

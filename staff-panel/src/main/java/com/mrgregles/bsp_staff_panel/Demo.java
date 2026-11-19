@@ -96,6 +96,20 @@ final class Demo {
                 refused = act.has("other") && act.get("other").getAsBoolean();
                 extra = ",\"data\":{\"result\":\"" + (refused ? "other_short" : "ok") + "\",\"withoutOther\":" + refused + "}";
             }
+            if (what.equals("bounty_list")) { // SU-77: a made-up Bounty Board, as BSP-Core 1.19's BspBounties
+                extra = ",\"data\":" + demoBounties(now);
+            }
+            if (what.equals("bounty_history")) {
+                extra = ",\"data\":" + demoBountyHistory(now);
+            }
+            if (what.equals("bounty_players")) {
+                extra = ",\"data\":{\"players\":[{\"id\":\"" + java.util.UUID.nameUUIDFromBytes("Wren_88".getBytes()) + "\",\"name\":\"Wren_88\",\"online\":true,\"refusal\":\"\"},"
+                        + "{\"id\":\"" + java.util.UUID.nameUUIDFromBytes("Wrenfield".getBytes()) + "\",\"name\":\"Wrenfield\",\"online\":false,\"refusal\":\"staff\"},"
+                        + "{\"id\":\"" + java.util.UUID.nameUUIDFromBytes("Wrenling".getBytes()) + "\",\"name\":\"Wrenling\",\"online\":true,\"refusal\":\"protected\"}]}";
+            }
+            if (what.startsWith("bounty_") && !what.equals("bounty_list") && !what.equals("bounty_history") && !what.equals("bounty_players")) {
+                extra = ",\"data\":{\"result\":\"ok\"}";
+            }
             if (what.equals("market_cancel_lot") || what.equals("market_cancel_order")) {
                 extra = ",\"data\":{\"result\":\"ok\",\"piecesBack\":" + (what.endsWith("order") ? 7200 : 0) + "}";
             }
@@ -112,6 +126,11 @@ final class Demo {
                     : what.equals("market_read") ? "demo market" : what.equals("lottery_read") ? "demo lottery" : what.equals("bank_read") ? "demo bank"
                     : what.equals("bank_refund") ? (refused ? "The other player no longer has that much. Nothing changed: refund it without them if you mean to."
                     : "Refunded (demo: nothing was sent to a game server). They are told in game.")
+                    : what.equals("bounty_list") ? "demo bounties" : what.equals("bounty_history") ? "demo history" : what.equals("bounty_players") ? "demo players"
+                    : what.equals("bounty_add") ? "Placed (demo: nothing was sent to a game server). The target is told in game."
+                    : what.equals("bounty_remove") ? "Taken off the board (demo: nothing was sent to a game server)."
+                    : what.equals("bounty_extend") ? "Extended (demo: nothing was sent to a game server)."
+                    : what.equals("bounty_blank_notes") ? "The notes are blank (demo: nothing was sent to a game server)."
                     : what.equals("market_cancel_lot") ? "Cancelled: the items go to their Collect box (demo: nothing was sent to a game server)."
                     : what.equals("market_cancel_order") ? "Cancelled: 7,200 pieces went back to their bank (demo: nothing was sent to a game server)."
                     : what.equals("lottery_draw") ? (extra.contains("busy") ? "A draw is already running on the network." : "Drawn on BSP-Spawn: the countdown has begun on every server (demo: nothing was paid).")
@@ -428,6 +447,7 @@ final class Demo {
                 o.addProperty("tpName", server[0]);
                 o.addProperty("market", true); // SU-51: BSP-Core 1.16 on every demo server
                 o.addProperty("bank", true); // SU-72: and 1.18's staff calls
+                o.addProperty("bounties", true); // SU-77: and 1.19's Bounty Board
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");
@@ -538,6 +558,52 @@ final class Demo {
         }
         o.addProperty("h", Integer.toHexString((id + n).hashCode()));
         return o;
+    }
+
+    /** A made-up Bounty Board, as {@code bounty_list} answers (SU-77); demo players by the ids the demo feed gives them. */
+    static String demoBounties(long now) {
+        long h = 3_600_000L;
+        return "{\"open\":[" + String.join(",",
+                bounty("b-41", "Vexa", "Kestrel_88", false, -1, 25000, 5000, now + 18 * h + 2_400_000L, 1250, now - h, now + 71 * h, "camps the nether hub after 9 pm, wears a blue cape", "Frostwarf",
+                        new String[][]{{"Mossy_Fen", String.valueOf(now - 2_400_000L)}, {"Pixl", String.valueOf(now - 720_000L)}}),
+                bounty("b-40", "Kestrel_88", "Server", true, 2, 3, 0, 0, 0, now - 2 * h, now + 23 * h, "", "Moongrove", new String[0][]),
+                bounty("b-39", "TallyHo", "RuneSmith", false, -1, 1500, 0, 0, 75, now - 5 * h, now + 5 * h, "", "BSP-Spawn", new String[][]{{"Vexa", String.valueOf(now - h)}}),
+                bounty("b-38", "Pixl", "Vexa", false, -1, 9000, 1000, now + 44 * h, 450, now - 30 * h, now + 144 * h, "keeps raiding the farm", "Stormfall", new String[0][]),
+                bounty("b-37", "Juniper_K", "BrickLayerTom", false, -1, 2000, 0, 0, 100, now - 50 * h, now + 264 * h, "", "Boulderbrook",
+                        new String[][]{{"Glimmer", String.valueOf(now - 40 * h)}, {"TallyHo", String.valueOf(now - 30 * h)}, {"Newbie_Sam", String.valueOf(now - 3 * h)}}))
+                + "],\"tiers\":[\"copper\",\"gold\",\"diamond\",\"netherite\",\"illyrium\"],\"server\":\"Frostwarf\"}";
+    }
+
+    static String demoBountyHistory(long now) {
+        long h = 3_600_000L;
+        return "{\"history\":["
+                + closed(bounty("b-30", "Vexa", "RuneSmith", false, -1, 12000, 2000, now - 60 * h, 600, now - 72 * h, now - h, "griefed my base twice", "Moongrove",
+                new String[][]{{"Mossy_Fen", String.valueOf(now - 70 * h)}, {"TallyHo", String.valueOf(now - 50 * h)}}), "CLAIMED", now - 2 * h, "Mossy_Fen", "", true) + ","
+                + closed(bounty("b-29", "Pixl", "Glimmer", false, -1, 4000, 0, 0, 200, now - 50 * h, now + 20 * h, "", "Stormfall", new String[0][]), "REMOVED", now - 26 * h, "", "Ana_Admin (panel)", false) + ","
+                + closed(bounty("b-28", "Juniper_K", "Server", true, -1, 1000, 0, 0, 0, now - 100 * h, now - 50 * h, "", "Boulderbrook", new String[0][]), "EXPIRED", now - 50 * h, "", "", false) + ","
+                + closed(bounty("b-27", "Glimmer", "Vexa", false, -1, 8000, 0, 0, 400, now - 90 * h, now - 70 * h, "", "BSP-Spawn", new String[0][]), "TARGET_STAFF", now - 75 * h, "", "", false)
+                + "],\"tiers\":[\"copper\",\"gold\",\"diamond\",\"netherite\",\"illyrium\"]}";
+    }
+
+    /** A demo player's id, as the demo feed makes it (from the name). */
+    private static String id(String name) {
+        return java.util.UUID.nameUUIDFromBytes(name.getBytes()).toString();
+    }
+
+    private static String bounty(String bid, String target, String placer, boolean server, int tier, long amount, long bonus, long bonusEnds, long fee, long placed, long ends,
+                                 String notes, String on, String[][] hunters) {
+        StringBuilder hs = new StringBuilder();
+        for (String[] hn : hunters) {
+            hs.append(hs.length() == 0 ? "" : ",").append("{\"id\":\"").append(id(hn[0])).append("\",\"name\":\"").append(hn[0]).append("\",\"accepted\":").append(hn[1]).append("}");
+        }
+        return "{\"id\":\"" + bid + "\",\"target\":\"" + id(target) + "\",\"targetName\":\"" + target + "\",\"placer\":\"" + (server ? "00000000-0000-0000-0000-000000000000" : id(placer))
+                + "\",\"placerName\":\"" + placer + "\",\"byServer\":" + server + ",\"tier\":" + tier + ",\"amount\":" + amount + ",\"bonus\":" + bonus + ",\"bonusEnds\":" + bonusEnds
+                + ",\"fee\":" + fee + ",\"placed\":" + placed + ",\"ends\":" + ends + ",\"notes\":\"" + notes + "\",\"server\":\"" + on + "\",\"hunters\":[" + hs + "]}";
+    }
+
+    private static String closed(String bounty, String ending, long at, String hunter, String by, boolean bonusPaid) {
+        return "{\"bounty\":" + bounty + ",\"ending\":\"" + ending + "\",\"closed\":" + at + ",\"hunter\":\"" + (hunter.isEmpty() ? "" : id(hunter)) + "\",\"hunterName\":\"" + hunter
+                + "\",\"by\":\"" + by + "\",\"bonusPaid\":" + bonusPaid + "}";
     }
 
     /** A made-up bank and market for one player, as {@code bank_read} answers (SU-72). */

@@ -201,6 +201,8 @@ const Players = (() => {
     box.appendChild(actionsFor(p));
     const ml = Market.line(p); // D405: their lots and orders, when they have any
     if (ml) box.appendChild(ml);
+    const bl = Bounties.line(p); // D528: bounties on them, placed or hunted by them
+    if (bl) box.appendChild(bl);
     box.appendChild(Items.section({ id: p.id, name: p.name, skin: p.skin }, { live: true, redraw: () => App.refresh() })); // D279, D337
     box.appendChild(Notes.section(p));
     drag(grip, box);

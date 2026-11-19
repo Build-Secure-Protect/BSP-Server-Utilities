@@ -213,6 +213,12 @@ public final class Feed {
         return null;
     }
 
+    /** Live servers where BSP-Core 1.19 runs the Bounty Board (their snapshot's {@code bounties}), database connected first, then the busiest. */
+    public List<String> liveWithBounties() {
+        return liveWith("bounties").stream().sorted(java.util.Comparator.comparing((String n) -> !flag(n, "lotteryUp"))
+                .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
     /** Live servers where BSP-Core 1.18 reads a player's bank and market (their snapshot's {@code bank}), database connected first, then the busiest. */
     public List<String> liveWithBank() {
         return liveWith("bank").stream().sorted(java.util.Comparator.comparing((String n) -> !flag(n, "lotteryUp"))

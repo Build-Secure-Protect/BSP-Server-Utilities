@@ -821,6 +821,7 @@
   "message.bsp_server_utilities.status.drops_crowded": "Crowded drops: %s items and %s arrows a chunk, cleared after %s min over; last hour %s clears, %s items, %s arrows.",
   "gui.bsp_server_utilities.panel.log.kind.mob": "Mobs removed",
   "gui.bsp_server_utilities.panel.log.kind.bank": "Refunds & cancels",
+  "gui.bsp_server_utilities.panel.log.kind.bounty": "Bounties",
   "message.bsp_server_utilities.mobs.full": "This chunk is at its mob limit (%s).",
   "message.bsp_server_utilities.status.mobs": "Mob limits: every chunk %s, %s dimensions, %s single chunks; %s new mobs refused since the server started.",
   "message.bsp_server_utilities.status.mobs_off": "Mob limits: none set (the MOBS tab)."

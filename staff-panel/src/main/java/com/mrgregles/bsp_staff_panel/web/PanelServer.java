@@ -199,6 +199,13 @@ public final class PanelServer {
     private volatile com.mrgregles.bsp_staff_panel.items.ItemPictures pictures;
     private volatile com.mrgregles.bsp_staff_panel.market.MarketDesk marketDesk;
     private volatile com.mrgregles.bsp_staff_panel.market.BankDesk bankDesk;
+    private volatile com.mrgregles.bsp_staff_panel.market.BountyDesk bountyDesk;
+
+    /** The Bounty Board (SU-76; D524 to D538). */
+    public PanelServer withBounties(com.mrgregles.bsp_staff_panel.market.BountyDesk d) {
+        this.bountyDesk = d;
+        return this;
+    }
 
     /** A player's Bank & Market (SU-71; D502 to D511). */
     public PanelServer withBank(com.mrgregles.bsp_staff_panel.market.BankDesk d) {
@@ -456,6 +463,8 @@ public final class PanelServer {
             case "/api/tp" -> tp(ex, id, body);
             case "/api/market", "/api/lottery", "/api/lottery/draw" -> marketPost(ex, id, path, body);
             case "/api/bank", "/api/bank/refund", "/api/bank/cancel" -> bankPost(ex, id, path, body);
+            case "/api/bounties", "/api/bounties/history", "/api/bounties/players", "/api/bounties/add", "/api/bounties/remove", "/api/bounties/extend",
+                 "/api/bounties/blank" -> bountyPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
             case "/api/staff/add" -> staffAdd(ex, id, body);
@@ -646,6 +655,7 @@ public final class PanelServer {
         o.addProperty("backupLeft", me.backup.size());
         o.addProperty("itemsPower", me.mayEditItems());
         o.addProperty("bankPower", me.mayActOnBank());
+        o.addProperty("bountyPower", me.mayActOnBounties());
         if (me.rank == Rank.OWNER) {
             JsonArray locks = new JsonArray();
             for (PanelStore.LogLine l : auth.lockoutsSince(me.previousLoginAt)) {
@@ -699,6 +709,7 @@ public final class PanelServer {
             o.addProperty("onPanel", on.contains(a.mcName));
             o.addProperty("itemsPower", a.itemsPower);
             o.addProperty("bankPower", a.bankPower);
+            o.addProperty("bountyPower", a.bountyPower);
             list.add(o);
         }
         JsonObject o = ok();
@@ -745,6 +756,7 @@ public final class PanelServer {
                 case "rank" -> auth.setRank(me.get(), target, "ADMIN".equals(str(b, "rank")) ? Rank.ADMIN : Rank.MODERATOR);
                 case "items" -> auth.setItemsPower(me.get(), target, bool(b, "on"));
                 case "bank" -> auth.setBankPower(me.get(), target, bool(b, "on"));
+                case "bounty" -> auth.setBountyPower(me.get(), target, bool(b, "on"));
                 default -> {
                     json(ex, 200, refused("Not an action the panel knows."));
                     return;
@@ -1672,6 +1684,45 @@ public final class PanelServer {
             case "/api/bank" -> desk.read(me, p, bool(b, "refresh"));
             case "/api/bank/refund" -> desk.refund(me, p, b);
             default -> desk.cancel(me, b);
+        };
+        String log = o.has("panelLog") ? str(o, "panelLog") : null;
+        o.remove("panelLog");
+        if (log != null) {
+            String said = str(o, "message");
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (o.get("ok").getAsBoolean() ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
+        }
+        json(ex, 200, o);
+    }
+
+    /**
+     * The Bounty Board (SU-76; D524 to D538): reads for every rank; add, remove, extend and blank for Admins, Owners and
+     * Moderators with the bounty power (403 otherwise, nothing sent); every change tried is in the panel's log.
+     */
+    private void bountyPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.market.BountyDesk desk = bountyDesk;
+        if (desk == null) {
+            json(ex, 200, refused("Bounties are not set up on this panel."));
+            return;
+        }
+        Account me = a.get();
+        String what = path.substring("/api/bounties".length());
+        boolean change = what.equals("/add") || what.equals("/remove") || what.equals("/extend") || what.equals("/blank");
+        if (change && !me.mayActOnBounties()) {
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, "tried to change a bounty without the bounty power"));
+            json(ex, 403, refused(com.mrgregles.bsp_staff_panel.market.BountyDesk.NOT_ALLOWED));
+            return;
+        }
+        JsonObject o = switch (what) {
+            case "" -> desk.list(me);
+            case "/history" -> desk.history(me);
+            case "/players" -> desk.players(me, str(b, "search"));
+            case "/add" -> desk.add(me, b);
+            default -> desk.change(me, what.substring(1), b);
         };
         String log = o.has("panelLog") ? str(o, "panelLog") : null;
         o.remove("panelLog");

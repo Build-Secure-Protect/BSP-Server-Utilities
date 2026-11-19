@@ -264,7 +264,7 @@ public final class Auth {
             throw new Refused("Owners are made from the panel's console.");
         }
         Rank was = t.rank;
-        boolean power = t.itemsPower && rank != was, bank = t.bankPower && rank != was;
+        boolean power = t.itemsPower && rank != was, bank = t.bankPower && rank != was, bounty = t.bountyPower && rank != was;
         t.rank = rank;
         if (power) {
             t.itemsPower = false; // a rank change ends the items power: an Admin made a Moderator again starts without it (audit)
@@ -272,9 +272,12 @@ public final class Auth {
         if (bank) {
             t.bankPower = false; // and the bank power (D504)
         }
+        if (bounty) {
+            t.bountyPower = false; // and the bounty power (D527)
+        }
         store.update(t);
         store.deleteSessionsOf(t.id); // logs in again at the new rank, for the new length
-        log(by.email, "changed " + t.email + " from " + was.label() + " to " + rank.label() + (power ? " (the items power ended)" : "") + (bank ? " (the bank power ended)" : ""));
+        log(by.email, "changed " + t.email + " from " + was.label() + " to " + rank.label() + (power ? " (the items power ended)" : "") + (bank ? " (the bank power ended)" : "") + (bounty ? " (the bounty power ended)" : ""));
     }
 
     /** An Owner gives a Moderator the power to add and remove players' items, or takes it back (D335, D363). */
@@ -306,6 +309,23 @@ public final class Auth {
                 store.update(t);
                 store.deleteSessionsOf(t.id); // logs in again for the login's new length (48 h with a power, D428)
                 log(by.email, (on ? "gave " : "took the bank power from ") + t.email + (on ? " the bank power" : ""));
+            }
+            return null;
+        });
+    }
+
+    /** An Owner gives a Moderator the power to add, remove, extend and blank bounties, or takes it back (D527). */
+    public void setBountyPower(Account by, long id, boolean on) throws Exception {
+        locked(id, () -> {
+            Account t = target(by, id);
+            if (t.rank != Rank.MODERATOR) {
+                throw new Refused("Admins change bounties already.");
+            }
+            if (t.bountyPower != on) {
+                t.bountyPower = on;
+                store.update(t);
+                store.deleteSessionsOf(t.id); // logs in again for the login's new length (48 h with a power, D428)
+                log(by.email, (on ? "gave " : "took the bounty power from ") + t.email + (on ? " the bounty power" : ""));
             }
             return null;
         });

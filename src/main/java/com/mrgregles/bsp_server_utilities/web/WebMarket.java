@@ -67,6 +67,7 @@ public final class WebMarket {
         BspCore.Economy eco = BspCore.economy();
         server.addProperty("market", eco != null);
         server.addProperty("bank", BspCore.bank() != null); // a player's Bank & Market (BSP-Core 1.18, SU-70)
+        server.addProperty("bounties", BspCore.bounties() != null); // the Bounty Board (BSP-Core 1.19, SU-75)
         if (eco != null) {
             server.addProperty("lottery", eco.phase());
             server.addProperty("lotterySince", eco.phase().equals(phase) ? phaseSince : 0);

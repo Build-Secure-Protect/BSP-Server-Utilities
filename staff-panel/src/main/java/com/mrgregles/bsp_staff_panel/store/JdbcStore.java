@@ -77,12 +77,19 @@ public final class JdbcStore implements PanelStore {
                     + " mc_name VARCHAR(16) NOT NULL, rnk VARCHAR(16) NOT NULL, password VARCHAR(255) NULL, totp TEXT NULL, totp_step BIGINT NOT NULL,"
                     + " backup TEXT NOT NULL, failed INT NOT NULL, locked_until BIGINT NOT NULL, created_at BIGINT NOT NULL, created_by VARCHAR(254) NOT NULL,"
                     + " last_login BIGINT NOT NULL, previous_login BIGINT NOT NULL, active BOOLEAN NOT NULL, items_power BOOLEAN NOT NULL DEFAULT FALSE,"
-                    + " bank_power BOOLEAN NOT NULL DEFAULT FALSE,"
+                    + " bank_power BOOLEAN NOT NULL DEFAULT FALSE, bounty_power BOOLEAN NOT NULL DEFAULT FALSE,"
                     + " UNIQUE KEY email (email)) DEFAULT CHARSET=utf8mb4");
             try (ResultSet rs = st.executeQuery("SHOW COLUMNS FROM " + prefix + "panel_staff LIKE 'items_power'")) {
                 if (!rs.next()) { // a table from the panel's 0.1.0 (SU-40)
                     try (Statement add = conn().createStatement()) {
                         add.executeUpdate("ALTER TABLE " + prefix + "panel_staff ADD COLUMN items_power BOOLEAN NOT NULL DEFAULT FALSE");
+                    }
+                }
+            }
+            try (ResultSet rs = st.executeQuery("SHOW COLUMNS FROM " + prefix + "panel_staff LIKE 'bounty_power'")) {
+                if (!rs.next()) { // a table from before the bounty power (D527)
+                    try (Statement add = conn().createStatement()) {
+                        add.executeUpdate("ALTER TABLE " + prefix + "panel_staff ADD COLUMN bounty_power BOOLEAN NOT NULL DEFAULT FALSE");
                     }
                 }
             }
@@ -122,7 +129,7 @@ public final class JdbcStore implements PanelStore {
         }
     }
 
-    private static final String COLS = "id, email, mc_name, rnk, password, totp, totp_step, backup, failed, locked_until, created_at, created_by, last_login, previous_login, active, items_power, bank_power";
+    private static final String COLS = "id, email, mc_name, rnk, password, totp, totp_step, backup, failed, locked_until, created_at, created_by, last_login, previous_login, active, items_power, bank_power, bounty_power";
 
     private static Account read(ResultSet rs) throws SQLException {
         Account a = new Account();
@@ -144,6 +151,7 @@ public final class JdbcStore implements PanelStore {
         a.active = rs.getBoolean(15);
         a.itemsPower = rs.getBoolean(16);
         a.bankPower = rs.getBoolean(17);
+        a.bountyPower = rs.getBoolean(18);
         return a;
     }
 
@@ -195,12 +203,13 @@ public final class JdbcStore implements PanelStore {
         ps.setBoolean(14, a.active);
         ps.setBoolean(15, a.itemsPower);
         ps.setBoolean(16, a.bankPower);
+        ps.setBoolean(17, a.bountyPower);
     }
 
     @Override
     public synchronized long insert(Account a) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "panel_staff (email, mc_name, rnk, password, totp, totp_step, backup, failed,"
-                + " locked_until, created_at, created_by, last_login, previous_login, active, items_power, bank_power) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+                + " locked_until, created_at, created_by, last_login, previous_login, active, items_power, bank_power, bounty_power) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
             bind(ps, a);
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -215,9 +224,9 @@ public final class JdbcStore implements PanelStore {
     @Override
     public synchronized void update(Account a) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "panel_staff SET email = ?, mc_name = ?, rnk = ?, password = ?, totp = ?, totp_step = ?,"
-                + " backup = ?, failed = ?, locked_until = ?, created_at = ?, created_by = ?, last_login = ?, previous_login = ?, active = ?, items_power = ?, bank_power = ? WHERE id = ?")) {
+                + " backup = ?, failed = ?, locked_until = ?, created_at = ?, created_by = ?, last_login = ?, previous_login = ?, active = ?, items_power = ?, bank_power = ?, bounty_power = ? WHERE id = ?")) {
             bind(ps, a);
-            ps.setLong(17, a.id);
+            ps.setLong(18, a.id);
             ps.executeUpdate();
         }
     }

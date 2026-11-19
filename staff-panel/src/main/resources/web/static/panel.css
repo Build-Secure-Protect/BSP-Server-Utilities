@@ -679,3 +679,26 @@ body.notlive .goldline { top: 50px; } /* below the "Not live" line, never over i
 .mkcx .bkform { align-self: stretch; border-radius: 8px; }
 .bklot .mks { display: flex; flex-wrap: wrap; gap: 2px; max-width: 40%; flex: none; } /* many stacks wrap instead of squeezing the name (audit) */
 .bklot .sub { white-space: normal; }
+
+/* the Bounty Board (SU-77; D535 to D542, look B of set AD): wanted posters, two a row on a phone, four on a computer */
+.bypagewrap { max-width: 980px; }
+.bygrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .bygrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; } }
+.byposter { background: linear-gradient(#2a2416, #1a1d24); border: 1px solid #5a4a1a; border-radius: 10px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
+.byposter .nm { max-width: 100%; } .byposter .sub { white-space: normal; }
+.byposter:hover { border-color: #8a7a3a; }
+.byhead { flex-direction: row; text-align: left; align-items: center; gap: 12px; cursor: default; }
+.byhead .grow { flex: 1; min-width: 0; }
+.bywanted { font: 700 12px var(--mono); letter-spacing: .14em; color: var(--gold); }
+.byrw { font: 600 18px var(--mono); color: var(--gold); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.byrw.small { font-size: 13px; flex: none; } .byrwu { color: var(--mu); font-size: 12px; }
+.byhunt { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.bynotes { background: #14181f; border: 1px dashed var(--ln); border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.bychip { font: 600 9.5px var(--mono); padding: 2px 6px; border-radius: 4px; background: #232733; color: var(--mu); vertical-align: middle; }
+.bychip.claimed { background: #14302b; color: #7fe0cf; } .bychip.removed { background: #3a1d1d; color: #ff8f86; } .bychip.staff { background: #271f38; color: var(--vio); }
+.bklot.tap { background: none; border-width: 0; color: inherit; font: inherit; text-align: left; width: 100%; cursor: pointer; } .bklot.tap:hover { background: #ffffff06; }
+.bklot + .bklot.tap, .bkform + .bklot.tap { border-top: 1px solid #20242d; } /* history rows keep their dividers (audit) */
+.bypagewrap .search { order: 0; } /* the search stays where it is drawn on a phone (.search has order 3 for the Players tab; audit) */
+.bydim { opacity: .55; }
+.byunit { height: 38px; border-radius: 8px; background: var(--pn); border: 1px solid var(--ln); padding: 0 8px; font-size: 14px; color: var(--tx); }
+.bkmodes .key:disabled { opacity: .45; cursor: default; }

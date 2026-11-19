@@ -68,6 +68,10 @@ async function more(main) {
     const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); TagsPage.view(main); return;
   }
+  if (moreView === "bounties") { // SU-77
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); const page = el("div", "bkpagewrap bypagewrap"); main.appendChild(page); Bounties.view(page); return;
+  }
   if (moreView === "bank") { // SU-72: back to the player's sheet (online) or their Find a player page
     const w = Bank.who();
     const back = el("button", "btn sm ghost back", "‹ " + (w ? w.name : "More")); back.type = "button";
@@ -134,6 +138,11 @@ async function more(main) {
   mk.appendChild(mkg); mk.appendChild(el("span", "mu", "›"));
   mk.addEventListener("click", () => { moreView = "market"; Market.reset(); render(); });
   menu.appendChild(mk);
+  const bt = el("button", "item menuitem"); bt.type = "button";
+  const btg = el("div", "grow"); btg.appendChild(el("div", "nm", "Bounties")); btg.appendChild(el("div", "sub", "The Bounty Board: open bounties, their notes, the history" + (me.bountyPower ? "; add and remove" : "")));
+  bt.appendChild(btg); if (!me.bountyPower) bt.appendChild(el("span", "rk ADMIN", "Admin changes")); bt.appendChild(el("span", "mu", "›"));
+  bt.addEventListener("click", () => { Bounties.open(null); moreView = "bounties"; render(); });
+  menu.appendChild(bt);
   const lt = el("button", "item menuitem"); lt.type = "button";
   const ltg = el("div", "grow"); ltg.appendChild(el("div", "nm", "Lottery")); ltg.appendChild(el("div", "sub", "The pot, who is in, the last wins" + (me.rank === "MODERATOR" ? "" : "; DRAW")));
   lt.appendChild(ltg); if (me.rank === "MODERATOR") lt.appendChild(el("span", "rk ADMIN", "Admin draws")); lt.appendChild(el("span", "mu", "›"));
@@ -176,10 +185,10 @@ async function staffAccounts(area) {
     const last = s.lastLogin ? new Date(s.lastLogin).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "never";
     const tr = el("tr");
     const nmc = el("td", "nm"); const nmw = el("span", "stname"); nmw.appendChild(staffFace(s.mcName, 20)); nmw.appendChild(el("span", null, s.mcName)); nmc.appendChild(nmw); tr.appendChild(nmc); // D291: name and face
-    const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) rk.appendChild(el("span", "pw", "ITEMS")); if (s.bankPower) rk.appendChild(el("span", "pw", "BANK")); tr.appendChild(rk);
+    const rk = el("td"); rk.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) rk.appendChild(el("span", "pw", "ITEMS")); if (s.bankPower) rk.appendChild(el("span", "pw", "BANK")); if (s.bountyPower) rk.appendChild(el("span", "pw", "BOUNTY")); tr.appendChild(rk);
     tr.appendChild(el("td", "mu", s.email)); tr.appendChild(el("td", cls, st)); tr.appendChild(el("td", "mu", last));
     const m = el("td"); m.appendChild(menu(s, area)); tr.appendChild(m); table.appendChild(tr);
-    const it = el("div", "item"); const g = el("div", "grow"); const n = el("div", "nm", s.mcName + " "); n.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) n.appendChild(el("span", "pw", "ITEMS")); if (s.bankPower) n.appendChild(el("span", "pw", "BANK"));
+    const it = el("div", "item"); const g = el("div", "grow"); const n = el("div", "nm", s.mcName + " "); n.appendChild(el("span", "rk " + s.rank, s.rankLabel)); if (s.itemsPower) n.appendChild(el("span", "pw", "ITEMS")); if (s.bankPower) n.appendChild(el("span", "pw", "BANK")); if (s.bountyPower) n.appendChild(el("span", "pw", "BOUNTY"));
     g.appendChild(n); g.appendChild(el("div", "sub", s.email)); g.appendChild(el("div", "sub " + cls, st)); it.appendChild(g); it.appendChild(menu(s, area, r.staff.length > 3 && at >= r.staff.length - 2)); list.appendChild(it);
   });
   area.appendChild(table); area.appendChild(list);
@@ -201,6 +210,7 @@ function menu(s, area, up) {
   acts.push([s.rank === "ADMIN" ? "Make Moderator" : "Make Admin", "rank"]);
   if (s.rank === "MODERATOR") acts.push([s.itemsPower ? "May add and remove items ✓ (tap to take back)" : "May add and remove items", "items"]); // D335, D363
   if (s.rank === "MODERATOR") acts.push([s.bankPower ? "May refund and cancel ✓ (tap to take back)" : "May refund and cancel (bank & market)", "bank"]); // D504
+  if (s.rank === "MODERATOR") acts.push([s.bountyPower ? "May add and remove bounties ✓ (tap to take back)" : "May add and remove bounties", "bounty"]); // D527
   acts.push(["Reset authenticator", "reset-code"], ["Reset whole login", "reset-login"], ["Remove", "remove", 1]);
   acts.forEach(([label, action, danger]) => {
     const x = el("button", danger ? "danger" : "", label); x.type = "button";
@@ -209,7 +219,7 @@ function menu(s, area, up) {
       if (busy) return;
       if (Date.now() - armed > 3000) { armed = Date.now(); x.textContent = label + ": sure?"; unarm(x, 3000, label); return; } // two taps within 3 s
       busy = true; pop.querySelectorAll("button").forEach((k) => { k.disabled = true; });
-      const r = await call("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN", on: action === "bank" ? !s.bankPower : !s.itemsPower }, true);
+      const r = await call("/api/staff/action", { id: s.id, action, rank: s.rank === "ADMIN" ? "MODERATOR" : "ADMIN", on: action === "bank" ? !s.bankPower : action === "bounty" ? !s.bountyPower : !s.itemsPower }, true);
       busy = false; armed = 0; x.textContent = label; pop.querySelectorAll("button").forEach((k) => { k.disabled = false; });
       if (!r.ok) { alert(r.message); return; }
       if (r.link) showLink(area, "New setup link for " + s.mcName + ", valid 15 minutes and once:", r.link);
@@ -293,6 +303,8 @@ function openPlayerSheet(id) { tab = "Players"; Players.open(id); render(); }
 function openGraves(name) { tab = "More"; moreView = "graves"; render().then(() => Graves.look(name)); }
 // the market line in a player's sheet opens the market filtered to them (D405, D415 R2)
 function openMarket(p) { tab = "More"; moreView = "market"; Market.forPlayer(p); render(); }
+// the bounties line in a player's sheet opens the board filtered to them (D528)
+function openBounties(p) { Bounties.open({ id: p.id, name: p.name }); tab = "More"; moreView = "bounties"; render(); }
 // the Bank & Market key in a player's sheet opens their bank and market (D517)
 function openBank(p) { Bank.open({ id: p.id, name: p.name }); tab = "More"; moreView = "bank"; render(); }
 // a player who is not online opens on their Find a player page (D304, D311, D415 R2)
@@ -455,6 +467,7 @@ async function whoAmI() {
   const m = $("me"); m.textContent = ""; m.appendChild(el("span", "nm", me.mcName + " ")); m.appendChild(el("span", "rk " + me.rank, me.rankLabel));
   if (me.rank === "MODERATOR" && me.itemsPower) m.appendChild(el("span", "pw", "ITEMS"));
   if (me.rank === "MODERATOR" && me.bankPower) m.appendChild(el("span", "pw", "BANK"));
+  if (me.rank === "MODERATOR" && me.bountyPower) m.appendChild(el("span", "pw", "BOUNTY"));
   $("chatbtn").addEventListener("click", () => { chatOpen = !chatOpen; placeChat(); });
   await Tags.load();
   Pictures.load().then((c) => { if (c) App.refresh(); }); // item pictures and names (SU-41), when there are any

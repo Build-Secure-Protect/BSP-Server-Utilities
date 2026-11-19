@@ -389,6 +389,13 @@ public final class WebActions {
             case "bank_refund" -> WebBank.refund(server, a, id, by);
             case "market_cancel_lot" -> WebBank.cancelLot(server, a, id, by);
             case "market_cancel_order" -> WebBank.cancelOrder(server, a, id, by);
+            case "bounty_list" -> WebBounties.list(server, id);
+            case "bounty_history" -> WebBounties.history(server, id);
+            case "bounty_players" -> WebBounties.players(server, a, id);
+            case "bounty_add" -> WebBounties.add(server, a, id, by);
+            case "bounty_remove" -> WebBounties.remove(server, a, id, by);
+            case "bounty_extend" -> WebBounties.extend(server, a, id, by);
+            case "bounty_blank_notes" -> WebBounties.blankNotes(server, a, id, by);
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
     }

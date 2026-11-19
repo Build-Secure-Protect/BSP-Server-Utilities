@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bounties Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set AD: three looks for More › Bounties on the staff web panel (decisions D524 to D534). Sample data; names are made up.
+   Layout: a page of sections, each look on its own board of phone (and computer) frames; the frames use the panel's own tokens (panel.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1240px; margin:0 auto; padding-block:28px 56px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; text-wrap:balance; } h2{ font-size:18px; margin:0; color:var(--acc); text-wrap:balance; }
+.lede{ color:var(--muted); margin:0; max-width:82ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:86ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:1100px){ .stage{ justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:12px; max-width:90ch; } ol b{ color:var(--fg); }
+.opt{ display:block; margin-top:3px; color:var(--muted); }
+
+/* ---------- the panel (its own tokens, panel.css) ---------- */
+.ph,.pc{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; flex:none; }
+.ph{ width:340px; height:740px; border:8px solid #050608; border-radius:30px; }
+.pc{ width:1000px; height:620px; border:8px solid #050608; border-radius:10px; flex-direction:row; }
+.ph *,.pc *{ box-sizing:border-box; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); } .vi{ color:var(--vio); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.back{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; color:var(--soft); font-size:15px; }
+.grow{ flex:1; min-width:0; }
+.scroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px; padding:0 12px 12px; }
+.face{ width:36px; height:36px; border-radius:4px; flex:none; background:linear-gradient(135deg,#6b4a2f 0 45%,#c99a6b 45% 70%,#3a2a1c 70%); }
+.nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub{ font-size:11px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tiles{ display:grid; grid-template-columns:1.3fr 1fr; gap:6px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:7px 9px; font-size:10.5px; color:var(--mu); min-width:0; }
+.tile b{ display:block; font:600 19px var(--mono); color:var(--tx); }
+.coins{ display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+.coin{ display:inline-flex; align-items:center; gap:4px; font:600 11px var(--mono); color:var(--tx); }
+.coin i{ width:10px; height:10px; border-radius:50%; display:block; }
+.c0{ background:#c87533; } .c1{ background:#f2c94c; } .c2{ background:#6fe3e1; } .c3{ background:#4a4048; border:1px solid #7a6a72; } .c4{ background:#b58cff; }
+.keys{ display:flex; gap:6px; flex-wrap:wrap; }
+.key{ height:30px; border-radius:8px; padding:0 11px; display:inline-flex; align-items:center; gap:6px; background:var(--pn); border:1px solid var(--ln); font-size:12px; font-weight:600; color:var(--soft); white-space:nowrap; }
+.key.on{ background:#19d3b01c; border-color:#19d3b066; color:var(--teal); }
+.key.danger{ color:var(--coral); border-color:#5a2a2a; background:transparent; }
+.key.armed{ background:var(--coral); color:#10151c; border-color:var(--coral); }
+.key.go{ background:var(--teal); color:#0f1115; border-color:var(--teal); }
+.key small{ font:600 10px var(--mono); opacity:.8; }
+.chips{ display:flex; gap:5px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:3px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11px; color:var(--mu); white-space:nowrap; }
+.chip.on{ color:var(--tx); border-color:var(--soft); }
+.sect{ font:600 10px var(--body); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
+.list{ background:var(--bg2); border:1px solid var(--ln); border-radius:10px; overflow:hidden; }
+.lr{ display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px; padding:8px 10px; align-items:start; }
+.lr + .lr, .lr + .rf, .rf + .lr{ border-top:1px solid #20242d; }
+.lr.sel{ background:#19d3b00d; }
+.ty{ font:600 9.5px var(--mono); padding:2px 5px; border-radius:4px; background:#232733; color:var(--soft); letter-spacing:.04em; margin-top:1px; }
+.ty.pay{ background:#1d2a3d; color:var(--blue); } .ty.mk{ background:#2a2614; color:var(--gold); } .ty.st{ background:#271f38; color:var(--vio); } .ty.cv{ background:#14302b; color:#7fe0cf; }
+.amt{ font:600 13px var(--mono); text-align:right; white-space:nowrap; }
+.amt.in{ color:var(--teal); } .amt.out{ color:var(--coral); }
+.amt small{ display:block; font:500 10px var(--mono); color:var(--mu); }
+.what{ font-size:12px; min-width:0; }
+.what .sub{ white-space:normal; }
+.bar{ height:3px; background:#2a2f3a; border-radius:2px; margin-top:4px; overflow:hidden; } .bar i{ display:block; height:100%; background:var(--vio); }
+.rf{ background:#14181f; padding:10px; display:flex; flex-direction:column; gap:8px; border-left:3px solid var(--teal); }
+.fld{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mu); }
+.fld .in{ height:32px; flex:1; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; display:flex; align-items:center; font:600 13px var(--mono); color:var(--tx); justify-content:space-between; min-width:0; }
+.fld .in em{ font:400 11px var(--body); color:var(--mu); font-style:normal; }
+.fld .in.txt{ font:13px var(--body); color:var(--soft); }
+.sw{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); }
+.sw i{ width:30px; height:18px; border-radius:9px; background:var(--teal); position:relative; flex:none; } .sw i::after{ content:""; position:absolute; right:2px; top:2px; width:14px; height:14px; border-radius:50%; background:#0f1115; }
+.sw i.off{ background:#2a2f3a; } .sw i.off::after{ left:2px; right:auto; background:var(--mu); }
+.sure{ font-size:12px; color:#ffb4ab; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:8px 10px; line-height:1.4; }
+.sure b{ color:#ffd9d4; }
+.lot{ display:flex; gap:9px; padding:9px 10px; align-items:center; }
+.lot + .lot{ border-top:1px solid #20242d; }
+.pic{ width:30px; height:30px; border-radius:5px; background:#232733; display:grid; place-items:center; font:600 10px var(--mono); color:var(--soft); flex:none; position:relative; }
+.pic sup{ position:absolute; right:-3px; bottom:-4px; font:600 9px var(--mono); color:var(--tx); background:#0f1115; border-radius:3px; padding:0 2px; }
+.pic.en{ box-shadow:inset 0 0 0 1px #b58cff88; }
+.note{ font-size:11px; color:var(--mu); line-height:1.4; }
+.okm{ font-size:12px; color:#7fe0cf; background:#14302b; border:1px solid #24443f; border-radius:8px; padding:7px 10px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); }
+.tnav div.on{ color:var(--teal); } .tnav b{ width:18px; height:18px; border:2px solid currentColor; border-radius:5px; display:block; }
+.day{ font:600 10.5px var(--body); color:var(--mu); padding:2px 2px 0; display:flex; justify-content:space-between; }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:16px 16px 0 0; padding:10px 14px 18px; display:flex; flex-direction:column; gap:9px; box-shadow:0 -14px 30px #000a; }
+.grab{ width:36px; height:4px; border-radius:2px; background:#3a3f4a; margin:0 auto 2px; }
+.shade{ position:absolute; inset:0; background:#000a; }
+.big{ background:var(--pn); border:1px solid var(--ln); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.flow{ display:grid; grid-template-columns:1fr auto; gap:3px 10px; font-size:12.5px; }
+.flow b{ font:600 13px var(--mono); text-align:right; }
+/* the computer */
+.side{ width:58px; background:var(--bg2); border-right:1px solid var(--ln); flex:none; display:flex; flex-direction:column; align-items:center; gap:14px; padding-top:14px; }
+.side b{ width:20px; height:20px; border:2px solid var(--mu); border-radius:5px; display:block; } .side b.on{ border-color:var(--teal); }
+.cmain{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.ccols{ flex:1; display:grid; grid-template-columns:250px 1fr 300px; gap:12px; padding:0 14px 14px; min-height:0; }
+.ccol{ display:flex; flex-direction:column; gap:9px; min-width:0; overflow:hidden; }
+table.led{ width:100%; border-collapse:collapse; font-size:12px; }
+.led th{ text-align:left; font:600 9.5px var(--body); letter-spacing:.1em; color:var(--dim); text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--ln); position:sticky; top:0; background:var(--bg2); }
+.led td{ padding:6px 8px; border-bottom:1px solid #20242d; white-space:nowrap; vertical-align:top; }
+.led td.n{ text-align:right; font:600 12px var(--mono); }
+.led tr.sel td{ background:#19d3b012; }
+.led td .sub{ max-width:170px; }
+
+.poster{ background:linear-gradient(#2a2416,#1a1d24); border:1px solid #5a4a1a; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center; }
+.poster .bigface{ width:56px; height:56px; border-radius:6px; background:linear-gradient(135deg,#6b4a2f 0 45%,#c99a6b 45% 70%,#3a2a1c 70%); }
+.poster .rw{ font:600 18px var(--mono); color:var(--gold); }
+.wanted{ font:12px Silkscreen,var(--mono); color:var(--gold); letter-spacing:.08em; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.chipe{ font:600 9.5px var(--mono); padding:2px 6px; border-radius:4px; }
+.ce-claimed{ background:#14302b; color:#7fe0cf; } .ce-expired{ background:#232733; color:var(--mu); } .ce-removed{ background:#3a1d1d; color:#ff8f86; } .ce-staff{ background:#271f38; color:var(--vio); }
+.notes{ background:#14181f; border:1px dashed var(--ln); border-radius:8px; padding:8px; font-size:12px; color:var(--soft); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+.hunt{ display:flex; gap:6px; align-items:center; font-size:12px; } .hunt i{ width:16px; height:16px; border-radius:3px; background:#5a7a3a; display:block; }
+.tbl{ width:100%; border-collapse:collapse; font-size:12px; } .tbl th{ text-align:left; font:600 9.5px var(--body); letter-spacing:.1em; color:var(--dim); text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--ln); }
+.tbl td{ padding:6px 8px; border-bottom:1px solid #20242d; white-space:nowrap; } .tbl tr.sel td{ background:#19d3b012; } .tbl td.n{ text-align:right; font:600 12px var(--mono); }
+.search{ height:32px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; display:flex; align-items:center; font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Bounties on the staff panel</h1>
+    <p class="lede">Mock-up set AD, three looks for More › Bounties (D524 to D534). It has OPEN (every running bounty with its target, reward, bonus and window, end, placer, hunters, fee and private notes), HISTORY (the newest 500 closed ones) and + ADD (a bounty paid by the server). Admins, Owners and Moderators with the bounty power add, remove (with or without a refund), extend and blank notes, each with a reason and a SURE? naming what moves. A player's sheet gets a line "Bounties: 1 on them, 2 placed" that opens this page filtered to them. The data is made up.</p>
+  </header>
+  <section><h2>A. One list with page keys, the bounty opening under its row</h2>
+    <div class="card"><p>Like the Bank &amp; Market page. Tapping a bounty opens its details and keys under it. Chips and a search narrow the list. On a computer the page is one column, 720 px wide.</p></div>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:42</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Bounties</div><div class="sub">6 open · read 3 s ago</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="keys"><span class="key on">OPEN <small>6</small></span><span class="key">HISTORY</span><span class="key">+ ADD</span></div>
+            <div class="chips"><span class="chip on">All</span><span class="chip">Ending within a day</span><span class="chip">Staff bounties</span><span class="chip">With a bonus</span></div>
+            <div class="search">Target, placer or hunter</div>
+            <div class="list">
+              <div class="lot sel" style="background:#19d3b00d"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">2 hunters · ends in 2 d 23 h · bonus 18 h</div></div><div class="amt gd">25,000</div></div>
+              <div class="rf">
+                <div class="kv"><span>Reward</span><span class="gd mono">25,000 pieces</span><span>Bonus</span><span><b class="gd mono">+5,000</b> if killed within <b>18 h 40 min</b></span><span>Ends</span><span>in 2 d 23 h (21 Nov 21:40)</span><span>Placed by</span><span>Kestrel_88 · 1 h ago on Frostwarf</span><span>Fee</span><span class="mono">1,250 pieces (to the lottery pot)</span></div>
+                <div class="sect">Hunters · 2</div>
+                <div class="hunt"><i></i>Mossy_Fen <span class="mu">· accepted 40 min ago</span></div>
+                <div class="hunt"><i></i>Pixl <span class="mu">· accepted 12 min ago</span></div>
+                <div class="sect">Notes · hunters and staff only</div>
+                <div class="notes">camps the nether hub after 9 pm, wears a blue cape</div>
+                <div class="keys"><span class="key">BLANK NOTES</span><span class="key">+1 HOUR</span><span class="key">+1 DAY</span><span class="key">+7 DAYS</span></div>
+                <div class="keys"><span class="key danger">REMOVE + REFUND</span><span class="key danger">REMOVE, NO REFUND</span></div>
+              </div>
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Kestrel_88</div><div class="sub">by the Server · no hunters · ends in 23 h</div></div><div class="amt gd">3 <span class="coin"><i class="c2"></i></span></div></div>
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">TallyHo</div><div class="sub">1 hunter · ends in 5 h</div></div><div class="amt gd">1,500</div></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">A1 · one list, the picked bounty opening under it with every key</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:44</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Bounties</div><div class="sub">add a bounty paid by the server</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="keys"><span class="key">OPEN <small>6</small></span><span class="key">HISTORY</span><span class="key on">+ ADD</span></div>
+            <div class="search" style="color:var(--tx)">wre</div>
+            <div class="list">
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">Frostwarf</div></div><div class="amt "><span class="tl" style="font-size:11px">online</span></div></div>
+              <div class="lot" style="opacity:.55"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Wrenfield</div><div class="sub">staff: cannot have a bounty</div></div></div>
+            </div>
+            <div class="keys"><span class="key on">PIECES</span><span class="key">COINS</span></div>
+            <div class="fld">Reward<span class="in">25000 <em>at least 1,000</em></span></div>
+            <div class="fld">For<span class="in">3 <em>days (1 h to 30 d)</em></span></div>
+            <div class="sw"><i></i>A bonus of <b class="mono">&nbsp;5,000&nbsp;</b> if killed within <b class="mono">&nbsp;1 day</b></div>
+            <div class="fld"><span class="in txt">Notes for hunters (optional)</span></div>
+            <div class="fld"><span class="in txt">Event: wanted for the weekend hunt</span></div>
+            <div class="sure">Sure? Put <b>25,000 pieces</b> on <b>Wren_88</b> for <b>3 days</b>, with <b>5,000</b> more if killed within <b>1 day</b>, paid by the server. Wren_88 is told.</div>
+            <div class="keys"><span class="key armed">SURE? PLACE IT</span></div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">A2 · + ADD: search, price, time, bonus, notes, reason, SURE?</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:46</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Bounties</div><div class="sub">history · the newest 500</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="keys"><span class="key">OPEN <small>6</small></span><span class="key on">HISTORY</span><span class="key">+ ADD</span></div>
+            <div class="chips"><span class="chip on">All</span><span class="chip">Claimed</span><span class="chip">Expired</span><span class="chip">Cancelled</span><span class="chip">Removed</span></div>
+            <div class="list">
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Vexa <span class="chipe ce-claimed">CLAIMED</span></div><div class="sub">by Mossy_Fen · bonus paid · 2 h ago</div></div><div class="amt gd">12,000</div></div>
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Pixl <span class="chipe ce-removed">REMOVED</span></div><div class="sub">by Ana_Admin (panel) · refunded · yesterday</div></div><div class="amt gd">4,000</div></div>
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Juniper_K <span class="chipe ce-expired">EXPIRED</span></div><div class="sub">no hunter · 2 days ago</div></div><div class="amt gd">1,000</div></div>
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Glimmer <span class="chipe ce-staff">TARGET_STAFF</span></div><div class="sub">everything refunded · 3 days ago</div></div><div class="amt gd">8,000</div></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">A3 · HISTORY with the ending chips</div>
+      </div>
+    </div></section>
+  <section><h2>B. The board as wanted posters, each bounty on a screen of its own</h2>
+    <div class="card"><p>Two posters a row on a phone and four on a computer, like the in-game Bounty Board. A poster opens the bounty's own screen. HISTORY and + ADD are as in A.</p></div>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:42</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Bounties</div><div class="sub">the board · 6 open</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="keys"><span class="key on">OPEN <small>6</small></span><span class="key">HISTORY</span><span class="key">+ ADD</span></div>
+            <div class="grid2">
+              <div class="poster"><span class="wanted">WANTED</span><div class="bigface"></div><b>Wren_88</b><span class="rw">25,000</span><span class="sub">+5,000 within 18 h</span><span class="sub">2 hunters · 2 d 23 h</span></div>
+              <div class="poster"><span class="wanted">WANTED</span><div class="bigface"></div><b>Kestrel_88</b><span class="rw">3 ◆</span><span class="sub">the Server</span><span class="sub">no hunters · 23 h</span></div>
+              <div class="poster"><span class="wanted">WANTED</span><div class="bigface"></div><b>TallyHo</b><span class="rw">1,500</span><span class="sub">1 hunter · 5 h</span></div>
+              <div class="poster"><span class="wanted">WANTED</span><div class="bigface"></div><b>Pixl</b><span class="rw">9,000</span><span class="sub">no hunters · 6 d</span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">B1 · the board as posters, like the in-game Bounty Board</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:43</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Wren_88</div><div class="sub">bounty b-41 · on Frostwarf</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="poster" style="flex-direction:row;text-align:left;align-items:center;gap:10px"><div class="bigface"></div><div class="grow"><span class="wanted">WANTED</span><div class="rw">25,000 pieces</div><div class="sub">+5,000 if killed within 18 h 40 min</div></div></div>
+            <div class="rf" style="border-left:0">
+                <div class="kv"><span>Reward</span><span class="gd mono">25,000 pieces</span><span>Bonus</span><span><b class="gd mono">+5,000</b> if killed within <b>18 h 40 min</b></span><span>Ends</span><span>in 2 d 23 h (21 Nov 21:40)</span><span>Placed by</span><span>Kestrel_88 · 1 h ago on Frostwarf</span><span>Fee</span><span class="mono">1,250 pieces (to the lottery pot)</span></div>
+                <div class="sect">Hunters · 2</div>
+                <div class="hunt"><i></i>Mossy_Fen <span class="mu">· accepted 40 min ago</span></div>
+                <div class="hunt"><i></i>Pixl <span class="mu">· accepted 12 min ago</span></div>
+                <div class="sect">Notes · hunters and staff only</div>
+                <div class="notes">camps the nether hub after 9 pm, wears a blue cape</div>
+                <div class="keys"><span class="key">BLANK NOTES</span><span class="key">+1 HOUR</span><span class="key">+1 DAY</span><span class="key">+7 DAYS</span></div>
+                <div class="keys"><span class="key danger">REMOVE + REFUND</span><span class="key danger">REMOVE, NO REFUND</span></div>
+              </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">B2 · a bounty on its own screen</div>
+      </div>
+    </div></section>
+  <section><h2>C. A table on a computer, a sheet from the bottom on a phone</h2>
+    <div class="card"><p>A sortable table with the picked bounty beside it on a computer. On a phone the table becomes a list, and a bounty slides up from the bottom.</p></div>
+    <div class="stage">
+      <div>
+        <div class="pc">
+          <div class="side"><b></b><b></b><b></b><b></b><b class="on"></b></div>
+          <div class="cmain">
+            <div class="top" style="padding-top:12px"><div class="grow"><div class="nm">Bounties · 6 open</div><div class="sub">read 3 s ago from Frostwarf</div></div><span class="key">OPEN</span><span class="key">HISTORY</span><span class="key">+ ADD</span><span class="key">REFRESH</span></div>
+            <div class="ccols" style="grid-template-columns:1fr 330px">
+              <div class="ccol">
+                <div class="chips"><span class="chip on">All</span><span class="chip">Ending within a day</span><span class="chip">Staff bounties</span><span class="chip">With a bonus</span><span class="search" style="flex:1">Target, placer or hunter</span></div>
+                <div class="list"><table class="tbl"><thead><tr><th>Target</th><th style="text-align:right">Reward</th><th>Bonus</th><th>Ends in</th><th>Placed by</th><th>Hunters</th><th>Server</th></tr></thead><tbody>
+                  <tr class="sel"><td>Wren_88</td><td class="n gd">25,000</td><td>+5,000 · 18 h</td><td>2 d 23 h</td><td>Kestrel_88</td><td>2</td><td class="mu">Frostwarf</td></tr>
+                  <tr><td>Kestrel_88</td><td class="n gd">3 ◆</td><td class="dim">·</td><td>23 h</td><td class="vi">Server</td><td>0</td><td class="mu">Moongrove</td></tr>
+                  <tr><td>TallyHo</td><td class="n gd">1,500</td><td class="dim">·</td><td>5 h</td><td>RuneSmith</td><td>1</td><td class="mu">BSP-Spawn</td></tr>
+                  <tr><td>Pixl</td><td class="n gd">9,000</td><td>+1,000 · 2 d</td><td>6 d</td><td>Vexa</td><td>0</td><td class="mu">Stormfall</td></tr>
+                  <tr><td>Juniper_K</td><td class="n gd">2,000</td><td class="dim">·</td><td>11 d</td><td>BrickLayerTom</td><td>3</td><td class="mu">Boulderbrook</td></tr>
+                </tbody></table></div>
+              </div>
+              <div class="ccol">
+                <div class="sect">Wren_88 · b-41</div>
+                <div class="rf">
+                <div class="kv"><span>Reward</span><span class="gd mono">25,000 pieces</span><span>Bonus</span><span><b class="gd mono">+5,000</b> if killed within <b>18 h 40 min</b></span><span>Ends</span><span>in 2 d 23 h (21 Nov 21:40)</span><span>Placed by</span><span>Kestrel_88 · 1 h ago on Frostwarf</span><span>Fee</span><span class="mono">1,250 pieces (to the lottery pot)</span></div>
+                <div class="sect">Hunters · 2</div>
+                <div class="hunt"><i></i>Mossy_Fen <span class="mu">· accepted 40 min ago</span></div>
+                <div class="hunt"><i></i>Pixl <span class="mu">· accepted 12 min ago</span></div>
+                <div class="sect">Notes · hunters and staff only</div>
+                <div class="notes">camps the nether hub after 9 pm, wears a blue cape</div>
+                <div class="keys"><span class="key">BLANK NOTES</span><span class="key">+1 HOUR</span><span class="key">+1 DAY</span><span class="key">+7 DAYS</span></div>
+                <div class="keys"><span class="key danger">REMOVE + REFUND</span><span class="key danger">REMOVE, NO REFUND</span></div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cap" style="max-width:none">C1 · a computer: the open bounties as a table, the picked one beside it</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:43</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Bounties</div><div class="sub">6 open</div></div><span class="key">REFRESH</span></div>
+          <div class="scroll">
+            <div class="list">
+              <div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Wren_88</div><div class="sub">2 hunters · 2 d 23 h</div></div><div class="amt gd">25,000</div></div><div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Kestrel_88</div><div class="sub">Server · 23 h</div></div><div class="amt gd">3 ◆</div></div><div class="lot"><div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">TallyHo</div><div class="sub">1 hunter · 5 h</div></div><div class="amt gd">1,500</div></div>
+            </div>
+          </div>
+          <div class="shade"></div>
+          <div class="sheet"><div class="grab"></div><div class="nm">Wren_88 · 25,000 pieces</div>
+            <div class="keys"><span class="key">+1 HOUR</span><span class="key">+1 DAY</span><span class="key">+7 DAYS</span></div>
+            <div class="fld"><span class="in txt">Bounty spam on a new player</span></div>
+            <div class="sure">Sure? Take this bounty off the board and give <b>Kestrel_88 25,000 pieces and the 5,000 bonus</b> back to their bank. The 1,250 fee stays in the pot. Kestrel_88, the 2 hunters and Wren_88 are told.</div>
+            <div class="keys"><span class="key armed">SURE? REMOVE + REFUND</span><span class="key">CLOSE</span></div>
+          </div>
+          
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Staff</div><div class="on"><b></b>More</div></div>
+        </div>
+        <div class="cap">C2 · a phone: a list, the bounty in a bottom sheet, a removal armed</div>
+      </div>
+    </div></section>
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>AD1 · Which look.</b> Default: <b>A</b>, one list with OPEN, HISTORY and + ADD keys, the bounty opening under its row.
+        <span class="opt">Or B: wanted posters, with each bounty on its own screen.</span>
+        <span class="opt">Or C: a table with the bounty beside it on a computer, and a bottom sheet on a phone.</span></li>
+      <li><b>AD2 · Narrowing OPEN.</b> Default: chips All, Ending within a day, Staff bounties and With a bonus, plus a search box matching the target, the placer or a hunter.
+        <span class="opt">Or: the search box only.</span></li>
+      <li><b>AD3 · The bonus.</b> Default: “+5,000 if killed within 18 h 40 min”, counting down until the window closes, then “bonus window over”.
+        <span class="opt">Or: the bonus amount and the time its window ends, as a clock time.</span></li>
+      <li><b>AD4 · History rows.</b> Default: one line each with a coloured ending chip (CLAIMED teal, EXPIRED and CANCELLED grey, REMOVED red, TARGET_STAFF violet, a newer one grey as it is). Tapping a row shows the whole bounty as it was, notes included.
+        <span class="opt">Or: every detail shown on every row.</span></li>
+    </ol></div>
+  </section>
+</div>
+</body>
+</html>

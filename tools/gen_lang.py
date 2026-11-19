@@ -888,6 +888,7 @@ KEYS["message.bsp_server_utilities.drops.cleared_staff_arrows"] = "Arrows lying 
 KEYS["message.bsp_server_utilities.status.drops_crowded"] = "Crowded drops: %s items and %s arrows a chunk, cleared after %s min over; last hour %s clears, %s items, %s arrows."
 KEYS["gui.bsp_server_utilities.panel.log.kind.mob"] = "Mobs removed"
 KEYS["gui.bsp_server_utilities.panel.log.kind.bank"] = "Refunds & cancels"
+KEYS["gui.bsp_server_utilities.panel.log.kind.bounty"] = "Bounties"
 KEYS["message.bsp_server_utilities.mobs.full"] = "This chunk is at its mob limit (%s)."
 KEYS["message.bsp_server_utilities.status.mobs"] = "Mob limits: every chunk %s, %s dimensions, %s single chunks; %s new mobs refused since the server started."
 KEYS["message.bsp_server_utilities.status.mobs_off"] = "Mob limits: none set (the MOBS tab)."

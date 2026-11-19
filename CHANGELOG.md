@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-19
+
+The Bounty Board on the staff web panel (with staff panel 0.4.0 and BSP-Core 1.19.0). The network protocol is still 8: players may stay on 0.12.0 or 0.13.0 (staff on an older client see the new "Bounties" Action log entries labelled Commands).
+
+### Added
+- The staff web panel's agent reads and runs the Bounty Board through BSP-Core 1.19's `BspBounties`: `bounty_list` (every open bounty with its target, reward, bonus and window, end, placer, hunters, fee and private notes), `bounty_history` (the newest 500 closed ones), `bounty_players` (the add form's player search, with who may not be a target), and `bounty_add` (a bounty paid by the server), `bounty_remove` (with or without a refund), `bounty_extend` and `bounty_blank_notes`. Every rank reads; Admins, Owners and Moderators given the bounty power change, with a reason; each change is in the Action log (kind "Bounties", staff only). Needs BSP-Core 1.19.0 on the server; without it the panel says so.
+- Staff panel: an Owner can give a Moderator the BOUNTY power (add, remove, extend and blank bounties; a 48-hour login, as with the other powers; ended by a change of rank), shown as BOUNTY beside their rank. The panel's `/api/bounties` (the board), `/api/bounties/history`, `/api/bounties/players` and `/api/bounties/add`, `/remove`, `/extend`, `/blank` check who may before anything is signed, need a reason, send a change to the server whose board the page showed (refused when it has gone) with the long wait, and write every change tried to the panel's log. Game servers say in their snapshot (`bounties`) whether they can answer. The panel's own database gets a `bounty_power` column on its staff table by itself.
+- Staff panel: More › Bounties, the Bounty Board as wanted posters (two a row on a phone, four on a computer), newest first, with chips (Ending within a day, Staff bounties, With a bonus) and a search by target, placer or hunter. Each poster opens the bounty's screen: the reward (coins with their tier), the bonus counting down, the end, who placed it and where, the fee, the hunters and the private notes; for Admins, Owners and the bounty power one "Why" box above BLANK NOTES, +1 HOUR, +1 DAY, +7 DAYS (one tap), DAYS… (a number and SURE?) and REMOVE + REFUND / REMOVE, NO REFUND (SURE? naming what goes back to whom). HISTORY lists the newest 500 closed bounties with coloured ending chips and opens one as it was, notes included. + ADD places a bounty paid by the server: a player search (staff and protected players shown and refused), pieces or coins of one tier, the time, an optional bonus with its window, notes, a reason and SURE?. A player's sheet shows "Bounties: 1 on them, 2 placed" when they have any, opening the board filtered to them. The board reads again every 30 seconds while nothing is being done. The demo has a made-up board.
+
+### Changed
+- Built and tested against BSP-Core 1.19.0 (dev runs and GameTests; the range stays `[1.4.0,)`).
+
 ## [0.13.0] - 2026-11-18
 
 A player's Bank & Market on the staff web panel (with staff panel 0.3.0 and BSP-Core 1.18.0). The network protocol is still 8: players may stay on 0.12.0 (staff on 0.12.0 see the new Action log entries labelled Commands, and cannot filter them by their own kind).

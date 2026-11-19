@@ -815,6 +815,88 @@ class PanelServerTest {
     }
 
     @Test
+    void bounties_are_read_by_everyone_and_changed_by_admins_or_the_bounty_power() throws Exception {
+        String o = owner();
+        JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));
+        String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+        String kip = cookieOf(post("/api/setup", "kip@bsp.test", null,
+                "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+        long kipId = store.accountByEmail("kip@bsp.test").orElseThrow().id;
+        java.util.List<JsonObject> asked = new java.util.concurrent.CopyOnWriteArrayList<>();
+        com.mrgregles.bsp_staff_panel.act.Actions[] g = new com.mrgregles.bsp_staff_panel.act.Actions[1];
+        g[0] = new com.mrgregles.bsp_staff_panel.act.Actions(ActionsTest.KEY, (uid, at, kind, payload) -> {
+            JsonObject a = unsign(payload);
+            asked.add(a);
+            String reply = "{\"id\":\"" + uid + "\"," + switch (a.get("action").getAsString()) {
+                case "bounty_list" -> "\"ok\":true,\"message\":\"1 open\",\"data\":{\"open\":[{\"id\":\"b-1\",\"targetName\":\"Vexa\",\"notes\":\"camps spawn\"}],\"tiers\":[]}";
+                case "bounty_history" -> "\"ok\":true,\"message\":\"0 closed\",\"data\":{\"history\":[]}";
+                case "bounty_players" -> "\"ok\":true,\"message\":\"1 players\",\"data\":{\"players\":[{\"id\":\"x\",\"name\":\"Vexa\",\"online\":true,\"refusal\":\"\"}]}";
+                default -> "\"ok\":true,\"message\":\"Done.\",\"data\":{\"result\":\"ok\"}";
+            } + "}";
+            new Thread(() -> g[0].acceptMessage(com.mrgregles.bsp_staff_panel.act.Actions.line("x", at, "answer", com.mrgregles.bsp_staff_panel.crypto.Signed.seal(ActionsTest.KEY, reply)))).start();
+        }, clock::get, 2);
+        server.withActions(g[0]);
+        server.withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> g[0], clock::get));
+        java.util.function.Consumer<Long> snapshots = at -> {
+            feed.accept("Frostwarf", at, "{\"v\":1,\"server\":\"Frostwarf\",\"at\":" + at + ",\"bounties\":true,\"lotteryUp\":true,\"players\":[{\"id\":\"a1\",\"name\":\"A\"}]}");
+            feed.accept("Moongrove", at, "{\"v\":1,\"server\":\"Moongrove\",\"at\":" + at + ",\"bounties\":true,\"lotteryUp\":true,\"players\":[]}");
+            feed.accept("Sanctuary", at, "{\"v\":1,\"server\":\"Sanctuary\",\"at\":" + at + ",\"players\":[{\"id\":\"d1\",\"name\":\"G\"},{\"id\":\"d2\",\"name\":\"H\"}]}");
+        };
+        assertFalse(json(post("/api/bounties", "kip@bsp.test", kip, "{}")).get("ok").getAsBoolean(), "no server with BSP-Core 1.19: refused");
+        snapshots.accept(clock.get());
+        assertEquals(java.util.List.of("Frostwarf", "Moongrove"), feed.liveWithBounties(), "connected first, then the busiest; none without BSP-Core 1.19");
+        JsonObject list = json(post("/api/bounties", "kip@bsp.test", kip, "{}"));
+        assertTrue(list.get("ok").getAsBoolean() && list.getAsJsonArray("open").get(0).getAsJsonObject().get("notes").getAsString().equals("camps spawn")
+                && list.get("server").getAsString().equals("Frostwarf"), "a Moderator reads the board, notes included (D524, D525): " + list);
+        assertTrue(json(post("/api/bounties/history", "kip@bsp.test", kip, "{}")).get("ok").getAsBoolean());
+        assertTrue(json(post("/api/bounties/players", "kip@bsp.test", kip, "{\"search\":\"ve\"}")).getAsJsonArray("players").size() == 1);
+        assertFalse(json(post("/api/bounties/players", "kip@bsp.test", kip, "{\"search\":\"no spaces!\"}")).get("ok").getAsBoolean());
+
+        String add = "{\"target\":\"11111111-2222-3333-4444-555555555555\",\"name\":\"Vexa\",\"tier\":-1,\"amount\":25000,\"bonus\":5000,\"bonusWithinMs\":86400000,\"durationMs\":259200000,"
+                + "\"notes\":\"x\",\"reason\":\"Event\",\"server\":\"Frostwarf\"}";
+        String extend = "{\"bounty\":\"b-1\",\"targetName\":\"Vexa\",\"addMs\":3600000,\"reason\":\"Event\",\"server\":\"Moongrove\"}";
+        int before = asked.size();
+        assertEquals(403, post("/api/bounties/add", "kip@bsp.test", kip, add).statusCode(), "a Moderator without the bounty power (D526)");
+        assertEquals(403, post("/api/bounties/extend", "kip@bsp.test", kip, extend).statusCode());
+        assertEquals(before, asked.size(), "nothing sent");
+        assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + kipId + ",\"action\":\"bounty\",\"on\":true}")).get("ok").getAsBoolean());
+        assertEquals(401, me("kip@bsp.test", kip).statusCode(), "giving the bounty power ends his logins (D527)");
+        clock.addAndGet(30_000);
+        snapshots.accept(clock.get());
+        HttpResponse<String> relogin = post("/api/login", "kip@bsp.test", null, "{\"password\":\"" + PW + "\",\"code\":\"" + code(ks) + "\"}");
+        assertTrue(relogin.headers().firstValue("Set-Cookie").orElse("").contains("Max-Age=" + Rank.ADMIN.session().toSeconds()), "48 hours with the power");
+        kip = cookieOf(relogin);
+        JsonObject meNow = json(me("kip@bsp.test", kip));
+        assertTrue(meNow.get("bountyPower").getAsBoolean() && !meNow.get("bankPower").getAsBoolean(), "the bounty power alone");
+        assertTrue(json(get("/api/staff", "owner@bsp.test", o)).getAsJsonArray("staff").asList().stream().anyMatch(x -> x.getAsJsonObject().get("bountyPower").getAsBoolean()));
+
+        before = asked.size();
+        for (String bad : java.util.List.of(add.replace("Event", " "), add.replace("\"amount\":25000", "\"amount\":0"), add.replace("\"durationMs\":259200000", "\"durationMs\":60000"),
+                add.replace("\"bonusWithinMs\":86400000", "\"bonusWithinMs\":259200000"), add.replace("11111111-2222-3333-4444-555555555555", "nope"))) {
+            assertFalse(json(post("/api/bounties/add", "kip@bsp.test", kip, bad)).get("ok").getAsBoolean(), bad);
+        }
+        assertEquals(before, asked.size(), "nothing malformed is signed");
+        assertTrue(json(post("/api/bounties/add", "kip@bsp.test", kip, add)).get("ok").getAsBoolean());
+        JsonObject sa = asked.get(asked.size() - 1);
+        assertTrue(sa.get("action").getAsString().equals("bounty_add") && sa.get("bountyPower").getAsBoolean() && sa.get("amount").getAsLong() == 25000
+                && sa.get("server").getAsString().equals("Frostwarf") && sa.get("rank").getAsString().equals("MODERATOR"), "the add as shown, with the power: " + sa);
+        assertTrue(json(post("/api/bounties/extend", "kip@bsp.test", kip, extend)).get("ok").getAsBoolean());
+        JsonObject se = asked.get(asked.size() - 1);
+        assertTrue(se.get("action").getAsString().equals("bounty_extend") && se.get("bounty").getAsString().equals("b-1") && se.get("bountyPower").getAsBoolean()
+                && se.get("addMs").getAsLong() == 3_600_000L && se.get("server").getAsString().equals("Moongrove"), "the id kept apart from the power, to the server the page read: " + se);
+        json(post("/api/bounties/remove", "kip@bsp.test", kip, extend.replace("\"addMs\":3600000", "\"refund\":true")));
+        assertTrue(asked.get(asked.size() - 1).get("refund").getAsBoolean(), "a remove with a refund");
+        int n = asked.size();
+        JsonObject gone = json(post("/api/bounties/blank", "kip@bsp.test", kip, extend.replace("Moongrove", "Sanctuary")));
+        assertTrue(!gone.get("ok").getAsBoolean() && gone.get("message").getAsString().contains("is not sending") && asked.size() == n, "a gone server: refused, never another");
+        assertTrue(store.log(0, 80).stream().anyMatch(l -> l.what().startsWith("asked to extend bounty b-1 by 1 h on Vexa: Event")), "in the panel's log");
+        assertTrue(store.log(0, 80).stream().anyMatch(l -> l.what().startsWith("tried to blank bounty b-1; refused: Sanctuary")), "a refusal too");
+        assertTrue(json(post("/api/staff/action", "owner@bsp.test", o, "{\"id\":" + kipId + ",\"action\":\"rank\",\"rank\":\"ADMIN\"}")).get("ok").getAsBoolean());
+        assertFalse(store.accountByEmail("kip@bsp.test").orElseThrow().bountyPower, "a rank change ends the bounty power");
+    }
+
+    @Test
     void a_game_server_that_does_not_answer_is_asked_once_not_by_every_page_and_the_busiest_draws() throws Exception {
         String o = owner();
         java.util.List<JsonObject> asked = new java.util.concurrent.CopyOnWriteArrayList<>();

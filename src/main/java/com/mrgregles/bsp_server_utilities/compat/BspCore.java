@@ -571,4 +571,223 @@ public final class BspCore {
         bankOverride = null;
         bankForced = false;
     }
+
+    // ------------------------------------------------------------------ bounties for staff (SU-74; BSP-Core 1.19's BspBounties)
+
+    /** The oldest BSP-Core with {@code BspBounties}. */
+    public static final String BOUNTIES_SINCE = "1.19.0";
+
+    /** A hunter who accepted a bounty. */
+    public record BountyHunter(java.util.UUID id, String name, long acceptedMs) {
+    }
+
+    /**
+     * A bounty as BSP-Core's {@code BspBounties.Info}: {@code coinTier} -1 for pieces, else a tier index; {@code amount} and
+     * {@code bonus} pieces or a count of coins; {@code bonusEndsMs} 0 for no bonus; {@code byServer} true for a staff bounty
+     * (placed by {@code BspBounties.SERVER}).
+     */
+    public record Bounty(String id, java.util.UUID target, String targetName, java.util.UUID placer, String placerName, boolean byServer, int coinTier,
+                         long amount, long bonus, long bonusEndsMs, long fee, long placedMs, long endsMs, String notes, String serverId,
+                         java.util.List<BountyHunter> hunters) {
+    }
+
+    /** A closed bounty: {@code ending} CLAIMED, CANCELLED, EXPIRED, REMOVED, REMOVED_NO_REFUND, TARGET_STAFF or newer; {@code hunter} null unless claimed. */
+    public record BountyClosed(Bounty bounty, String ending, long closedMs, @org.jetbrains.annotations.Nullable java.util.UUID hunter, String hunterName,
+                               String by, boolean bonusPaid) {
+    }
+
+    /** A player the bank knows, for the add form. */
+    public record BountyPlayer(java.util.UUID id, String name, boolean online) {
+    }
+
+    /** A staff change's answer: BSP-Core's key (or "failed": BSP-Core threw) and the bounty as it is after it, when there is one. */
+    public record BountyResult(String key, @org.jetbrains.annotations.Nullable Bounty bounty) {
+    }
+
+    /** What the staff panel's bounties need; the real one is BSP-Core 1.19+, tests give their own. Server thread only. */
+    public interface Bounties {
+        /** Every running bounty, newest first. Throws when BSP-Core failed. */
+        java.util.List<Bounty> open(net.minecraft.server.MinecraftServer server);
+
+        /** Closed bounties, newest first. Throws when BSP-Core failed. */
+        java.util.List<BountyClosed> history(net.minecraft.server.MinecraftServer server);
+
+        /** Players whose name contains {@code search}, online first; {@code failed} runs instead when BSP-Core failed. */
+        void players(net.minecraft.server.MinecraftServer server, String search, java.util.function.Consumer<java.util.List<BountyPlayer>> then, Runnable failed);
+
+        /** Null, or {@code staff} / {@code protected}. Throws when BSP-Core failed. */
+        @org.jetbrains.annotations.Nullable
+        String targetRefusal(net.minecraft.server.MinecraftServer server, java.util.UUID target, String name);
+
+        /** The coin tiers' names, cheapest first. */
+        java.util.List<String> tiers();
+
+        void add(net.minecraft.server.MinecraftServer server, String by, java.util.UUID target, String targetName, int coinTier, long amount, long bonus,
+                 long bonusWithinMs, long durationMs, String notes, java.util.function.Consumer<BountyResult> then);
+
+        void remove(net.minecraft.server.MinecraftServer server, String id, boolean refund, String by, java.util.function.Consumer<BountyResult> then);
+
+        void extend(net.minecraft.server.MinecraftServer server, String id, long addMs, String by, java.util.function.Consumer<BountyResult> then);
+
+        void blankNotes(net.minecraft.server.MinecraftServer server, String id, String by, java.util.function.Consumer<BountyResult> then);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static Bounties bountiesOverride;
+    private static boolean bountiesForced;
+    private static Boolean bountiesChecked;
+
+    /** BSP-Core's bounty calls, or null without BSP-Core 1.19.0 or newer. */
+    @org.jetbrains.annotations.Nullable
+    public static Bounties bounties() {
+        if (bountiesForced) {
+            return bountiesOverride;
+        }
+        return hasBounties() ? RealBounties.INSTANCE : null;
+    }
+
+    private static boolean hasBounties() {
+        if (bountiesChecked != null) {
+            return bountiesChecked;
+        }
+        if (ModList.get() == null || !isLoaded()) {
+            return false;
+        }
+        boolean ok;
+        try {
+            ok = ModList.get().getModContainerById(MODID)
+                    .map(c -> c.getModInfo().getVersion().compareTo(new org.apache.maven.artifact.versioning.DefaultArtifactVersion(BOUNTIES_SINCE)) >= 0)
+                    .orElse(false);
+            if (ok) {
+                Class.forName("com.mrgregles.bsp_core.api.BspBounties$Result");
+            }
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            ok = false;
+        }
+        bountiesChecked = ok;
+        return ok;
+    }
+
+    /** Loaded only once BSP-Core 1.19+ is known to be there. A failure answers once, never after BSP-Core answered. */
+    private static final class RealBounties implements Bounties {
+        static final Bounties INSTANCE = new RealBounties();
+
+        private static Bounty bounty(com.mrgregles.bsp_core.api.BspBounties.Info i) {
+            return new Bounty(i.id(), i.target(), i.targetName(), i.placer(), i.placerName(), com.mrgregles.bsp_core.api.BspBounties.SERVER.equals(i.placer()),
+                    i.coinTier(), i.amount(), i.bonus(), i.bonusEndsMs(), i.fee(), i.placedMs(), i.endsMs(), i.notes() == null ? "" : i.notes(),
+                    i.serverId() == null ? "" : i.serverId(),
+                    i.hunters() == null ? java.util.List.of() : i.hunters().stream().map(h -> new BountyHunter(h.id(), h.name(), h.acceptedMs())).toList());
+        }
+
+        private static BountyResult result(com.mrgregles.bsp_core.api.BspBounties.Result r) {
+            return r == null ? new BountyResult("failed", null) : new BountyResult(r.key(), r.bounty() == null ? null : bounty(r.bounty()));
+        }
+
+        private static void failed(String what, Throwable e, java.util.concurrent.atomic.AtomicBoolean ran, Runnable fallback) {
+            if (ran.get()) {
+                BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: the staff panel's {} answer failed after BSP-Core answered: {}", what, e.toString());
+            } else {
+                BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: BSP-Core's {} failed: {}", what, e.toString());
+                fallback.run();
+            }
+        }
+
+        @Override
+        public java.util.List<Bounty> open(net.minecraft.server.MinecraftServer server) {
+            try {
+                return com.mrgregles.bsp_core.api.BspBounties.open(server).stream().map(RealBounties::bounty).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public java.util.List<BountyClosed> history(net.minecraft.server.MinecraftServer server) {
+            try {
+                return com.mrgregles.bsp_core.api.BspBounties.history(server).stream().map(c -> new BountyClosed(bounty(c.bounty()), c.ending(), c.closedMs(), c.hunter(),
+                        c.hunterName() == null ? "" : c.hunterName(), c.by() == null ? "" : c.by(), c.bonusPaid())).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public void players(net.minecraft.server.MinecraftServer server, String search, java.util.function.Consumer<java.util.List<BountyPlayer>> then, Runnable fail) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                com.mrgregles.bsp_core.api.BspBounties.players(server, search, list -> {
+                    ran.set(true);
+                    then.accept(list == null ? java.util.List.of() : list.stream().map(x -> new BountyPlayer(x.id(), x.name(), x.online())).toList());
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed("bounty player search", e, ran, fail);
+            }
+        }
+
+        @Override
+        public String targetRefusal(net.minecraft.server.MinecraftServer server, java.util.UUID target, String name) {
+            try {
+                return com.mrgregles.bsp_core.api.BspBounties.targetRefusal(server, target, name);
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public java.util.List<String> tiers() {
+            try {
+                return java.util.List.copyOf(com.mrgregles.bsp_core.api.BspCoins.tiers());
+            } catch (LinkageError | RuntimeException e) {
+                return java.util.List.of();
+            }
+        }
+
+        private interface Call {
+            void run(java.util.function.Consumer<com.mrgregles.bsp_core.api.BspBounties.Result> then);
+        }
+
+        private static void change(String what, Call call, java.util.function.Consumer<BountyResult> then) {
+            java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+            try {
+                call.run(r -> {
+                    ran.set(true);
+                    then.accept(result(r));
+                });
+            } catch (LinkageError | RuntimeException e) {
+                failed(what, e, ran, () -> then.accept(new BountyResult("failed", null)));
+            }
+        }
+
+        @Override
+        public void add(net.minecraft.server.MinecraftServer server, String by, java.util.UUID target, String targetName, int coinTier, long amount, long bonus,
+                        long bonusWithinMs, long durationMs, String notes, java.util.function.Consumer<BountyResult> then) {
+            change("bounty add", t -> com.mrgregles.bsp_core.api.BspBounties.add(server, by, target, targetName, coinTier, amount, bonus, bonusWithinMs, durationMs, notes, t), then);
+        }
+
+        @Override
+        public void remove(net.minecraft.server.MinecraftServer server, String id, boolean refund, String by, java.util.function.Consumer<BountyResult> then) {
+            change("bounty remove", t -> com.mrgregles.bsp_core.api.BspBounties.remove(server, id, refund, by, t), then);
+        }
+
+        @Override
+        public void extend(net.minecraft.server.MinecraftServer server, String id, long addMs, String by, java.util.function.Consumer<BountyResult> then) {
+            change("bounty extend", t -> com.mrgregles.bsp_core.api.BspBounties.extend(server, id, addMs, by, t), then);
+        }
+
+        @Override
+        public void blankNotes(net.minecraft.server.MinecraftServer server, String id, String by, java.util.function.Consumer<BountyResult> then) {
+            change("bounty notes", t -> com.mrgregles.bsp_core.api.BspBounties.blankNotes(server, id, by, t), then);
+        }
+    }
+
+    /** Tests: the bounties to use (null: none, as without BSP-Core 1.19). */
+    public static void useBountiesForTests(@org.jetbrains.annotations.Nullable Bounties b) {
+        bountiesOverride = b;
+        bountiesForced = true;
+    }
+
+    public static void useRealBounties() {
+        bountiesOverride = null;
+        bountiesForced = false;
+    }
 }

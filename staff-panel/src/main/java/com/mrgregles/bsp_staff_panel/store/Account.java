@@ -28,15 +28,22 @@ public final class Account {
     public boolean itemsPower;
     /** A Moderator an Owner trusts to refund bank rows and cancel market lots and requests (D504); Admins and Owners always may. */
     public boolean bankPower;
+    /** A Moderator an Owner trusts to add, remove, extend and blank bounties (D527); Admins and Owners always may. */
+    public boolean bountyPower;
 
     /** How long a login lasts (D281): 48 hours for Admins and Owners, and for a Moderator with the items or bank power (D428, D504), else 7 days. */
     public java.time.Duration session() {
-        return itemsPower || bankPower ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session().compareTo(rank.session()) < 0 ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session() : rank.session() : rank.session();
+        return itemsPower || bankPower || bountyPower ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session().compareTo(rank.session()) < 0 ? com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN.session() : rank.session() : rank.session();
     }
 
     /** Whether this account may refund bank rows and cancel market lots and requests (D503, D504). */
     public boolean mayActOnBank() {
         return rank.atLeast(Rank.ADMIN) || bankPower;
+    }
+
+    /** Whether this account may add, remove, extend and blank bounties (D526, D527). */
+    public boolean mayActOnBounties() {
+        return rank.atLeast(Rank.ADMIN) || bountyPower;
     }
 
     /** Whether this account may add and remove players' items. */
@@ -67,6 +74,7 @@ public final class Account {
         a.active = active;
         a.itemsPower = itemsPower;
         a.bankPower = bankPower;
+        a.bountyPower = bountyPower;
         return a;
     }
 }

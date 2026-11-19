@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-19
+
+The Bounty Board (with BSP-Server Utilities 0.14.0 on the game servers, and BSP-Core 1.19.0 there).
+
+### Added
+- More › Bounties (with BSP-Server Utilities' bounty actions on the game servers, and BSP-Core 1.19.0 there): the Bounty Board as wanted posters, newest first, with chips (Ending within a day, Staff bounties, With a bonus) and a search by target, placer or hunter; each bounty's screen with its reward, the bonus counting down, the end, the placer, the fee, the hunters and the private notes; BLANK NOTES, +1 HOUR, +1 DAY, +7 DAYS, DAYS… and REMOVE + REFUND / REMOVE, NO REFUND behind one reason; HISTORY of the newest 500 closed bounties with coloured ending chips; + ADD, a bounty paid by the server. A player's sheet shows their bounties and opens the board filtered to them. Every rank reads, notes included; Admins, Owners and Moderators with the BOUNTY power change.
+- The BOUNTY power: an Owner gives it to a Moderator from the staff menu ("May add and remove bounties"); a 48-hour login as with the other powers; ended by a change of rank; shown as BOUNTY.
+- `/api/bounties`, `/api/bounties/history`, `/api/bounties/players`, `/api/bounties/add`, `/remove`, `/extend`, `/blank`: who may is checked before anything is signed (403 without the power), a reason is required, a change goes to the server the page read from (refused when it has gone) and waits 15 s, every change tried is in the panel's log.
+- The panel's database adds a `bounty_power` column to its staff table by itself on start.
+- The demo has a made-up Bounty Board.
+
 ## [0.3.0] - 2026-11-18
 
 A player's Bank & Market (with BSP-Server Utilities 0.13.0 on the game servers, and BSP-Core 1.18.0 there for the bank calls).
