@@ -61,6 +61,9 @@ public final class Storage {
     @Nullable
     private volatile RedisLink redis;
     private volatile int safetyPollSeconds = 30;
+    /** When a notice last arrived through the table only while Redis was subscribed (0: never). */
+    private volatile long tableOnlyAt;
+    private static final long TABLE_ONLY_MEMORY_MS = 10 * 60_000L;
     private final Set<String> seen = Collections.synchronizedSet(Collections.newSetFromMap(new LinkedHashMap<>(256, 0.75f, false) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
@@ -169,11 +172,16 @@ public final class Storage {
     }
 
     /**
-     * How late another server's notice can reach this one: nothing with Redis subscribed, else the table's poll and a
-     * little more for the worker (Support BSP waits this long before telling a join from a move, audit of SU-90).
+     * How late another server's notice can reach this one: nothing with Redis subscribed (unless another server's notices
+     * came through the table only in the last 10 minutes: then the safety poll), else the table's poll, each with a little
+     * more for the worker (Support BSP waits this long before telling a join from a move; audits of SU-90 and 0.15.0).
      */
     public long noticeLagMs() {
-        return redis != null && redis.subscribed() ? 0 : pollSeconds * 1000L + 2000L;
+        if (redis == null || !redis.subscribed()) {
+            return pollSeconds * 1000L + 2000L;
+        }
+        // subscribed, but another server's notice came only through the table lately (its Redis is down): wait for the safety poll
+        return System.currentTimeMillis() - tableOnlyAt < TABLE_ONLY_MEMORY_MS ? safetyPollSeconds * 1000L + 2000L : 0;
     }
 
     /** Sends what is queued (up to a few seconds) and closes the database and Redis. */
@@ -420,14 +428,22 @@ public final class Storage {
                 if (n.createdAt() < oldest) {
                     continue; // a notice this old is history, not news (audit: a second guard against replaying the table)
                 }
-                server.execute(() -> handle(n));
+                server.execute(() -> handle(n, true));
             }
         });
     }
 
     private void handle(StorageBackend.Notice n) {
+        handle(n, false);
+    }
+
+    /** {@code fromTable}: read from the notices table; while Redis is subscribed, one met there first means another server is not reaching Redis. */
+    private void handle(StorageBackend.Notice n, boolean fromTable) {
         if (!seen.add(n.uid()) || n.source().equals(serverId)) {
             return;
+        }
+        if (fromTable && redis != null && redis.subscribed()) {
+            tableOnlyAt = System.currentTimeMillis();
         }
         delivered++;
         BiConsumer<MinecraftServer, StorageBackend.Notice> handler = HANDLERS.get(n.kind());

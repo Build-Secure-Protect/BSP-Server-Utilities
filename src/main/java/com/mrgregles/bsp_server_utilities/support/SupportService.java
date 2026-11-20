@@ -30,6 +30,10 @@ public final class SupportService {
     private static LongSupplier clock = System::currentTimeMillis;
     private static Consumer<SupportLinkPacket> toEveryone = p -> ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), p);
     private static java.util.function.BiConsumer<ServerPlayer, SupportOpenPacket> opener = ServerUtilsNetwork::sendTo;
+    private static final long RETRY_MS = 60_000L;
+    @Nullable
+    private static volatile SupportSettings unwritten;
+    private static long lastRetry;
 
     private SupportService() {
     }
@@ -126,14 +130,40 @@ public final class SupportService {
         data.setSettings(next);
         Storage st = Storage.active();
         if (st != null) {
-            SupportSettings saved = next;
-            st.submit(() -> st.backend().saveSupportSettings(saved));
+            write(st, next);
             st.publish(KIND_SETTINGS, next.encode());
         }
         if (!was.link().equals(next.link())) {
             sendToAll(next);
         }
         return next;
+    }
+
+    /** Writes the settings to the network's table; a failed write is tried again every minute until it lands (audit of 0.15.0). */
+    private static void write(Storage st, SupportSettings s) {
+        unwritten = s;
+        st.submit(() -> {
+            st.backend().saveSupportSettings(s);
+            if (unwritten == s) {
+                unwritten = null;
+            }
+        });
+    }
+
+    /** Every server tick: a write that failed is tried again once a minute. */
+    public static void tick(MinecraftServer server) {
+        SupportSettings s = unwritten;
+        Storage st = Storage.active();
+        if (s != null && st != null && clock.getAsLong() - lastRetry >= RETRY_MS) {
+            lastRetry = clock.getAsLong();
+            SupportSettings now = settings(server);
+            write(st, now.revision() >= s.revision() ? now : s);
+        }
+    }
+
+    /** Whether a save still waits to reach the network's table (tests). */
+    public static boolean unwritten() {
+        return unwritten != null;
     }
 
     /** Takes a shared copy of the settings when it is newer. */
@@ -229,6 +259,8 @@ public final class SupportService {
     /** A test clock and where the packet to everyone goes (null: to every client). */
     public static void useForTests(LongSupplier testClock, @Nullable Consumer<SupportLinkPacket> everyone) {
         clock = testClock;
+        lastRetry = 0;
+        unwritten = null;
         toEveryone = everyone != null ? everyone : p -> ServerUtilsNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), p);
     }
 

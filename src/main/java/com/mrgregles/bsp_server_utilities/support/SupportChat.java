@@ -64,6 +64,18 @@ public final class SupportChat {
         PENDING.put(player.getUUID(), new Pending(player, NetworkJoins.arrived(player), DELAY_MS + Math.max(0, lag.getAsLong())));
     }
 
+    /**
+     * The server is stopping: everyone still here is told to the other servers as leaving (with any line they are owed)
+     * while the storage is still open, since the logouts come after it closes (audit of 0.15.0). Their own logouts
+     * later only note it here.
+     */
+    public static void onServerStopping(java.util.Collection<ServerPlayer> players) {
+        for (ServerPlayer player : players) {
+            Pending p = PENDING.remove(player.getUUID());
+            NetworkJoins.onLogout(player, p != null && p.wanted());
+        }
+    }
+
     /** Leaving before the line was sent: owed on the next server, if it would have been sent here. */
     public static void onLogout(ServerPlayer player) {
         Pending p = PENDING.remove(player.getUUID());
@@ -90,6 +102,7 @@ public final class SupportChat {
                     if (line != null) {
                         sender.accept(p.player, line);
                     }
+                    NetworkJoins.sent(e.getKey()); // owed nowhere any more
                 }
             }
         }

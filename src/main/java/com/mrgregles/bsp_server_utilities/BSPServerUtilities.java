@@ -92,6 +92,8 @@ public class BSPServerUtilities {
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             com.mrgregles.bsp_server_utilities.web.WebAgent.farewell(e.getServer()); // the panel drops this server at once, not 20 s later (audit)
+            // Support BSP: the players still here leave after the storage closes, so tell the network now (audit of 0.15.0)
+            com.mrgregles.bsp_server_utilities.support.SupportChat.onServerStopping(e.getServer().getPlayerList().getPlayers());
             Storage.stop();
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -145,6 +147,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.setup.SetupService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.support.SupportChat.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.support.SupportService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebAgent.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebNotes.tick(e.getServer());

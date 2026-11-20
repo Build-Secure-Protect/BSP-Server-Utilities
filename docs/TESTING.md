@@ -1593,3 +1593,26 @@ Left, as they are: a command block at level 2 can run `/su support …` and is l
 GameTests: `SupportJoinGameTests` now 7 (a quick reconnect after the line; leaving before the line, on to another server through the notice, and while at the rules; once sent, nothing owed; a 7 s notice lag with a move and a join), `SupportGameTests` checks the write-back of a newer copy and two invisible-character links.
 
 In game, on top of the earlier checks: with Redis off on a test pair of servers, move between them several times: no line on any move; join the network and move on within 3 s: the line comes on the second server.
+
+## 2026-11-20: audit of 0.15.0 (SU-94)
+
+Two independent read-only audits of the 0.15.0 commit (server side, client side; given the code and the decisions only). No security finding, no crash, nothing client-only reachable on a server. Fixed:
+1. **A stack on the cursor put down by the popup's CLOSE or OPEN**: the popup acted on the press and gave the release to the inventory underneath. Its keys now act when the button comes up over the key it went down on.
+2. **Players moved off a stopping server got the line again** (and a line still owed there was lost): the storage closes before Minecraft logs the players out, so their leavings never went out. `SupportChat.onServerStopping` tells the network of everyone still online, with any owed line, just before the storage closes.
+3. **BANNED took SUPPORT BSP's place on some windows** (1366 × 768 at GUI scale 3: SUPPORT BSP down a row, BANNED after KITS): Region Guard has to start BANNED after SUPPORT BSP too; request **SU-RG1** in the vault's Requests for Other Mods. Until Region Guard does, the order holds only on windows where SUPPORT BSP fits on the first row.
+4. **The mouse wheel over the SUPPORT tab's sentence box scrolled the hidden rules list**: it goes to the box.
+5. **The 5-second refresh removed a typed space or line break** (the tidied text equalled the saved one): a box whose tidied text equals the saved text keeps its text and cursor. The first answer always fills the boxes.
+6. **A server waited too little for another's notices when only that other server's Redis was down**: a notice that reaches this server only through the table while Redis is subscribed makes it wait the safety poll for 10 minutes (`Storage.noticeLagMs`).
+7. **A leaving read late from the table counted as new**: it is dated when it happened (the notice's age), so a player who left minutes ago is not a quick reconnect.
+8. **The popup's keys did nothing from the keyboard**: Enter or Space opens the page, C copies it.
+Also: an owed line stays owed until a server sends it (`support_sent` tells the others), never cancelled by a later leaving, and is kept 30 minutes for a long read of the rules; a failed write of the settings to the table is tried again every minute until it lands; zero-width and direction marks are taken out of the sentence; `/su support` from a command block or `/execute as <entity>` is logged under that source's name, not "Console"; the popup settles its height before drawing (no frame at a mixed scale); with the recipe book open on a window narrower than 379 the key counts as hidden (vanilla draws no widgets then), for JEI, EMI and the other corner keys.
+
+Left: two saves on different servers in the same millisecond; the Forge creative page label (BSP-Core has the same); `/execute … run su support …` by an operator is logged twice (once as the command).
+
+GameTests: 6 new or changed (`SupportJoinGameTests`: a stopping server tells the network, a late notice dated by its age, an owed line kept until sent and cleared by another server's `support_sent`; `SupportGameTests`: the start-up check that had no assertion, the table write retried, the sentence's invisible marks). The client fixes (1, 4, 5, 8, the popup's height, the narrow book) are not testable on the GameTest server.
+
+In game, on top of the earlier checks:
+1. Hold a stack on the cursor in the inventory, click SUPPORT BSP, then CLOSE: the stack is still on the cursor, nothing changed in the slots. Again with OPEN.
+2. In the popup: Enter opens the page; C shows "Copied.".
+3. SUPPORT tab: a 200-character sentence scrolls with the wheel anywhere over its box; type a space at the end of a saved sentence and wait 10 s: the space and the cursor stay.
+4. With players on a server, stop it while Velocity sends them to another: no Support BSP line there.

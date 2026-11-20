@@ -65,13 +65,14 @@ final class SupportTab {
     }
 
     void accept(AdminSupportPacket p) {
+        boolean first = data == null;
         boolean wasDirty = dirty();
         data = p;
         saved = p.settings();
         // after SAVE or CLEAR the boxes take what was saved, unless they were typed in since (SU-93 audit)
         boolean answered = (p.note().equals("saved") || p.note().equals("cleared")) && sent != null && typed().sameAs(sent);
-        if (!wasDirty || answered) {
-            load();
+        if (first || !wasDirty || answered) {
+            load(); // the first answer always fills the boxes, whatever was typed while waiting for it
         }
         if (!p.note().isEmpty()) {
             sent = null;
@@ -119,15 +120,28 @@ final class SupportTab {
         fSentence = saved.sentence();
         fChat = saved.chatLink();
         loading = true;
-        // only a box whose text differs, so the cursor stays put on the 5-second refresh (SU-93 audit)
-        if (linkBox != null && !linkBox.getValue().equals(fLink)) {
-            linkBox.setValue(fLink);
+        // a box whose text already says the same once tidied keeps its text and cursor (a space typed before the next
+        // word survives the 5-second refresh; audits of SU-93 and 0.15.0)
+        if (linkBox != null) {
+            if (SupportLinks.tidy(linkBox.getValue()).equals(fLink)) {
+                fLink = linkBox.getValue();
+            } else {
+                linkBox.setValue(fLink);
+            }
         }
-        if (sentenceBox != null && !sentenceBox.getValue().equals(fSentence)) {
-            sentenceBox.setValue(fSentence);
+        if (sentenceBox != null) {
+            if (SupportSettings.cleanSentence(sentenceBox.getValue()).equals(fSentence)) {
+                fSentence = sentenceBox.getValue();
+            } else {
+                sentenceBox.setValue(fSentence);
+            }
         }
-        if (chatBox != null && !chatBox.getValue().equals(fChat)) {
-            chatBox.setValue(fChat);
+        if (chatBox != null) {
+            if (SupportLinks.tidy(chatBox.getValue()).equals(fChat)) {
+                fChat = chatBox.getValue();
+            } else {
+                chatBox.setValue(fChat);
+            }
         }
         loading = false;
     }

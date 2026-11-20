@@ -55,6 +55,26 @@ public final class SupportButton {
         }
     }
 
+    /**
+     * With the recipe book open on a window narrower than 379, the inventory draws the book over itself and none of its
+     * widgets, so the key is not rendered and would keep its last place: it is hidden then (audit of 0.15.0).
+     */
+    @SubscribeEvent
+    public static void onRenderPre(ScreenEvent.Render.Pre event) {
+        if (event.getScreen() instanceof InventoryScreen inv && bookHidesWidgets(inv)) {
+            for (var child : inv.children()) {
+                if (child instanceof Corner c) {
+                    c.visible = false;
+                    c.placed = false;
+                }
+            }
+        }
+    }
+
+    private static boolean bookHidesWidgets(InventoryScreen inv) {
+        return inv.width < 379 && inv.getRecipeBookComponent().isVisible();
+    }
+
     /** Where the key stands now as {x, y, width, height}, or null when it is hidden: for JEI and EMI, which keep their overlays out of it. */
     @Nullable
     public static int[] area(@Nullable Screen screen) {

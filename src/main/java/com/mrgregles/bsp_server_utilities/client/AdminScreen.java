@@ -866,6 +866,9 @@ public class AdminScreen extends Screen {
         if (tab == MOBS) {
             return mobs.scroll(mx, my, delta);
         }
+        if (tab == SUPPORT) {
+            return super.mouseScrolled(mx, my, delta); // the sentence box, not the hidden rules list (audit of 0.15.0)
+        }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
         if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {
             listScroll -= (int) Math.signum(delta) * ROW_H;

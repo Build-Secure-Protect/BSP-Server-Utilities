@@ -63,7 +63,12 @@ public final class SupportCommands {
 
     private static String who(CommandSourceStack source) {
         ServerPlayer p = source.getPlayer();
-        return p != null ? p.getGameProfile().getName() : source.getTextName().equals("Rcon") ? "RCON" : "Console";
+        if (p != null) {
+            return p.getGameProfile().getName();
+        }
+        String name = source.getTextName();
+        // the console and RCON by those words; a command block or another entity by its own name (audit of 0.15.0)
+        return name.equals("Rcon") ? "RCON" : name.equals("Server") ? "Console" : name;
     }
 
     private static int show(CommandSourceStack source) {

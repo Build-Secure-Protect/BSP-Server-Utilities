@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-20
+
+Fixes to Support BSP. The network protocol is still 9: 0.15.0 and 0.15.1 players and servers work together, but every server should run 0.15.1 for the chat line's fixes.
+
+### Fixed
+- Support BSP's popup: CLOSE and OPEN act when the mouse button comes up, so a stack held on the cursor is no longer put down in the inventory underneath. Enter or Space opens the page and C copies it.
+- Support BSP's chat line on joining the network:
+  - Players moved off a stopping server no longer get it again, and a line still owed there is sent on the next server.
+  - A leaving read late from the database counts from when it happened.
+  - When one server's Redis is down, the others wait for its notices before telling a join from a move.
+  - A line owed to a player who left before it came stays owed until a server sends it.
+- Support BSP's settings: a save that could not be written to the database is tried again every minute. Invisible direction and zero-width marks are taken out of the sentence. A change from a command block is logged under its own name.
+- The SUPPORT tab: the mouse wheel scrolls the sentence box, and the refresh every 5 seconds no longer removes a typed space or moves the cursor.
+- The SUPPORT BSP key counts as hidden while the recipe book covers a narrow inventory.
+
 ## [0.15.0] - 2026-11-20
 
 Support BSP: ways for players to reach the page where they can support the server. The network protocol is 9: players need this version of the mod to join.

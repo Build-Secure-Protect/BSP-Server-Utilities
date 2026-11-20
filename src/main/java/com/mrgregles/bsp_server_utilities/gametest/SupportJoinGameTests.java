@@ -151,7 +151,7 @@ public class SupportJoinGameTests {
             // left another server 30 s before the login
             ServerPlayer ann = rig.player(h);
             rig.at(20_000);
-            NetworkJoins.left(ann.getUUID(), false);
+            NetworkJoins.left(ann.getUUID(), false, rig.clock.get());
             rig.at(50_000);
             SupportChat.onLogin(ann);
             rig.at(55_000);
@@ -159,7 +159,7 @@ public class SupportJoinGameTests {
             // left 61 s before the login: a join
             ServerPlayer bo = rig.player(h);
             rig.at(60_000);
-            NetworkJoins.left(bo.getUUID(), false);
+            NetworkJoins.left(bo.getUUID(), false, rig.clock.get());
             rig.at(121_000);
             SupportChat.onLogin(bo);
             rig.at(126_000);
@@ -266,12 +266,109 @@ public class SupportJoinGameTests {
             rig.at(5_000);
             h.assertTrue(rig.lines.isEmpty(), "with notices up to 7 s late, nothing at 5 s");
             rig.at(9_000);
-            NetworkJoins.left(moved.getUUID(), false); // the old server's leaving, read from the table 9 s after the login
+            NetworkJoins.left(moved.getUUID(), false, rig.clock.get()); // the old server's leaving, read from the table 9 s after the login
             rig.at(11_999);
             h.assertTrue(rig.lines.isEmpty(), "still waiting");
             rig.at(12_000);
             h.assertTrue(rig.lines.size() == 1, "at 5 + 7 s: the join gets its line, the move (known by then) none: " + rig.texts());
         } finally {
+            rig.close();
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_stopping_server_tells_the_network_who_leaves(GameTestHelper h) throws Exception {
+        Rig rig = new Rig(h, "Support us: {link}", SHOP, "");
+        MemoryBackend db = new MemoryBackend();
+        Storage alpha = Storage.startWith(rig.server, db, "alpha"), beta = Storage.startWith(rig.server, db, "beta");
+        alpha.drain();
+        beta.drain();
+        try {
+            ServerPlayer staying = rig.player(h), arriving = rig.player(h);
+            rig.at(0);
+            SupportChat.onLogin(staying);
+            rig.at(6_000); // staying got their line on alpha
+            rig.at(58_000);
+            SupportChat.onLogin(arriving); // still waiting for theirs when alpha stops
+            Storage.useForTests(alpha);
+            rig.at(60_000);
+            SupportChat.onServerStopping(List.of(staying, arriving));
+            alpha.drain();
+            NetworkJoins.forget(staying.getUUID());
+            NetworkJoins.forget(arriving.getUUID());
+            Storage.useForTests(beta);
+            beta.pollNotices();
+            beta.drain();
+            Storage.useForTests(null);
+            rig.lines.clear();
+            rig.at(61_000); // Velocity sends them both to beta
+            SupportChat.onLogin(staying);
+            SupportChat.onLogin(arriving);
+            rig.at(66_000);
+            h.assertTrue(rig.lines.size() == 1, "of the two moved off a stopping server, only the one still owed a line gets it (audit of 0.15.0): " + rig.texts());
+            h.assertTrue(!SupportChat.waiting(staying.getUUID()) && !SupportChat.waiting(arriving.getUUID()), "both decided");
+        } finally {
+            alpha.close();
+            beta.close();
+            rig.close();
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_late_leaving_notice_is_dated_when_it_happened(GameTestHelper h) {
+        Rig rig = new Rig(h, "Support us: {link}", SHOP, "");
+        MemoryBackend db = new MemoryBackend();
+        Storage beta = Storage.startWith(rig.server, db, "beta");
+        beta.drain();
+        try {
+            ServerPlayer kat = rig.player(h);
+            rig.at(100_000);
+            // a leaving from 5 minutes ago, read only now (the table catching up after a Redis gap)
+            beta.deliverForTests(new com.mrgregles.bsp_server_utilities.storage.StorageBackend.Notice(1, "late-" + kat.getUUID(), System.currentTimeMillis() - 300_000,
+                    "alpha", NetworkJoins.KIND_LEFT, kat.getUUID().toString()));
+            SupportChat.onLogin(kat);
+            rig.at(105_000);
+            h.assertTrue(rig.lines.size() == 1, "a leaving 5 minutes old is not a quick reconnect: the join gets its line (audit of 0.15.0)");
+        } finally {
+            beta.close();
+            rig.close();
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void an_owed_support_line_stays_owed_until_it_is_sent(GameTestHelper h) {
+        Rig rig = new Rig(h, "Support us: {link}", SHOP, "");
+        MemoryBackend db = new MemoryBackend();
+        Storage beta = Storage.startWith(rig.server, db, "beta");
+        beta.drain();
+        try {
+            ServerPlayer kat = rig.player(h), sam = rig.player(h);
+            rig.at(1_000);
+            NetworkJoins.left(kat.getUUID(), true, rig.clock.get()); // left X before the line: owed
+            rig.at(2_000);
+            NetworkJoins.left(kat.getUUID(), false, rig.clock.get()); // then passed through A without it (A had not heard yet)
+            rig.at(2_500);
+            SupportChat.onLogin(kat);
+            rig.at(7_500);
+            h.assertTrue(rig.lines.size() == 1, "a later leaving with nothing owed does not cancel the owed line (audit of 0.15.0)");
+            SupportChat.onLogout(kat);
+            rig.at(8_000);
+            SupportChat.onLogin(kat);
+            rig.at(13_000);
+            h.assertTrue(rig.lines.size() == 1, "once sent, nothing is owed: the next move gets none");
+            // another server sent the line: its notice clears the owed line here
+            NetworkJoins.left(sam.getUUID(), true, rig.clock.get());
+            beta.deliverForTests(new com.mrgregles.bsp_server_utilities.storage.StorageBackend.Notice(2, "sent-" + sam.getUUID(), System.currentTimeMillis(),
+                    "alpha", NetworkJoins.KIND_SENT, sam.getUUID().toString()));
+            rig.at(14_000);
+            SupportChat.onLogin(sam);
+            rig.at(19_000);
+            h.assertTrue(rig.lines.size() == 1, "a line another server sent is owed nowhere");
+        } finally {
+            beta.close();
             rig.close();
         }
         h.succeed();

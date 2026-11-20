@@ -34,6 +34,9 @@ public class SupportScreen extends Screen {
     private final List<Ui.Hit> hits = new ArrayList<>();
     private float scale = 1;
     private long copiedAt = -1;
+    /** The key the left button went down on, until it comes up. */
+    @Nullable
+    private Ui.Hit pressed;
     private int h = 120;
 
     public SupportScreen(String link, @Nullable Screen parent) {
@@ -75,6 +78,14 @@ public class SupportScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
         renderBackground(g);
         hits.clear();
+        // the height (and so the scale) settled before anything is drawn, so one frame never mixes two scales (audit of 0.15.0)
+        boolean copied = copiedAt >= 0 && Util.getMillis() - copiedAt < COPIED_MS;
+        int textH = Math.max(1, Ui.wrap(font, Tr.t("support.text"), W - 2 * PAD, SMALL).size()) * 8;
+        int wanted = PAD + 10 + 4 + 10 + 6 + textH + 6 + 16 + (copied ? 10 : 0) + 6 + KEY_H + PAD;
+        if (wanted != h) {
+            h = wanted;
+            init();
+        }
         g.pose().pushPose();
         g.pose().scale(scale, scale, 1);
         draw(g, (int) (mouseX / scale), (int) (mouseY / scale));
@@ -86,11 +97,6 @@ public class SupportScreen extends Screen {
         List<String> lines = Ui.wrap(f, Tr.t("support.text"), W - 2 * PAD, SMALL);
         int textH = Math.max(1, lines.size()) * 8;
         boolean copied = copiedAt >= 0 && Util.getMillis() - copiedAt < COPIED_MS;
-        int wanted = PAD + 10 + 4 + 10 + 6 + textH + 6 + 16 + (copied ? 10 : 0) + 6 + KEY_H + PAD;
-        if (wanted != h) {
-            h = wanted;
-            init();
-        }
         int x = left(), y = top();
         g.fill(x, y, x + W, y + h, Ui.PANEL);
         Ui.frame(g, x, y, W, h, Ui.GOLD);
@@ -179,18 +185,59 @@ public class SupportScreen extends Screen {
         onClose();
     }
 
+    /**
+     * A key acts when the button is let go over the key it was pressed on, never on the press: closing on the press would
+     * hand the release to the inventory underneath, which puts down a stack held on the cursor (audit of 0.15.0).
+     */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        pressed = null;
         if (button == 0) {
-            double mx = mouseX / scale, my = mouseY / scale;
-            for (Ui.Hit hit : hits) {
-                if (hit.contains(mx, my)) {
-                    hit.action().run();
-                    return true;
-                }
+            pressed = hitAt(mouseX, mouseY);
+            if (pressed != null) {
+                return true;
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && pressed != null) {
+            Ui.Hit was = pressed;
+            pressed = null;
+            Ui.Hit now = hitAt(mouseX, mouseY);
+            if (now != null && now.x() == was.x() && now.y() == was.y()) {
+                now.action().run();
+            }
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Nullable
+    private Ui.Hit hitAt(double mouseX, double mouseY) {
+        double mx = mouseX / scale, my = mouseY / scale;
+        for (Ui.Hit hit : hits) {
+            if (hit.contains(mx, my)) {
+                return hit;
+            }
+        }
+        return null;
+    }
+
+    /** From the keyboard: Enter or Space opens the page, C copies it (Esc closes, as on every screen). */
+    @Override
+    public boolean keyPressed(int key, int scan, int modifiers) {
+        if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || key == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER || key == org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE) {
+            open();
+            return true;
+        }
+        if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
+            copy();
+            return true;
+        }
+        return super.keyPressed(key, scan, modifiers);
     }
 
     /** The text cut in the middle with "…" to fit, keeping its start and its end (D611). */

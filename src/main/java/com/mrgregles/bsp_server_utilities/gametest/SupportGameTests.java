@@ -88,6 +88,7 @@ public class SupportGameTests {
         h.assertTrue(longest.length() == SupportLinks.MAX && SupportLinks.check(longest) == Problem.OK && SupportLinks.check(longest + "a") == Problem.TOO_LONG,
                 "exactly 256 characters is allowed, 257 is not");
         h.assertTrue(!SupportLinks.usable("") && SupportLinks.usable(SHOP) && !SupportLinks.usable("http://x.net"), "usable: allowed and not empty");
+        h.assertTrue(SupportSettings.cleanSentence("Help \u200Bus\u202E now").equals("Help us now"), "zero-width and direction marks are taken out of the sentence (audit of 0.15.0)");
         for (Problem p : Problem.values()) {
             h.assertTrue(p.langKey().startsWith("support.link."), "every reason has a lang line: " + p);
         }
@@ -219,13 +220,13 @@ public class SupportGameTests {
             h.assertTrue(SupportService.settings(server).equals(saved), "an older revision is ignored");
             db.saveSupportSettings(new SupportSettings("https://old.example.net", "Old", "", "Console", 1, saved.revision() - 1));
             h.assertTrue(db.loadSupportSettings().equals(saved), "nor does a late older write replace the table's row");
-            // a server starting with an older copy takes the table's
+            // a server starting with an older copy takes the table's (the worker's answer runs on the server thread at once here)
             SupportService.restoreForTests(server, SupportSettings.NONE);
             SupportService.onServerStarted(server);
             beta.drain();
+            h.assertTrue(SupportService.settings(server).equals(saved), "a starting server with an older copy takes the table's: " + SupportService.settings(server));
             // a server whose copy is newer than the table's (a save that reached the servers but not the table) puts it back
             SupportSettings newer = new SupportSettings("https://newer.example.net", "Newer", "", "Console", 2, saved.revision() + 10);
-            db.saveSupportSettings(saved);
             SupportService.restoreForTests(server, newer);
             Storage.useForTests(alpha);
             SupportService.onServerStarted(server);
@@ -233,25 +234,26 @@ public class SupportGameTests {
             h.assertTrue(newer.equals(db.loadSupportSettings()), "a newer copy than the table's is written back at start (audit): " + db.loadSupportSettings());
             SupportService.restoreForTests(server, SupportSettings.NONE);
             Storage.useForTests(beta);
-            SupportService.onServerStarted(server);
+            beta.pollNotices();
             beta.drain();
-            SupportSettings expect = newer;
-            h.runAfterDelay(2, () -> {
-                try {
-                    h.assertTrue(SupportService.settings(server).equals(expect), "a starting server takes the network's settings: " + SupportService.settings(server));
-                    h.succeed();
-                } finally {
-                    alpha.close();
-                    beta.close();
-                    restore(server, was);
-                }
-            });
-        } catch (Throwable t) {
+            h.assertTrue(SupportService.settings(server).equals(newer), "and the other servers are told: " + SupportService.settings(server));
+            // a save the table refused is tried again until it lands (audit of 0.15.0)
+            Storage.useForTests(alpha);
+            db.setFailing(true);
+            SupportService.Result retry = SupportService.edit(server, null, "Console", "https://retry.example.net", "Again", "");
+            alpha.drain();
+            db.setFailing(false);
+            h.assertTrue(retry.saved() && SupportService.unwritten() && !"https://retry.example.net".equals(db.loadSupportSettings().link()),
+                    "the table was down: the save is kept to write again");
+            SupportService.tick(server);
+            alpha.drain();
+            h.assertTrue(!SupportService.unwritten() && db.loadSupportSettings().link().equals("https://retry.example.net"), "and lands when the table is back: " + db.loadSupportSettings());
+        } finally {
             alpha.close();
             beta.close();
             restore(server, was);
-            throw t;
         }
+        h.succeed();
     }
 
     @GameTest(template = EMPTY)

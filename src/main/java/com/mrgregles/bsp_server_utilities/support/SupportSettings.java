@@ -31,7 +31,10 @@ public record SupportSettings(String link, String sentence, String chatLink, Str
 
     /** Typed words without formatting codes or control characters, at most {@value #MAX_SENTENCE} characters; may be empty. */
     public static String cleanSentence(@Nullable String s) {
-        return PlayersSettings.clean(s, MAX_SENTENCE, "");
+        // zero-width and direction marks could hide or reorder words (audit of 0.15.0)
+        String t = s == null ? null : s.codePoints().filter(c -> Character.getType(c) != Character.FORMAT)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+        return PlayersSettings.clean(t, MAX_SENTENCE, "");
     }
 
     /** Whether there is a support link: the key shows and {@code /support} opens the popup. */
