@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-20
+
+Support BSP: ways for players to reach the page where they can support the server. The network protocol is 9: players need this version of the mod to join.
+
+### Added
+- The SUPPORT BSP key in the top left corner of the survival and creative inventory, right of BSP-Core's TEAM and KITS (Region Guard's BANNED stands to its right): a pink heart and SUPPORT BSP, shown while the server has a support link. It keeps clear of other buttons, the inventory with its tab rows and the open recipe book with its tabs, and is hidden rather than drawn over anything when no place is free. With JEI or EMI installed, their panels leave it free. Players can hide it with `supportButton = false` in `config/bsp_server_utilities-client.toml`.
+- `/support` for every player, and the key, open a popup with the support page's address: OPEN opens it in the web browser, COPY LINK copies it, CLOSE or Esc goes back. With no support page set, `/support` says so.
+- The Support BSP chat line on joining the network: about 5 seconds after a player joins (after the replay of earlier chat), the admin's sentence in gold with the address underlined; clicking it opens Minecraft's own "open this link?" prompt. Not sent on a move between the network's servers or a reconnect within a minute; a new player who has to agree to the rules gets it 5 seconds after AGREE; a player who leaves before it arrives gets it on the next server they reach. Without Redis the line waits as long as the database's notices may take (about 12 seconds) to tell a move from a join. Every server tells the others when a player leaves (notice `support_left`).
+- Support BSP settings, one set for the network (the newest change wins, shared through the table `<prefix>support_settings` and the notice `support_settings`; a server starting with a newer copy than the table's writes it back): the support link, the chat line's sentence (at most 200 characters, plain words, `{link}` marking where the address goes) and the chat line's own link (empty: the support link). A link must be https, a web address with a dot in its host, without spaces, invisible characters or a name and password, at most 256 characters; a refused link saves nothing and says why. Only operators and BSP-Core admins change them, and every change is in the Action Log.
+- A SUPPORT tab in `/su` for operators and BSP-Core admins: the three boxes, each link checked as it is typed; a preview of the inventory key and of the chat line as players will see them; SAVE for every server of the network, UNDO, and CLEAR with SURE?. Shows who changed them last.
+- `/su support` shows the settings and who changed them last; `/su support link <url>`, `/su support message <text>` and `/su support chatlink <url>` change one (`none` empties it); `/su support clear` empties all three. `/su status` has a Support BSP line.
+
+### Changed
+- The `/su` title reads "SU" when the eleven tabs leave too little room for "SERVER UTILITIES".
+
 ## [0.14.0] - 2026-11-19
 
 The Bounty Board on the staff web panel (with staff panel 0.4.0 and BSP-Core 1.19.0). The network protocol is still 8: players may stay on 0.12.0 or 0.13.0 (staff on an older client see the new "Bounties" Action log entries labelled Commands).

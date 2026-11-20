@@ -677,6 +677,20 @@ public final class ClientCheckService {
         return null;
     }
 
+    /**
+     * Whether another server of the network lists the player as on it now (a server not heard from for {@value #STALE_MS}
+     * ms left out): during a move between servers the new server's login comes before the old one lets go (Support BSP,
+     * D601).
+     */
+    public static boolean listedElsewhere(UUID player) {
+        Remote r = REMOTE.get(player);
+        if (r == null || r.server().equalsIgnoreCase(Storage.currentServerId())) {
+            return false;
+        }
+        Long at = SERVER_SEEN.get(r.server());
+        return at != null && clock.getAsLong() - at <= STALE_MS;
+    }
+
     /** A player's latest report here, or null. */
     @Nullable
     public static Held report(UUID player) {

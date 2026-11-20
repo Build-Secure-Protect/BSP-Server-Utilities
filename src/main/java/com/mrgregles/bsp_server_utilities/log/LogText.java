@@ -18,6 +18,7 @@ public final class LogText {
 
     /** Commands under {@code /su players} that write their own entry (the player counter's changes, D170). */
     private static final Set<String> SELF_LOGGED = Set.of("set", "add", "reset", "true");
+    private static final Set<String> SUPPORT_SELF_LOGGED = Set.of("link", "message", "chatlink", "clear");
 
     /** Whether a command writes its own, clearer entry when it succeeds, so the command itself is not logged. */
     public static boolean selfLogged(String command) {
@@ -28,6 +29,9 @@ public final class LogText {
         String[] w = command.strip().split("\\s+");
         if (w.length >= 3 && w[1].equalsIgnoreCase("serverimages") && w[2].equalsIgnoreCase("refresh")) {
             return true; // the refresh writes what it changed (D196)
+        }
+        if (w.length >= 3 && w[1].equalsIgnoreCase("support") && SUPPORT_SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT))) {
+            return true; // Support BSP writes what it changed (SU-89, D602)
         }
         return w.length >= 3 && w[1].equalsIgnoreCase("players") && SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT));
     }

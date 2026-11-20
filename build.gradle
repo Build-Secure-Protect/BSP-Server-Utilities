@@ -83,6 +83,16 @@ repositories {
         url = 'https://cursemaven.com'
         content { includeGroup 'curse.maven' }
     }
+    // JEI and EMI, compiled against only (the SUPPORT BSP key's place, so their panels leave it free), as BSP-Core does.
+    maven {
+        url = 'https://maven.blamejared.com/'
+        content { includeGroup 'mezz.jei' }
+    }
+    maven {
+        name = 'Sleeping Town'
+        url = 'https://repo.sleeping.town/'
+        content { includeGroup 'dev.emi' }
+    }
 }
 
 dependencies {
@@ -112,6 +122,12 @@ dependencies {
     if (project.hasProperty('withCm')) {
         runtimeOnly fg.deobf("curse.maven:${cm_curse}")
     }
+
+    // JEI and EMI APIs, compile only: compat/jei and compat/emi tell them where the SUPPORT BSP key stands (D592). Never
+    // loaded unless JEI or EMI is installed; the same versions as BSP-Core.
+    compileOnly fg.deobf("mezz.jei:jei-1.20.1-common-api:15.20.0.112")
+    compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.20.0.112")
+    compileOnly fg.deobf("dev.emi:emi-forge:1.1.22+1.20.1:api")
 }
 
 tasks.named('processResources', ProcessResources).configure {

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support BSP Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Sets AG, AH, AI: the SUPPORT BSP key, the popup, the SUPPORT tab (D587 to D606). Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); } h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:78ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:80ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:14px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:600px){ .stage{ justify-content:flex-start; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:84ch; } ol b{ color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+.ctl{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; font-size:13px; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+.tb.on{ border-color:var(--acc); color:var(--acc); }
+
+/* ---------- the in-game palette ---------- */
+.scr{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A;
+  position:relative; background:var(--P); color:var(--T); font-family:var(--body); font-size:11px; line-height:1.3; box-sizing:border-box; flex:none;
+  display:flex; flex-direction:column; padding:10px 12px; gap:7px; overflow:hidden; }
+.scr.v{ box-shadow:0 0 0 1.5px var(--V); } .scr.q{ box-shadow:0 0 0 1.5px var(--Q); }
+.world{ background:linear-gradient(160deg,#2f4a2a,#22331f 40%,#3a5a8a); padding:22px; border-radius:3px; position:relative; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.55); border-radius:3px; }
+.world > *{ position:relative; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.ttl.v{ color:var(--V); } .ttl.q{ color:var(--Q); }
+.tabs{ display:flex; gap:4px; } .tab{ width:62px; height:19px; display:grid; place-items:center; background:var(--D); color:var(--M); font:600 9px Oswald,var(--body); letter-spacing:.08em; }
+.tab.on{ background:var(--V); color:#10151C; }
+.m{ color:var(--M); } .g{ color:var(--G); } .r{ color:var(--R); } .ok{ color:var(--OK); } .vv{ color:var(--V); } .qq{ color:var(--Q); } .sm{ font-size:9px; } .b{ font-weight:600; } .up{ text-transform:uppercase; letter-spacing:.08em; }
+.box{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:24px; padding:0 12px; display:grid; place-items:center; font:700 9.5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:var(--D); color:var(--T); box-sizing:border-box; white-space:nowrap; }
+.key.q{ background:var(--Q); color:#10151C; } .key.v{ background:var(--V); color:#10151C; }
+.key.lock{ opacity:.4; } .key.leave{ background:transparent; color:var(--R); box-shadow:inset 0 0 0 1px #5a2a2a; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; } .key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); }
+.key.sm{ height:18px; padding:0 7px; font-size:8.5px; }
+.tick{ width:13px; height:13px; flex:none; box-sizing:border-box; box-shadow:inset 0 0 0 1.5px var(--M); display:grid; place-items:center; font:700 10px var(--mono); color:#10151C; }
+.tick.on{ background:var(--Q); box-shadow:none; } .tick.on::after{ content:"\2713"; }
+.num{ width:14px; flex:none; color:var(--Q); font:600 10px var(--mono); }
+.rule{ display:flex; gap:8px; padding:6px 8px; align-items:flex-start; }
+.rule + .rule{ border-top:1px solid #1c222c; }
+.rule .t{ font-weight:600; } .rule .x{ color:var(--M); font-size:10px; }
+.sb{ width:4px; background:var(--D); position:relative; flex:none; } .sb i{ position:absolute; left:0; right:0; background:var(--M); }
+.seg{ display:flex; gap:3px; } .seg i{ width:22px; height:5px; background:var(--D); display:block; } .seg i.on{ background:var(--Q); }
+.dots{ display:flex; gap:5px; justify-content:center; } .dots i{ width:6px; height:6px; border-radius:50%; background:var(--D); display:block; } .dots i.on{ background:var(--Q); } .dots i.cur{ box-shadow:0 0 0 2px var(--Q); background:var(--P); }
+.inp{ height:17px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:0 5px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+.inp.focus{ box-shadow:inset 0 0 0 1px var(--V); }
+.area{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:9.5px; padding:4px 5px; box-sizing:border-box; line-height:1.35; }
+.lbl{ font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--M); }
+.row{ height:18px; display:flex; align-items:center; gap:6px; padding:0 6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; }
+.row.sel{ background:#1b2230; box-shadow:inset 2px 0 0 var(--V); }
+.chip{ font-size:9px; padding:2px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); }
+.chip.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.grow{ flex:1; min-height:0; min-width:0; }
+.hint{ font-size:9px; color:var(--M); }
+</style>
+<style>
+/* ---------- the inventory scenes, drawn in GUI pixels and scaled ---------- */
+.stage{ flex-wrap:wrap; }
+.wrap{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --OK:#8FE04A; }
+.pop .m{ color:#9AA3B5; }
+.dot{ width:6px; height:6px; border-radius:50%; display:inline-block; flex:none; } .dot.on{ background:#8FE04A; }
+.gwrap{ position:relative; flex:none; overflow:hidden; border-radius:3px; }
+.gwin{ position:absolute; left:0; top:0; transform-origin:0 0; background:linear-gradient(160deg,#41603a,#2b3f27 45%,#4a6d9c); font-family:var(--body); }
+.gwin::before{ content:""; position:absolute; inset:0; background:rgba(16,16,16,.62); }
+.gwin > *{ position:absolute; }
+.inv{ width:176px; height:166px; background:#c6c6c6; box-shadow:inset 2px 2px 0 #fff, inset -2px -2px 0 #555; border-radius:2px; }
+.inv .sl{ position:absolute; width:16px; height:16px; background:#8b8b8b; box-shadow:inset 1px 1px 0 #373737, inset -1px -1px 0 #fff; }
+.inv .pm{ position:absolute; left:26px; top:8px; width:49px; height:70px; background:#000; }
+.inv .rb{ position:absolute; left:104px; top:61px; width:20px; height:18px; background:#7aa8a0; box-shadow:inset 0 0 0 1px #2c4b46; }
+.inv .tx{ position:absolute; left:97px; top:6px; font-size:7px; color:#404040; }
+.book{ width:147px; height:166px; background:#c6c6c6; box-shadow:inset 2px 2px 0 #fff, inset -2px -2px 0 #555; border-radius:2px; }
+.book i{ position:absolute; width:25px; height:25px; background:#8b8b8b; box-shadow:inset 1px 1px 0 #373737; }
+.book .srch{ position:absolute; left:25px; top:12px; width:81px; height:12px; background:#000; box-shadow:inset 0 0 0 1px #a0a0a0; }
+.ck2{ height:14px; box-sizing:border-box; background:rgba(16,21,28,.94); box-shadow:inset 0 0 0 1px #2A2F3A; display:grid; place-items:center; font:500 6px var(--body); letter-spacing:.02em; color:#9AA3B5; white-space:nowrap; }
+.ck2.hot{ box-shadow:inset 0 0 0 1px #19D3B0; color:#19D3B0; }
+.ck2.gold{ color:#FFD23A; } .ck2.gold.hot{ box-shadow:inset 0 0 0 1px #FFD23A; }
+.ck2.edge{ box-shadow:inset 0 0 0 1px #6b5a1e; color:#FFD23A; } .ck2.edge.hot{ box-shadow:inset 0 0 0 1px #FFD23A; background:#2a2410; }
+.ck2 .hrt{ color:#FF6B8A; margin-right:2px; font-size:6px; }
+.band{ box-sizing:border-box; border:1px dashed rgba(255,210,58,.55); background:rgba(255,210,58,.06); }
+.band.b2{ border-color:rgba(181,140,255,.6); background:rgba(181,140,255,.06); }
+.jei{ display:grid; grid-template-columns:repeat(4,16px); gap:2px; }
+.jei i{ width:16px; height:16px; display:block; background:rgba(139,139,139,.55); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4); }
+.tipx{ background:#100010; box-shadow:inset 0 0 0 1px #5000ff; color:#fff; font-size:6px; padding:3px 4px; white-space:nowrap; }
+.cap{ font-size:12px; color:var(--muted); max-width:52ch; }
+.scene{ display:flex; flex-direction:column; gap:6px; flex:none; }
+.keyrow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.keyrow .bigk{ transform:scale(3); transform-origin:0 50%; margin-right:120px; }
+
+/* ---------- popups and chat ---------- */
+.pop{ background:#10151C; color:#E6EAF2; box-sizing:border-box; display:flex; flex-direction:column; gap:7px; padding:10px 12px; font-size:11px; line-height:1.35; }
+.pop.q{ box-shadow:0 0 0 1.5px #19D3B0; } .pop.g{ box-shadow:0 0 0 1.5px #FFD23A; }
+.addr{ background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; font:500 10px var(--mono); padding:5px 7px; color:#19D3B0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mcchat{ font-family:var(--mono); font-size:11px; background:rgba(0,0,0,.5); color:#fff; padding:4px 8px; display:flex; flex-direction:column; gap:2px; max-width:100%; box-sizing:border-box; }
+.mcchat .gold{ color:#FFAA00; } .mcchat .lnk{ color:#55FFFF; text-decoration:underline; } .mcchat .gr{ color:#AAAAAA; } .mcchat .rd{ color:#FF5555; }
+.strip{ background:#10151C; box-shadow:0 -1px 0 #FFD23A; display:flex; align-items:center; gap:10px; padding:7px 10px; font-size:11px; color:#E6EAF2; }
+.tabs.eleven .tab{ width:29.5px; font-size:7.5px; letter-spacing:.02em; }
+.fld{ display:flex; flex-direction:column; gap:3px; }
+.bad{ color:#FF6B5C; font-size:9px; } .okl{ color:#8FE04A; font-size:9px; }
+.pv{ background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; padding:6px; display:flex; flex-direction:column; gap:5px; }
+.side{ width:112px; flex:none; display:flex; flex-direction:column; gap:1px; }
+.side .row{ font-size:10px; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>Sets AG, AH and AI: Support BSP</h1>
+<p class="lede">Three looks each for the SUPPORT BSP key in the inventory (set AG), the popup the key and <code>/support</code> open (set AH) and the SUPPORT tab in <code>/su</code> (set AI). What you already chose is drawn in all of them: the key right after KITS, BANNED to its right when shown (D587), in the survival and creative inventory (D588), "SUPPORT BSP" on a 56 px key (D589); the popup with its line, the address, OPEN, COPY LINK and CLOSE (D594); the chat line as your sentence in gold and the address underlined (D597); the eleventh tab with the link, the sentence, the chat link, a preview and SAVE (D605). Pick one look per set; you may combine. Sample data: the address and the sentence are made up, nothing here is live.</p></header>
+
+<!-- ===================== SET AG ===================== -->
+<section><h2>Set AG: the SUPPORT BSP key</h2>
+<div class="card"><p>The three looks side by side, three times their real size, at rest and under the mouse. TEAM and KITS are BSP-Core's keys as they are drawn today.</p>
+<div class="stage" style="flex-direction:column;align-items:flex-start;gap:30px;padding:26px 20px">
+<div class="keyrow"><span class="lab" style="width:150px">Look A: TEAM's look</span>
+<div class="bigk" style="display:flex;gap:2px"><span class="ck2" style="width:40px">TEAM</span><span class="ck2" style="width:40px">KITS</span><span class="ck2" style="width:56px">SUPPORT BSP</span><span class="ck2 hot" style="width:56px">SUPPORT BSP</span></div></div>
+<div class="keyrow"><span class="lab" style="width:150px">Look B: a small heart</span>
+<div class="bigk" style="display:flex;gap:2px"><span class="ck2" style="width:40px">TEAM</span><span class="ck2" style="width:40px">KITS</span><span class="ck2" style="width:62px"><span><span class="hrt">♥</span>SUPPORT BSP</span></span><span class="ck2 hot" style="width:62px"><span><span class="hrt">♥</span>SUPPORT BSP</span></span></div></div>
+<div class="keyrow"><span class="lab" style="width:150px">Look C: gold</span>
+<div class="bigk" style="display:flex;gap:2px"><span class="ck2" style="width:40px">TEAM</span><span class="ck2" style="width:40px">KITS</span><span class="ck2 edge" style="width:56px">SUPPORT BSP</span><span class="ck2 edge hot" style="width:56px">SUPPORT BSP</span></div></div>
+</div>
+<ol>
+<li><b>Look A, TEAM's look</b> (your D590): the same dark key, dim edge and grey text, turning teal under the mouse. It reads as one row with TEAM and KITS; it does not stand out.</li>
+<li><b>Look B, a small heart</b>: Look A with a pink heart before the words, 62 px wide. Still one row, but the eye finds it.</li>
+<li><b>Look C, gold</b>: the dark key with a dull gold edge and gold text, bright gold under the mouse. The one key in the row that is not grey, as gold is the palette's colour for things of value.</li>
+</ol></div>
+
+<div class="card"><p>Where it stands, in Look A, on a window 480 × 270 GUI pixels (a 1080p screen at GUI scale 4), drawn at 1.5 times. The dashed gold box is the inventory panel with the 32 px kept free above and below it for tab rows, which every corner key steps past. The tooltip shows under the mouse.</p>
+<div class="stage" style="flex-wrap:wrap">
+<div class="scene"><span class="lab">1. The inventory</span>
+<div class="gwrap" style="width:720px;height:405px"><div class="gwin" style="width:480px;height:270px;transform:scale(1.5)">
+<div class="band" style="left:152px;top:20px;width:176px;height:230px"></div>
+<div class="inv" style="left:152px;top:52px"><span class="pm"></span><span class="tx">Crafting</span><span class="rb"></span>
+<span class="sl" style="left:8px;top:84px"></span><span class="sl" style="left:26px;top:84px"></span><span class="sl" style="left:44px;top:84px"></span><span class="sl" style="left:62px;top:84px"></span><span class="sl" style="left:80px;top:84px"></span><span class="sl" style="left:98px;top:84px"></span><span class="sl" style="left:116px;top:84px"></span><span class="sl" style="left:134px;top:84px"></span><span class="sl" style="left:152px;top:84px"></span><span class="sl" style="left:8px;top:102px"></span><span class="sl" style="left:26px;top:102px"></span><span class="sl" style="left:44px;top:102px"></span><span class="sl" style="left:62px;top:102px"></span><span class="sl" style="left:80px;top:102px"></span><span class="sl" style="left:98px;top:102px"></span><span class="sl" style="left:116px;top:102px"></span><span class="sl" style="left:134px;top:102px"></span><span class="sl" style="left:152px;top:102px"></span><span class="sl" style="left:8px;top:120px"></span><span class="sl" style="left:26px;top:120px"></span><span class="sl" style="left:44px;top:120px"></span><span class="sl" style="left:62px;top:120px"></span><span class="sl" style="left:80px;top:120px"></span><span class="sl" style="left:98px;top:120px"></span><span class="sl" style="left:116px;top:120px"></span><span class="sl" style="left:134px;top:120px"></span><span class="sl" style="left:152px;top:120px"></span>
+<span class="sl" style="left:8px;top:142px"></span><span class="sl" style="left:26px;top:142px"></span><span class="sl" style="left:44px;top:142px"></span><span class="sl" style="left:62px;top:142px"></span><span class="sl" style="left:80px;top:142px"></span><span class="sl" style="left:98px;top:142px"></span><span class="sl" style="left:116px;top:142px"></span><span class="sl" style="left:134px;top:142px"></span><span class="sl" style="left:152px;top:142px"></span>
+<span class="sl" style="left:98px;top:18px"></span><span class="sl" style="left:116px;top:18px"></span><span class="sl" style="left:98px;top:36px"></span><span class="sl" style="left:116px;top:36px"></span><span class="sl" style="left:154px;top:28px"></span></div>
+<span class="ck2" style="left:2px;top:2px;width:40px">TEAM</span><span class="ck2" style="left:44px;top:2px;width:40px">KITS</span><span class="ck2 hot" style="left:86px;top:2px;width:56px">SUPPORT BSP</span>
+<span class="tipx" style="left:96px;top:19px">Support the server: opens the BSP support page</span>
+</div></div></div>
+
+<div class="scene"><span class="lab">2. Something is banned here: BANNED stands right of it</span>
+<div class="gwrap" style="width:720px;height:405px"><div class="gwin" style="width:480px;height:270px;transform:scale(1.5)">
+<div class="band" style="left:152px;top:20px;width:176px;height:230px"></div>
+<div class="inv" style="left:152px;top:52px"><span class="pm"></span><span class="tx">Crafting</span><span class="rb"></span><span class="sl" style="left:8px;top:84px"></span><span class="sl" style="left:26px;top:84px"></span><span class="sl" style="left:44px;top:84px"></span><span class="sl" style="left:62px;top:84px"></span><span class="sl" style="left:80px;top:84px"></span><span class="sl" style="left:98px;top:84px"></span><span class="sl" style="left:116px;top:84px"></span><span class="sl" style="left:134px;top:84px"></span><span class="sl" style="left:152px;top:84px"></span><span class="sl" style="left:8px;top:102px"></span><span class="sl" style="left:26px;top:102px"></span><span class="sl" style="left:44px;top:102px"></span><span class="sl" style="left:62px;top:102px"></span><span class="sl" style="left:80px;top:102px"></span><span class="sl" style="left:98px;top:102px"></span><span class="sl" style="left:116px;top:102px"></span><span class="sl" style="left:134px;top:102px"></span><span class="sl" style="left:152px;top:102px"></span><span class="sl" style="left:8px;top:120px"></span><span class="sl" style="left:26px;top:120px"></span><span class="sl" style="left:44px;top:120px"></span><span class="sl" style="left:62px;top:120px"></span><span class="sl" style="left:80px;top:120px"></span><span class="sl" style="left:98px;top:120px"></span><span class="sl" style="left:116px;top:120px"></span><span class="sl" style="left:134px;top:120px"></span><span class="sl" style="left:152px;top:120px"></span><span class="sl" style="left:8px;top:142px"></span><span class="sl" style="left:26px;top:142px"></span><span class="sl" style="left:44px;top:142px"></span><span class="sl" style="left:62px;top:142px"></span><span class="sl" style="left:80px;top:142px"></span><span class="sl" style="left:98px;top:142px"></span><span class="sl" style="left:116px;top:142px"></span><span class="sl" style="left:134px;top:142px"></span><span class="sl" style="left:152px;top:142px"></span><span class="sl" style="left:98px;top:18px"></span><span class="sl" style="left:116px;top:18px"></span><span class="sl" style="left:98px;top:36px"></span><span class="sl" style="left:116px;top:36px"></span><span class="sl" style="left:154px;top:28px"></span></div>
+<span class="ck2" style="left:2px;top:2px;width:40px">TEAM</span><span class="ck2" style="left:44px;top:2px;width:40px">KITS</span><span class="ck2" style="left:86px;top:2px;width:56px">SUPPORT BSP</span><span class="ck2" style="left:144px;top:2px;width:40px">BANNED</span>
+</div></div></div>
+
+<div class="scene"><span class="lab">3. Recipe book open, JEI's bookmarks on the left</span>
+<div class="gwrap" style="width:720px;height:405px"><div class="gwin" style="width:480px;height:270px;transform:scale(1.5)">
+<div class="band" style="left:229px;top:20px;width:176px;height:230px"></div>
+<div class="band b2" style="left:80px;top:52px;width:147px;height:166px"></div>
+<div class="book" style="left:80px;top:52px"><span class="srch"></span><i style="left:11px;top:31px"></i><i style="left:36px;top:31px"></i><i style="left:61px;top:31px"></i><i style="left:86px;top:31px"></i><i style="left:111px;top:31px"></i><i style="left:11px;top:56px"></i><i style="left:36px;top:56px"></i><i style="left:61px;top:56px"></i></div>
+<div class="inv" style="left:229px;top:52px"><span class="pm"></span><span class="tx">Crafting</span><span class="rb" style="background:#a0d0c8"></span><span class="sl" style="left:8px;top:84px"></span><span class="sl" style="left:26px;top:84px"></span><span class="sl" style="left:44px;top:84px"></span><span class="sl" style="left:62px;top:84px"></span><span class="sl" style="left:80px;top:84px"></span><span class="sl" style="left:98px;top:84px"></span><span class="sl" style="left:116px;top:84px"></span><span class="sl" style="left:134px;top:84px"></span><span class="sl" style="left:152px;top:84px"></span><span class="sl" style="left:8px;top:102px"></span><span class="sl" style="left:26px;top:102px"></span><span class="sl" style="left:44px;top:102px"></span><span class="sl" style="left:62px;top:102px"></span><span class="sl" style="left:80px;top:102px"></span><span class="sl" style="left:98px;top:102px"></span><span class="sl" style="left:116px;top:102px"></span><span class="sl" style="left:134px;top:102px"></span><span class="sl" style="left:152px;top:102px"></span><span class="sl" style="left:8px;top:120px"></span><span class="sl" style="left:26px;top:120px"></span><span class="sl" style="left:44px;top:120px"></span><span class="sl" style="left:62px;top:120px"></span><span class="sl" style="left:80px;top:120px"></span><span class="sl" style="left:98px;top:120px"></span><span class="sl" style="left:116px;top:120px"></span><span class="sl" style="left:134px;top:120px"></span><span class="sl" style="left:152px;top:120px"></span><span class="sl" style="left:8px;top:142px"></span><span class="sl" style="left:26px;top:142px"></span><span class="sl" style="left:44px;top:142px"></span><span class="sl" style="left:62px;top:142px"></span><span class="sl" style="left:80px;top:142px"></span><span class="sl" style="left:98px;top:142px"></span><span class="sl" style="left:116px;top:142px"></span><span class="sl" style="left:134px;top:142px"></span><span class="sl" style="left:152px;top:142px"></span><span class="sl" style="left:98px;top:18px"></span><span class="sl" style="left:116px;top:18px"></span><span class="sl" style="left:98px;top:36px"></span><span class="sl" style="left:116px;top:36px"></span><span class="sl" style="left:154px;top:28px"></span></div>
+<div class="jei" style="left:2px;top:22px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<span class="ck2" style="left:2px;top:2px;width:40px">TEAM</span><span class="ck2" style="left:44px;top:2px;width:40px">KITS</span><span class="ck2" style="left:86px;top:2px;width:56px">SUPPORT BSP</span>
+</div></div></div>
+</div>
+<ol>
+<li><b>The panel and its tab rows</b> (gold dashes) and <b>the open recipe book</b> (violet dashes) are kept clear. The book reaches the top row only on a very short window; then the key steps down a row like TEAM does.</li>
+<li><b>JEI and EMI</b> are told the key's place, as BSP-Core tells them TEAM's and KITS', so their bookmark columns start under the row instead of over it (D592).</li>
+<li>Any other mod's button in the corner is stepped past the same way. BANNED comes and goes; the SUPPORT BSP key never moves.</li>
+</ol></div>
+</section>
+
+<!-- ===================== SET AH ===================== -->
+<section><h2>Set AH: the popup (the key and <code>/support</code>)</h2>
+<div class="card"><p>Over the inventory, or over the world after <code>/support</code>. OPEN opens the player's web browser at the address; COPY LINK puts it on the clipboard and the line turns to "Copied."; CLOSE or Esc goes back. Drawn at 1.5 times its size in game.</p>
+<div class="stage">
+<div class="scene"><span class="lab">Look A: a teal card</span>
+<div class="world" style="width:380px;height:250px;display:grid;place-items:center">
+<div class="pop q" style="width:300px">
+<span class="ttl q">Support BSP</span>
+<span>Thank you for helping keep BSP running. This opens the support page in your web browser.</span>
+<span class="addr">https://store.example.net/bsp</span>
+<div class="keys" style="justify-content:flex-end"><span class="key ghost">Close</span><span class="key">Copy link</span><span class="key q">Open</span></div>
+</div></div></div>
+
+<div class="scene"><span class="lab">Look B: a gold card with a heart</span>
+<div class="world" style="width:380px;height:250px;display:grid;place-items:center">
+<div class="pop g" style="width:300px;align-items:center;text-align:center;gap:8px">
+<span style="color:#FF6B8A;font-size:22px;line-height:1">♥</span>
+<span class="ttl" style="color:#FFD23A;font-size:14px">Support BSP</span>
+<span class="m">Thank you for helping keep BSP running. This opens the support page in your web browser.</span>
+<span class="addr" style="align-self:stretch;color:#FFD23A">https://store.example.net/bsp</span>
+<div class="keys"><span class="key ghost">Close</span><span class="key">Copy link</span><span class="key" style="background:#FFD23A;color:#10151C">Open</span></div>
+</div></div></div>
+
+<div class="scene"><span class="lab">Look C: a strip along the foot of the screen</span>
+<div class="world" style="width:380px;height:250px;padding:0;display:flex;flex-direction:column;justify-content:flex-end">
+<div class="strip" style="flex-direction:column;align-items:stretch;gap:6px">
+<div class="hd"><span class="ttl" style="color:#FFD23A">Support BSP</span><span class="m sm">Esc closes</span></div>
+<span class="sm m">Thank you for helping keep BSP running. This opens the support page in your web browser.</span>
+<div style="display:flex;gap:6px;align-items:center"><span class="addr grow">https://store.example.net/bsp</span><span class="key sm">Copy</span><span class="key sm q">Open</span></div>
+</div></div></div>
+</div>
+<ol>
+<li><b>Look A, a teal card</b>: the size and frame of the mod's other small popups (the AFK check, the rules' LEAVE), title in teal, the keys at its foot with OPEN on the right in teal.</li>
+<li><b>Look B, a gold card with a heart</b>: centred words, a heart over the title, gold frame and a gold OPEN. Warmer, set apart from the mod's working screens.</li>
+<li><b>Look C, a strip along the foot of the screen</b>: the world (or the inventory) stays in view above; the address with COPY and OPEN beside it on one line.</li>
+</ol>
+<p class="note">With no link set, <code>/support</code> answers in chat instead of opening anything (D595):</p>
+<div class="mcchat" style="max-width:520px;background:#26331f"><span class="gr">No support page is set up yet.</span></div>
+</div></section>
+
+<!-- ===================== SET AI ===================== -->
+<section><h2>Set AI: the SUPPORT tab in <code>/su</code></h2>
+<div class="card"><p>The eleventh tab, the keys narrowed to fit (D605). The admin screen at 1.5 times. The chat line preview is drawn as the chat draws it; the key preview as the inventory does. A refused link shows its reason in red under its box and SAVE stays dim until it is fixed (D603).</p>
+<div class="stage" style="flex-direction:column;align-items:center;gap:22px">
+
+<div class="scene"><span class="lab">Look A: the boxes on the left, the previews on the right</span>
+<div class="scr v" style="width:516px;height:315px">
+<div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs eleven" style="gap:3px"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab">Mobs</span><span class="tab on">Support</span></span></div>
+<div class="grow" style="display:flex;gap:10px">
+<div style="width:250px;display:flex;flex-direction:column;gap:8px">
+<div class="fld"><span class="lbl">Support link (the key and /support)</span><span class="inp focus">https://store.example.net/bsp</span><span class="okl">A link players can open.</span></div>
+<div class="fld"><span class="lbl">Chat line on joining the network</span><div class="area" style="height:44px">Enjoying BSP? You can help keep the servers running: {link}</div><span class="hint">{link} puts the address there; without it, it goes at the end.</span></div>
+<div class="fld"><span class="lbl">Chat line's link (empty: the support link)</span><span class="inp"><span class="m">https://store.example.net/bsp</span></span></div>
+</div>
+<div class="grow" style="display:flex;flex-direction:column;gap:6px">
+<span class="lbl">Preview</span>
+<div class="pv"><span class="hint">In the inventory</span><div style="display:flex;gap:2px;transform:scale(1.4);transform-origin:0 0;height:20px"><span class="ck2" style="width:40px">TEAM</span><span class="ck2" style="width:40px">KITS</span><span class="ck2" style="width:56px">SUPPORT BSP</span></div></div>
+<div class="pv"><span class="hint">In chat, 5 s after joining the network</span><div class="mcchat" style="font-size:9px;padding:3px 5px"><span><span class="gold">Enjoying BSP? You can help keep the servers running: </span><span class="lnk">https://store.example.net/bsp</span></span></div></div>
+<span class="hint">Last change: Mrgregles, 20 Nov 14:02</span>
+</div></div>
+<div class="hd"><span class="hint">Shared by every server of the network.</span><div class="keys"><span class="key warn">Clear</span><span class="key ghost">Undo</span><span class="key v">Save</span></div></div>
+</div></div>
+
+<div class="scene"><span class="lab">Look B: one column, each box with its own preview under it</span>
+<div class="scr v" style="width:516px;height:315px">
+<div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs eleven" style="gap:3px"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab">Mobs</span><span class="tab on">Support</span></span></div>
+<div class="grow" style="display:flex;flex-direction:column;gap:7px">
+<div class="box" style="padding:6px 8px;display:flex;flex-direction:column;gap:4px">
+<div class="hd"><span class="lbl qq">1 · The key and /support</span><span class="ck2" style="width:56px;transform:scale(1.3);transform-origin:100% 50%">SUPPORT BSP</span></div>
+<span class="inp" style="box-shadow:inset 0 0 0 1px #FF6B5C">http://store.example.net/bsp</span><span class="bad">Only https:// links are allowed.</span></div>
+<div class="box" style="padding:6px 8px;display:flex;flex-direction:column;gap:4px">
+<span class="lbl qq">2 · The chat line on joining the network</span>
+<span class="inp">Enjoying BSP? You can help keep the servers running: {link}</span>
+<div style="display:flex;gap:6px;align-items:center"><span class="hint" style="width:62px">Its link</span><span class="inp grow"><span class="m">empty: the support link</span></span></div>
+<div class="mcchat" style="font-size:9px;padding:3px 5px"><span><span class="gold">Enjoying BSP? You can help keep the servers running: </span><span class="lnk">http://store.example.net/bsp</span></span></div></div>
+<span class="hint">Last change: Mrgregles, 20 Nov 14:02 · Shared by every server of the network.</span>
+</div>
+<div class="hd"><span></span><div class="keys"><span class="key warn">Clear</span><span class="key ghost">Undo</span><span class="key v lock">Save</span></div></div>
+</div></div>
+
+<div class="scene"><span class="lab">Look C: a list of the three places on the left, the chosen one on the right</span>
+<div class="scr v" style="width:516px;height:315px">
+<div class="hd"><span class="ttl v" style="font-size:9px">Server utilities</span><span class="tabs eleven" style="gap:3px"><span class="tab">Rules</span><span class="tab">Staff</span><span class="tab">Log</span><span class="tab">AFK</span><span class="tab">Chunks</span><span class="tab">Drops</span><span class="tab">Clients</span><span class="tab">Servers</span><span class="tab">Rooms</span><span class="tab">Mobs</span><span class="tab on">Support</span></span></div>
+<div class="grow" style="display:flex;gap:10px">
+<div class="side box" style="padding:3px 0">
+<div class="row"><span class="dot on"></span>Inventory key</div>
+<div class="row"><span class="dot on"></span>/support popup</div>
+<div class="row sel"><span class="dot on"></span>Chat on joining</div>
+<div style="flex:1"></div>
+<div class="row"><span class="hint">The chat line may have its own link</span></div>
+</div>
+<div class="grow" style="display:flex;flex-direction:column;gap:7px">
+<span class="ttl" style="font-size:10px">Chat on joining the network</span>
+<span class="hint">Sent 5 seconds after a player joins the network; not when they move between servers.</span>
+<div class="fld"><span class="lbl">Sentence</span><div class="area" style="height:38px">Enjoying BSP? You can help keep the servers running: {link}</div></div>
+<div class="fld"><span class="lbl">Link (empty: the support link)</span><span class="inp"><span class="m">https://store.example.net/bsp</span></span></div>
+<div class="pv"><div class="mcchat" style="font-size:9px;padding:3px 5px"><span><span class="gold">Enjoying BSP? You can help keep the servers running: </span><span class="lnk">https://store.example.net/bsp</span></span></div></div>
+<span class="hint">Last change: Mrgregles, 20 Nov 14:02</span>
+</div></div>
+<div class="hd"><span class="hint">Shared by every server of the network.</span><div class="keys"><span class="key warn">Clear</span><span class="key ghost">Undo</span><span class="key v">Save</span></div></div>
+</div></div>
+</div>
+<ol>
+<li><b>Look A, boxes left and previews right</b>: the support link with a green or red line under it, the sentence, the chat link; on the right the key as it stands in the inventory and the chat line as players will read it, both following what is typed. CLEAR (SURE? within three seconds) empties all three and hides the key; UNDO puts back what was saved.</li>
+<li><b>Look B, one column</b>: two numbered boxes, "the key and /support" and "the chat line", each with its own preview inside it. Drawn here with a refused http link, SAVE dim.</li>
+<li><b>Look C, a list on the left</b>: the three places players meet the link (the inventory key, the /support popup, the chat line), each opening its own page on the right with its words and a preview, as the RULES tab lists its rules.</li>
+</ol></div>
+</section>
+
+<section><h2>What happens after you pick</h2>
+<div class="card"><p>Answer per set, for example "AG: A, AH: B, AI: A", and combine if you like ("AH: B without the heart"). The pick is drawn once more on a refined page with two or three points to confirm, then SU-89 starts the server side.</p></div>
+</section>
+</div></body></html>

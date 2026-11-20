@@ -143,6 +143,14 @@ public interface StorageBackend {
 
     void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ Support BSP (SU-89)
+
+    /** The network's Support BSP settings, or null when none were ever saved. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.support.SupportSettings loadSupportSettings() throws Exception;
+
+    void saveSupportSettings(com.mrgregles.bsp_server_utilities.support.SupportSettings settings) throws Exception;
+
     // ------------------------------------------------------------------ server images (SU-26)
 
     /** The network's server images, or null when none were ever saved. */

@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}) and MOBS ({@link MobsTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}) and SUPPORT ({@link SupportTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -54,7 +54,7 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
@@ -65,6 +65,7 @@ public class AdminScreen extends Screen {
     private final ServersTab servers = new ServersTab(this);
     private final RoomsTab rooms = new RoomsTab(this);
     private final MobsTab mobs = new MobsTab(this);
+    private final SupportTab support = new SupportTab(this);
     /** The setup guide, while the panel shows it (D156). */
     @Nullable
     private SetupGuide guide;
@@ -269,6 +270,10 @@ public class AdminScreen extends Screen {
         mobs.accept(p);
     }
 
+    void acceptSupport(com.mrgregles.bsp_server_utilities.network.AdminSupportPacket p) {
+        support.accept(p);
+    }
+
     /** Whether the panel shows the setup guide (a tab drawn in it leaves the footer to the guide's keys). */
     boolean inGuide() {
         return guide != null;
@@ -353,6 +358,8 @@ public class AdminScreen extends Screen {
             rooms.open();
         } else if (tab == MOBS) {
             mobs.open();
+        } else if (tab == SUPPORT) {
+            support.open();
         }
     }
 
@@ -410,6 +417,10 @@ public class AdminScreen extends Screen {
         }
         if (tab == MOBS) {
             mobs.addWidgets(left(), top());
+            return;
+        }
+        if (tab == SUPPORT) {
+            support.addWidgets(left(), top());
             return;
         }
         int x = left() + PANE_X, y = top();
@@ -481,6 +492,9 @@ public class AdminScreen extends Screen {
         if (tab == MOBS) {
             mobs.tick();
         }
+        if (tab == SUPPORT) {
+            support.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -521,10 +535,10 @@ public class AdminScreen extends Screen {
         g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
         String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
-                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs")};
+                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs"), Tr.t("admin.tab.support")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(22, Ui.width(font, tabs[i], TINY) + 4); // narrower keys, so ten fit beside the title (D191; ROOMS, SU-59; MOBS, D478)
+            int tabW = Math.max(22, Ui.width(font, tabs[i], TINY) + 4); // narrower keys, so eleven fit beside the title (D191; ROOMS, SU-59; MOBS, D478; SUPPORT, D605)
             tx -= tabW;
             boolean on = i == litTab();
             g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
@@ -535,10 +549,16 @@ public class AdminScreen extends Screen {
             }
             tx -= 2;
         }
-        // the title in the room the tabs leave, smaller when nine tabs need it
-        String title = Tr.t("admin.title");
-        float titleScale = Math.min(1f, (tx - x - PAD - 2) / (float) Math.max(1, Ui.width(font, title, 1f)));
-        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
+        // the title in the room the tabs leave, measured bold as drawn; smaller when the tabs need the room, and the short
+        // title when the full one would be too small to read (eleven tabs, SU-93 audit)
+        int room = tx - x - PAD - 2;
+        Component title = Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD);
+        float titleScale = Math.min(1f, room / (float) Math.max(1, font.width(title)));
+        if (titleScale < 0.55f) {
+            title = Component.literal(Tr.t("admin.title_short")).withStyle(ChatFormatting.BOLD);
+            titleScale = Math.min(1f, room / (float) Math.max(1, font.width(title)));
+        }
+        Ui.text(g, font, title, x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
         if (guide != null) {
             renderGuide(g, x, y, mx, my, partial);
             return;
@@ -590,6 +610,11 @@ public class AdminScreen extends Screen {
         if (tab == MOBS) {
             mobs.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the never-counted box
+            return;
+        }
+        if (tab == SUPPORT) {
+            support.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial); // the link, sentence and chat link boxes
             return;
         }
         if (tab == CLIENTS) {

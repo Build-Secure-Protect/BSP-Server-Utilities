@@ -32,6 +32,8 @@ public class BSPServerUtilities {
         context.registerConfig(ModConfig.Type.SERVER, ServerUtilsConfig.SPEC);
         // the network connection and its passwords: a COMMON config, never sent to players (D183)
         context.registerConfig(ModConfig.Type.COMMON, ServerUtilsNetworkConfig.SPEC, ServerUtilsNetworkConfig.FILE);
+        // the player's own settings (the SUPPORT BSP key, D591); never read by a server
+        context.registerConfig(ModConfig.Type.CLIENT, ServerUtilsClientConfig.SPEC);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerAboutToStartEvent e) -> ServerUtilsNetworkConfig.onAboutToStart());
         ModBlocks.register(context.getModEventBus());
         ServerUtilsNetwork.register();
@@ -51,6 +53,8 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerNotices();
         com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
+        com.mrgregles.bsp_server_utilities.support.SupportService.registerNotices(); // Support BSP (SU-89)
+        com.mrgregles.bsp_server_utilities.support.NetworkJoins.registerNotices(); // a join to the network or a move (SU-90)
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();
@@ -82,6 +86,7 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.check.ClientCheckService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.support.SupportService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.rooms.RoomList.onServerStarted(e.getServer());
         });
@@ -105,6 +110,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.onLogin(p);
+                com.mrgregles.bsp_server_utilities.support.SupportService.onLogin(p);
+                com.mrgregles.bsp_server_utilities.support.SupportChat.onLogin(p);
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogin(p);
                 com.mrgregles.bsp_server_utilities.web.WebNotes.sendTo(p);
             }
@@ -116,6 +123,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogout(p);
                 StaffDirectory.onLogout(p);
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogout(p);
+                com.mrgregles.bsp_server_utilities.support.SupportChat.onLogout(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> ImageService.forget(e.getEntity().getUUID()));
@@ -136,6 +144,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.check.ClientCheckService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.setup.SetupService.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.support.SupportChat.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebAgent.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebNotes.tick(e.getServer());

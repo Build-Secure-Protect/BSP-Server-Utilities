@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "8"; // 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "9"; // 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -180,6 +180,20 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminMobsEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminMobsEditPacket::encode).decoder(AdminMobsEditPacket::decode)
                 .consumerMainThread(AdminMobsEditPacket::handle).add();
+        // Support BSP (SU-89, D587 to D612); protocol 9.
+        CHANNEL.messageBuilder(SupportLinkPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SupportLinkPacket::encode).decoder(SupportLinkPacket::decode)
+                .consumerMainThread(SupportLinkPacket::handle).add();
+        CHANNEL.messageBuilder(SupportOpenPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SupportOpenPacket::encode).decoder(SupportOpenPacket::decode)
+                .consumerMainThread(SupportOpenPacket::handle).add();
+        // The SUPPORT tab (SU-92, D605, D609, D612); still protocol 9.
+        CHANNEL.messageBuilder(AdminSupportPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminSupportPacket::encode).decoder(AdminSupportPacket::decode)
+                .consumerMainThread(AdminSupportPacket::handle).add();
+        CHANNEL.messageBuilder(AdminSupportEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminSupportEditPacket::encode).decoder(AdminSupportEditPacket::decode)
+                .consumerMainThread(AdminSupportEditPacket::handle).add();
     }
 
     /** Client to server. */

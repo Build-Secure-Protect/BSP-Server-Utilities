@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>mob_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots), {@code <prefix>web_chat} (public chat for the panel, 30 days).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>mob_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>support_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots), {@code <prefix>web_chat} (public chat for the panel, 30 days).
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -98,6 +98,7 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "setup_state (id INT NOT NULL PRIMARY KEY, state MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL, first_at BIGINT NOT NULL, first_server VARCHAR(64) NOT NULL, KEY first_at (first_at)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "players_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "support_settings (id INT NOT NULL PRIMARY KEY, settings TEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_images (id INT NOT NULL PRIMARY KEY, images MEDIUMTEXT NOT NULL, revision BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "server_image_bytes (id CHAR(40) NOT NULL PRIMARY KEY, png MEDIUMBLOB NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "web_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, at_ms BIGINT NOT NULL, snapshot MEDIUMTEXT NOT NULL) DEFAULT CHARSET=utf8mb4");
@@ -627,6 +628,25 @@ public final class JdbcBackend implements StorageBackend {
     public void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings s) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "players_settings (id, settings, revision) VALUES (1, ?, ?)"
                 + " ON DUPLICATE KEY UPDATE settings = VALUES(settings), revision = VALUES(revision)")) {
+            ps.setString(1, s.encode());
+            ps.setLong(2, s.revision());
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.support.SupportSettings loadSupportSettings() throws SQLException {
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT settings FROM " + prefix + "support_settings WHERE id = 1")) {
+            return rs.next() ? com.mrgregles.bsp_server_utilities.support.SupportSettings.decode(rs.getString(1)) : null;
+        }
+    }
+
+    /** Written only when newer than the row there, so a late write never puts back an older change. */
+    @Override
+    public void saveSupportSettings(com.mrgregles.bsp_server_utilities.support.SupportSettings s) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "support_settings (id, settings, revision) VALUES (1, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE settings = IF(VALUES(revision) > revision, VALUES(settings), settings), revision = GREATEST(revision, VALUES(revision))")) {
             ps.setString(1, s.encode());
             ps.setLong(2, s.revision());
             ps.executeUpdate();

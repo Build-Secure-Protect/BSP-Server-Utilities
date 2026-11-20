@@ -52,6 +52,7 @@ public final class ClientSetup {
         ClientSetupGuide.register();
         // the presence check's card (D220, D222)
         ClientAfkCheck.register();
+        ClientSupport.register();
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();
             for (StaffViewPacket.Row r : ClientStaff.rows()) {

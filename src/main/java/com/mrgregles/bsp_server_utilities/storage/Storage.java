@@ -168,6 +168,14 @@ public final class Storage {
         return redis;
     }
 
+    /**
+     * How late another server's notice can reach this one: nothing with Redis subscribed, else the table's poll and a
+     * little more for the worker (Support BSP waits this long before telling a join from a move, audit of SU-90).
+     */
+    public long noticeLagMs() {
+        return redis != null && redis.subscribed() ? 0 : pollSeconds * 1000L + 2000L;
+    }
+
     /** Sends what is queued (up to a few seconds) and closes the database and Redis. */
     public void close() {
         RedisLink r = redis;

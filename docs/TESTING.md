@@ -1517,3 +1517,79 @@ One independent read of `MapShown`, the new parts of `PanelServer`, the stores, 
 - Not changed, said to the owner: showing a map again reloads BlueMap's page for everyone on the Map tab (the view goes back to the map's start); the players window or a pin's box moved to the right is under the open sheet; a follower moved off a hidden map gets "That map was hidden by an Owner." and, at the next update, "… which has no map shown"; a refused try by a non-Owner is logged each time (as the bank's are); the log line is written after the save (as every panel action's is).
 
 JUnit 97/97 (new: a no-op tap keeps the last change, a change of several saves only its changes, two Owners at once both kept (20 rounds), a database down then back (all shown, not asked per tile, nothing saved, read after 30 s); over HTTP `.` segments refused for a hidden map's tile, the list and `index.html`, a set without `show` refused; hidden paths in any case, heads and pins). Checked on the demo panel 0.4.2 at 1300 × 800: following BrickLayerTom with the sheet open, the card right of the sheet; Esc in the players search left the sheet open; Frostwarf's Overworld hidden from the sheet and the sheet closed before the answer: moved to Boulderbrook's Overworld (Frostwarf had no other shown Overworld) with the gold line, the focus on MAPS; the gold line under a bar wrapped to four rows beside the sheet. **Not tested:** over the real BlueMap page; the network's MySQL.
+
+## 2026-11-20: Support BSP settings (SU-89)
+
+The server side of Support BSP (D596, D597, D602 to D606, D612). `support/SupportLinks` (the link check: https only, a host name of letters, digits and hyphens with a dot, no spaces, no name and password, at most 256 characters; empty means no link), `SupportSettings` (the support link, the chat sentence at most 200 characters with formatting codes not read, the chat line's own link, who and when, a revision; a refused link is never kept, even from the shared copy), `SupportData` (SavedData `bsp_server_utilities_support`), `SupportService` (edit, one field, clear; refused unless operator level 2 or a BSP-Core admin; a refused link saves nothing; the same settings again change nothing; each change in the Action Log; the newest revision wins across servers; the support link sent to every client at login and when it changes), `SupportCommands` (`/su support`, `link`, `message`, `chatlink`, `none`, `clear`, the `/su status` line). Table `<prefix>support_settings` (one row, a late older write never replaces a newer row), notice `support_settings`, packet `SupportLinkPacket`; protocol 9.
+
+GameTests (`SupportGameTests`, 6): the link check (25 addresses), only operators and admins change it and each change is logged, a refused link saves nothing, CLEAR, one setting for the network with the newest winning (two servers on one store), `/su support` from the console. **Not tested:** against the network's real MySQL and Redis; anything in a client (the key, the popup and the SUPPORT tab are SU-91 and SU-92).
+
+On a server, as an operator:
+1. `/su support`: "Support link: none", "Chat line on joining the network: none", "Chat line's link: the support link".
+2. `/su support link http://example.com`: refused, "Only https:// links are allowed." Nothing changes in `/su support`.
+3. `/su support link https://<your store>`: "Support BSP saved for every server of the network." On another server of the network, `/su support` shows the same link within a few seconds.
+4. `/actionlog`: one line "set the support link to …" under your name (not a second line for the command).
+5. As a player who is not an operator: `/su support` is not offered.
+6. `/su status`: "Support BSP: link set; chat line on joining the network not set."
+
+## 2026-11-20: the Support BSP line on joining the network (SU-90)
+
+D597 to D601. `support/NetworkJoins`: at a login, the time and whether another server still lists the player (`ClientCheckService.listedElsewhere`: the client check's network list, servers quiet for 90 s left out); a login is a **move** when the player was listed elsewhere then, or left any server of the network (this one too) from 60 s before the login up to when the line is due; every server tells the others of a leaving with the notice `support_left`, so it works with the client check off; kept in memory (a server just started knows no earlier leavings). `support/SupportChat`: the line 5 s after the login, decided then (on Velocity the old server lets go a moment after the new login); a player at the rules' gate or held waits until 5 s after they are let through; dropped if they leave first; the admin's sentence in gold, the address in aqua, underlined, `OPEN_URL` (Minecraft's own prompt and the player's chat-link settings), every `{link}` filled, without one the address after the sentence; nothing without a sentence or an address; everyone, staff too.
+
+GameTests (`SupportJoinGameTests`, 5): a join gets the line at 5 s (not at 4.999 s), once, its parts styled; a move gets none (listed elsewhere, a leaving notice from another server after the login, a leaving 30 s before), a leaving 61 s before is a join; a quick reconnect and leaving early; the rules hold and 5 s after AGREE; the line's text without a sentence, with only the chat link, with two `{link}`. **Not tested:** a real move through Velocity (the order and timing of the two servers' login and logout), Redis delivery of `support_left` (the tests use the notices table), the line in a client's chat.
+
+On the network, as a player (after `/su support link …` and `/su support message Enjoying BSP? Help keep it running: {link}`):
+1. Join the network: about 5 s after arriving (after the "Earlier chat" replay), the gold line with the address underlined. Click it: Minecraft asks whether to open the link.
+2. Move to another server (a warp or `/server`): no line there.
+3. Leave the game and join again after a minute or more: the line again. Join again within a minute: no line.
+4. As a new player who has to agree to the rules: no line while the rules are on screen; it comes about 5 s after AGREE.
+5. `/su support message none`: the next join has no line.
+
+## 2026-11-20: the SUPPORT BSP key and the /support popup (SU-91)
+
+D587 to D595, D607, D608, D610, D611. `client/SupportButton`: the key on the survival and creative inventory (`ScreenEvent.Init.Post`), 62 × 14, TEAM's look with a pink ❤ before "SUPPORT BSP" at 0.75 scale, edge and words teal under the mouse, tooltip "Support the server: opens the BSP support page"; placed each frame by `support/CornerPlace` from two pixels right of BSP-Core's rightmost corner key on its row (found by class name; the window's corner without BSP-Core), stepping past every other visible widget except Region Guard's BANNED (which steps past this key, so it stands to its right), the panel with 32 px above and below, and the open recipe book (147 × 166, computed as vanilla places it); down a row past the left half; not drawn when no place is free; hidden while there is no support link or with `supportButton = false` in the new client config `config/bsp_server_utilities-client.toml`. `client/SupportScreen`: the gold popup (220 GUI px, shrinks on a small window), the heart, the gold title, the thanks line, the address cut in the middle with the whole as a tooltip, CLOSE / COPY LINK / OPEN (gold); OPEN opens the browser (`Util.getPlatform().openUri`) and closes; COPY LINK and "Copied." for 3 s; Esc or CLOSE back to the inventory or the game; the address checked again and never opened unless https. `/support` for every player (`SupportCommands.registerPlayer`): `SupportOpenPacket` with the link, or the grey line "No support page is set up yet."; from the console it prints the link.
+
+GameTests (`SupportPopupGameTests`, 2): `/support` with and without a link; the key's place (right of KITS, the corner without BSP-Core, past another button, down a row on a narrow window, a key that just fits, nowhere when nothing is free, under something tall). **Not tested (no client run):** the key drawn on real screens and GUI scales, its tooltip, BANNED beside it, the creative inventory, the recipe book, the popup's look, the browser opening, the clipboard. JEI and EMI (SU-91b, D592): `compat/jei/SupportJeiPlugin` (`@JeiPlugin`, a global GUI handler's extra areas) and `compat/emi/SupportEmiPlugin` (`@EmiEntrypoint`, a generic exclusion area) report `SupportButton.area(screen)` while the key is drawn; `build.gradle` compiles against JEI 15.20.0.112's and EMI 1.1.22's APIs only (as BSP-Core), nothing of them shipped or loaded in the GameTests. **Not tested:** JEI's and EMI's panels leaving the key free (no client run with them).
+
+In game (a player, after `/su support link https://<your store>`):
+1. Open the inventory: SUPPORT BSP with a pink heart right of KITS; the tooltip under the mouse. The same in the creative inventory.
+2. Stand where Region Guard bans something: BANNED appears right of SUPPORT BSP, which does not move.
+3. Open the recipe book, then make the window small: the key never sits on the book, the panel or another button; on a tiny window it moves down a row or hides.
+4. Click it: the gold popup. COPY LINK: "Copied." and the address pasted elsewhere is right. OPEN: the browser opens the page and the popup closes back to the inventory. Esc: back to the inventory.
+5. `/support` in chat: the same popup over the game; Esc back to the game.
+6. `/su support clear`: the key disappears from an open inventory at once; `/support` says "No support page is set up yet."
+7. `config/bsp_server_utilities-client.toml`, `supportButton = false`: no key (after reopening the inventory).
+8. With JEI's bookmarks shown (and again with EMI's panels): the bookmark column starts below the corner row; nothing of JEI or EMI is drawn over SUPPORT BSP.
+
+## 2026-11-20: the SUPPORT tab (SU-92)
+
+D605, D609, D612; look A of set AI. `client/SupportTab`, the eleventh tab of `/su` (`AdminScreen`: `SUPPORT = 10`, keys still at least 22 px, the title shrinking to fit): on the left the support link (an `EditBox`, 256), the sentence (a `MultiLineEditBox`, 200, with "n / 200" and the `{link}` hint) and the chat line's link, each link with a line under it as typed (green "A link players can open.", red with the reason, or what empty means); on the right the key as the inventory draws it (beside TEAM and KITS, `SupportButton.drawKey`) and the chat line as `SupportChat.line` builds it, in chat colours, both following the boxes before SAVE; an amber "The saved settings stay in use until SAVE." while they differ; "Last change: name, time". SAVE (violet; dim while a link is refused, nothing changed or no data yet) sends all three; UNDO (when changed) puts the boxes back; CLEAR (red; dim when nothing is set) then SURE? within 3 s with the red warning line. The server's answer shows for 3 s at the foot ("Saved for every server of the network.", "Cleared: …", "Nothing changed.", or "Not saved. The support link: <reason>"). The tab asks for the data every 5 s; another admin's change replaces the boxes unless they hold unsaved typing. Server side `support/SupportAdmin` (refused outright without `Perms.canEdit`), `AdminSupportPacket`, `AdminSupportEditPacket` (boxes cut at 768 characters before sending; the server checks every limit).
+
+GameTests (`SupportTabGameTests`, 2): a player who may not edit gets nothing; REFRESH, SAVE (who changed it), a refused support link and a refused chat link (the reason, nothing saved), unchanged, CLEAR; both packets' round trip. **Not tested (no client run):** the tab's look and fit at the panel's size, the boxes, the live check lines, the previews, UNDO, SURE?, the eleven tab keys beside the title.
+
+In game, as an operator, `/su` → SUPPORT:
+1. The eleventh key, SUPPORT, fits beside the title; the tab shows the three boxes and the previews.
+2. Type `http://example.com` in the support link: the red line "Only https:// links are allowed.", SAVE dim. Make it `https://…`: the green line, the key appears in the preview.
+3. Type a sentence with `{link}`: the chat preview shows it in gold with the address underlined; the count follows.
+4. SAVE: "Saved for every server of the network."; "Last change" names you; `/su support` shows the same.
+5. Change a box, then UNDO: back to what is saved.
+6. CLEAR: SURE? and the red warning; CLEAR again within 3 s: everything empty, "Cleared: …"; the key leaves an open inventory.
+7. On another server, open the tab: the same settings.
+
+## 2026-11-20: audit of Support BSP (SU-93)
+
+An independent read-only audit of SU-89 to SU-92 (given the code and the decisions only). No security finding: links (`javascript:`, `file:`, `http:`, user@host) are refused on the server and checked again on the client before `openUri`; every edit path needs `Perms.canEdit`; packet limits hold; nothing client-only is reachable on a server. Fixed:
+1. **A move taken for a join without Redis** (the old server's `support_left` read from the table after the 5 s decision): the line now waits 5 s plus `Storage.noticeLagMs()` (0 with Redis subscribed, else the table's poll + 2 s) before deciding.
+2. **A join followed at once by a move (or a move while still at the rules) never got the line**: a player who leaves before their line is sent is "owed" it (`support_left` carries `1`), and the next server they reach within a minute sends it 5 s after arriving, though that was a move. Once sent, nothing is owed.
+3. **The world's settings were read on the storage worker** at start: now read on the server thread before the worker runs.
+4. **Servers could keep different settings** after a save that reached the others by Redis but not the table: a server starting with a newer copy than the table's writes it back and tells the others.
+5. **The `/su` title shrank to an unreadable 0.31** with eleven tabs (and was measured without bold): measured bold, and "SU" instead when the full title would be smaller than 0.55.
+6. **The key could sit on the open recipe book's tab column** (drawn by the book, not a widget): the column (32 px left of the book) is kept clear too.
+7. **The key flickered on the inventory's first frame** at (2, 2), and could change TEAM's and KITS' order when they wrap: it starts hidden until placed.
+Also: zero-width and direction-mark characters are refused in links (they could disguise an address); the SUPPORT tab's 5-second refresh no longer moves the cursor, and a SAVE's answer no longer overwrites typing done after SAVE; a second `/support` replaces the popup instead of stacking.
+
+Left, as they are: a command block at level 2 can run `/su support …` and is logged as "Console"; `§6` in a sentence becomes a space and a 6; a sentence over 200 from `/su support message` is cut without a word; Enter in the sentence box becomes a space; the address tooltip on a shrunken popup can sit near the screen's edge; `/execute … run su support …` is logged twice; `ClientCheckService.listedElsewhere` itself is not GameTested (the join tests stub it); the MySQL upsert is untested against a real MySQL.
+
+GameTests: `SupportJoinGameTests` now 7 (a quick reconnect after the line; leaving before the line, on to another server through the notice, and while at the rules; once sent, nothing owed; a 7 s notice lag with a move and a join), `SupportGameTests` checks the write-back of a newer copy and two invisible-character links.
+
+In game, on top of the earlier checks: with Redis off on a test pair of servers, move between them several times: no line on any move; join the network and move on within 3 s: the line comes on the second server.

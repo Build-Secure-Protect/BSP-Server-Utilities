@@ -15,6 +15,7 @@ Features:
 - **Compact Machines rooms**: with Compact Machines 6.0.3, every player sees their rooms across the network in `/su rooms`, and admins can set how many rooms each player may own (a network total or per server). A room whose machine is certainly destroyed, or that its owner gives back or staff free, stops counting at once and is emptied after a grace period unless its machine is placed again. Admins see every owner in the ROOMS tab.
 - **Mob limits**: admins set how many mobs one chunk may hold in the MOBS tab, as a number for every chunk, for each dimension (the Compact Machines rooms, say), or for one chunk, the most specific winning, the same on every server. A new mob is refused in a full chunk, whether it spawns, comes from a spawner or a mob farm, is bred, hatched from a spawn egg or summoned; mobs already there stay. The tab lists the fullest chunks on every server, and REMOVE EXTRAS takes a chunk on this server down to its limit, the most numerous kind first, never tamed or name-tagged mobs.
 - **Crowded drops and arrows**: a chunk holding more than 256 dropped items or 128 arrows for 5 minutes is cleared down to that number, oldest first, keeping death drops and what `/su clearitems` keeps; players nearby are told. Set on the same tab's DROPS & ARROWS page, with the crowded chunks on every server and CLEAR NOW.
+- **Support BSP**: a link to the page where players can support the server. A SUPPORT BSP key in the top left corner of the inventory (right of BSP-Core's TEAM and KITS, clear of every other button, the recipe book, JEI and EMI) and `/support` open a popup with the address (OPEN in the browser, COPY LINK); a chat line about 5 seconds after a player joins the network (not when they move between its servers) says the admin's sentence with the link. Admins set the link, the sentence and the chat line's own link in the SUPPORT tab, the same for every server; only https links are accepted.
 
 The mod is in development and has not yet been tried on a live server.
 
@@ -29,6 +30,8 @@ The mod is in development and has not yet been tried on a live server.
 - `/su clearitems here | all | <server>`: clear dropped items after a 60-second warning (operators, BSP-Core admins).
 - `/su setup`: the setup guide, a page per feature with NEXT, SETUP LATER and TURN OFF FEATURE (operators, BSP-Core admins; offered at their join until done or ignored).
 - `/su client <player>`: what a player's client reported and what the check made of it; `/su clientcheck export | reload`: write or read `config/bsp_server_utilities/trusted_setup.json` (operators, BSP-Core admins).
+- `/support`: the support page's popup (everyone).
+- `/su support`: the Support BSP settings; `/su support link <url>`, `/su support message <text>`, `/su support chatlink <url>` (`none` empties one), `/su support clear` (operators, BSP-Core admins, the console).
 - `/broadcast <chat|title> <colour> <player|all> <server|network> <message>`: an announcement in chat, or as a title in the middle of the screen (a `|` splits off a smaller subtitle), in a colour (red, gold, grey, `"#FF8800"` and so on, `&` codes allowed), for everyone or one player, on this server or every server of the network, with a short chime (operators, BSP-Core admins, the console and RCON).
 
 ## Requirements
@@ -44,6 +47,7 @@ The server config is `serverconfig/bsp_server_utilities-server.toml` in each wor
 - **Staff**: `staff.groups` lists the LuckPerms groups that count as staff, highest first, as `group:Label:#RRGGBB` (for example `"admin:Admin:#B58CFF"`). `staff.operators` makes server operators staff too.
 - **Action log**: `log.keepDays` (7) is how long entries are kept on every server and in the shared table.
 - **Images**: Display Panels show pictures from a web address or from `config/bsp_server_utilities/images/` on that server. The server fetches the address itself (players never do), so only admins can set one; any address the server can reach is allowed, including ones on its own network. Limits are in the `[images]` section.
+- **The player's own game**: `config/bsp_server_utilities-client.toml`, `supportButton = false` hides the SUPPORT BSP key.
 - **Rooms**: the `[rooms]` section: `limit` (0: no limit, rooms only counted), `scope` (`network` or `server`), `exemptGroup` (a LuckPerms group never limited; operators never are), `graceDays` (7). Use the same values on every server.
 - `/serverutils status` (or `/su status`, operators and BSP-Core admins) shows what the server is using.
 

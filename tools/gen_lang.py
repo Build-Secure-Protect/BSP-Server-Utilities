@@ -270,6 +270,7 @@ GUI = {
     "rules.no_rules": "There are no rules yet.",
     # the admin panel and its RULES tab
     "admin.title": "SERVER UTILITIES",
+    "admin.title_short": "SU",
     "admin.tab.rules": "RULES",
     "rules.popup_text": "POPUP TEXT",
     "rules.add_rule": "+ Add rule",
@@ -892,6 +893,81 @@ KEYS["gui.bsp_server_utilities.panel.log.kind.bounty"] = "Bounties"
 KEYS["message.bsp_server_utilities.mobs.full"] = "This chunk is at its mob limit (%s)."
 KEYS["message.bsp_server_utilities.status.mobs"] = "Mob limits: every chunk %s, %s dimensions, %s single chunks; %s new mobs refused since the server started."
 KEYS["message.bsp_server_utilities.status.mobs_off"] = "Mob limits: none set (the MOBS tab)."
+
+# Support BSP (SU-89, D587 to D612): why a link is refused (shown in the SUPPORT tab and in command answers), and /su support
+SUPPORT_LINK = {
+    "ok": "A link players can open.",
+    "too_long": "At most 256 characters.",
+    "spaces": "A link cannot have spaces.",
+    "https": "Only https:// links are allowed.",
+    "user": "A link cannot hold a name and password.",
+    "not_address": "That is not a web address.",
+}
+KEYS.update({"gui.bsp_server_utilities.support.link." + k: v for k, v in SUPPORT_LINK.items()})
+SUPPORT = {
+    "header": "Support BSP (shared by every server of the network):",
+    "link": "  Support link: %s",
+    "sentence": "  Chat line on joining the network: %s",
+    "chat_link": "  Chat line's link: %s",
+    "chat_link_same": "the support link",
+    "none": "none",
+    "last": "  Last change: %s, %s",
+    "saved": "Support BSP saved for every server of the network.",
+    "unchanged": "Nothing changed.",
+    "cleared": "Support BSP cleared: no link, no chat line; the key is hidden everywhere.",
+    "bad_link": "Not saved: the support link was refused. %s",
+    "bad_chat_link": "Not saved: the chat line's link was refused. %s",
+    "not_allowed": "Only operators and BSP-Core admins can change Support BSP.",
+}
+KEYS.update({"message.bsp_server_utilities.support." + k: v for k, v in SUPPORT.items()})
+SUPPORT_GUI = {
+    "button": "SUPPORT BSP",
+    "button.tip": "Support the server: opens the BSP support page",
+    "title": "SUPPORT BSP",
+    "text": "Thank you for helping keep BSP running. This opens the support page in your web browser.",
+    "close": "CLOSE",
+    "copy": "COPY LINK",
+    "open": "OPEN",
+    "copied": "Copied.",
+}
+KEYS.update({"gui.bsp_server_utilities.support." + k: v for k, v in SUPPORT_GUI.items()})
+SUPPORT_TAB = {
+    "link": "Support link (the key and /support)",
+    "link_empty": "Empty: no key, and /support says there is no page.",
+    "sentence": "Chat line on joining the network",
+    "sentence_hint": "{link} puts the address there; without it, it goes at the end. Empty: no chat line.",
+    "count": "%s / %s",
+    "chat_link": "Chat line's link (empty: the support link)",
+    "chat_link_empty": "Empty: the chat line uses the support link.",
+    "preview": "Preview",
+    "in_inventory": "In the inventory",
+    "team": "TEAM",
+    "kits": "KITS",
+    "no_key": "No support link: the key is hidden.",
+    "in_chat": "In chat, 5 s after joining the network",
+    "no_chat": "No chat line is sent.",
+    "unsaved": "The saved settings stay in use until SAVE.",
+    "last": "Last change: %s, %s",
+    "never": "Not set yet.",
+    "shared": "Shared by every server of the network.",
+    "waiting": "Waiting for the server…",
+    "clear": "CLEAR",
+    "sure": "SURE?",
+    "sure_text": "CLEAR again within 3 s empties all three and hides the key everywhere.",
+    "undo": "UNDO",
+    "save": "SAVE",
+    "saved": "Saved for every server of the network.",
+    "cleared": "Cleared: no link and no chat line.",
+    "unchanged": "Nothing changed.",
+    "refused_link": "Not saved. The support link: %s",
+    "refused_chat": "Not saved. The chat line's link: %s",
+}
+KEYS.update({"gui.bsp_server_utilities.support.tab." + k: v for k, v in SUPPORT_TAB.items()})
+KEYS["gui.bsp_server_utilities.admin.tab.support"] = "SUPPORT"
+KEYS["message.bsp_server_utilities.support.no_page"] = "No support page is set up yet."
+KEYS["message.bsp_server_utilities.status.support"] = "Support BSP: link %s; chat line on joining the network %s."
+KEYS["message.bsp_server_utilities.status.support_on"] = "set"
+KEYS["message.bsp_server_utilities.status.support_off"] = "not set"
 
 
 def main():

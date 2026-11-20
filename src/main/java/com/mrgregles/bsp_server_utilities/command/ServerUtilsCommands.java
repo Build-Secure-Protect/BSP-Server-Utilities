@@ -107,6 +107,7 @@ public final class ServerUtilsCommands {
                                 .executes(c -> playersChanged(c.getSource(), PlayerCounter.add(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()), IntegerArgumentType.getInteger(c, "number"))))))
                         .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
                         .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
+                .then(com.mrgregles.bsp_server_utilities.support.SupportCommands.node())
                 .then(Commands.literal("serverimages").requires(Perms::canEdit)
                         .executes(c -> serverImages(c.getSource()))
                         .then(Commands.literal("list").executes(c -> serverImages(c.getSource())))
@@ -149,6 +150,7 @@ public final class ServerUtilsCommands {
             com.mrgregles.bsp_server_utilities.afk.AfkService.markAfk(c.getSource().getPlayerOrException());
             return 1;
         }));
+        com.mrgregles.bsp_server_utilities.support.SupportCommands.registerPlayer(d); // /support (D593, D595)
         d.register(Commands.literal("actionlog").executes(c -> {
             com.mrgregles.bsp_server_utilities.log.LogSync.open(c.getSource().getPlayerOrException());
             return 1;
@@ -487,6 +489,7 @@ public final class ServerUtilsCommands {
         say(source, com.mrgregles.bsp_server_utilities.serverimages.ServerImages.off() ? Component.translatable("message.bsp_server_utilities.status.servers_off")
                 : Component.translatable("message.bsp_server_utilities.status.servers", images,
                 Component.translatable(s == null ? "message.bsp_server_utilities.serverimages.here" : "message.bsp_server_utilities.serverimages.network")));
+        say(source, com.mrgregles.bsp_server_utilities.support.SupportCommands.status(com.mrgregles.bsp_server_utilities.support.SupportService.settings(source.getServer())));
         say(source, Component.translatable("message.bsp_server_utilities.status.setup", done, pages.size(), names(pages, SetupState.Status.OFF), names(pages, SetupState.Status.LATER, SetupState.Status.NOT_YET)));
         say(source, webStatus(s));
         if (com.mrgregles.bsp_server_utilities.web.WebAgent.enabled()) {

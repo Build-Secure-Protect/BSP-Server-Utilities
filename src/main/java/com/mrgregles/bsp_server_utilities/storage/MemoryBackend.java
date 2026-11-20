@@ -31,6 +31,7 @@ public final class MemoryBackend implements StorageBackend {
     private com.mrgregles.bsp_server_utilities.check.TrustedSetup trustedSetup;
     private com.mrgregles.bsp_server_utilities.setup.SetupState setupState;
     private com.mrgregles.bsp_server_utilities.players.PlayersSettings playersSettings;
+    private com.mrgregles.bsp_server_utilities.support.SupportSettings supportSettings;
     private final Map<String, WebServer> webServers = new HashMap<>();
     private com.mrgregles.bsp_server_utilities.serverimages.ServerImageSet serverImages;
     private final Map<String, byte[]> serverImageBytes = new java.util.HashMap<>();
@@ -288,6 +289,20 @@ public final class MemoryBackend implements StorageBackend {
     public synchronized void savePlayersSettings(com.mrgregles.bsp_server_utilities.players.PlayersSettings settings) throws Exception {
         check();
         playersSettings = settings;
+    }
+
+    @Override
+    public synchronized com.mrgregles.bsp_server_utilities.support.SupportSettings loadSupportSettings() throws Exception {
+        check();
+        return supportSettings;
+    }
+
+    @Override
+    public synchronized void saveSupportSettings(com.mrgregles.bsp_server_utilities.support.SupportSettings settings) throws Exception {
+        check();
+        if (supportSettings == null || settings.revision() > supportSettings.revision()) {
+            supportSettings = settings; // newer only, as the table keeps it
+        }
     }
 
     @Override
