@@ -141,7 +141,7 @@ public class WebBountyGameTests {
     }
 
     private static List<LogEntry> bountyLog(MinecraftServer server) {
-        return ActionLog.recent(server, 200, false, List.of(LogEntry.BOUNTY));
+        return ActionLog.recent(server, com.mrgregles.bsp_server_utilities.log.LogData.MAX, false, List.of(LogEntry.BOUNTY)); // the whole log: the test world keeps a week of earlier runs (200 filled up)
     }
 
     @GameTest(template = EMPTY)

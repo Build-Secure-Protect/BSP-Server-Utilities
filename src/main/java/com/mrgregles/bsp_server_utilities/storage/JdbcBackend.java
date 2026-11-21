@@ -118,7 +118,14 @@ public final class JdbcBackend implements StorageBackend {
                     + " size INT NOT NULL, name VARCHAR(64) NOT NULL, machine VARCHAR(160) NOT NULL, machines INT NOT NULL, state VARCHAR(16) NOT NULL,"
                     + " grace_until BIGINT NOT NULL, reason VARCHAR(32) NOT NULL, told BOOLEAN NOT NULL, owner_name VARCHAR(16) NOT NULL DEFAULT '', PRIMARY KEY (server, x, z), KEY owner (owner)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "cm_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, heard_at BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
+            st.executeUpdate(STEALS_TABLE.replace("<prefix>", prefix)); // totem steals for the staff panel (SU-95), kept 90 days
             warnCharsets();
+            if (!hasColumn(prefix + "steals", "line")) { // a steals table from before the signed copy (never released; development databases)
+                st.executeUpdate("ALTER TABLE " + prefix + "steals ADD COLUMN line TEXT NULL");
+            }
+            if (!hasColumn(prefix + "steals", "ticks")) { // the same, before the ticks
+                st.executeUpdate("ALTER TABLE " + prefix + "steals ADD COLUMN ticks INT NOT NULL DEFAULT 0");
+            }
             if (!hasColumn(prefix + "afk_settings", "macros")) { // a table from before the macros switch (0.6.0 and older): on for the network
                 st.executeUpdate("ALTER TABLE " + prefix + "afk_settings ADD COLUMN macros BOOLEAN NOT NULL DEFAULT TRUE");
             }
@@ -990,6 +997,100 @@ public final class JdbcBackend implements StorageBackend {
             }
         }
         return new com.mrgregles.bsp_server_utilities.rooms.RoomTable(heard, rows);
+    }
+
+    /** The steals table (SU-95): each game server writes the steals that ended there; the staff panel reads it (docs/API.md). */
+    static final int PRUNE_BATCH = 5000;
+
+    public static final String STEALS_TABLE = "CREATE TABLE IF NOT EXISTS <prefix>steals (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid CHAR(36) NOT NULL,"
+            + " server VARCHAR(64) NOT NULL, dimension VARCHAR(160) NOT NULL, x INT NOT NULL, y INT NOT NULL, z INT NOT NULL,"
+            + " thief CHAR(36) NOT NULL, thief_name VARCHAR(32) NOT NULL, owner CHAR(36) NOT NULL DEFAULT '', owner_name VARCHAR(32) NOT NULL DEFAULT '',"
+            + " source VARCHAR(16) NOT NULL, tier INT NOT NULL, points INT NOT NULL, started_ms BIGINT NOT NULL, ended_ms BIGINT NOT NULL,"
+            + " expected_s INT NOT NULL, success BOOLEAN NOT NULL, reason VARCHAR(128) NOT NULL DEFAULT '', ticks INT NOT NULL DEFAULT 0, line TEXT NULL,"
+            + " UNIQUE KEY uid (uid), KEY ended (ended_ms), KEY thief (thief, ended_ms)) DEFAULT CHARSET=utf8mb4";
+
+    @Override
+    public void insertSteals(List<Steal> steals) throws SQLException {
+        if (steals.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "steals (uid, server, dimension, x, y, z, thief, thief_name, owner, owner_name,"
+                + " source, tier, points, started_ms, ended_ms, expected_s, success, reason, ticks, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+            for (Steal s : steals) {
+                ps.setString(1, s.uid());
+                ps.setString(2, s.server());
+                ps.setString(3, s.dimension());
+                ps.setInt(4, s.x());
+                ps.setInt(5, s.y());
+                ps.setInt(6, s.z());
+                ps.setString(7, s.thief().toString());
+                ps.setString(8, s.thiefName());
+                ps.setString(9, s.owner() == null ? "" : s.owner().toString());
+                ps.setString(10, s.ownerName());
+                ps.setString(11, s.source());
+                ps.setInt(12, s.tier());
+                ps.setInt(13, s.points());
+                ps.setLong(14, s.startedMs());
+                ps.setLong(15, s.endedMs());
+                ps.setInt(16, s.expectedSeconds());
+                ps.setBoolean(17, s.success());
+                ps.setString(18, s.reason());
+                ps.setInt(19, s.ticks());
+                ps.setString(20, s.line());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    @Override
+    public List<Steal> loadSteals(long sinceMs, int limit) throws SQLException {
+        List<Steal> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uid, server, dimension, x, y, z, thief, thief_name, owner, owner_name, source, tier, points,"
+                + " started_ms, ended_ms, expected_s, success, reason, ticks, line FROM " + prefix + "steals WHERE ended_ms >= ? ORDER BY ended_ms DESC, id DESC LIMIT ?")) {
+            ps.setLong(1, sinceMs);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UUID thief;
+                    try {
+                        thief = UUID.fromString(rs.getString(7));
+                    } catch (IllegalArgumentException e) {
+                        continue; // not a row this mod wrote
+                    }
+                    out.add(new Steal(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getInt(5), rs.getInt(6), thief, rs.getString(8),
+                            uuidOrNull(rs.getString(9)), rs.getString(10), rs.getString(11), rs.getInt(12), rs.getInt(13), rs.getLong(14), rs.getLong(15),
+                            rs.getInt(16), rs.getBoolean(17), rs.getString(18), rs.getInt(19), rs.getString(20) == null ? "" : rs.getString(20)));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Nullable
+    private static UUID uuidOrNull(@Nullable String s) {
+        if (s == null || s.isEmpty()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(s);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public int pruneSteals(long beforeMs) throws SQLException {
+        // in batches: one huge delete would hold the table's locks for long (audit of 0.16.0)
+        int total = 0, n;
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "steals WHERE ended_ms < ? LIMIT " + PRUNE_BATCH)) {
+            do {
+                ps.setLong(1, beforeMs);
+                n = ps.executeUpdate();
+                total += n;
+            } while (n >= PRUNE_BATCH);
+        }
+        return total;
     }
 
     @Override

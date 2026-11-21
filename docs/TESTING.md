@@ -1616,3 +1616,121 @@ In game, on top of the earlier checks:
 2. In the popup: Enter opens the page; C shows "Copied.".
 3. SUPPORT tab: a 200-character sentence scrolls with the wheel anywhere over its box; type a space at the end of a saved sentence and wait 10 s: the space and the cursor stay.
 4. With players on a server, stop it while Velocity sends them to another: no Support BSP line there.
+
+## 2026-11-21: totem steals recorded for the staff panel (SU-95)
+
+Each game server writes every Shatter Totem steal that ends there, completed or failed, to `<prefix>steals` (docs/API.md "Totem steals"), for the staff panel's TOTEMS page (D613 to D622). Only with BSP-Core and shared storage. Nothing on the panel shows it yet (SU-97, SU-98).
+
+GameTests (`StealGameTests`, 7): a completed steal, posted as BSP-Core's own events, is one row with the server, dimension, block, thief, owner, tier, points, start, end and the seconds BSP-Core gave; a failed steal keeps its reason and start; another thief's start is never used for an end (start 0, seconds 0); a Totem Forge's pour is `forge`, tier 1; an unclaimed totem has no owner, and long names and reasons are cut to the columns; an empty block is `other`, tier 0, never guessed; nothing is kept without shared storage; a failed write waits and is written on the next minute's try; rows older than 90 days go on the first tick after a start; the real lookup reads a placed Tier III totem's tier and BSP-Core's points for it.
+
+Not covered by the GameTests: the MySQL table itself (the memory table plays it); a steal against a real owner with BSP-Core's ledger; BSP-Core's Totem Forge block entity (only the lookup's answer is stubbed).
+
+On the network, after installing the mod (both servers of a pair with BSP-Core and shared storage):
+1. Start the server: its log has no storage warning; in MySQL, `SHOW CREATE TABLE bsp_su_steals;` shows the table.
+2. Steal a test player's totem on one server and let it finish: `SELECT server, dimension, x, y, z, thief_name, owner_name, tier, points, started_ms, ended_ms, expected_s, success FROM bsp_su_steals ORDER BY id DESC LIMIT 5;` shows one row with that server, the world, the totem's block and `success` 1; `ended_ms - started_ms` is about `expected_s` seconds.
+3. Start a steal and walk away so it fails: a second row with `success` 0 and a `reason` key.
+4. Steal on the second server: its row names that server; no steal appears twice.
+5. Steal from a Totem Forge: `source` is `forge`, `tier` 1.
+
+## 2026-11-21: the board and live steals for the staff panel (SU-96)
+
+The panel's TOTEMS page asks a game server for BSP-Core's board and the steals running (`totem_board`), and hears each steal that starts or ends at once (kind `steal` on the web channel); docs/API.md. Nothing on the panel shows it yet (SU-97, SU-98).
+
+GameTests (`WebTotemsGameTests`, 3): without BSP-Core the answer says so and the snapshot's `totems` is false; with it every panel rank reads the board (each line's id, name, rank, points, totems held and best tier) and the steals running (server, world, block, thief, owner, how much is left), an unclaimed totem with an empty owner; BSP-Core failing is said as such; a steal started and ended through BSP-Core's own events is told twice, both signed with the action key, the end with its row's uid, tier, points, start, end and seconds; with the panel off on the server nothing is told and the row is still written; the real BSP-Core 1.19 board answers through the adapter.
+
+Not covered: Redis itself (the messages are caught before `publishWeb`); a board of real players; another server's steal in `stealing` (BSP-Core's own estimate).
+
+On the network, after installing the mod, with the panel on (until SU-97 the panel ignores these; check on Redis):
+1. `redis-cli SUBSCRIBE bsp_su:<channel>:web` on mc-main, then start a steal on a game server: a message of kind `steal` with `"event":"start"`; let it finish: `"event":"end"` with `"success":true`.
+2. Walk out of range so a steal fails: `"success":false` and a `reason`.
+
+## 2026-11-21: the TOTEMS page's panel side (SU-97)
+
+The panel reads the board every 30 s from a server whose snapshot says `totems`, keeps every change of points in `panel_points` (90 days), reads the steals from `bsp_su_steals`, hears steals live, and answers `/api/totems` and `/api/totems/player` (D613 to D622). The page itself is SU-98.
+
+JUnit (`TotemsTest`, 5, and `PanelServerTest.the_totems_page_is_read_by_every_rank_and_by_nobody_logged_out`): no server with the board is said and nothing is asked; the read goes to the able server; the first sighting of each player is marked first (never a gain); no change, no row; a gain and a player gone from a whole board (at 0); nothing recorded twice after a restart; a cut board (over 1,000 lines) never sets the missing to 0; the window's points gained on the board; live steals dropped unsigned, named by another server or old, taken once, a quarter done after 10 of 40 s in "stealing now", gone at the end, the end flagged fast; fast only past the 2 s margin and never without a start; a burst of three in 10 minutes; the time since the player's previous steal; a failed steal in words; the thieves in order, flagged first, with their counts; the grant missing said with where to look; one player's steals and points line, oldest first; a window not offered is a week; a Moderator reads the page, nobody logged out. **103/103** panel tests.
+
+Not covered: MySQL itself (`JdbcStore`'s new queries and `panel_points` run only against the memory store); the real Redis; two panels at once.
+
+On the network (after installing mod 0.16.0 and panel 0.5.0, SU-99):
+1. In MariaDB as root: `GRANT SELECT ON bsp.bsp_su_steals TO 'bsp_panel'@'<host>';` (the same `<host>` as the other grants; part 5 of docs/STAFF_PANEL_SETUP.md).
+2. The panel's console prints no `[panel] the TOTEMS board:` line within a minute of a game server sending (one line when none can answer).
+3. `SELECT COUNT(*) FROM bsp_panel.bsp_su_panel_points;` (the panel's own database and prefix) grows after the first board read, then only when points change.
+
+## 2026-11-21: audit of the TOTEMS work (SU-98)
+
+Two independent read-only audits of SU-95 to SU-97 (the mod side, the panel side); every finding checked against the code before fixing. Fixed:
+
+Mod:
+1. **The database down at the start stopped steal rows for the whole run**: the write batch marked itself queued and the mark was cleared only inside a task that never ran. `Storage.submit(queued, task)` clears it as the task's turn comes, whether or not the database answers; the web chat's batch had the same fault and uses it too.
+2. **A failure in the recording could break a steal**: Forge hands a listener's throw back to BSP-Core, which posts the end before giving the thief the totem. Both listeners catch everything.
+3. **Steal rows unsigned**: each row carries `line`, its end message signed with the action key; the panel shows only that.
+4. The end news is sent only for a row that will be in the table; while writes fail only the minute's retry tries; a null line or thief from BSP-Core is left out instead of failing the board; this server's own running steals are named by this mod's server name; the board says `ready`.
+5. Tests restore the shared storage as they found it; the tier test expects 4 for Tier III (the test world's `tierPoints`), not BSP-Core's own answer; posting real steal events is safe because the test world's BSP-Core storage is local (said in the test).
+
+Panel:
+6. **An empty board zeroed everyone** (BSP-Core's board is empty until its first refresh): a server not `ready` is passed over, and an empty board while points were held never records anyone at 0.
+7. The same server while it answers (switching recorded changes that never were); the next able one (up to three, those that can answer) when it cannot.
+8. A points save is all or none, and after a failed one the panel reads where everyone stood from the table again: never counted twice. Gained and lost summed by the database (no 20,000-row cut).
+9. Rows shown only through their signed copies; the rest counted (`unverified`).
+10. A start whose end was missed is dropped 10 minutes after BSP-Core's time ran out, or when a board read over a minute after it does not list it; the board and its time (taken before asking) are one; memory trimmed on every read.
+11. Bursts and gaps look back a day before the window; the page's answer kept 5 s and made once for all open pages; database errors on the console, plain words on the page.
+
+Left: an operator's finish on BSP-Core's admin screen still looks fast (request SU-BC4 (3)); `JdbcStore`'s new SQL (the all-or-none save, the totals, `lastPoints`) runs only against the memory store in tests; another server's running steal is named by BSP-Core's server name, which matches this mod's unless a server sets this mod's own `storage.serverId` differently.
+
+GameTests: **218/218** (3 new: the database down at the start, a failing lookup never reaching BSP-Core's steal, each row's signed copy; the board test also checks `ready`, the bad entries and the local name). JUnit: **108/108** (`TotemsTest` 10: also an empty, cut or unready board, the same server kept and the next tried, a failed save, a missed end, a burst across the window's start, rows only through their signed copies; `PanelServerTest` also an Admin).
+
+## 2026-11-21: the TOTEMS tab (SU-99)
+
+The panel's TOTEMS tab (`static/totems.js`, its part of `panel.css`, the tab in `app.js`, `MapView.showSpot` in `map.js`), as the refined page `tools/preview/staff_totems_refined.html` (D623 to D629).
+
+Checked in the browser pane on `java -jar staff-panel/build/libs/bsp-staff-panel-0.5.0.jar --demo 8205`, at a computer's width and at 375 px:
+- TOTEMS between Map and Staff (six tabs fit on a phone).
+- Stealing now: a live steal counting down each second, and the board's running one shown as "62 % left".
+- The flagged cards: Vexa FAST ×2 and BURST, Pixl BURST, with fastest, BSP-Core's time, min gap and last.
+- The board: gains in teal, losses in coral, flag counts; totems and steals as columns on a computer only.
+- The steals: chips with counts, search, a FAILED one dimmed with its reason, FORGE, "Yest." and dated times, and "after their last".
+- Vexa opened under her board row: the points line with the red and gold dots, the FAST warning, her steals, ALL STEALS, NOTES (her notes in place) and PLAYER ›.
+- MAP › with no map shown: a line at the foot of the screen for 6 s, staying on TOTEMS.
+- No console errors.
+
+JUnit: `PanelServerTest.the_totems_page_is_read_by_every_rank_and_by_nobody_logged_out` also checks that `/static/totems.js` is served and loaded, and sets no markup. **108/108.**
+
+Not tested: MAP › onto a real BlueMap map (centring and the 30 s pin; the demo has no map here); the tab with the real network's live `steal` messages and board; a steal lit for 10 s as it arrives (the demo's live end was not watched); the window kept after a reload.
+
+On the network (after installing mod 0.16.0, panel 0.5.0 and the grant, SU-100):
+1. Open TOTEMS: "board read … s ago from <server>" within a minute; the board matches BSP-Core's Score Screens.
+2. Start a steal on a test totem: it appears under Stealing now and counts down; let it finish: it leaves, and the steal appears at the top of the list, lit, with the right server, world, coordinates and "0:40 of 0:40" (or that totem's time).
+3. MAP › on that steal: the Map tab opens on that server and world, centred on the totem, with a pin that goes after 30 s.
+4. A steal that fails (walk away): dimmed, FAILED, "Left the totem for too long".
+
+## 2026-11-21: audit of the TOTEMS tab and release 0.16.0 / 0.5.0 (SU-100)
+
+An independent read-only audit of SU-99 (the tab, `map.js`'s place, `app.js`, the styles, the demo). No markup injection: network text goes in as text, BlueMap's label is escaped, every new style is prefixed. Fixed:
+1. **Redraws under a press or typing.** The tab is drawn again after an answer only once a press has ended and nothing in it is being typed in. Typing in the search box redraws only the list under it. The panel sends `board` only when the board, the running steals or the problem changed, not every 30 s.
+2. **The last window's numbers under the new window's words** while reading: "Reading…" until the answer for the window shown.
+3. **MAP › after leaving the tab** no longer pulls staff to the Map tab. An unreadable map list is said as such, not "no map shown".
+4. **The map's place** is tried until BlueMap knows the map (up to 15 s), then dropped: never on a later load. It is cleared when the tab is left. It is centred again once BlueMap settles. Its pin goes when staff switch to another map.
+5. The chip picked is outlined (it was white on teal). Times are 24-hour on every browser. Stealing now shows the tier or FORGE (the start message carries `source` and `tier`) and "finishing…" at 0. ALL STEALS lists that player's steals by id, with an "Only …'s steals ✕" chip. A player's line starts where their points stood before the window. Lit steals are forgotten. The foot line is made hidden when the tab opens and hidden when it is left. Flag counts have a title. A burst is a diamond on the chart. MAP › and names are bigger to tap and keep focus. Countdowns use the panel's clock.
+
+Left: the console's connection errors after a demo restart are the old page's live feed retrying (not the tab); `lastPoints()` is read once per player opened (a whole-table query; fine for a handful of staff).
+
+Tests: GameTests **218/218** (`WebTotemsGameTests` also checks the start's tier and source). JUnit **110/110** (`TotemsTest` 12: the board event only on a change, a running steal's tier, a line's start before the window). Checked again on the 0.5.0 demo: the chip, ALL STEALS by id, no console errors from the tab.
+
+Release: mod **0.16.0** (`gradle.properties`; root `CHANGELOG.md` `[0.16.0]`; protocol still 9), panel **0.5.0** (`staff-panel/CHANGELOG.md` `[0.5.0]`). Jars `build/libs/bsp-server-utilities-0.16.0.jar` (reference map complete) and `staff-panel/build/libs/bsp-staff-panel-0.5.0.jar`; `bsp-staff-panel-0.4.2.jar` unchanged. `docs/STAFF_PANEL_SETUP.md` (and its User Notes copy): the jar table, the upload step, protocol 9, and Running it › Updating to panel 0.5.0 with the grant.
+
+## 2026-11-21: second audit of the TOTEMS work (SU-101)
+
+Two fresh independent read-only audits of everything in 0.16.0 / 0.5.0 (the mod's recording and answers, the panel's desk and tab). Fixed:
+1. **FAST judged on the clock.** Minecraft catches up a tick backlog by running ticks back to back (lag spikes within 15 s of its last warning), so an honest steal could end more than 2 s early by the clock. Each row now carries `ticks` (the server ticks it took), and FAST is `ticks < expected_s * 20 - 40`. The time shown is the ticks' too.
+2. **A player's row picked by an unsigned column.** Rows are shown only when their signed copy is of the same uid, thief and end as the columns. A uid seen twice is counted, not shown. Rows dated more than a day ahead are not read.
+3. **A Forge pour, or another server's steal, left "stealing now" after a minute.** Running steals are matched by world, block and thief (BSP-Core and this mod may name a server differently). A forge pour, never on the board, goes only when its time runs out.
+4. Mod: the events' getters are inside the guard. Repeated failed attempts by one thief at one totem within a minute are recorded once; at most 60 failed rows a thief an hour. The prune deletes 5,000 at a time. A database down from the start no longer gets a write per steal (only the minute's retry). Waiting rows get one last try at the stop, and the count is logged. Owner names come from BSP-Core's own totem or forge first. `scores()` checks the record shapes, not only the classes.
+5. Panel: every TOTEMS answer carries the panel's uncached `now` for the page's clock. The lit steal and an opened row use that clock. A failed read after a window change shows its error. A player's starting points come from one targeted query. A board slightly behind never brings back an ended steal. MAP › only reads the map list until staff are known to be still on TOTEMS. The steals table's name in the message follows the configured prefix.
+
+Left, said: a Totem Forge steal running at a server stop gets no row (BSP-Core keeps none; API.md says so); the panel's MySQL code (the points transaction, `lastPointsBefore`, the bounded steals query) runs only against the memory store in tests; reading from a lagging fallback server can still record a small loss and gain.
+
+Tests: GameTests **220/220** (new: failed attempts folded and capped; rows waiting at the stop; also the ticks against a catch-up clock, the owner name from BSP-Core, no write per steal during an outage, the prune once an hour). JUnit **112/112** (new: speed on ticks, rows matching their copies, a future-dated row; a forge pour and another server's steal still running a minute on; an Owner on `/api/totems` with `now`). The 0.5.0 demo checked again: Vexa and Pixl flagged, FAST from ticks, stealing now, no errors.
+
+On the network, add to the earlier checks: after a lag spike (`/tick` is not in 1.20.1; a heavy area or a backup), steal a test totem: `SELECT ticks, expected_s, ended_ms - started_ms FROM bsp_su_steals ORDER BY id DESC LIMIT 1;` shows `ticks` close to `expected_s * 20`, and the panel does not flag it.
+

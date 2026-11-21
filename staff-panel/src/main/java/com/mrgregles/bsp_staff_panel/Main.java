@@ -47,6 +47,7 @@ public final class Main {
         Runnable stopFeed;
         com.mrgregles.bsp_staff_panel.act.Actions actions;
         com.mrgregles.bsp_staff_panel.chat.Chat chat;
+        com.mrgregles.bsp_staff_panel.totems.TotemDesk totems;
         String actionKey, mapRoot;
         java.util.function.Supplier<String> redisState = () -> "Redis: not used (demo)";
         if (demo) {
@@ -61,6 +62,18 @@ public final class Main {
             stopFeed = Demo.feed(feed);
             actions = Demo.actions();
             chat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, null, System::currentTimeMillis);
+            com.mrgregles.bsp_staff_panel.act.Actions demoActions = actions;
+            totems = new com.mrgregles.bsp_staff_panel.totems.TotemDesk(store, feed, () -> demoActions, System::currentTimeMillis, null);
+            Runnable stopTotemsDemo, stopChatDemo0 = stopFeed;
+            try {
+                stopTotemsDemo = Demo.totems((MemoryStore) store, totems); // made-up steals and points, and a steal every two minutes
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+            stopFeed = () -> {
+                stopTotemsDemo.run();
+                stopChatDemo0.run();
+            };
             Runnable stopDemo = stopFeed, stopChat = Demo.chat(store);
             stopFeed = () -> {
                 stopDemo.run();
@@ -131,10 +144,13 @@ public final class Main {
             actions.refuseWhen(signedFeed::whyNoAnswers);
             com.mrgregles.bsp_staff_panel.chat.Chat signedChat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, c.actionKey(), System::currentTimeMillis);
             chat = signedChat;
+            com.mrgregles.bsp_staff_panel.totems.TotemDesk signedTotems = new com.mrgregles.bsp_staff_panel.totems.TotemDesk(store, signedFeed, () -> acts,
+                    System::currentTimeMillis, c.actionKey()); // only steals the game servers signed (SU-97)
+            totems = signedTotems;
             java.util.concurrent.atomic.AtomicLong lastRedis = new java.util.concurrent.atomic.AtomicLong();
             RedisListener redis = new RedisListener(c.redisHost(), c.redisPort(), c.redisUser(), c.redisPassword(), c.webChannel(),
                     m -> {
-                        if (!signedChat.acceptMessage(m) && !acts.acceptMessage(m) && signedFeed.acceptMessage(m)) {
+                        if (!signedChat.acceptMessage(m) && !acts.acceptMessage(m) && !signedTotems.acceptMessage(m) && signedFeed.acceptMessage(m)) {
                             lastRedis.set(System.currentTimeMillis());
                         }
                     }).start();
@@ -187,10 +203,16 @@ public final class Main {
                 .withMapShown(new com.mrgregles.bsp_staff_panel.web.MapShown(store, System::currentTimeMillis))
                 .withMarket(new com.mrgregles.bsp_staff_panel.market.MarketDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBank(new com.mrgregles.bsp_staff_panel.market.BankDesk(feed, () -> marketActions, System::currentTimeMillis))
-                .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis)).start();
+                .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis))
+                .withTotems(totems).start();
         if (!mapRoot.isEmpty() && !java.nio.file.Files.isRegularFile(Path.of(mapRoot, "index.html"))) {
             System.out.println("The map's folder " + mapRoot + " holds no index.html yet: BlueMap writes it on its first start (or check the mount).");
         }
+        Runnable stopTotems = totemPolling(totems), stopFirst = stopFeed;
+        stopFeed = () -> {
+            stopTotems.run();
+            stopFirst.run();
+        };
         Runnable stopCounts = notesToGame(feed, notes, actions), stopBefore = stopFeed;
         stopFeed = () -> {
             stopCounts.run();
@@ -208,6 +230,40 @@ public final class Main {
             System.out.println("DEMO: made-up data, nothing reaches a game server. Set up the demo Owner at " + publicUrl + "/setup#" + l.token());
         }
         console(auth, store, publicUrl, server, stopFeed, actionKey, redisState, feed);
+    }
+
+    /** The TOTEMS page (SU-97): the board read every 30 s (D618), points changes older than 90 days dropped every hour. */
+    private static Runnable totemPolling(com.mrgregles.bsp_staff_panel.totems.TotemDesk totems) {
+        ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "panel-totems");
+            t.setDaemon(true);
+            return t;
+        });
+        java.util.concurrent.atomic.AtomicReference<String> lastProblem = new java.util.concurrent.atomic.AtomicReference<>("");
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                totems.poll();
+                String p = totems.problem();
+                if (!p.isEmpty() && !p.equals(lastProblem.getAndSet(p))) {
+                    System.err.println("[panel] the TOTEMS board: " + p); // once per new problem, not every 30 s
+                } else if (p.isEmpty()) {
+                    lastProblem.set("");
+                }
+            } catch (RuntimeException e) { // never stops for good
+                System.err.println("[panel] the TOTEMS board: " + e.getMessage());
+            }
+        }, 10, com.mrgregles.bsp_staff_panel.totems.TotemDesk.POLL_MS / 1000, TimeUnit.SECONDS);
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                int gone = totems.prune();
+                if (gone > 0) {
+                    System.out.println("[panel] dropped " + gone + " points changes older than 90 days.");
+                }
+            } catch (Exception e) {
+                System.err.println("[panel] dropping old points changes: " + e.getMessage());
+            }
+        }, 5, 60, TimeUnit.MINUTES);
+        return s::shutdownNow;
     }
 
     /**

@@ -790,4 +790,204 @@ public final class BspCore {
         bountiesOverride = null;
         bountiesForced = false;
     }
+
+    // ------------------------------------------------------------------ totem steals for the staff panel (SU-95, D613 to D622)
+
+    /**
+     * What was stolen at a place: {@code source} "totem", "forge" (a Totem Forge's pour) or "other"; {@code tier} 1 to 5, 0
+     * unknown; {@code points} on the board, 0 unknown; {@code ownerName} the owner's (or pourer's) name as BSP-Core keeps it
+     * on the block, empty when unknown.
+     */
+    public record TotemInfo(String source, int tier, int points, String ownerName) {
+        public static final TotemInfo UNKNOWN = new TotemInfo("other", 0, 0, "");
+
+        public TotemInfo(String source, int tier, int points) {
+            this(source, tier, points, "");
+        }
+    }
+
+    /** BSP-Core's steal events, as this mod reads them (server thread). */
+    public interface StealListener {
+        /** {@code owner} is who the steal is against (null: unclaimed); {@code seconds} what BSP-Core gave it. */
+        void started(net.minecraft.server.MinecraftServer server, net.minecraft.core.GlobalPos where, @org.jetbrains.annotations.Nullable java.util.UUID owner,
+                     java.util.UUID thief, String thiefName, int seconds);
+
+        /** {@code owner} is who the steal was against (null: unclaimed); {@code reasonKey} empty on success. */
+        void ended(net.minecraft.server.MinecraftServer server, net.minecraft.core.GlobalPos where, @org.jetbrains.annotations.Nullable java.util.UUID owner,
+                   java.util.UUID thief, String thiefName, boolean success, String reasonKey);
+    }
+
+    private static boolean stealsHooked;
+
+    /**
+     * Calls {@code listener} for every steal that starts or ends on this server (BSP-Core's {@code TotemEvent.StealStarted}
+     * and {@code StealEnded}, posted for placed totems and Totem Forges alike); once, and nothing without BSP-Core.
+     */
+    public static void onSteals(StealListener listener) {
+        if (!isLoaded() || stealsHooked) {
+            return;
+        }
+        try {
+            // the events' own getters inside the guard too: nothing thrown here may reach BSP-Core's steal (audit of 0.16.0)
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((com.mrgregles.bsp_core.api.event.TotemEvent.StealStarted e) -> {
+                try {
+                    listener.started(e.getServer(), e.getWhere(), e.getOwner(), e.getThief(), e.getThiefName(), e.getSeconds());
+                } catch (LinkageError | RuntimeException x) {
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: a steal start was not noted: {}", x.toString());
+                }
+            });
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((com.mrgregles.bsp_core.api.event.TotemEvent.StealEnded e) -> {
+                try {
+                    listener.ended(e.getServer(), e.getWhere(), e.getOwner(), e.getThief(), e.getThiefName(), e.isSuccess(), e.getReasonKey() == null ? "" : e.getReasonKey());
+                } catch (LinkageError | RuntimeException x) {
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: a steal was not recorded: {}", x.toString());
+                }
+            });
+            stealsHooked = true;
+        } catch (LinkageError | RuntimeException e) {
+            BSPServerUtilities.LOGGER.debug("BSP-Core steal events not reachable: {}", e.toString());
+        }
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static java.util.function.BiFunction<net.minecraft.server.MinecraftServer, net.minecraft.core.GlobalPos, TotemInfo> totemInfoOverride;
+
+    /**
+     * What stands at {@code where} on this server, read while a steal's end event runs (the totem is still there, its
+     * owner not yet changed): a Shatter Totem's tier and what BSP-Core's board counts it as, or a Totem Forge, whose pour
+     * comes out a tier I totem. Never loads a chunk; {@link TotemInfo#UNKNOWN} when nothing is readable.
+     */
+    public static TotemInfo totemInfo(net.minecraft.server.MinecraftServer server, net.minecraft.core.GlobalPos where) {
+        if (totemInfoOverride != null) {
+            return totemInfoOverride.apply(server, where);
+        }
+        if (!isLoaded()) {
+            return TotemInfo.UNKNOWN;
+        }
+        try {
+            net.minecraft.server.level.ServerLevel level = server.getLevel(where.dimension());
+            if (level == null || !level.isLoaded(where.pos())) {
+                return TotemInfo.UNKNOWN;
+            }
+            net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(where.pos());
+            if (be instanceof com.mrgregles.bsp_core.totem.ShatterTotemBlockEntity totem) {
+                int tier = totem.getTier(); // 0 (I) to 4 (V)
+                String owner = totem.getOwner().map(com.mrgregles.bsp_core.totem.TotemOwner::name).orElse("");
+                return new TotemInfo("totem", tier + 1, tierPoints(tier), owner == null ? "" : owner);
+            }
+            if (be instanceof com.mrgregles.bsp_core.machine.TotemForgeBlockEntity forge) {
+                String pourer = forge.pourerName();
+                return new TotemInfo("forge", 1, tierPoints(0), pourer == null ? "" : pourer);
+            }
+        } catch (LinkageError | RuntimeException e) {
+            BSPServerUtilities.LOGGER.debug("BSP-Core totem not readable: {}", e.toString());
+        }
+        return TotemInfo.UNKNOWN;
+    }
+
+    /**
+     * Points a totem of {@code tier} (0 = I) is worth on BSP-Core's board ({@code scoring.tierPoints}). BSP-Core keeps this
+     * outside its api (request SU-BC4 asks for it there), so a BSP-Core without it answers 0: unknown.
+     */
+    private static int tierPoints(int tier) {
+        try {
+            return Math.max(0, com.mrgregles.bsp_core.score.ScoreService.tierPoints(tier));
+        } catch (LinkageError | RuntimeException e) {
+            return 0;
+        }
+    }
+
+    /** One line of BSP-Core's network board: {@code rank} 1 for the leader, {@code bestTier} 1 to 5. */
+    public record BoardLine(java.util.UUID player, String name, int rank, int points, int totems, int bestTier) {
+    }
+
+    /** A steal running anywhere on the network: {@code fractionLeft} 1 at the start to 0 at the end (estimated for another server's). */
+    public record StealNow(String serverId, boolean local, String dimension, int x, int y, int z, @org.jetbrains.annotations.Nullable java.util.UUID owner,
+                           java.util.UUID thief, String thiefName, float fractionLeft) {
+    }
+
+    /** BSP-Core's board and the steals in progress, as the staff panel's TOTEMS page reads them; the real one is {@code BspScores} and {@code BspTotems}, tests give their own. Server thread only. */
+    public interface Scores {
+        /** The whole board, best first; with network storage every server's combined, rebuilt every {@code scoring.refreshSeconds}. Throws when BSP-Core failed. */
+        java.util.List<BoardLine> board(net.minecraft.server.MinecraftServer server);
+
+        /** The steals running on the network (this server's exactly, the others' as last read). Throws when BSP-Core failed. */
+        java.util.List<StealNow> stealing(net.minecraft.server.MinecraftServer server);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static Scores scoresOverride;
+    private static boolean scoresForced;
+    private static Boolean scoresChecked;
+
+    /** BSP-Core's board and steals in progress, or null without a BSP-Core that has {@code BspScores} (1.19.0 is the oldest built against). */
+    @org.jetbrains.annotations.Nullable
+    public static Scores scores() {
+        if (scoresForced) {
+            return scoresOverride;
+        }
+        if (scoresChecked == null) {
+            if (ModList.get() == null || !isLoaded()) {
+                return null; // not cached: asked again once mods are loaded
+            }
+            boolean ok;
+            try {
+                // the record shapes read, not only the classes (audit of 0.16.0): an older shape answers as BSP-Core absent
+                Class<?> score = Class.forName("com.mrgregles.bsp_core.api.BspScores$Score"), steal = Class.forName("com.mrgregles.bsp_core.api.BspTotems$StealAnywhere");
+                for (String m : new String[]{"player", "name", "rank", "points", "totems", "bestTier"}) {
+                    score.getMethod(m);
+                }
+                for (String m : new String[]{"serverId", "local", "dimension", "pos", "owner", "thief", "thiefName", "fractionLeft"}) {
+                    steal.getMethod(m);
+                }
+                ok = true;
+            } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+                ok = false;
+            }
+            scoresChecked = ok;
+        }
+        return scoresChecked ? RealScores.INSTANCE : null;
+    }
+
+    /** Loaded only once {@code BspScores} is known to be there. */
+    private static final class RealScores implements Scores {
+        static final Scores INSTANCE = new RealScores();
+
+        @Override
+        public java.util.List<BoardLine> board(net.minecraft.server.MinecraftServer server) {
+            try {
+                return com.mrgregles.bsp_core.api.BspScores.board(server).stream()
+                        .map(x -> new BoardLine(x.player(), x.name() == null ? "" : x.name(), x.rank(), x.points(), x.totems(), x.bestTier())).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+
+        @Override
+        public java.util.List<StealNow> stealing(net.minecraft.server.MinecraftServer server) {
+            try {
+                return com.mrgregles.bsp_core.api.BspTotems.stealsAnywhere(server).stream()
+                        .map(x -> new StealNow(x.serverId(), x.local(), x.dimension().location().toString(), x.pos().getX(), x.pos().getY(), x.pos().getZ(),
+                                x.owner(), x.thief(), x.thiefName() == null ? "" : x.thiefName(), x.fractionLeft())).toList();
+            } catch (LinkageError e) {
+                throw new IllegalStateException(e.toString(), e);
+            }
+        }
+    }
+
+    /** Tests: the board to use (null: none, as without BSP-Core). */
+    public static void useScoresForTests(@org.jetbrains.annotations.Nullable Scores sc) {
+        scoresOverride = sc;
+        scoresForced = true;
+    }
+
+    public static void useRealScores() {
+        scoresOverride = null;
+        scoresForced = false;
+    }
+
+    /** Tests: what {@link #totemInfo} answers (null: the real lookup). */
+    public static void useTotemInfoForTests(@org.jetbrains.annotations.Nullable java.util.function.BiFunction<net.minecraft.server.MinecraftServer, net.minecraft.core.GlobalPos, TotemInfo> info) {
+        totemInfoOverride = info;
+    }
 }

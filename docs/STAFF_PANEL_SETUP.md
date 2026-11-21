@@ -78,14 +78,14 @@ You need these files. They are already built on your Mac:
 
 | File | Where it is on your Mac | Where it goes |
 |---|---|---|
-| `bsp-server-utilities-0.14.0.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack |
+| `bsp-server-utilities-0.16.0.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack |
 | `bsp-core-1.19.2.jar` (**not** the `-slim` one: it has no database driver) | `Github/BSP-Core/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-inventorysync-0.8.1.jar` | `Github/BSP-InventorySync/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-teleport-3.9.0.jar` | `Github/BSP-Teleport/build/libs/` | every game server's `mods/` |
-| `bsp-staff-panel-0.4.2.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
+| `bsp-staff-panel-0.5.0.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
 
 1. **The players' modpack.** A player can join only when their game's BSP-Server Utilities and BSP-Core speak the
-   same network protocol as the server, exactly: BSP-Server Utilities 0.12.0 and newer speak protocol 8, BSP-Core
+   same network protocol as the server, exactly: BSP-Server Utilities 0.15.0 and newer speak protocol 9 (0.12.0 to 0.14.x: 8), BSP-Core
    1.19.0 and newer protocol 15 (1.18.x: 14). Anyone else is turned away, told the mod's version differs.
    - First look at what you have now: the `bsp-` file names in a game server's `mods/` and in the published pack.
      If both already have these versions (or others with the same protocols), there is nothing to do here.
@@ -210,11 +210,12 @@ to make themselves Owner of the panel.
    GRANT SELECT ON bsp.bsp_su_web_servers TO 'bsp_panel'@'<host>';
    GRANT SELECT ON bsp.bsp_su_web_items TO 'bsp_panel'@'<host>';
    GRANT SELECT ON bsp.bsp_su_web_item_parts TO 'bsp_panel'@'<host>';
+   GRANT SELECT ON bsp.bsp_su_steals TO 'bsp_panel'@'<host>';
    GRANT SELECT, INSERT ON bsp.bsp_su_notices TO 'bsp_panel'@'<host>';
    GRANT SELECT, INSERT, DELETE ON bsp.bsp_su_web_chat TO 'bsp_panel'@'<host>';
    ```
    Each answers `Query OK`. A `GRANT` that says `Table 'bsp.bsp_su_...' doesn't exist` means no game server has run
-   0.14.0 yet (part 3): do part 3 first, then run that line again.
+   0.14.0 yet (`bsp_su_steals`: 0.16.0) (part 3): do part 3 first, then run that line again.
    **Paste the password from your note; never retype it** (a missed `/` or `+` is easy). Then check that MariaDB has
    exactly the password in your note (the answer shows nothing secret; paste the password between the quotes):
    ```sql
@@ -273,7 +274,7 @@ to make themselves Owner of the panel.
    - **Create Server**. Wait until its install finishes (the server page shows it).
    - **Subusers**: none on this server, ever. Whoever can read its files or console can read its keys. And no staff
      member is ever a Pterodactyl admin: every admin can read every server's files, this one's keys included.
-4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.4.2.jar`.
+4. **Upload the jar.** The server's page (not the admin area) › **Files** › **Upload**: `bsp-staff-panel-0.5.0.jar`.
    Then on the uploaded file, the **⋯** menu › **Rename** to `bsp-staff-panel.jar` (one fixed name, so a later
    update is only a new file with the same name).
 5. **First start.** **Console** › **Start**. It prints a few lines and stops by itself with
@@ -569,6 +570,12 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
 - **Updating the panel.** **Stop** it, **Upload** the new jar, delete the old `bsp-staff-panel.jar`, rename the new
   one to `bsp-staff-panel.jar`, **Start**. The mod and the panel are released together when their messages change:
   update both at once.
+- **Updating to panel 0.5.0 (the TOTEMS tab).** First BSP-Server Utilities 0.16.0 on every game server (it makes the
+  table `bsp_su_steals` when it starts; players need no new modpack for it, the protocol is still 9). Once one game
+  server has started with it, give the panel's user read access to that table, on `192.168.1.25` in `sudo mariadb`:
+  `GRANT SELECT ON bsp.bsp_su_steals TO 'bsp_panel'@'<host>';` (the same `<host>` as in part 5; `SHOW TABLES IN bsp
+  LIKE 'bsp_su_steals';` shows one row first). Then update the panel as above. Without the grant the tab still shows
+  the board and says the steal history cannot be read.
 - **Restarts.** The panel, Redis, MariaDB and the game servers can each be restarted on their own: each reconnects by
   itself (Redis within 30 seconds). A game server that starts before MariaDB answers waits for it (its console says
   `storage connected` when it does) and refuses banned players from its own copy of the bans meanwhile.

@@ -396,6 +396,7 @@ public final class WebActions {
             case "bounty_remove" -> WebBounties.remove(server, a, id, by);
             case "bounty_extend" -> WebBounties.extend(server, a, id, by);
             case "bounty_blank_notes" -> WebBounties.blankNotes(server, a, id, by);
+            case "totem_board" -> WebTotems.board(server, id); // the TOTEMS page (SU-96): every staff account reads it (D614)
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
     }

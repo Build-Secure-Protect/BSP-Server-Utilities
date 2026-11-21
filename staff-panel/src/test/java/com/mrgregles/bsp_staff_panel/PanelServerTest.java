@@ -815,6 +815,36 @@ class PanelServerTest {
     }
 
     @Test
+    void the_totems_page_is_read_by_every_rank_and_by_nobody_logged_out() throws Exception {
+        String o = owner();
+        JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));
+        String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+        String kip = cookieOf(post("/api/setup", "kip@bsp.test", null,
+                "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+        assertFalse(json(post("/api/totems", "kip@bsp.test", kip, "{}")).get("ok").getAsBoolean(), "not set up on this panel: said");
+        store.addSteal(new com.mrgregles.bsp_staff_panel.store.PanelStore.Steal("s-1", "Frostwarf", "minecraft:overworld", 1, 64, 2, "11111111-2222-3333-4444-555555555555", "Vexa",
+                "", "", "totem", 1, 1, clock.get() - 60_000, clock.get() - 20_000, 40, true, "", 800, ""));
+        server.withTotems(new com.mrgregles.bsp_staff_panel.totems.TotemDesk(store, feed, () -> actions, clock::get, null));
+        assertEquals(401, post("/api/totems", "kip@bsp.test", null, "{}").statusCode(), "logged out: nothing");
+        JsonObject page = json(post("/api/totems", "kip@bsp.test", kip, "{\"days\":30}"));
+        assertTrue(page.get("ok").getAsBoolean() && page.get("days").getAsInt() == 30 && page.getAsJsonArray("steals").size() == 1, "a Moderator reads the page (D614): " + page);
+        JsonObject adaLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"ada@bsp.test\",\"mcName\":\"Ada\",\"rank\":\"ADMIN\"}"));
+        String at = adaLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String as = json(post("/api/setup/info", "ada@bsp.test", null, "{\"token\":\"" + at + "\"}")).get("secret").getAsString();
+        String ada = cookieOf(post("/api/setup", "ada@bsp.test", null,
+                "{\"token\":\"" + at + "\",\"secret\":\"" + as + "\",\"code\":\"" + code(as) + "\",\"password\":\"" + PW + "\"}"));
+        assertTrue(json(post("/api/totems", "ada@bsp.test", ada, "{\"days\":1}")).get("ok").getAsBoolean(), "an Admin too");
+        JsonObject asOwner = json(post("/api/totems", "owner@bsp.test", o, "{}"));
+        assertTrue(asOwner.get("ok").getAsBoolean() && asOwner.get("now").getAsLong() == clock.get(), "an Owner too, with the panel's time as the answer left (audit of 0.16.0)");
+        HttpResponse<String> js = get("/static/totems.js", "kip@bsp.test", null);
+        assertTrue(js.statusCode() == 200 && js.body().contains("const Totems") && !js.body().contains("innerHTML"), "the tab's script is served, and sets no markup from the network");
+        assertTrue(get("/", "kip@bsp.test", kip).body().contains("/static/totems.js"), "the page loads it");
+        JsonObject one = json(post("/api/totems/player", "owner@bsp.test", o, "{\"id\":\"11111111-2222-3333-4444-555555555555\",\"days\":\"x\"}"));
+        assertTrue(one.get("ok").getAsBoolean() && one.get("days").getAsInt() == 7 && one.getAsJsonArray("steals").size() == 1, "a player's row; a bad window is a week: " + one);
+    }
+
+    @Test
     void bounties_are_read_by_everyone_and_changed_by_admins_or_the_bounty_power() throws Exception {
         String o = owner();
         JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));

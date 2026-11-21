@@ -44,6 +44,7 @@ public final class WebSnapshot {
             o.addProperty("tpName", tp.serverName()); // the name BSP-Teleport and the proxy know this server by
         }
         WebMarket.addTo(o); // the market and the lottery's phase (SU-50)
+        WebTotems.addTo(o); // where the panel reads BSP-Core's board (SU-96)
         JsonArray list = new JsonArray();
         for (ServerPlayer p : players) {
             list.add(player(server, p));

@@ -468,6 +468,37 @@ public final class MemoryBackend implements StorageBackend {
         return new com.mrgregles.bsp_server_utilities.rooms.RoomTable(Map.copyOf(roomsHeard), List.copyOf(all));
     }
 
+    private final Map<String, Steal> steals = new java.util.LinkedHashMap<>();
+
+    @Override
+    public synchronized void insertSteals(List<Steal> rows) throws Exception {
+        check();
+        for (Steal s : rows) {
+            steals.putIfAbsent(s.uid(), s);
+        }
+    }
+
+    @Override
+    public synchronized List<Steal> loadSteals(long sinceMs, int limit) throws Exception {
+        check();
+        List<Steal> all = new ArrayList<>(steals.values());
+        java.util.Collections.reverse(all); // newest written first among equal end times, as the table's id DESC
+        return all.stream().filter(s -> s.endedMs() >= sinceMs).sorted((a, b) -> Long.compare(b.endedMs(), a.endedMs())).limit(limit).toList();
+    }
+
+    @Override
+    public synchronized int pruneSteals(long beforeMs) throws Exception {
+        check();
+        int n = steals.size();
+        steals.values().removeIf(s -> s.endedMs() < beforeMs);
+        return n - steals.size();
+    }
+
+    /** How many steals the table holds (tests). */
+    public synchronized int stealCount() {
+        return steals.size();
+    }
+
     @Override
     public String describe() {
         return "memory";

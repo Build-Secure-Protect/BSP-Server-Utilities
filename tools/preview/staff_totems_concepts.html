@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Totems Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set AJ: three looks for the TOTEMS tab on the staff web panel (decisions D613 to D622). Sample data; names are made up.
+   Layout: a page of sections, each look on its own board of phone (and computer) frames; the frames use the panel's own tokens (panel.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1240px; margin:0 auto; padding-block:28px 56px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; text-wrap:balance; } h2{ font-size:18px; margin:0; color:var(--acc); text-wrap:balance; }
+.lede{ color:var(--muted); margin:0; max-width:82ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:86ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:1100px){ .stage{ justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:340px; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:12px; max-width:90ch; } ol b{ color:var(--fg); }
+.opt{ display:block; margin-top:3px; color:var(--muted); }
+
+/* ---------- the panel (its own tokens, panel.css) ---------- */
+.ph,.pc{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; flex:none; }
+.ph{ width:340px; height:740px; border:8px solid #050608; border-radius:30px; }
+.pc{ width:1000px; height:620px; border:8px solid #050608; border-radius:10px; flex-direction:row; }
+.ph *,.pc *{ box-sizing:border-box; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); } .vi{ color:var(--vio); }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.top{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.back{ width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:var(--pn); border:1px solid var(--ln); flex:none; color:var(--soft); font-size:15px; }
+.grow{ flex:1; min-width:0; }
+.scroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px; padding:0 12px 12px; }
+.face{ width:36px; height:36px; border-radius:4px; flex:none; background:linear-gradient(135deg,#6b4a2f 0 45%,#c99a6b 45% 70%,#3a2a1c 70%); }
+.nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub{ font-size:11px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tiles{ display:grid; grid-template-columns:1.3fr 1fr; gap:6px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:7px 9px; font-size:10.5px; color:var(--mu); min-width:0; }
+.tile b{ display:block; font:600 19px var(--mono); color:var(--tx); }
+.coins{ display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+.coin{ display:inline-flex; align-items:center; gap:4px; font:600 11px var(--mono); color:var(--tx); }
+.coin i{ width:10px; height:10px; border-radius:50%; display:block; }
+.c0{ background:#c87533; } .c1{ background:#f2c94c; } .c2{ background:#6fe3e1; } .c3{ background:#4a4048; border:1px solid #7a6a72; } .c4{ background:#b58cff; }
+.keys{ display:flex; gap:6px; flex-wrap:wrap; }
+.key{ height:30px; border-radius:8px; padding:0 11px; display:inline-flex; align-items:center; gap:6px; background:var(--pn); border:1px solid var(--ln); font-size:12px; font-weight:600; color:var(--soft); white-space:nowrap; }
+.key.on{ background:#19d3b01c; border-color:#19d3b066; color:var(--teal); }
+.key.danger{ color:var(--coral); border-color:#5a2a2a; background:transparent; }
+.key.armed{ background:var(--coral); color:#10151c; border-color:var(--coral); }
+.key.go{ background:var(--teal); color:#0f1115; border-color:var(--teal); }
+.key small{ font:600 10px var(--mono); opacity:.8; }
+.chips{ display:flex; gap:5px; overflow:hidden; flex:none; }
+.chip{ flex:none; padding:3px 9px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11px; color:var(--mu); white-space:nowrap; }
+.chip.on{ color:var(--tx); border-color:var(--soft); }
+.sect{ font:600 10px var(--body); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
+.list{ background:var(--bg2); border:1px solid var(--ln); border-radius:10px; overflow:hidden; }
+.lr{ display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px; padding:8px 10px; align-items:start; }
+.lr + .lr, .lr + .rf, .rf + .lr{ border-top:1px solid #20242d; }
+.lr.sel{ background:#19d3b00d; }
+.ty{ font:600 9.5px var(--mono); padding:2px 5px; border-radius:4px; background:#232733; color:var(--soft); letter-spacing:.04em; margin-top:1px; }
+.ty.pay{ background:#1d2a3d; color:var(--blue); } .ty.mk{ background:#2a2614; color:var(--gold); } .ty.st{ background:#271f38; color:var(--vio); } .ty.cv{ background:#14302b; color:#7fe0cf; }
+.amt{ font:600 13px var(--mono); text-align:right; white-space:nowrap; }
+.amt.in{ color:var(--teal); } .amt.out{ color:var(--coral); }
+.amt small{ display:block; font:500 10px var(--mono); color:var(--mu); }
+.what{ font-size:12px; min-width:0; }
+.what .sub{ white-space:normal; }
+.bar{ height:3px; background:#2a2f3a; border-radius:2px; margin-top:4px; overflow:hidden; } .bar i{ display:block; height:100%; background:var(--vio); }
+.rf{ background:#14181f; padding:10px; display:flex; flex-direction:column; gap:8px; border-left:3px solid var(--teal); }
+.fld{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mu); }
+.fld .in{ height:32px; flex:1; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; display:flex; align-items:center; font:600 13px var(--mono); color:var(--tx); justify-content:space-between; min-width:0; }
+.fld .in em{ font:400 11px var(--body); color:var(--mu); font-style:normal; }
+.fld .in.txt{ font:13px var(--body); color:var(--soft); }
+.sw{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); }
+.sw i{ width:30px; height:18px; border-radius:9px; background:var(--teal); position:relative; flex:none; } .sw i::after{ content:""; position:absolute; right:2px; top:2px; width:14px; height:14px; border-radius:50%; background:#0f1115; }
+.sw i.off{ background:#2a2f3a; } .sw i.off::after{ left:2px; right:auto; background:var(--mu); }
+.sure{ font-size:12px; color:#ffb4ab; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:8px 10px; line-height:1.4; }
+.sure b{ color:#ffd9d4; }
+.lot{ display:flex; gap:9px; padding:9px 10px; align-items:center; }
+.lot + .lot{ border-top:1px solid #20242d; }
+.pic{ width:30px; height:30px; border-radius:5px; background:#232733; display:grid; place-items:center; font:600 10px var(--mono); color:var(--soft); flex:none; position:relative; }
+.pic sup{ position:absolute; right:-3px; bottom:-4px; font:600 9px var(--mono); color:var(--tx); background:#0f1115; border-radius:3px; padding:0 2px; }
+.pic.en{ box-shadow:inset 0 0 0 1px #b58cff88; }
+.note{ font-size:11px; color:var(--mu); line-height:1.4; }
+.okm{ font-size:12px; color:#7fe0cf; background:#14302b; border:1px solid #24443f; border-radius:8px; padding:7px 10px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); }
+.tnav div.on{ color:var(--teal); } .tnav b{ width:18px; height:18px; border:2px solid currentColor; border-radius:5px; display:block; }
+.day{ font:600 10.5px var(--body); color:var(--mu); padding:2px 2px 0; display:flex; justify-content:space-between; }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--bg2); border-top:1px solid var(--ln); border-radius:16px 16px 0 0; padding:10px 14px 18px; display:flex; flex-direction:column; gap:9px; box-shadow:0 -14px 30px #000a; }
+.grab{ width:36px; height:4px; border-radius:2px; background:#3a3f4a; margin:0 auto 2px; }
+.shade{ position:absolute; inset:0; background:#000a; }
+.big{ background:var(--pn); border:1px solid var(--ln); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.flow{ display:grid; grid-template-columns:1fr auto; gap:3px 10px; font-size:12.5px; }
+.flow b{ font:600 13px var(--mono); text-align:right; }
+/* the computer */
+.side{ width:58px; background:var(--bg2); border-right:1px solid var(--ln); flex:none; display:flex; flex-direction:column; align-items:center; gap:14px; padding-top:14px; }
+.side b{ width:20px; height:20px; border:2px solid var(--mu); border-radius:5px; display:block; } .side b.on{ border-color:var(--teal); }
+.cmain{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.ccols{ flex:1; display:grid; grid-template-columns:250px 1fr 300px; gap:12px; padding:0 14px 14px; min-height:0; }
+.ccol{ display:flex; flex-direction:column; gap:9px; min-width:0; overflow:hidden; }
+table.led{ width:100%; border-collapse:collapse; font-size:12px; }
+.led th{ text-align:left; font:600 9.5px var(--body); letter-spacing:.1em; color:var(--dim); text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--ln); position:sticky; top:0; background:var(--bg2); }
+.led td{ padding:6px 8px; border-bottom:1px solid #20242d; white-space:nowrap; vertical-align:top; }
+.led td.n{ text-align:right; font:600 12px var(--mono); }
+.led tr.sel td{ background:#19d3b012; }
+.led td .sub{ max-width:170px; }
+
+.poster{ background:linear-gradient(#2a2416,#1a1d24); border:1px solid #5a4a1a; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center; }
+.poster .bigface{ width:56px; height:56px; border-radius:6px; background:linear-gradient(135deg,#6b4a2f 0 45%,#c99a6b 45% 70%,#3a2a1c 70%); }
+.poster .rw{ font:600 18px var(--mono); color:var(--gold); }
+.wanted{ font:12px Silkscreen,var(--mono); color:var(--gold); letter-spacing:.08em; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.chipe{ font:600 9.5px var(--mono); padding:2px 6px; border-radius:4px; }
+.ce-claimed{ background:#14302b; color:#7fe0cf; } .ce-expired{ background:#232733; color:var(--mu); } .ce-removed{ background:#3a1d1d; color:#ff8f86; } .ce-staff{ background:#271f38; color:var(--vio); }
+.notes{ background:#14181f; border:1px dashed var(--ln); border-radius:8px; padding:8px; font-size:12px; color:var(--soft); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+.hunt{ display:flex; gap:6px; align-items:center; font-size:12px; } .hunt i{ width:16px; height:16px; border-radius:3px; background:#5a7a3a; display:block; }
+.tbl{ width:100%; border-collapse:collapse; font-size:12px; } .tbl th{ text-align:left; font:600 9.5px var(--body); letter-spacing:.1em; color:var(--dim); text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--ln); }
+.tbl td{ padding:6px 8px; border-bottom:1px solid #20242d; white-space:nowrap; } .tbl tr.sel td{ background:#19d3b012; } .tbl td.n{ text-align:right; font:600 12px var(--mono); }
+.search{ height:32px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; display:flex; align-items:center; font-size:12px; color:var(--dim); }
+
+
+/* ---------- set AJ's own ---------- */
+.flag{ font:600 9.5px var(--mono); padding:2px 5px; border-radius:4px; letter-spacing:.04em; white-space:nowrap; }
+.f-fast{ background:#3a1d1d; color:#ff8f86; } .f-burst{ background:#3a2a10; color:var(--gold); } .f-fail{ background:#232733; color:var(--mu); } .f-ok{ background:#14302b; color:#7fe0cf; }
+.now{ background:#1d1424; border:1px solid #4a2f5a; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:7px; }
+.now .row{ display:grid; grid-template-columns:1fr auto; gap:2px 8px; font-size:12px; }
+.prog{ grid-column:1 / -1; height:5px; background:#2a2f3a; border-radius:3px; overflow:hidden; } .prog i{ display:block; height:100%; background:var(--vio); }
+.live{ display:inline-flex; align-items:center; gap:5px; font:600 10px var(--body); letter-spacing:.1em; color:var(--vio); text-transform:uppercase; }
+.live::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--vio); box-shadow:0 0 0 3px #b58cff33; }
+.sus{ background:var(--pn); border:1px solid #5a2a2a; border-radius:10px; padding:9px 10px; display:grid; grid-template-columns:auto 1fr auto; gap:3px 9px; align-items:center; }
+.sus .stats{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.st{ background:#14181f; border-radius:6px; padding:4px 6px; font-size:9.5px; color:var(--mu); line-height:1.25; } .st b{ display:block; font:600 13px var(--mono); color:var(--tx); }
+.st b.rd{ color:var(--coral); } .st b.gd{ color:var(--gold); }
+.brd{ display:grid; grid-template-columns:20px 1fr auto auto; gap:1px 8px; padding:7px 10px; align-items:center; font-size:12px; }
+.brd + .brd{ border-top:1px solid #20242d; }
+.rk{ font:600 11px var(--mono); color:var(--dim); text-align:right; }
+.pts{ font:600 13px var(--mono); text-align:right; } .gain{ font:600 11px var(--mono); color:var(--teal); text-align:right; min-width:38px; } .gain.lo{ color:var(--coral); }
+.tier{ font:600 9px var(--mono); padding:1px 4px; border-radius:3px; background:#232733; color:var(--soft); }
+.ev{ display:grid; grid-template-columns:44px 1fr auto; gap:1px 8px; padding:7px 10px; font-size:12px; align-items:start; }
+.ev + .ev{ border-top:1px solid #20242d; }
+.ev .t{ font:600 10.5px var(--mono); color:var(--mu); padding-top:1px; }
+.ev.failed{ opacity:.55; }
+.where{ font:11px var(--mono); color:var(--soft); } .xyz{ white-space:nowrap; }
+.maplink{ font:600 10px var(--body); color:var(--teal); white-space:nowrap; }
+.took{ font:600 11px var(--mono); text-align:right; white-space:nowrap; } .took small{ display:block; font:500 9.5px var(--mono); color:var(--mu); }
+.chart{ background:var(--bg2); border:1px solid var(--ln); border-radius:10px; padding:8px; }
+.chart svg{ display:block; width:100%; height:auto; }
+.legend{ display:flex; flex-wrap:wrap; gap:4px 10px; font-size:10.5px; color:var(--mu); margin-top:4px; }
+.legend i{ display:inline-block; width:10px; height:3px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+.seg{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:9px; padding:2px; gap:2px; flex:none; }
+.seg span{ flex:1; text-align:center; font:600 11px var(--body); padding:5px 4px; border-radius:7px; color:var(--mu); }
+.seg span.on{ background:#19d3b01c; color:var(--teal); }
+.warnl{ font-size:11px; color:var(--gold); background:#2a2614; border:1px solid #4a3f1a; border-radius:8px; padding:6px 9px; line-height:1.35; }
+.tbl td.where{ white-space:normal; min-width:120px; max-width:150px; line-height:1.3; } .tbl td, .tbl th{ padding:6px 6px; }
+.pc .tnavh{ display:flex; gap:4px; padding:10px 14px 0; flex:none; }
+.pc .tnavh span{ font:600 12px var(--body); padding:6px 12px; border-radius:8px; color:var(--mu); }
+.pc .tnavh span.on{ background:#19d3b01c; color:var(--teal); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>The TOTEMS tab on the staff panel</h1>
+    <p class="lede">Mock-up set AJ, three looks for the new TOTEMS tab between Map and Staff (D613 to D622), for every staff rank. Each look holds the same things: the board (points, totems held and best tier, points gained in the window), "stealing now" (live), every steal with where, when, from whom, how long it took against BSP-Core's time and the time since that player's last steal, and a player's own view with their points over time. Flags: <b>FAST</b> (finished more than 2 s sooner than BSP-Core allows) and <b>BURST</b> (3 completed steals within 10 minutes). Windows: 24 h, 7 days (the default), 30 days, 90 days.</p>
+  </header>
+
+  <section><h2>A. Watch list first: the flagged players at the top, then the board, then the steals</h2>
+    <div class="card"><p>One column that reads top to bottom. "Stealing now" stays at the top while anything runs. Next come the players with flags in the window, each with their counts. The board follows, with the points gained in the window, and the steals as a list under it. Tapping a player opens their view under the row: their points line, then their steals. On a computer the column is 760 px wide.</p></div>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:42</span><span>5G</span></div>
+          <div class="top"><div class="grow"><div class="nm">Totems</div><div class="sub">board read 12 s ago from Frostwarf</div></div><span class="key">7 DAYS</span></div>
+          <div class="scroll">
+            <div class="now">
+              <span class="live">Stealing now · 1</span>
+              <div class="row"><span><b>Vexa</b> <span class="mu">from</span> Wren_88</span><span class="mono mu">31 s left</span><span class="where">Frostwarf · Nether · <span class="xyz">120 64 -880</span></span><span class="maplink">MAP ›</span><span class="prog"><i style="width:38%"></i></span></div>
+            </div>
+            <div class="sect">Flagged · 2 players</div>
+            <div class="sus">
+              <div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Vexa</div><div class="sub">14 steals · 31 points taken</div></div><span><span class="flag f-fast">FAST ×2</span> <span class="flag f-burst">BURST</span></span>
+              <div class="stats"><div class="st">fastest<b class="rd">0:19</b></div><div class="st">given<b>0:40</b></div><div class="st">min gap<b class="gd">1:41</b></div><div class="st">failed<b>3</b></div></div>
+            </div>
+            <div class="sus" style="border-color:#4a3f1a">
+              <div class="face" style="width:30px;height:30px"></div><div class="grow"><div class="nm">Pixl</div><div class="sub">5 steals · 9 points taken</div></div><span class="flag f-burst">BURST</span>
+              <div class="stats"><div class="st">fastest<b>0:42</b></div><div class="st">given<b>0:40</b></div><div class="st">min gap<b class="gd">2:55</b></div><div class="st">failed<b>0</b></div></div>
+            </div>
+            <div class="sect">Board · 7 days</div>
+            <div class="list">
+              <div class="brd"><span class="rk">1</span><span class="nm">Vexa <span class="tier">IV</span></span><span class="gain">+22</span><span class="pts">31</span></div>
+              <div class="brd"><span class="rk">2</span><span class="nm">Kestrel_88 <span class="tier">V</span></span><span class="gain">+3</span><span class="pts">24</span></div>
+              <div class="brd"><span class="rk">3</span><span class="nm">Pixl <span class="tier">III</span></span><span class="gain">+9</span><span class="pts">13</span></div>
+              <div class="brd"><span class="rk">4</span><span class="nm">Wren_88 <span class="tier">II</span></span><span class="gain lo">−18</span><span class="pts">4</span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div class="on"><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">A1 · stealing now, the flagged players, the board with gains</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:43</span><span>5G</span></div>
+          <div class="top"><div class="grow"><div class="nm">Totems</div><div class="sub">steals · 7 days · 41</div></div><span class="key">7 DAYS</span></div>
+          <div class="scroll">
+            <div class="chips"><span class="chip on">All</span><span class="chip">Flagged</span><span class="chip">Completed</span><span class="chip">Failed</span></div>
+            <div class="list">
+              <div class="ev"><span class="t">21:31</span><div><b>Vexa</b> <span class="mu">took</span> Wren_88's <span class="tier">II</span> <span class="flag f-fast">FAST</span> <span class="flag f-burst">BURST</span><div class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span> <span class="maplink">MAP ›</span></div><div class="sub">1 min 41 s after their last</div></div><span class="took rd">0:19<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">21:29</span><div><b>Vexa</b> <span class="mu">took</span> TallyHo's <span class="tier">I</span> <span class="flag f-burst">BURST</span><div class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span> <span class="maplink">MAP ›</span></div><div class="sub">3 min 5 s after their last</div></div><span class="took">0:41<small>of 0:40</small></span></div>
+              <div class="ev failed"><span class="t">21:27</span><div><b>Vexa</b> <span class="mu">tried</span> Juniper_K's <span class="tier">III</span> <span class="flag f-fail">FAILED</span><div class="where">Moongrove · Overworld · <span class="xyz">412 66 -1300</span></div><div class="sub">Left the totem for too long</div></div><span class="took">0:12<small>of 0:55</small></span></div>
+              <div class="ev"><span class="t">21:26</span><div><b>Vexa</b> <span class="mu">took</span> Mossy_Fen's <span class="tier">II</span> <span class="flag f-burst">BURST</span><div class="where">Moongrove · Overworld · <span class="xyz">401 64 -1288</span> <span class="maplink">MAP ›</span></div><div class="sub">first in 2 days</div></div><span class="took">0:40<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">Yest.</span><div><b>Pixl</b> <span class="mu">took</span> Kestrel_88's <span class="tier">IV</span><div class="where">BSP-Spawn · Overworld · <span class="xyz">88 70 -42</span> <span class="maplink">MAP ›</span></div><div class="sub">4 h 10 min after their last</div></div><span class="took">1:05<small>of 1:05</small></span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div class="on"><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">A2 · the steals: where, time taken against BSP-Core's, the gap since the last</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:44</span><span>5G</span></div>
+          <div class="top"><span class="back">‹</span><div class="grow"><div class="nm">Vexa</div><div class="sub">31 points · 6 totems · best IV · online on Frostwarf</div></div></div>
+          <div class="scroll">
+            <div class="chart">
+              <svg viewBox="0 0 300 120" role="img" aria-label="Vexa's points over 7 days, rising from 9 to 31">
+                <g stroke="#2a2f3a" stroke-width="1"><line x1="24" y1="10" x2="296" y2="10"/><line x1="24" y1="50" x2="296" y2="50"/><line x1="24" y1="90" x2="296" y2="90"/></g>
+                <g fill="#6b7180" font-size="9" font-family="IBM Plex Mono"><text x="2" y="13">30</text><text x="2" y="53">20</text><text x="2" y="93">10</text><text x="24" y="114">Mon</text><text x="150" y="114">Thu</text><text x="268" y="114">Sun</text></g>
+                <polyline fill="none" stroke="#19d3b0" stroke-width="2" stroke-linejoin="round" points="24,94 70,94 90,86 130,86 150,78 200,78 220,62 250,58 262,46 272,34 284,22 296,14"/>
+                <g fill="#ff6b5c"><circle cx="284" cy="22" r="3.5"/><circle cx="262" cy="46" r="3.5"/></g>
+                <g fill="#ffd23a"><circle cx="272" cy="34" r="3"/></g>
+              </svg>
+              <div class="legend"><span><i style="background:#19d3b0"></i>points</span><span><i style="background:#ff6b5c;height:7px;width:7px;border-radius:50%"></i>fast steal</span><span><i style="background:#ffd23a;height:7px;width:7px;border-radius:50%"></i>burst</span></div>
+            </div>
+            <div class="tiles" style="grid-template-columns:repeat(3,1fr)"><div class="tile">gained<b class="tl">+22</b></div><div class="tile">steals<b>14</b></div><div class="tile">flags<b class="rd">3</b></div></div>
+            <div class="warnl">A FAST steal may be an operator pressing finish on BSP-Core's admin screen: that is not in the Action Log. Ask the operators before acting.</div>
+            <div class="sect">Their steals · newest first</div>
+            <div class="list">
+              <div class="ev"><span class="t">21:31</span><div>Wren_88's <span class="tier">II</span> <span class="flag f-fast">FAST</span><div class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span></div></div><span class="took rd">0:19<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">21:29</span><div>TallyHo's <span class="tier">I</span><div class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span></div></div><span class="took">0:41<small>of 0:40</small></span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div class="on"><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">A3 · a player opened: points line with the flagged steals marked, then their steals</div>
+      </div>
+    </div></section>
+
+  <section><h2>B. Three panes on a computer, three keys on a phone</h2>
+    <div class="card"><p>On a computer: the board on the left, every steal in the middle, and the picked player on the right. The right pane shows their points line, flags, counts and their steals. "Stealing now" runs across the top. On a phone BOARD, STEALS and PLAYER are three keys under "stealing now", and tapping a name goes to PLAYER.</p></div>
+    <div class="stage">
+      <div>
+        <div class="pc">
+          <div class="side"><b></b><b></b><b></b><b class="on"></b><b></b><b></b></div>
+          <div class="cmain">
+            <div class="top" style="padding-top:12px"><div class="grow"><div class="nm">Totems</div><div class="sub">board read 12 s ago from Frostwarf · 41 steals in 7 days</div></div><span class="key">24 H</span><span class="key on">7 DAYS</span><span class="key">30 DAYS</span><span class="key">90 DAYS</span></div>
+            <div style="padding:0 14px 10px"><div class="now" style="flex-direction:row;align-items:center;gap:14px"><span class="live">Stealing now</span><div class="row" style="flex:1"><span><b>Vexa</b> <span class="mu">from</span> Wren_88 · <span class="where">Frostwarf · Nether · <span class="xyz">120 64 -880</span></span> <span class="maplink">MAP ›</span></span><span class="mono mu">31 s left</span><span class="prog"><i style="width:38%"></i></span></div></div></div>
+            <div class="ccols" style="grid-template-columns:210px 1fr 250px">
+              <div class="ccol">
+                <div class="sect">Board</div>
+                <div class="list">
+                  <div class="brd"><span class="rk">1</span><span class="nm">Vexa <span class="tier">IV</span> <span class="flag f-fast">3</span></span><span class="gain">+22</span><span class="pts">31</span></div>
+                  <div class="brd"><span class="rk">2</span><span class="nm">Kestrel_88 <span class="tier">V</span></span><span class="gain">+3</span><span class="pts">24</span></div>
+                  <div class="brd"><span class="rk">3</span><span class="nm">Pixl <span class="tier">III</span> <span class="flag f-burst">1</span></span><span class="gain">+9</span><span class="pts">13</span></div>
+                  <div class="brd"><span class="rk">4</span><span class="nm">Mossy_Fen <span class="tier">III</span></span><span class="gain lo">−4</span><span class="pts">9</span></div>
+                  <div class="brd"><span class="rk">5</span><span class="nm">Wren_88 <span class="tier">II</span></span><span class="gain lo">−18</span><span class="pts">4</span></div>
+                  <div class="brd"><span class="rk">6</span><span class="nm">TallyHo <span class="tier">I</span></span><span class="gain lo">−1</span><span class="pts">1</span></div>
+                </div>
+              </div>
+              <div class="ccol">
+                <div class="chips"><span class="chip on">All</span><span class="chip">Flagged</span><span class="chip">Completed</span><span class="chip">Failed</span><span class="search" style="flex:1;height:26px">Player</span></div>
+                <div class="list"><table class="tbl"><thead><tr><th>When</th><th>Thief ← from</th><th>Where</th><th style="text-align:right">Took / gap</th></tr></thead><tbody>
+                  <tr class="sel"><td class="mono">21:31</td><td>Vexa <span class="flag f-fast">FAST</span><div class="sub">← Wren_88 <span class="tier">II</span></div></td><td class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span></td><td class="n"><span class="rd">0:19 / 0:40</span><div class="sub gd" style="text-align:right">1:41 after</div></td></tr>
+                  <tr><td class="mono">21:29</td><td>Vexa <span class="flag f-burst">BURST</span><div class="sub">← TallyHo <span class="tier">I</span></div></td><td class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span></td><td class="n">0:41 / 0:40<div class="sub gd" style="text-align:right">3:05 after</div></td></tr>
+                  <tr style="opacity:.55"><td class="mono">21:27</td><td>Vexa <span class="flag f-fail">FAILED</span><div class="sub">← Juniper_K <span class="tier">III</span></div></td><td class="where">Moongrove · Overworld · <span class="xyz">412 66 -1300</span></td><td class="n">0:12 / 0:55<div class="sub" style="text-align:right">left too long</div></td></tr>
+                  <tr><td class="mono">21:26</td><td>Vexa <span class="flag f-burst">BURST</span><div class="sub">← Mossy_Fen <span class="tier">II</span></div></td><td class="where">Moongrove · Overworld · <span class="xyz">401 64 -1288</span></td><td class="n">0:40 / 0:40<div class="sub" style="text-align:right">2 d after</div></td></tr>
+                  <tr><td class="mono">Yest.</td><td>Pixl<div class="sub">← Kestrel_88 <span class="tier">IV</span></div></td><td class="where">BSP-Spawn · Overworld · <span class="xyz">88 70 -42</span></td><td class="n">1:05 / 1:05<div class="sub" style="text-align:right">4 h after</div></td></tr>
+                  <tr><td class="mono">Yest.</td><td>Pixl <span class="flag f-burst">BURST</span><div class="sub">← Wren_88 <span class="tier">II</span></div></td><td class="where">Stormfall · Overworld · <span class="xyz">1504 80 220</span></td><td class="n">0:40 / 0:40<div class="sub gd" style="text-align:right">2:55 after</div></td></tr>
+                </tbody></table></div>
+              </div>
+              <div class="ccol">
+                <div class="sect">Vexa · 31 points · best IV</div>
+                <div class="chart">
+                  <svg viewBox="0 0 300 110" role="img" aria-label="Vexa's points over 7 days, rising from 9 to 31">
+                    <g stroke="#2a2f3a" stroke-width="1"><line x1="24" y1="10" x2="296" y2="10"/><line x1="24" y1="50" x2="296" y2="50"/><line x1="24" y1="90" x2="296" y2="90"/></g>
+                    <g fill="#6b7180" font-size="9" font-family="IBM Plex Mono"><text x="2" y="13">30</text><text x="2" y="53">20</text><text x="2" y="93">10</text></g>
+                    <polyline fill="none" stroke="#19d3b0" stroke-width="2" stroke-linejoin="round" points="24,94 70,94 90,86 130,86 150,78 200,78 220,62 250,58 262,46 272,34 284,22 296,14"/>
+                    <g fill="#ff6b5c"><circle cx="284" cy="22" r="3.5"/><circle cx="262" cy="46" r="3.5"/></g><g fill="#ffd23a"><circle cx="272" cy="34" r="3"/></g>
+                  </svg>
+                </div>
+                <div class="tiles" style="grid-template-columns:repeat(2,1fr)"><div class="tile">fastest / given<b class="rd" style="font-size:15px">0:19 / 0:40</b></div><div class="tile">shortest gap<b class="gd">1:41</b></div><div class="tile">steals / failed<b style="font-size:15px">14 / 3</b></div><div class="tile">gained<b class="tl">+22</b></div></div>
+                <div class="warnl">A FAST steal may be an operator pressing finish on BSP-Core's admin screen (not in the Action Log).</div>
+                <div class="keys"><span class="key">NOTES</span><span class="key">ON THE MAP</span><span class="key">PLAYER PAGE</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cap" style="max-width:none">B1 · a computer: board, every steal, the picked player</div>
+      </div>
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:43</span><span>5G</span></div>
+          <div class="top"><div class="grow"><div class="nm">Totems</div><div class="sub">board read 12 s ago from Frostwarf</div></div><span class="key">7 DAYS</span></div>
+          <div class="scroll">
+            <div class="now"><span class="live">Stealing now · 1</span><div class="row"><span><b>Vexa</b> <span class="mu">from</span> Wren_88</span><span class="mono mu">31 s left</span><span class="prog"><i style="width:38%"></i></span></div></div>
+            <div class="seg"><span>BOARD</span><span class="on">STEALS · 41</span><span>PLAYER</span></div>
+            <div class="chips"><span class="chip">All</span><span class="chip on">Flagged</span><span class="chip">Completed</span><span class="chip">Failed</span></div>
+            <div class="list">
+              <div class="ev"><span class="t">21:31</span><div><b>Vexa</b> ← Wren_88 <span class="flag f-fast">FAST</span><div class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span> <span class="maplink">MAP ›</span></div></div><span class="took rd">0:19<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">21:29</span><div><b>Vexa</b> ← TallyHo <span class="flag f-burst">BURST</span><div class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span> <span class="maplink">MAP ›</span></div></div><span class="took">0:41<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">21:26</span><div><b>Vexa</b> ← Mossy_Fen <span class="flag f-burst">BURST</span><div class="where">Moongrove · Overworld · <span class="xyz">401 64 -1288</span> <span class="maplink">MAP ›</span></div></div><span class="took">0:40<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">Yest.</span><div><b>Pixl</b> ← Wren_88 <span class="flag f-burst">BURST</span><div class="where">Stormfall · Overworld · <span class="xyz">1504 80 220</span> <span class="maplink">MAP ›</span></div></div><span class="took">0:40<small>of 0:40</small></span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div class="on"><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">B2 · a phone: the three keys, STEALS narrowed to the flagged</div>
+      </div>
+    </div></section>
+
+  <section><h2>C. A timeline: everyone's points over the window, steals as dots on it</h2>
+    <div class="card"><p>The page opens on one chart with the leading players' points over the window. Each steal is a dot on the thief's line: red when it was fast, gold in a burst, hollow when it failed. Under the chart, one feed in time order holds the steals and the other changes of points. The board is a strip of chips above the chart, the leader first. Tapping a line or a name narrows the feed to that player.</p></div>
+    <div class="stage">
+      <div>
+        <div class="ph">
+          <div class="sbar"><span>21:42</span><span>5G</span></div>
+          <div class="top"><div class="grow"><div class="nm">Totems</div><div class="sub">board read 12 s ago from Frostwarf</div></div><span class="key">7 DAYS</span></div>
+          <div class="scroll">
+            <div class="now"><span class="live">Stealing now · 1</span><div class="row"><span><b>Vexa</b> <span class="mu">from</span> Wren_88</span><span class="mono mu">31 s left</span><span class="prog"><i style="width:38%"></i></span></div></div>
+            <div class="chips"><span class="chip on">1 Vexa 31</span><span class="chip">2 Kestrel_88 24</span><span class="chip">3 Pixl 13</span><span class="chip">4 Mossy_Fen 9</span></div>
+            <div class="chart">
+              <svg viewBox="0 0 300 150" role="img" aria-label="The top players' points over 7 days">
+                <g stroke="#2a2f3a" stroke-width="1"><line x1="24" y1="12" x2="296" y2="12"/><line x1="24" y1="56" x2="296" y2="56"/><line x1="24" y1="100" x2="296" y2="100"/></g>
+                <g fill="#6b7180" font-size="9" font-family="IBM Plex Mono"><text x="2" y="15">30</text><text x="2" y="59">20</text><text x="2" y="103">10</text><text x="24" y="142">Mon</text><text x="150" y="142">Thu</text><text x="268" y="142">Sun</text></g>
+                <polyline fill="none" stroke="#19d3b0" stroke-width="2.2" stroke-linejoin="round" points="24,104 70,104 90,96 130,96 150,88 200,88 220,70 250,66 262,52 272,38 284,26 296,17"/>
+                <polyline fill="none" stroke="#7fb2ff" stroke-width="1.6" stroke-linejoin="round" points="24,48 120,48 160,40 296,47"/>
+                <polyline fill="none" stroke="#b58cff" stroke-width="1.6" stroke-linejoin="round" points="24,122 110,122 140,104 180,100 210,92 296,92"/>
+                <polyline fill="none" stroke="#cfd4de" stroke-width="1.4" stroke-linejoin="round" points="24,108 150,108 200,110 296,113"/>
+                <g fill="#ff6b5c"><circle cx="284" cy="26" r="3.5"/><circle cx="262" cy="52" r="3.5"/></g>
+                <g fill="#ffd23a"><circle cx="272" cy="38" r="3"/><circle cx="180" cy="100" r="3"/><circle cx="210" cy="92" r="3"/></g>
+                <g fill="none" stroke="#9aa3b5" stroke-width="1.4"><circle cx="268" cy="44" r="3"/></g>
+              </svg>
+              <div class="legend"><span><i style="background:#19d3b0"></i>Vexa</span><span><i style="background:#7fb2ff"></i>Kestrel_88</span><span><i style="background:#b58cff"></i>Pixl</span><span><i style="background:#cfd4de"></i>Mossy_Fen</span></div>
+            </div>
+            <div class="sect">Feed · Vexa</div>
+            <div class="list">
+              <div class="ev"><span class="t">21:31</span><div>took Wren_88's <span class="tier">II</span> <span class="flag f-fast">FAST</span><div class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span> <span class="maplink">MAP ›</span></div></div><span class="took rd">0:19<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">21:29</span><div>took TallyHo's <span class="tier">I</span> <span class="flag f-burst">BURST</span><div class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span></div></div><span class="took">0:41<small>of 0:40</small></span></div>
+              <div class="ev"><span class="t">20:02</span><div>points 27 → 29 <span class="mu">(an upgrade)</span></div><span class="took tl">+2</span></div>
+            </div>
+          </div>
+          <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div class="on"><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+        </div>
+        <div class="cap">C1 · a phone: the top players' lines with every steal as a dot, the feed for the picked one</div>
+      </div>
+      <div>
+        <div class="pc">
+          <div class="side"><b></b><b></b><b></b><b class="on"></b><b></b><b></b></div>
+          <div class="cmain">
+            <div class="top" style="padding-top:12px"><div class="grow"><div class="nm">Totems</div><div class="sub">board read 12 s ago from Frostwarf</div></div><span class="key">24 H</span><span class="key on">7 DAYS</span><span class="key">30 DAYS</span><span class="key">90 DAYS</span></div>
+            <div class="ccols" style="grid-template-columns:1fr 330px">
+              <div class="ccol">
+                <div class="chart">
+                  <svg viewBox="0 0 600 230" role="img" aria-label="The top players' points over 7 days">
+                    <g stroke="#2a2f3a" stroke-width="1"><line x1="28" y1="14" x2="596" y2="14"/><line x1="28" y1="84" x2="596" y2="84"/><line x1="28" y1="154" x2="596" y2="154"/></g>
+                    <g fill="#6b7180" font-size="10" font-family="IBM Plex Mono"><text x="2" y="18">30</text><text x="2" y="88">20</text><text x="2" y="158">10</text><text x="28" y="222">Mon</text><text x="300" y="222">Thu</text><text x="560" y="222">Sun</text></g>
+                    <polyline fill="none" stroke="#19d3b0" stroke-width="2.5" stroke-linejoin="round" points="28,161 140,161 180,147 260,147 300,133 400,133 440,105 500,98 524,77 544,56 568,35 596,21"/>
+                    <polyline fill="none" stroke="#7fb2ff" stroke-width="1.8" stroke-linejoin="round" points="28,70 240,70 320,56 596,68"/>
+                    <polyline fill="none" stroke="#b58cff" stroke-width="1.8" stroke-linejoin="round" points="28,189 220,189 280,161 360,154 420,140 596,140"/>
+                    <polyline fill="none" stroke="#cfd4de" stroke-width="1.5" stroke-linejoin="round" points="28,168 300,168 400,171 596,175"/>
+                    <g fill="#ff6b5c"><circle cx="568" cy="35" r="4.5"/><circle cx="524" cy="77" r="4.5"/></g>
+                    <g fill="#ffd23a"><circle cx="544" cy="56" r="4"/><circle cx="360" cy="154" r="4"/><circle cx="420" cy="140" r="4"/></g>
+                    <g fill="none" stroke="#9aa3b5" stroke-width="1.6"><circle cx="536" cy="66" r="4"/></g>
+                  </svg>
+                  <div class="legend"><span><i style="background:#19d3b0"></i>Vexa 31</span><span><i style="background:#7fb2ff"></i>Kestrel_88 24</span><span><i style="background:#b58cff"></i>Pixl 13</span><span><i style="background:#cfd4de"></i>Mossy_Fen 9</span><span><i style="background:#ff6b5c;height:7px;width:7px;border-radius:50%"></i>fast</span><span><i style="background:#ffd23a;height:7px;width:7px;border-radius:50%"></i>burst</span><span>○ failed</span></div>
+                </div>
+                <div class="now" style="flex-direction:row;align-items:center;gap:14px"><span class="live">Stealing now</span><div class="row" style="flex:1"><span><b>Vexa</b> <span class="mu">from</span> Wren_88 · <span class="where">Frostwarf · Nether · <span class="xyz">120 64 -880</span></span></span><span class="mono mu">31 s left</span><span class="prog"><i style="width:38%"></i></span></div></div>
+              </div>
+              <div class="ccol">
+                <div class="sect">Feed · everyone</div>
+                <div class="list">
+                  <div class="ev"><span class="t">21:31</span><div><b>Vexa</b> took Wren_88's <span class="flag f-fast">FAST</span><div class="where">Frostwarf · Nether · <span class="xyz">118 64 -874</span></div></div><span class="took rd">0:19<small>of 0:40</small></span></div>
+                  <div class="ev"><span class="t">21:29</span><div><b>Vexa</b> took TallyHo's <span class="flag f-burst">BURST</span><div class="where">Frostwarf · Overworld · <span class="xyz">-2210 71 905</span></div></div><span class="took">0:41<small>of 0:40</small></span></div>
+                  <div class="ev failed"><span class="t">21:27</span><div><b>Vexa</b> tried Juniper_K's <span class="flag f-fail">FAILED</span><div class="where">Moongrove · Overworld · <span class="xyz">412 66 -1300</span></div></div><span class="took">0:12<small>of 0:55</small></span></div>
+                  <div class="ev"><span class="t">21:26</span><div><b>Vexa</b> took Mossy_Fen's <span class="flag f-burst">BURST</span><div class="where">Moongrove · Overworld · <span class="xyz">401 64 -1288</span></div></div><span class="took">0:40<small>of 0:40</small></span></div>
+                  <div class="ev"><span class="t">20:02</span><div><b>Vexa</b> points 27 → 29</div><span class="took tl">+2</span></div>
+                  <div class="ev"><span class="t">19:40</span><div><b>Kestrel_88</b> points 25 → 24</div><span class="took rd">−1</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cap" style="max-width:none">C2 · a computer: the chart, stealing now under it, the feed beside</div>
+      </div>
+    </div></section>
+
+  <section><h2>Choices</h2>
+    <div class="card"><ol>
+      <li><b>AJ1 · Which look.</b> Default: <b>A</b>, one column with stealing now, the flagged players, the board with gains, then the steals, and a player opening under their row with their points line.
+        <span class="opt">Or B: three panes on a computer (board, every steal, the picked player), and three keys on a phone.</span>
+        <span class="opt">Or C: a chart of the top players' points with every steal as a dot, and one feed of steals and points changes under it.</span></li>
+      <li><b>AJ2 · How a steal's speed reads.</b> Default: the time it took beside BSP-Core's time ("0:19 of 0:40"), red when FAST, and under it "1 min 41 s after their last".
+        <span class="opt">Or: a percentage of BSP-Core's time ("48 %"), with the gap in its own column.</span></li>
+      <li><b>AJ3 · Where.</b> Default: "Frostwarf · Nether · <span class="xyz">118 64 -874</span>", with MAP › opening the Map tab on that server and world at that block (D621).
+        <span class="opt">Or: the raw world id ("minecraft:the_nether") and the coordinates with x, y and z labels.</span></li>
+      <li><b>AJ4 · Failed steals.</b> Default: shown in the list dimmed, with a FAILED tag and BSP-Core's reason in words, and counted beside each player (D615).
+        <span class="opt">Or: hidden until a Failed chip is picked.</span></li>
+      <li><b>AJ5 · The FAST warning.</b> Default: one gold line in a player's view that a FAST steal may be an operator pressing finish on BSP-Core's admin screen, which is not in the Action Log, until BSP-Core can tell them apart (SU-BC4).
+        <span class="opt">Or: no warning line.</span></li>
+      <li><b>AJ6 · Steals that could not be verified</b> (a row without a good signature). Default: a gold line at the top of the steals, such as "2 steals could not be verified and are not shown", only when there are any.
+        <span class="opt">Or: nothing shown.</span></li>
+    </ol></div>
+  </section>
+</div>
+</body>
+</html>

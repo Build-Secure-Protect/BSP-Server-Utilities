@@ -239,6 +239,37 @@ public interface StorageBackend {
     /** Every server's rooms and when each last wrote. */
     com.mrgregles.bsp_server_utilities.rooms.RoomTable loadRooms() throws Exception;
 
+    // ------------------------------------------------------------------ totem steals for the staff panel (SU-95, D613 to D622)
+
+    /**
+     * One ended steal of a BSP-Core Shatter Totem, written by the game server where it ran (D616): where (server,
+     * dimension, block), who stole from whom ({@code owner} null for an unclaimed totem), what it was ({@code source}
+     * "totem" or "forge" for a Totem Forge's pour, else "other"; {@code tier} 1 to 5, 0 unknown; {@code points} what the
+     * totem is worth on the board, 0 unknown), when it started and ended ({@code startedMs} 0 when this server did not see
+     * the start), how long BSP-Core said it would take ({@code expectedSeconds}, 0 unknown), and whether it worked
+     * ({@code reason}: BSP-Core's translation key for a failure, empty on success); {@code ticks} the server ticks between its
+     * start and end as this server counted them (0 when the start was not seen), which is what BSP-Core counts a steal in;
+     * {@code line} is all of it signed with the
+     * action key, which is what the staff panel believes (a row without a good signature is not shown). Kept 90 days (D617).
+     */
+    record Steal(String uid, String server, String dimension, int x, int y, int z, UUID thief, String thiefName, @Nullable UUID owner, String ownerName,
+                 String source, int tier, int points, long startedMs, long endedMs, int expectedSeconds, boolean success, String reason, int ticks, String line) {
+        /** The same steal with {@code line}: its fields signed with the action key (the {@code steal} end message), empty without a key. */
+        public Steal withLine(String signed) {
+            return new Steal(uid, server, dimension, x, y, z, thief, thiefName, owner, ownerName, source, tier, points, startedMs, endedMs, expectedSeconds, success, reason,
+                    ticks, signed == null ? "" : signed);
+        }
+    }
+
+    /** Adds steals; a steal whose {@code uid} is stored already is skipped. */
+    void insertSteals(List<Steal> steals) throws Exception;
+
+    /** Steals that ended at or after {@code sinceMs}, newest first, at most {@code limit}. */
+    List<Steal> loadSteals(long sinceMs, int limit) throws Exception;
+
+    /** Deletes steals that ended before the given time; returns how many went. */
+    int pruneSteals(long beforeMs) throws Exception;
+
     String describe();
 
     void close() throws Exception;

@@ -418,4 +418,85 @@ public final class MemoryStore implements PanelStore {
         }
         choices.forEach(m -> mapChoiceRows.put(m.map(), m));
     }
+
+    // ------------------------------------------------------------------ the TOTEMS page (SU-97)
+
+    private final List<Steal> stealRows = new ArrayList<>();
+    private final List<PointsChange> pointRows = new ArrayList<>();
+    /** Tests: reading the steals fails, as a database without the grant. */
+    public volatile boolean failStealReads;
+
+    /** Tests and the demo: a steal as a game server writes it. */
+    public synchronized void addSteal(Steal s) {
+        if (stealRows.stream().noneMatch(x -> x.uid().equals(s.uid()))) {
+            stealRows.add(s);
+        }
+    }
+
+    @Override
+    public synchronized List<Steal> steals(long sinceMs, long untilMs, String thief, int limit) throws java.sql.SQLException {
+        if (failStealReads) {
+            throw new java.sql.SQLException("SELECT command denied to user 'bsp_panel' for table 'bsp_su_steals' (test)");
+        }
+        List<Steal> out = new ArrayList<>(stealRows);
+        java.util.Collections.reverse(out);
+        return out.stream().filter(s -> s.endedMs() >= sinceMs && s.endedMs() <= untilMs && (thief == null || thief.isEmpty() || s.thief().equalsIgnoreCase(thief)))
+                .sorted(Comparator.comparingLong(Steal::endedMs).reversed()).limit(limit).toList();
+    }
+
+    /** Tests: the next points save fails, as a database that does not answer (nothing of it is kept). */
+    public volatile boolean failPointSaves;
+
+    @Override
+    public synchronized void insertPoints(List<PointsChange> changes) throws java.sql.SQLException {
+        if (failPointSaves) {
+            throw new java.sql.SQLException("the test's database does not answer");
+        }
+        pointRows.addAll(changes);
+    }
+
+    @Override
+    public synchronized Map<String, int[]> pointsTotals(long sinceMs) {
+        Map<String, int[]> out = new HashMap<>();
+        for (PointsChange p : pointRows) {
+            if (p.at() >= sinceMs && !p.first()) {
+                int[] t = out.computeIfAbsent(p.player(), k -> new int[2]);
+                t[p.after() > p.before() ? 0 : 1] += Math.abs(p.after() - p.before());
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized List<PointsChange> points(long sinceMs, String player, int limit) {
+        List<PointsChange> out = new ArrayList<>(pointRows);
+        java.util.Collections.reverse(out);
+        return out.stream().filter(p -> p.at() >= sinceMs && (player == null || player.isEmpty() || p.player().equalsIgnoreCase(player)))
+                .sorted(Comparator.comparingLong(PointsChange::at).reversed()).limit(limit).toList();
+    }
+
+    @Override
+    public synchronized Optional<PointsChange> lastPointsBefore(String player, long beforeMs) {
+        PointsChange found = null;
+        for (PointsChange p : pointRows) {
+            if (p.player().equalsIgnoreCase(player) && p.at() < beforeMs) {
+                found = p; // in the order written: the last one stays
+            }
+        }
+        return Optional.ofNullable(found);
+    }
+
+    @Override
+    public synchronized Map<String, PointsChange> lastPoints() {
+        Map<String, PointsChange> out = new HashMap<>();
+        pointRows.forEach(p -> out.put(p.player(), p)); // in the order written: the last one stays
+        return out;
+    }
+
+    @Override
+    public synchronized int prunePoints(long beforeMs) {
+        int n = pointRows.size();
+        pointRows.removeIf(p -> p.at() < beforeMs);
+        return n - pointRows.size();
+    }
 }

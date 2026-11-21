@@ -158,6 +158,7 @@ const MapView = (() => {
       }
       drawList(); return;
     }
+    if (spot && frame && stage.contains(frame)) setTimeout(applySpot, 0); // the frame is already up: go there now
     if (!frame || !stage.contains(frame)) {
       stage.textContent = "";
       const last = loadLast(); // the map looked at last, in this browser (D576); the first time, the first overworld as before
@@ -174,7 +175,7 @@ const MapView = (() => {
     redraw();
   }
   function unmount(main) {
-    if (host && host === main) { closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
+    if (host && host === main) { spot = null; clearTimeout(spotRetry); clearTimeout(spotTimer); spotMap = null; closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
   }
 
   // BlueMap's own bar is hidden (the panel's replaces it); clicks on heads follow, clicks on pins open the panel's box
@@ -186,6 +187,7 @@ const MapView = (() => {
     d.head.appendChild(st);
     fit(); setTimeout(fit, 800); // BlueMap sizes its drawing when it starts: once the frame has its size, ask it again
     hook();
+    if (spot) setTimeout(applySpot, 300); // the TOTEMS tab's place, once BlueMap has started
     if (follow) setTimeout(() => { const p = lastLive.players.find((x) => x.id === follow); if (p && mapId(p.server, p.dim) === cur) centre(p); }, 1500); // the tab opened again (audit)
   }
   function fit() { try { frame.contentWindow.dispatchEvent(new Event("resize")); } catch (e) { /* gone */ } }
@@ -239,6 +241,7 @@ const MapView = (() => {
   let switching = Promise.resolve(), busy = false, gen = 0;
   function resetSwitching() { switching = Promise.resolve(); busy = false; gen++; }
   function switchTo(id, p) {
+    if (spotMap && spotMap !== id) dropSpotPin(); // the TOTEMS place's pin stays on its own map
     cur = id; pinBox = null; saveLast(id);
     const g = gen;
     switching = switching.then(async () => {
@@ -702,5 +705,58 @@ const MapView = (() => {
     if (box === sheetBox && r.ok && !sheetBusy) { sheetData = r; drawSheet(); }
   }
   function redrawIfOpen() { if (host) redraw(); }
-  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged };
+
+  // ---------------------------------------------------------------- a place from another tab (the TOTEMS tab's MAP ›, SU-99, D629 R7)
+  // true when that server and world have a map shown: the tab then opens on it, centred on the block, with a pin there for
+  // 30 seconds; false (nothing changed) when an Owner hid it or BlueMap never drew it; null when the list of maps could not
+  // be read (then nothing is said about that map)
+  let spot = null, spotTimer = 0, spotRetry = 0, spotMap = null;
+  const SPOT_WAIT_MS = 15000;
+  // whether that map is shown, the list read first if needed; changes nothing (the caller commits with showSpot once it
+  // knows staff are still where they asked from: audit of 0.16.0)
+  async function canShow(server, dim) {
+    if (maps === null || mapsStale) await loadMaps();
+    if (!maps) return null;
+    return maps.includes(mapId(server, dim));
+  }
+  function showSpot(server, dim, x, y, z) {
+    const id = mapId(server, dim);
+    if (!maps || !maps.includes(id)) return false;
+    stopQuiet(); // not following anyone: the place is what is looked at
+    spot = { id, x: Number(x) + 0.5, y: Number(y), z: Number(z) + 0.5, label: server + " · " + x + " " + y + " " + z, until: Date.now() + SPOT_WAIT_MS };
+    cur = id; saveLast(id);
+    return true;
+  }
+  // once BlueMap has started and knows the map: switched, centred (again after BlueMap settles on its start position), and
+  // pinned; tried every 300 ms, and dropped after 15 s so it never fires on a later load (audit of SU-99)
+  function applySpot() {
+    clearTimeout(spotRetry);
+    const s = spot;
+    if (!s) return;
+    if (Date.now() > s.until || !host) { spot = null; return; }
+    const b = bm();
+    if (!b || !b.mapViewer || !b.mapsMap || !b.mapsMap.has(s.id)) { spotRetry = setTimeout(applySpot, 300); return; }
+    spot = null;
+    if (follow) return; // staff began following someone meanwhile: that wins
+    switchTo(s.id, s).then(() => {
+      const bb = bm(); if (!bb || !bb.mapViewer || cur !== s.id) return;
+      setTimeout(() => { try { if (cur === s.id && !follow) bb.mapViewer.controlsManager.position.set(s.x, s.y, s.z); } catch (e) { /* gone */ } }, 1200);
+      try {
+        const pop = bb.mapViewer.markers.markerSets.get("bm-popup-set"); if (!pop) return;
+        // the label and detail are put in as markup by BlueMap: escaped
+        pop.updateMarkerFromData("bsp-spot", { type: "poi", position: { x: s.x, y: s.y + 1, z: s.z }, label: esc(s.label), detail: esc(s.label),
+          icon: "/static/map-warp.svg", anchor: { x: 12, y: 24 }, classes: ["bsp-spot"] });
+        spotMap = s.id;
+        clearTimeout(spotTimer);
+        spotTimer = setTimeout(dropSpotPin, 30000);
+      } catch (e) { /* BlueMap's internals moved: the map is still centred there */ }
+    });
+  }
+  // the pin lives in BlueMap's popup set, which outlives a map switch: it goes with the map it was put on (audit)
+  function dropSpotPin() {
+    clearTimeout(spotTimer); spotMap = null;
+    const b = bm();
+    try { const pop = b && b.mapViewer.markers.markerSets.get("bm-popup-set"), m = pop && pop.markers.get("bsp-spot"); if (m) pop.remove(m); } catch (e) { /* gone */ }
+  }
+  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged, canShow, showSpot };
 })();

@@ -71,6 +71,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.mobs.MobLimits.registerNotices(); // mob limits (SU-62 to SU-64)
         com.mrgregles.bsp_server_utilities.mobs.MobLimits.registerEvents();
         com.mrgregles.bsp_server_utilities.mobs.Crowding.registerNotices(); // crowded drops and arrows (SU-66 to SU-68)
+        com.mrgregles.bsp_server_utilities.steals.StealRecorder.register(); // totem steals for the staff panel (SU-95)
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
@@ -89,11 +90,13 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.support.SupportService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.rooms.RoomList.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.steals.StealRecorder.onServerStarted();
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             com.mrgregles.bsp_server_utilities.web.WebAgent.farewell(e.getServer()); // the panel drops this server at once, not 20 s later (audit)
             // Support BSP: the players still here leave after the storage closes, so tell the network now (audit of 0.15.0)
             com.mrgregles.bsp_server_utilities.support.SupportChat.onServerStopping(e.getServer().getPlayerList().getPlayers());
+            com.mrgregles.bsp_server_utilities.steals.StealRecorder.onServerStopping(); // waiting steal rows: one last try, the count said
             Storage.stop();
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -157,6 +160,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.rooms.RoomClearing.tick(e.getServer()); // rooms whose grace ended, cleared every minute
                 com.mrgregles.bsp_server_utilities.mobs.Crowding.tick(e.getServer()); // crowded drops and arrows, every 30 s
                 com.mrgregles.bsp_server_utilities.rooms.RoomOutbox.tick(e.getServer()); // notices about other servers' rooms, sent again when missed
+                com.mrgregles.bsp_server_utilities.steals.StealRecorder.tick(e.getServer()); // totem steals: a failed write again each minute, 90-day prune
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

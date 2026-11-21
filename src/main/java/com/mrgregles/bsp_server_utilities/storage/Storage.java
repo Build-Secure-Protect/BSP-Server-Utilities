@@ -252,6 +252,28 @@ public final class Storage {
         });
     }
 
+    /**
+     * As {@link #submit(Task)}, with {@code queued} cleared as the task's turn comes, whether or not the database is
+     * reached: a write batch that marks itself queued must never stay marked when {@link #ready()} fails before it runs
+     * (audit of SU-95: the database down at start left steals, and the web chat, unwritten for the rest of the run).
+     */
+    public void submit(AtomicBoolean queued, Task task) {
+        work.add(() -> {
+            queued.set(false); // rows added from here on queue another write
+            try {
+                ready();
+                task.run();
+            } catch (Exception e) {
+                errors++;
+                String message = e.toString();
+                if (!message.equals(lastError)) {
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities storage: {}", message);
+                }
+                lastError = message;
+            }
+        });
+    }
+
     /** Runs every queued task on the calling thread (tests, and the last flush of an unthreaded storage). */
     public void drain() {
         Runnable r;
@@ -362,8 +384,7 @@ public final class Storage {
         }
         chatRows.add(row);
         if (chatQueued.compareAndSet(false, true)) {
-            submit(() -> {
-                chatQueued.set(false); // lines added from here on queue another write
+            submit(chatQueued, () -> { // cleared even when the database is not reached (audit of SU-95)
                 List<StorageBackend.WebChat> rows = new java.util.ArrayList<>();
                 StorageBackend.WebChat r;
                 while ((r = chatRows.poll()) != null) {

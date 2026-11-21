@@ -1,6 +1,7 @@
 package com.mrgregles.bsp_staff_panel.store;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -248,4 +249,53 @@ public interface PanelStore {
 
     /** Saves these choices together, all or none (ALL and NONE are one change). */
     void putMapChoices(List<MapChoice> choices) throws Exception;
+
+    // ------------------------------------------------------------------ the TOTEMS page (SU-97, D613 to D622)
+
+    /**
+     * An ended steal as BSP-Server Utilities records it ({@code <prefix>steals}, written by the game server where it ran;
+     * docs/API.md "Totem steals"): {@code owner} empty for an unclaimed totem; {@code tier} 1 to 5 and {@code points} 0 when
+     * unknown; {@code startedMs} and {@code expectedSeconds} 0 when the server did not see the start. {@code line} is the
+     * game server's signed copy of it all: the panel shows a row only through that copy (audit of SU-97).
+     */
+    record Steal(String uid, String server, String dimension, int x, int y, int z, String thief, String thiefName, String owner, String ownerName,
+                 String source, int tier, int points, long startedMs, long endedMs, int expectedSeconds, boolean success, String reason, int ticks, String line) {
+    }
+
+    /**
+     * Steals that ended from {@code sinceMs} to {@code untilMs}, newest first, by {@code thief} (a UUID; empty: anyone), at
+     * most {@code limit}. The upper bound keeps rows dated in the future from crowding out the real ones (audit of 0.16.0).
+     */
+    List<Steal> steals(long sinceMs, long untilMs, String thief, int limit) throws Exception;
+
+    /** The game servers' steals table as named in the database (for the words when it cannot be read). */
+    default String stealsTable() {
+        return "bsp_su_steals";
+    }
+
+    /**
+     * A player's points on BSP-Core's board as the panel saw them change ({@code <prefix>panel_points}, D618): from
+     * {@code before} to {@code after} at {@code at}, with the totems held and best tier after. {@code first} marks the
+     * first time the panel saw them, so their points then are where the line starts, never a gain.
+     */
+    record PointsChange(long at, String player, String name, int before, int after, int totems, int tier, boolean first) {
+    }
+
+    /** Saves these changes together, all or none (a half-saved batch would be saved again on the next read and counted twice). */
+    void insertPoints(List<PointsChange> changes) throws Exception;
+
+    /** Changes at or after {@code sinceMs}, newest first, of {@code player} (empty: anyone), at most {@code limit}. */
+    List<PointsChange> points(long sinceMs, String player, int limit) throws Exception;
+
+    /** Per player, the points gained and lost (as {@code [gained, lost]}) over changes since {@code sinceMs}, first sightings left out; summed by the database. */
+    Map<String, int[]> pointsTotals(long sinceMs) throws Exception;
+
+    /** A player's newest change before {@code beforeMs}, if any: where their line starts when nothing changed in a window. */
+    Optional<PointsChange> lastPointsBefore(String player, long beforeMs) throws Exception;
+
+    /** Each player's newest change: where the board stood when the panel last looked. */
+    Map<String, PointsChange> lastPoints() throws Exception;
+
+    /** Drops changes older than {@code beforeMs}; how many went. */
+    int prunePoints(long beforeMs) throws Exception;
 }

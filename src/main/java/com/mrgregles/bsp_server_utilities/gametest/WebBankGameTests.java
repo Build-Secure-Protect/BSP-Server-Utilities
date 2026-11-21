@@ -170,7 +170,7 @@ public class WebBankGameTests {
     }
 
     private static List<LogEntry> bankLog(MinecraftServer server) {
-        return ActionLog.recent(server, 200, false, List.of(LogEntry.BANK));
+        return ActionLog.recent(server, com.mrgregles.bsp_server_utilities.log.LogData.MAX, false, List.of(LogEntry.BANK)); // the whole log: the test world keeps a week of earlier runs (200 filled up)
     }
 
     @GameTest(template = EMPTY)

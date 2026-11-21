@@ -11,6 +11,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -128,6 +129,9 @@ public final class JdbcStore implements PanelStore {
                     + " PRIMARY KEY (player, tag), KEY tag (tag)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_maps (map VARCHAR(170) NOT NULL PRIMARY KEY, hidden BOOLEAN NOT NULL,"
                     + " by_name VARCHAR(32) NOT NULL, at_ms BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4"); // SU-83
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_points (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, at_ms BIGINT NOT NULL, player CHAR(36) NOT NULL,"
+                    + " name VARCHAR(32) NOT NULL, before_pts INT NOT NULL, after_pts INT NOT NULL, totems INT NOT NULL, tier INT NOT NULL, first BOOLEAN NOT NULL,"
+                    + " KEY player (player, at_ms), KEY at (at_ms)) DEFAULT CHARSET=utf8mb4"); // SU-97: the board's changes, 90 days
         }
     }
 
@@ -837,6 +841,150 @@ public final class JdbcStore implements PanelStore {
     }
 
     // ------------------------------------------------------------------ the maps shown on the Map tab (SU-83)
+
+    // ------------------------------------------------------------------ the TOTEMS page (SU-97)
+
+    @Override
+    public synchronized List<Steal> steals(long sinceMs, long untilMs, String thief, int limit) throws SQLException {
+        boolean one = thief != null && !thief.isEmpty();
+        List<Steal> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uid, server, dimension, x, y, z, thief, thief_name, owner, owner_name, source, tier, points,"
+                + " started_ms, ended_ms, expected_s, success, reason, ticks, line FROM " + shared + "steals WHERE ended_ms >= ? AND ended_ms <= ?" + (one ? " AND thief = ?" : "")
+                + " ORDER BY ended_ms DESC, id DESC LIMIT ?")) {
+            int i = 1;
+            ps.setLong(i++, sinceMs);
+            ps.setLong(i++, untilMs);
+            if (one) {
+                ps.setString(i++, thief.toLowerCase(java.util.Locale.ROOT));
+            }
+            ps.setInt(i, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new Steal(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getInt(5), rs.getInt(6), rs.getString(7), rs.getString(8),
+                            rs.getString(9), rs.getString(10), rs.getString(11), rs.getInt(12), rs.getInt(13), rs.getLong(14), rs.getLong(15), rs.getInt(16),
+                            rs.getBoolean(17), rs.getString(18), rs.getInt(19), rs.getString(20) == null ? "" : rs.getString(20)));
+                }
+            }
+        }
+        return out;
+    }
+
+    private static final String POINT_COLS = "at_ms, player, name, before_pts, after_pts, totems, tier, first";
+
+    private static PointsChange pointsRow(ResultSet rs) throws SQLException {
+        return new PointsChange(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getInt(5), rs.getInt(6), rs.getInt(7), rs.getBoolean(8));
+    }
+
+    @Override
+    public synchronized void insertPoints(List<PointsChange> changes) throws SQLException {
+        if (changes.isEmpty()) {
+            return;
+        }
+        Connection c = conn();
+        c.setAutoCommit(false);
+        try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + prefix + "panel_points (" + POINT_COLS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
+            for (PointsChange p : changes) {
+                ps.setLong(1, p.at());
+                ps.setString(2, p.player());
+                ps.setString(3, p.name().length() > 32 ? p.name().substring(0, 32) : p.name());
+                ps.setInt(4, p.before());
+                ps.setInt(5, p.after());
+                ps.setInt(6, p.totems());
+                ps.setInt(7, p.tier());
+                ps.setBoolean(8, p.first());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            c.commit(); // all or none (audit)
+        } catch (SQLException e) {
+            try {
+                c.rollback();
+            } catch (SQLException ignored) {
+                // the connection is gone: nothing was kept
+            }
+            throw e;
+        } finally {
+            try {
+                c.setAutoCommit(true);
+            } catch (SQLException ignored) {
+                // reopened on the next call
+            }
+        }
+    }
+
+    @Override
+    public synchronized Map<String, int[]> pointsTotals(long sinceMs) throws SQLException {
+        Map<String, int[]> out = new java.util.HashMap<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT player, COALESCE(SUM(CASE WHEN after_pts > before_pts THEN after_pts - before_pts ELSE 0 END), 0),"
+                + " COALESCE(SUM(CASE WHEN after_pts < before_pts THEN before_pts - after_pts ELSE 0 END), 0) FROM " + prefix + "panel_points"
+                + " WHERE at_ms >= ? AND first = FALSE GROUP BY player")) {
+            ps.setLong(1, sinceMs);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.put(rs.getString(1), new int[]{(int) rs.getLong(2), (int) rs.getLong(3)});
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized List<PointsChange> points(long sinceMs, String player, int limit) throws SQLException {
+        boolean one = player != null && !player.isEmpty();
+        List<PointsChange> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + POINT_COLS + " FROM " + prefix + "panel_points WHERE at_ms >= ?" + (one ? " AND player = ?" : "")
+                + " ORDER BY at_ms DESC, id DESC LIMIT ?")) {
+            int i = 1;
+            ps.setLong(i++, sinceMs);
+            if (one) {
+                ps.setString(i++, player.toLowerCase(java.util.Locale.ROOT));
+            }
+            ps.setInt(i, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(pointsRow(rs));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public String stealsTable() {
+        return (shared + "steals").replace("`", "");
+    }
+
+    @Override
+    public synchronized Optional<PointsChange> lastPointsBefore(String player, long beforeMs) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + POINT_COLS + " FROM " + prefix + "panel_points WHERE player = ? AND at_ms < ? ORDER BY at_ms DESC, id DESC LIMIT 1")) {
+            ps.setString(1, player.toLowerCase(java.util.Locale.ROOT));
+            ps.setLong(2, beforeMs);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(pointsRow(rs)) : Optional.empty();
+            }
+        }
+    }
+
+    @Override
+    public synchronized Map<String, PointsChange> lastPoints() throws SQLException {
+        Map<String, PointsChange> out = new java.util.HashMap<>();
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT p.at_ms, p.player, p.name, p.before_pts, p.after_pts, p.totems, p.tier, p.first FROM "
+                + prefix + "panel_points p JOIN (SELECT player, MAX(id) id FROM " + prefix + "panel_points GROUP BY player) m ON p.id = m.id")) {
+            while (rs.next()) {
+                PointsChange p = pointsRow(rs);
+                out.put(p.player(), p);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized int prunePoints(long beforeMs) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "panel_points WHERE at_ms < ?")) {
+            ps.setLong(1, beforeMs);
+            return ps.executeUpdate();
+        }
+    }
 
     @Override
     public synchronized List<MapChoice> mapChoices() throws SQLException {

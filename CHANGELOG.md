@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-21
+
+Totem steals and BSP-Core's board for the staff web panel's TOTEMS tab (panel 0.5.0). Install with panel 0.5.0 and the one new database grant in `docs/STAFF_PANEL_SETUP.md` (Running it › Updating to panel 0.5.0). The network protocol is still 9: players need no new modpack for this.
+
+### Added
+- Totem steals are recorded for the staff web panel: every server with BSP-Core and shared storage writes each steal of a Shatter Totem or a Totem Forge's pour that ends there, completed or failed, to a new shared table `bsp_su_steals` (where, who from whom, the tier and its points, when it started and ended, and how long it was meant to take), kept 90 days.
+- The staff web panel can read BSP-Core's network board and the steals running from any server (`totem_board`), and hears each steal that starts or ends at once. Each recorded steal carries a signed copy that the panel checks, so the table alone cannot be used to make up steals.
+- Each steal also records the server ticks it took, so the panel judges a steal's speed as BSP-Core counts it and a server catching up after lag never makes an honest steal look too fast. Repeated failed attempts by one player at one totem within a minute are recorded once, and each player has at most 60 failed attempts recorded an hour; completed steals are always recorded.
+
+### Fixed
+- The staff web panel's chat lines are written to the shared table again once the database answers, when it was down as the server started.
+
 ## [0.15.1] - 2026-11-20
 
 Fixes to Support BSP. The network protocol is still 9: 0.15.0 and 0.15.1 players and servers work together, but every server should run 0.15.1 for the chat line's fixes.

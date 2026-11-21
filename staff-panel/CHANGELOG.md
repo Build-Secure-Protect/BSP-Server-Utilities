@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-21
+
+The TOTEMS tab: who is stealing which totems and how fast. Needs BSP-Server Utilities 0.16.0 on the game servers and one more database grant (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.5.0).
+
+### Added
+- The TOTEMS tab, between Map and Staff, for every rank:
+  - "Stealing now", counting down each second.
+  - The players flagged in the window (FAST or BURST), each with their fastest steal against BSP-Core's time, the shortest gap between two steals and their last steal.
+  - BSP-Core's board with the points each player gained or lost in the window (the top 20, then ALL).
+  - Every steal with where (MAP › opens the Map tab there, with a pin), when, from whom, the time taken against BSP-Core's time, and the gap since that player's last steal. Failed steals are shown dimmed, with BSP-Core's reason in words.
+  - Windows of 24 hours, 7, 30 or 90 days, remembered on each device.
+  - A player opens under their row: their points line (a red dot for a FAST steal, gold for a burst, hollow for a failed one), their newest steals, NOTES and PLAYER ›.
+- `--demo` shows the tab with made-up steals and points, and a steal every two minutes.
+- A steal is FAST when it took fewer server ticks than BSP-Core allows, so lag on a game server never flags an honest steal. A steal is shown only when its row matches its signed copy (the same steal, thief and end), so nobody with the database alone can put a steal under another player.
+- The TOTEMS page's server side (the page itself follows): `POST /api/totems` (`days` 1, 7, 30 or 90) and `POST /api/totems/player` (`id`, `days`) for every rank. They give BSP-Core's network board with each player's points gained and lost in the window, the steals running now, every recorded steal (where, who from whom, tier, points, when, how long it took against what BSP-Core gave it, the time since that player's previous steal) and a line per thief. A steal that finished more than 2 s sooner than BSP-Core allows is `fast`, and three completed steals by one player within 10 minutes are a `burst`.
+- The board is read from one game server every 30 s (BSP-Server Utilities 0.16.0's `totem_board`), and every change of a player's points is kept in the panel's own new `panel_points` table for 90 days (made by itself on start). Steals are read from the game servers' `bsp_su_steals`, which needs one more grant: `GRANT SELECT ON bsp.bsp_su_steals TO 'bsp_panel'@'<host>';`. Without it the page says so.
+- Steals starting and ending anywhere reach open pages at once as `totems` events.
+- The board is read from the same server while it answers, from the next able one when it cannot, and never from a server that has only just started. Nobody's points are set to 0 from an empty or cut board. A points save is all or none and never counted twice. Points gained and lost are summed by the database.
+- Steals are shown only through each row's signed copy; rows without one are counted as "could not be verified". A steal whose end was missed leaves "stealing now" once its time has run out or a later board does not list it. Bursts and the time between steals also look at the day before the window. The page's answer is kept for 5 seconds, and made once for all open pages after a change. Database errors go to the panel's console, and the page says what to check in plain words.
+
 ## [0.4.2] - 2026-11-19
 
 Which maps each server shows on the Map tab, chosen by an Owner. Only the panel changes: the game servers stay on BSP-Server Utilities 0.14.0, nothing in the modpack.

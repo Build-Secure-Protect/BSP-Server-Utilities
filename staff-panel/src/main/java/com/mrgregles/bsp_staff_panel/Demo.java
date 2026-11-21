@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mrgregles.bsp_staff_panel.feed.Feed;
 
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -99,6 +100,9 @@ final class Demo {
             if (what.equals("bounty_list")) { // SU-77: a made-up Bounty Board, as BSP-Core 1.19's BspBounties
                 extra = ",\"data\":" + demoBounties(now);
             }
+            if (what.equals("totem_board")) { // SU-99: a made-up board, as BSP-Core's BspScores and BspTotems
+                extra = ",\"data\":" + demoBoard(now);
+            }
             if (what.equals("bounty_history")) {
                 extra = ",\"data\":" + demoBountyHistory(now);
             }
@@ -126,6 +130,7 @@ final class Demo {
                     : what.equals("market_read") ? "demo market" : what.equals("lottery_read") ? "demo lottery" : what.equals("bank_read") ? "demo bank"
                     : what.equals("bank_refund") ? (refused ? "The other player no longer has that much. Nothing changed: refund it without them if you mean to."
                     : "Refunded (demo: nothing was sent to a game server). They are told in game.")
+                    : what.equals("totem_board") ? "demo board"
                     : what.equals("bounty_list") ? "demo bounties" : what.equals("bounty_history") ? "demo history" : what.equals("bounty_players") ? "demo players"
                     : what.equals("bounty_add") ? "Placed (demo: nothing was sent to a game server). The target is told in game."
                     : what.equals("bounty_remove") ? "Taken off the board (demo: nothing was sent to a game server)."
@@ -448,6 +453,7 @@ final class Demo {
                 o.addProperty("market", true); // SU-51: BSP-Core 1.16 on every demo server
                 o.addProperty("bank", true); // SU-72: and 1.18's staff calls
                 o.addProperty("bounties", true); // SU-77: and 1.19's Bounty Board
+                o.addProperty("totems", true); // SU-99: and its board for the TOTEMS tab
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");
@@ -558,6 +564,100 @@ final class Demo {
         }
         o.addProperty("h", Integer.toHexString((id + n).hashCode()));
         return o;
+    }
+
+    // ------------------------------------------------------------------ the TOTEMS tab (SU-99)
+
+    /** The demo board: name, points, totems, best tier; the points match the end of each one's made-up history. */
+    private static final Object[][] BOARD = {{"Vexa", 31, 6, 4}, {"Kestrel_88", 24, 3, 5}, {"Pixl", 13, 4, 3}, {"Mossy_Fen", 9, 3, 3}, {"RuneSmith", 7, 2, 4},
+            {"Juniper_K", 5, 2, 3}, {"Wren_88", 4, 2, 2}, {"TallyHo", 1, 1, 1}};
+
+    /** A made-up board, as {@code totem_board} answers (BSP-Server Utilities' WebTotems); one steal running on BSP-Spawn. */
+    static String demoBoard(long now) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < BOARD.length; i++) {
+            b.append(i == 0 ? "" : ",").append("{\"id\":\"").append(id((String) BOARD[i][0])).append("\",\"name\":\"").append(BOARD[i][0]).append("\",\"rank\":").append(i + 1)
+                    .append(",\"points\":").append(BOARD[i][1]).append(",\"totems\":").append(BOARD[i][2]).append(",\"tier\":").append(BOARD[i][3]).append("}");
+        }
+        return "{\"v\":1,\"server\":\"Frostwarf\",\"at\":" + now + ",\"lines\":" + BOARD.length + ",\"ready\":true,\"board\":[" + b + "],\"stealing\":["
+                + "{\"server\":\"Stormfall\",\"dim\":\"minecraft:overworld\",\"x\":1504,\"y\":80,\"z\":220,\"thief\":\"" + id("RuneSmith") + "\",\"thiefName\":\"RuneSmith\","
+                + "\"owner\":\"" + id("Juniper_K") + "\",\"ownerName\":\"Juniper_K\",\"left\":0.62}]}";
+    }
+
+    private static com.mrgregles.bsp_staff_panel.store.PanelStore.Steal steal(String uid, String server, String dim, int x, int y, int z, String thief, String owner,
+                                                                         String source, int tier, long started, long ended, int seconds, boolean ok, String reason) {
+        int[] pts = {0, 1, 2, 4, 7, 10};
+        return new com.mrgregles.bsp_staff_panel.store.PanelStore.Steal(uid, server, dim, x, y, z, id(thief), thief, owner == null ? "" : id(owner), owner == null ? "" : owner,
+                source, tier, pts[tier], started, ended, seconds, ok, ok ? "" : reason, started > 0 ? (int) Math.max(1, (ended - started) / 50) : 0, "");
+    }
+
+    /**
+     * Made-up steals and points for {@code --demo}: a week of them, Vexa with two steals too fast and a burst, Pixl with a
+     * burst; then, every two minutes, Pixl stealing a forged totem on BSP-Spawn for 40 s, told to the tab as the game
+     * servers' live messages would be.
+     */
+    static Runnable totems(com.mrgregles.bsp_staff_panel.store.MemoryStore store, com.mrgregles.bsp_staff_panel.totems.TotemDesk desk) throws Exception {
+        long now = System.currentTimeMillis(), m = 60_000L, h = 60 * m, d = 24 * h;
+        String ow = "minecraft:overworld", ne = "minecraft:the_nether";
+        String left = "message.bsp_core.steal.failed_left", gone = "message.bsp_core.steal.failed_thief_gone";
+        List<com.mrgregles.bsp_staff_panel.store.PanelStore.Steal> rows = List.of(
+                steal("d-01", "Frostwarf", ne, 118, 64, -874, "Vexa", "Wren_88", "totem", 2, now - 11 * m - 19_000, now - 11 * m, 40, true, ""),
+                steal("d-02", "Frostwarf", ow, -2210, 71, 905, "Vexa", "TallyHo", "totem", 1, now - 13 * m - 41_000, now - 13 * m + 1000, 40, true, ""),
+                steal("d-03", "Moongrove", ow, 412, 66, -1300, "Vexa", "Juniper_K", "totem", 3, now - 15 * m - 12_000, now - 15 * m, 55, false, left),
+                steal("d-04", "Moongrove", ow, 401, 64, -1288, "Vexa", "Mossy_Fen", "totem", 2, now - 16 * m - 40_000, now - 16 * m, 40, true, ""),
+                steal("d-05", "BSP-Spawn", ow, 96, 70, -40, "Pixl", "Kestrel_88", "forge", 1, now - 20 * h - 65_000, now - 20 * h, 65, true, ""),
+                steal("d-06", "Stormfall", ow, 1504, 80, 220, "Pixl", "Wren_88", "totem", 2, now - 26 * h - 40_000, now - 26 * h, 40, true, ""),
+                steal("d-07", "Stormfall", ow, 1480, 78, 260, "Pixl", "TallyHo", "totem", 1, now - 26 * h - 6 * m - 40_000, now - 26 * h - 6 * m, 40, true, ""),
+                steal("d-08", "Stormfall", ow, 1510, 81, 200, "Pixl", "Mossy_Fen", "totem", 2, now - 26 * h - 9 * m - 40_000, now - 26 * h - 9 * m, 40, true, ""),
+                steal("d-09", "Boulderbrook", ow, -620, 70, 3110, "Wren_88", null, "totem", 1, 0, now - 2 * d - 3 * h, 0, true, ""),
+                steal("d-10", "Frostwarf", ow, -2190, 70, 930, "Vexa", "Kestrel_88", "totem", 4, now - 3 * d - 70_000, now - 3 * d - 31_000, 70, true, ""),
+                steal("d-11", "Moongrove", ow, 380, 65, -1250, "Mossy_Fen", "Vexa", "totem", 3, now - 4 * d - 55_000, now - 4 * d - 30_000, 55, false, gone),
+                steal("d-12", "BSP-Spawn", ow, 88, 70, -42, "Kestrel_88", "RuneSmith", "totem", 4, now - 5 * d - 65_000, now - 5 * d, 65, true, ""),
+                steal("d-13", "Frostwarf", ne, 140, 64, -900, "Vexa", "Pixl", "totem", 3, now - 6 * d - 55_000, now - 6 * d, 55, true, ""));
+        for (var r : rows) {
+            store.addSteal(r);
+        }
+        // each one's points over the week, ending where the demo board stands (first sightings a week ago)
+        long start = now - 7 * d + h;
+        List<com.mrgregles.bsp_staff_panel.store.PanelStore.PointsChange> pts = new java.util.ArrayList<>();
+        java.util.function.BiConsumer<String, int[]> line = (name, steps) -> {
+            long at = start;
+            pts.add(new com.mrgregles.bsp_staff_panel.store.PanelStore.PointsChange(at, id(name), name, 0, steps[0], 2, 2, true));
+            for (int i = 1; i < steps.length; i++) {
+                at = start + (7 * d - 2 * h) * i / steps.length;
+                pts.add(new com.mrgregles.bsp_staff_panel.store.PanelStore.PointsChange(at, id(name), name, steps[i - 1], steps[i], 2 + i / 2, 3, false));
+            }
+        };
+        line.accept("Vexa", new int[]{9, 12, 14, 18, 20, 23, 27, 29, 31});
+        line.accept("Kestrel_88", new int[]{21, 25, 24});
+        line.accept("Pixl", new int[]{4, 6, 8, 11, 13});
+        line.accept("Mossy_Fen", new int[]{13, 11, 9});
+        line.accept("RuneSmith", new int[]{11, 7});
+        line.accept("Juniper_K", new int[]{5});
+        line.accept("Wren_88", new int[]{22, 18, 12, 8, 4});
+        line.accept("TallyHo", new int[]{2, 1});
+        pts.sort(java.util.Comparator.comparingLong(com.mrgregles.bsp_staff_panel.store.PanelStore.PointsChange::at));
+        store.insertPoints(pts);
+        // every two minutes a steal starts on BSP-Spawn and ends 40 s later, as a game server tells it
+        ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor(t -> {
+            Thread x = new Thread(t, "panel-demo-totems");
+            x.setDaemon(true);
+            return x;
+        });
+        java.util.concurrent.atomic.AtomicInteger n = new java.util.concurrent.atomic.AtomicInteger();
+        s.scheduleWithFixedDelay(() -> {
+            long at = System.currentTimeMillis();
+            String uid = "live-" + n.incrementAndGet(), body = "\"server\":\"BSP-Spawn\",\"dim\":\"minecraft:overworld\",\"x\":96,\"y\":70,\"z\":-40,\"thief\":\"" + id("Pixl")
+                    + "\",\"thiefName\":\"Pixl\",\"owner\":\"" + id("Kestrel_88") + "\",\"ownerName\":\"Kestrel_88\",\"seconds\":40";
+            desk.acceptMessage("x\n" + at + "\nBSP-Spawn\nsteal\n{\"type\":\"steal\",\"v\":1,\"event\":\"start\",\"uid\":\"" + uid + "s\",\"at\":" + at + "," + body + "}");
+            s.schedule(() -> {
+                long end = System.currentTimeMillis();
+                store.addSteal(steal(uid, "BSP-Spawn", "minecraft:overworld", 96, 70, -40, "Pixl", "Kestrel_88", "forge", 1, at, end, 40, true, ""));
+                desk.acceptMessage("x\n" + end + "\nBSP-Spawn\nsteal\n{\"type\":\"steal\",\"v\":1,\"event\":\"end\",\"uid\":\"" + uid + "\",\"at\":" + end + "," + body
+                        + ",\"source\":\"forge\",\"tier\":1,\"points\":1,\"started\":" + at + ",\"ended\":" + end + ",\"success\":true,\"reason\":\"\",\"ticks\":" + Math.max(1, (end - at) / 50) + "}");
+            }, 40, TimeUnit.SECONDS);
+        }, 20, 120, TimeUnit.SECONDS);
+        return s::shutdownNow;
     }
 
     /** A made-up Bounty Board, as {@code bounty_list} answers (SU-77); demo players by the ids the demo feed gives them. */

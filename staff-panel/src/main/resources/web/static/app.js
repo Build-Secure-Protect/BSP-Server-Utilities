@@ -1,7 +1,7 @@
 "use strict";
-// The panel's frame: the five tabs (bottom on a phone, a menu on the left from 900 px, D276, D287), staff online on the
+// The panel's frame: the six tabs (TOTEMS added by SU-99) (bottom on a phone, a menu on the left from 900 px, D276, D287), staff online on the
 // left (D293), the live feed, and the More tab with your login and, for Owners, the staff accounts (D291).
-const TABS = ["Players", "Chat", "Map", "Staff", "More"];
+const TABS = ["Players", "Chat", "Map", "Totems", "Staff", "More"]; // TOTEMS between Map and Staff (D613)
 let me = null, live = { servers: [], players: [], onPanel: [] }, tab = "Players";
 
 function nav() {
@@ -265,7 +265,7 @@ function showLink(area, text, link) {
 
 async function render() {
   const main = $("main");
-  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); main.textContent = "";
+  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); Totems.unmount(main); main.textContent = "";
   main.classList.toggle("chatmain", tab === "Chat");
   main.classList.toggle("staffmain", tab === "Staff");
   if (tab !== "More") moreView = "home";
@@ -277,6 +277,7 @@ async function render() {
     if (tab === "More") await more(main);
     else if (tab === "Staff") StaffView.mount(main);
     else if (tab === "Map") MapView.mount(main); // SU-47
+    else if (tab === "Totems") Totems.mount(main); // SU-99
     else if (tab !== "Chat") main.appendChild(el("div", "note", tab + " is not part of the panel yet."));
   }
 }
@@ -383,6 +384,7 @@ const App = {
   refresh() {
     if (tab === "More") { if (moreView === "find") App.refreshMore(); return; }
     if (tab === "Map") { MapView.redraw(); return; }
+    if (tab === "Totems") { Totems.redraw(); return; } // a player's notes read (NOTES under their row)
     if (tab !== "Players") return;
     const h = hold();
     Players.view($("main"), live); Players.detail(live);
@@ -441,6 +443,7 @@ function connect() {
   on("tags", () => Tags.changed());
   on("maps", () => MapView.mapsChanged()); // an Owner changed the maps shown (D583)
   on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
+  on("totems", (e) => Totems.event(JSON.parse(e.data))); // the board read, a steal starting or ending (SU-99)
   on("ended", () => { drop(es); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
   on("replaced", () => { drop(es); replaced(); });
@@ -457,7 +460,7 @@ setInterval(() => {
 
 // after a gap in the feed: the chat, the room and messages, tags, the lottery and notes read again
 function afterGap() {
-  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged();
+  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged(); Totems.resync();
 }
 
 function replaced() {
