@@ -103,6 +103,9 @@ const Players = (() => {
   function view(main, live) {
     const kept = [...main.children].find((x) => x.classList.contains("pbar") && typingIn(x)) || null;
     const before = [], after = [];
+    Offline.ensure(); // the OFFLINE group's first read (SU-116)
+    Offline.search(filter); // this tab's search, should the map's window have searched another name
+    const off = Offline.state();
     const total = live.players.length;
     // servers: chips on a phone, tiles on a computer
     const chips = el("div", "chips");
@@ -113,6 +116,10 @@ const Players = (() => {
       t.title = s.server + " · " + s.mspt + " ms a tick"; tiles.appendChild(t);
     });
     const net = el("div", "tile net"); net.appendChild(el("b", null, String(total))); net.appendChild(document.createTextNode("Network")); tiles.appendChild(net);
+    if (off.read && !off.listQ) { // everyone who ever joined and is not online (R1, R3)
+      const ot = el("div", "tile offt"); ot.appendChild(el("b", null, off.total.toLocaleString("en-GB"))); ot.appendChild(document.createTextNode("Offline")); tiles.appendChild(ot);
+      const oc = el("div", "chip srv offchip"); oc.appendChild(el("i", "dot off")); oc.appendChild(el("span", null, "Offline")); oc.appendChild(el("b", null, off.total.toLocaleString("en-GB"))); chips.appendChild(oc);
+    }
     before.push(chips, tiles);
     const put = () => {
       [...main.children].forEach((x) => { if (x !== kept) x.remove(); });
@@ -121,15 +128,17 @@ const Players = (() => {
     };
     if (!live.servers.length) {
       before.push(el("div", "note", "No game server has sent its players yet. Each server sends them while webPanel.enabled is on in its config/bsp_server_utilities-network.toml."));
+      const g0 = el("div", "groups"); g0.appendChild(offlineGroup()); after.push(g0); // who played is known without them
       put(); return;
     }
     const gs = groups(live.players);
     const bar = el("div", "pbar");
     const count = el("div", "grow pcount"); count.appendChild(el("span", "big", String(total)));
-    count.appendChild(el("span", "mu", " online · " + (groupBy === "team" ? gs.filter((x) => x.key !== "none").length + " teams" : live.servers.length + " servers")));
+    count.appendChild(el("span", "mu", " online · " + (groupBy === "team" ? gs.filter((x) => x.key !== "none").length + " teams" : live.servers.length + " servers")
+      + (off.read && !off.listQ ? " · " + off.total.toLocaleString("en-GB") + " offline" : "")));
     bar.appendChild(count);
     const search = el("input", "search"); search.type = "search"; search.placeholder = "Find a player…"; search.value = filter; search.dataset.keep = "psearch";
-    search.addEventListener("input", () => { filter = search.value.trim().toLowerCase(); App.refresh(); });
+    search.addEventListener("input", () => { filter = search.value.trim().toLowerCase(); Offline.search(search.value); App.refresh(); }); // offline players too (R2)
     bar.appendChild(search);
     const seg = el("div", "seg");
     [["team", "Teams"], ["server", "Servers"]].forEach(([k, t]) => {
@@ -149,10 +158,54 @@ const Players = (() => {
       if (!collapsed.has(gr.key)) gr.players.forEach((p) => card.appendChild(row(p)));
       grid.appendChild(card);
     });
-    if (!gs.length) grid.appendChild(el("div", "note", "Nobody online matches “" + filter + "”."));
+    if (!gs.length) grid.appendChild(el("div", "note", filter ? "Nobody online matches “" + filter + "”." : "Nobody is online."));
+    grid.appendChild(offlineGroup());
     after.push(grid);
     put();
   }
+
+  // ---------------------------------------------------------------- offline players (SU-116; D653, D654, D668, R1 to R3)
+  function offlineGroup() {
+    const off = Offline.state(), card = el("div", "gcard offgroup");
+    const h = el("button", "ghead offg"); h.type = "button"; h.dataset.keep = "grp:offline";
+    const fold = Offline.folded();
+    h.appendChild(el("span", "nm", "Offline"));
+    const rows = Offline.rows();
+    h.appendChild(el("span", "mu", !off.read ? "reading…" : off.listQ ? (off.total ? off.total + " match “" + off.listQ + "”" : "Nobody offline matches “" + off.listQ + "”")
+      : off.total.toLocaleString("en-GB") + " · last seen first"));
+    h.appendChild(el("span", "chev", fold ? "⌄" : "⌃"));
+    h.addEventListener("click", () => { Offline.fold(!fold); App.refresh(); });
+    card.appendChild(h);
+    if (fold) return card;
+    if (off.problem) card.appendChild(el("div", "gold offnote", off.problem));
+    if (off.error) card.appendChild(el("div", "err offnote", off.error));
+    rows.forEach((p) => card.appendChild(offRow(p)));
+    const left = off.total - rows.length;
+    if (off.read && left > 0 && rows.length) {
+      const m = el("button", "more", off.loading ? "Reading…" : "SHOW " + (matchMedia("(min-width: 900px)").matches ? "50 " : "") + "MORE · " + rows.length + " OF " + off.total.toLocaleString("en-GB"));
+      m.type = "button"; m.dataset.keep = "offmore"; m.disabled = off.loading;
+      m.addEventListener("click", () => Offline.more());
+      card.appendChild(m);
+    }
+    return card;
+  }
+  function offRow(p) {
+    const r = el("button", "prow off" + (p.id === openId ? " sel" : "")); r.type = "button"; r.dataset.keep = "prow:" + p.id;
+    const face = head(p, 30); face.classList.add("offface"); r.appendChild(face);
+    const g = el("div", "grow"); const top = el("div", "pname"); top.appendChild(el("span", "nm", p.name)); top.appendChild(Tags.chips(p.id, 2));
+    g.appendChild(top);
+    g.appendChild(el("div", "sub mono offwhere", p.state === "ok" ? Offline.where(p.place) : p.state === "bad" ? "not known" : "not recorded"));
+    r.appendChild(g);
+    r.appendChild(el("span", "seen mono", p.state === "ok" ? Offline.ago(p.place.at) : "—"));
+    r.addEventListener("click", () => openOff(p));
+    return r;
+  }
+  // an offline player's card (R4): from a row, Find a player, a name in chat or anywhere else
+  function setOff(p) {
+    if (openId !== p.id) { kickOpen = null; result = null; kickReason = ""; }
+    Offline.remember(p); openId = p.id;
+  }
+  function openOff(p) { setOff(p); App.refresh(); }
 
   // ---------------------------------------------------------------- one player: the sheet (phone) or card (computer)
   let lastLive = { servers: [], players: [] };
@@ -164,6 +217,10 @@ const Players = (() => {
     if (!openId) { if (box) box.remove(); const d = $("pdim"); if (d) d.remove(); return; }
     const p = live.players.find((x) => x.id === openId);
     if (p) { lastName = p.name; lastFor = p.id; }
+    if (tick && box && !p && box.dataset.off === openId) { // an offline card: only how long ago changes with the feed
+      const sub = box.querySelector(".dsub"); if (sub) sub.replaceWith(offSub(Offline.card({ id: openId, name: lastFor === openId ? lastName : "" })));
+      return;
+    }
     if (tick && box && p && box.querySelector(".dlive")) {
       box.querySelector(".dsub").replaceWith(subLine(p));
       box.querySelector(".dlive").replaceWith(livePart(p));
@@ -177,20 +234,11 @@ const Players = (() => {
       if (cardPos) { box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; }
     }
     const scrolled = box.scrollTop; // kept through the redraw every few seconds
-    box.textContent = "";
+    box.textContent = ""; delete box.dataset.off;
     const top = el("div", "dtop"); const grip = el("div", "grip"); grip.title = "Drag"; top.appendChild(grip);
     const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close"; x.dataset.keep = "pclose"; x.addEventListener("click", close);
     box.appendChild(el("div", "grab"));
-    if (!p) {
-      // they left (a ban sends them off the network): the last answer stays with the card (audit)
-      const name = lastFor === openId ? lastName : "";
-      const who = el("div", "grow"); if (name) who.appendChild(el("div", "dname", name)); who.appendChild(el("div", name ? "sub" : "nm", "Not online any more"));
-      top.appendChild(who); top.appendChild(x); box.appendChild(top);
-      const a = Bans.answerFor(openId) || result;
-      if (a) box.appendChild(el("div", a.ok ? "okm" : "err", a.message));
-      box.appendChild(el("div", "note", "They left the network, or their server stopped sending."));
-      drag(grip, box); return;
-    }
+    if (!p) { offlineCard(box, top, x); drag(grip, box); box.scrollTop = scrolled; return; } // offline, or they left while open (R4)
     const who = el("div", "grow"); const n = el("div", "dname"); n.textContent = p.name; who.appendChild(n);
     who.appendChild(subLine(p));
     const tags = el("div", "tagline"); tags.appendChild(Tags.chips(p.id)); // every tag in the sheet, + TAG to change them (D320)
@@ -208,6 +256,68 @@ const Players = (() => {
     box.appendChild(Notes.section(p));
     drag(grip, box);
     box.scrollTop = scrolled;
+  }
+
+  // ---------------------------------------------------------------- the offline card (SU-116; D658, D659, D669, R4)
+  function offlineCard(box, top, x) {
+    const c = Offline.card({ id: openId, name: lastFor === openId ? lastName : "" }); // a player who left while open keeps their name
+    const p = { id: c.id || openId, name: c.name || "…", skin: !!c.skin };
+    box.dataset.off = openId;
+    const who = el("div", "grow"); who.appendChild(el("div", "dname offn", p.name));
+    who.appendChild(offSub(c));
+    const tags = el("div", "tagline"); tags.appendChild(Tags.chips(p.id));
+    const add = el("button", "tg addt", "+ Tag"); add.type = "button"; add.dataset.keep = "addtag"; add.addEventListener("click", () => Tags.open(p)); tags.appendChild(add);
+    who.appendChild(tags);
+    const face = head(p, 48); face.classList.add("offface");
+    top.appendChild(face); top.appendChild(who); top.appendChild(x); box.appendChild(top);
+    const a = Bans.answerFor(openId) || result; // a ban sends them off the network: its answer stays with the card (audit)
+    if (a) box.appendChild(el("div", a.ok ? "okm" : "err", a.message));
+    box.appendChild(placeBox(c));
+    // Kick and Teleport left out: nobody to kick or move (D659)
+    const wrap = el("div", "pact"); const keys = el("div", "keys");
+    const graves = el("button", "key", "Graves"); graves.type = "button"; graves.dataset.keep = "k:graves";
+    graves.addEventListener("click", () => { openId = null; result = null; Players.leave(); openGraves(p.name); });
+    keys.appendChild(graves); keys.appendChild(Bank.key(p)); keys.appendChild(PlayerMsg.key(p)); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
+    const bn = Bans.box(p); if (bn) wrap.appendChild(bn);
+    box.appendChild(wrap);
+    box.appendChild(PlayerMsg.section({ id: p.id, name: p.name }));
+    const ml = Market.line(p); if (ml) box.appendChild(ml);
+    const bl = Bounties.line(p); if (bl) box.appendChild(bl);
+    box.appendChild(Items.section(p, { live: false, redraw: () => App.refresh() })); // the newest save (D658)
+    box.appendChild(Notes.section(p));
+  }
+  function offSub(c) {
+    const sub = el("div", "sub dsub offsub"); sub.appendChild(el("span", "chip offc", "OFFLINE"));
+    sub.appendChild(document.createTextNode(" " + (c.state === "loading" ? "reading…" : c.online ? "back online" : Offline.lastSeen(c))));
+    return sub;
+  }
+  // where they logged off, and MAP › (R4)
+  function placeBox(c) {
+    const b = el("div", "offbox");
+    if (c.problem) b.appendChild(el("div", "offwarn", c.problem));
+    if (c.state === "loading") { b.appendChild(el("div", "mu", "Reading where they logged off…")); return b; }
+    if (c.error && !c.state) { b.appendChild(el("div", "err", c.error)); return b; }
+    if (c.state === "none") { b.appendChild(el("div", "mu", "Where they logged off is not recorded yet. It is kept from their next logout.")); return b; }
+    if (c.state !== "ok" || !c.place) { b.appendChild(el("div", "mu", "Last place not known: the record could not be checked.")); return b; }
+    const pl = c.place, logout = pl.kind === "logout";
+    const l1 = el("div", "loc mono"); l1.appendChild(el("span", "offdot", "○ ")); l1.appendChild(document.createTextNode((logout ? "Logged off on " : "Last seen on ") + pl.server + " · " + Offline.world(pl.dim)));
+    b.appendChild(l1);
+    const l2 = el("div", "offline2"); l2.appendChild(el("span", "loc mono grow", pl.x + ", " + pl.y + ", " + pl.z + " · " + Offline.when(pl.at)));
+    const shown = Offline.mapShown(pl.server, pl.dim);
+    const m = el("button", "lnk" + (shown === false ? " off" : ""), "MAP ›"); m.type = "button"; m.dataset.keep = "offmap";
+    m.disabled = shown === false || shown === undefined;
+    m.addEventListener("click", () => toMap(c));
+    l2.appendChild(m); b.appendChild(l2);
+    if (!logout) b.appendChild(el("div", "offwarn", "The server did not record a logout: this is its last 5-minute record."));
+    if (shown === false) b.appendChild(el("div", "offwarn", "That world's map is not shown on the Map tab."));
+    return b;
+  }
+  // MAP ›: the Map tab on that server and world, centred on the block with their grey pin and the map's offline card (R7)
+  async function toMap(c) {
+    const pl = c.place, ok = await MapView.canShow(pl.server, pl.dim);
+    if (ok && MapView.showOffline(c)) { tab = "Map"; render(); return; }
+    result = { ok: false, message: ok === null ? "The list of maps could not be read. Try MAP › again." : "That world's map is not shown on the Map tab." };
+    App.refresh();
   }
 
   function subLine(p) {
@@ -292,5 +402,17 @@ const Players = (() => {
   // a name tapped in chat (D304) opens that player's sheet or card
   function open(id) { if (openId !== id) kickReason = ""; openId = id; kickOpen = null; result = null; }
   function closeKeys() { kickOpen = null; kickReason = ""; result = null; Teleport.close(); Bans.close(); }
-  return { view, detail, leave, open, face: head, stats, actions: (p, l) => { lastLive = l; return actionsFor(p); }, closeKeys };
+  // A new read of offline players: the list drawn again, and an open offline card too unless a field in it is being typed in;
+  // then only where they logged off and when (audit of SU-116: the whole card was rebuilt under a phone's keyboard).
+  function offlineChanged(l) {
+    const h = hold(), box = $("pdetail");
+    view($("main"), l);
+    if (box && openId && box.dataset.off === openId && typingIn(box)) {
+      const c = Offline.card({ id: openId, name: lastFor === openId ? lastName : "" });
+      const sub = box.querySelector(".dsub"); if (sub) sub.replaceWith(offSub(c));
+      const pb = box.querySelector(".offbox"); if (pb) pb.replaceWith(placeBox(c));
+    } else detail(l);
+    give(h);
+  }
+  return { view, detail, leave, open, openOffline: setOff, offlineChanged, face: head, stats, actions: (p, l) => { lastLive = l; return actionsFor(p); }, closeKeys };
 })();

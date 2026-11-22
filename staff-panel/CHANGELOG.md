@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-22
+
+Offline players on the Players tab and the Map tab. Needs BSP-Server Utilities 0.18.0 on the game servers and one more database grant (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.7.0).
+
+### Added
+- Offline players, the panel's server side: `POST /api/players/offline` (`q` any part of a name, `offset`, `limit` up to 50: everyone who ever joined and is not online now, the most recently seen first, then those with no record by name, with how many in all) and `POST /api/players/seen` (`player`: one player with whether they are online), for every rank. Each comes with where they were last seen (server, world, block, when, and whether it was a logout or the server's last 5-minute record) from the game servers' `bsp_su_seen` (BSP-Server Utilities 0.18.0), which needs one more grant: `GRANT SELECT ON bsp.bsp_su_seen TO 'bsp_panel'@'<host>';`. A place is shown only through a signed copy of that very row (the player, their name, the time, the server, world, block and kind), and an `actionKey` the panel cannot read shows no place at all; a row dated more than a day ahead never holds the top. Without the grant the players are still listed by name, and with game servers older than 0.18.0 the panel says to update them.
+- An offline player's head is drawn from the skin last seen while the panel ran.
+- Offline players on the Players tab: a grey OFFLINE group under the online groups, the most recently seen first, each with a faded head, the name in light grey, their tags, the server and world they logged off on and how long ago ("12 min", "3 h", "yest.", "4 d", "18 Oct"); "not recorded" last, by name. An Offline tile (a chip on a phone) and "· 1,284 offline" in the count; SHOW 50 MORE (20 at a time on a phone); the group folds and stays folded in this browser. The search box finds offline players by any part of the name too.
+- An offline player's card: the same card as an online player's, greyed, with OFFLINE and when they were last seen; where they logged off with MAP ›, said when the server recorded no logout (its last 5-minute record), when nothing is recorded yet, when the record could not be checked, or when that world's map is not shown; Graves, Bank & Market, Message and Ban (no Kick or Teleport); messages, market, bounties, the items from their newest save and notes. A player who leaves while their card is open keeps it, now offline.
+- The offline players are read again a few seconds after anyone leaves the network and every minute while shown; someone who logs on moves to their online group at once.
+- `--demo` has 90 made-up offline players with places, one crash record and three never recorded.
+- Offline players on the Map tab: "Show offline players" under the players window's search (in the list sheet on a phone), kept in this browser, adds a grey OFFLINE part under the servers: the most recently seen first with how long ago ("12m", "3h", "1d") and their world, MORE for the next ones, found by the window's search. Choosing one stops following, switches to the server and world where they logged off, centres on the block and puts their head there in grey, labelled "Name · logged off", until another player is chosen or their card is closed; their card in the corner (a small sheet on a phone) shows when and where, the hotbar from their last save, ITEMS, NOTES and OPEN CARD. A world whose map is not shown leaves the map where it was and says so; a player with no record gets the card without a pin; one who logs on is followed live.
+- MAP › on an offline player's card opens the Map tab the same way.
+
+### Changed
+- More › Find a player opens an offline player's card on the Players tab (the separate offline page is gone), as do a name tapped in chat, the TOTEMS tab, the market, Bank & Market and Player messages.
+
 ## [0.6.0] - 2026-11-22
 
 Private messages to players. Needs BSP-Server Utilities 0.17.0 on the game servers (players need its new modpack: protocol 10) and two more database grants (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.6.0).

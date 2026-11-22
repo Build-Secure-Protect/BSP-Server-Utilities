@@ -93,12 +93,14 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.rooms.RoomList.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.steals.StealRecorder.onServerStarted();
+            com.mrgregles.bsp_server_utilities.players.LastSeen.onServerStarted(); // nothing left from an earlier run in the same game
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             com.mrgregles.bsp_server_utilities.web.WebAgent.farewell(e.getServer()); // the panel drops this server at once, not 20 s later (audit)
             // Support BSP: the players still here leave after the storage closes, so tell the network now (audit of 0.15.0)
             com.mrgregles.bsp_server_utilities.support.SupportChat.onServerStopping(e.getServer().getPlayerList().getPlayers());
             com.mrgregles.bsp_server_utilities.steals.StealRecorder.onServerStopping(); // waiting steal rows: one last try, the count said
+            com.mrgregles.bsp_server_utilities.players.LastSeen.onServerStopping(e.getServer().getPlayerList().getPlayers()); // everyone here logged out now (SU-114)
             Storage.stop();
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
@@ -122,10 +124,12 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.talk.TalkDelivery.onLogin(p); // the MESSAGE STAFF key's state, the popup for lines sent while away
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogin(p);
                 com.mrgregles.bsp_server_utilities.web.WebNotes.sendTo(p);
+                com.mrgregles.bsp_server_utilities.players.LastSeen.onLogin(p); // their first row 10 s after arriving (SU-114)
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
+                com.mrgregles.bsp_server_utilities.players.LastSeen.onLogout(p); // where they left, for the staff panel (SU-114); first, so no other feature's trouble skips it
                 com.mrgregles.bsp_server_utilities.afk.AfkService.onLogout(p);
                 com.mrgregles.bsp_server_utilities.chunks.ChunkService.onLogout(p);
                 com.mrgregles.bsp_server_utilities.setup.SetupService.onLogout(p);
@@ -168,6 +172,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.steals.StealRecorder.tick(e.getServer()); // totem steals: a failed write again each minute, 90-day prune
                 com.mrgregles.bsp_server_utilities.talk.TalkService.tick(e.getServer()); // private staff messages: the 90-day prune every 6 hours
                 com.mrgregles.bsp_server_utilities.talk.TalkDelivery.tick(e.getServer()); // popups for lines sent while away, once the rules let the player through
+                com.mrgregles.bsp_server_utilities.players.LastSeen.tick(e.getServer()); // where players were last seen: arrivals, every 5 minutes, retries (SU-114)
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

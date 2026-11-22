@@ -121,6 +121,7 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate(STEALS_TABLE.replace("<prefix>", prefix)); // totem steals for the staff panel (SU-95), kept 90 days
             st.executeUpdate(TALKS_TABLE.replace("<prefix>", prefix)); // private staff messages (SU-105), lines kept 90 days
             st.executeUpdate(TALK_LINES_TABLE.replace("<prefix>", prefix));
+            st.executeUpdate(SEEN_TABLE.replace("<prefix>", prefix)); // where each player was last seen, for the staff panel (SU-114); one row per player
             if (!hasColumn(prefix + "talks", "last_kind")) { // a talks table from before the audit of SU-111 (never released; development databases)
                 st.executeUpdate("ALTER TABLE " + prefix + "talks ADD COLUMN last_kind VARCHAR(8) NOT NULL DEFAULT '', ADD KEY open_talks (is_open)");
             }
@@ -1085,6 +1086,58 @@ public final class JdbcBackend implements StorageBackend {
             }
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------ where each player was last seen (SU-114)
+
+    public static final String SEEN_TABLE = "CREATE TABLE IF NOT EXISTS <prefix>seen (uuid CHAR(36) NOT NULL PRIMARY KEY, name VARCHAR(32) NOT NULL,"
+            + " at_ms BIGINT NOT NULL, server VARCHAR(64) NOT NULL, dimension VARCHAR(160) NOT NULL, x INT NOT NULL, y INT NOT NULL, z INT NOT NULL,"
+            + " kind VARCHAR(8) NOT NULL, line TEXT NULL, KEY at (at_ms)) DEFAULT CHARSET=utf8mb4";
+
+    @Override
+    public void saveSeen(List<Seen> rows) throws SQLException {
+        if (rows.isEmpty()) {
+            return;
+        }
+        // an older row never replaces a newer one (a logout written late, two servers a second apart: D656); at_ms last, so the
+        // comparisons above it still read the stored time
+        String newer = "VALUES(at_ms) >= at_ms";
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "seen (uuid, name, at_ms, server, dimension, x, y, z, kind, line)"
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE"
+                + " name = IF(" + newer + ", VALUES(name), name), server = IF(" + newer + ", VALUES(server), server),"
+                + " dimension = IF(" + newer + ", VALUES(dimension), dimension), x = IF(" + newer + ", VALUES(x), x), y = IF(" + newer + ", VALUES(y), y),"
+                + " z = IF(" + newer + ", VALUES(z), z), kind = IF(" + newer + ", VALUES(kind), kind), line = IF(" + newer + ", VALUES(line), line),"
+                + " at_ms = GREATEST(at_ms, VALUES(at_ms))")) {
+            for (Seen r : rows) {
+                ps.setString(1, r.player().toString());
+                ps.setString(2, r.name());
+                ps.setLong(3, r.atMs());
+                ps.setString(4, r.server());
+                ps.setString(5, r.dimension());
+                ps.setInt(6, r.x());
+                ps.setInt(7, r.y());
+                ps.setInt(8, r.z());
+                ps.setString(9, r.kind());
+                ps.setString(10, r.line());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    @Override
+    @Nullable
+    public Seen loadSeen(UUID player) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT name, at_ms, server, dimension, x, y, z, kind, line FROM " + prefix + "seen WHERE uuid = ?")) {
+            ps.setString(1, player.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                return new Seen(player, rs.getString(1), rs.getLong(2), rs.getString(3), rs.getString(4), rs.getInt(5), rs.getInt(6), rs.getInt(7),
+                        rs.getString(8), rs.getString(9) == null ? "" : rs.getString(9));
+            }
+        }
     }
 
     @Nullable

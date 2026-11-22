@@ -325,4 +325,37 @@ public interface PanelStore {
     default String talkLinesTable() {
         return "bsp_su_talk_lines";
     }
+
+    // ------------------------------------------------------------------ offline players (SU-115; D653 to D671)
+
+    /**
+     * A player who ever joined ({@code <prefix>players}) and, when {@code seen}, where they were last seen
+     * ({@code <prefix>seen}, written by BSP-Server Utilities 0.18.0 and newer): the row's columns as they are, unchecked;
+     * {@code line} is the signed copy the panel believes.
+     */
+    record SeenPlayer(String id, String name, boolean seen, String seenName, long atMs, String server, String dimension, int x, int y, int z, String kind, String line) {
+        public static SeenPlayer unseen(String id, String name) {
+            return new SeenPlayer(id, name, false, "", 0, "", "", 0, 0, 0, "", "");
+        }
+    }
+
+    /**
+     * Players who ever joined, none of {@code online} (UUIDs), whose name holds {@code contains} (any case; empty: everyone):
+     * those with a last-seen row dated at or before {@code maxAtMs} first, the newest first, then the rest by name (then UUID, so
+     * pages never swap rows); from {@code offset}, at most {@code limit}. A row dated later than {@code maxAtMs} sorts with the
+     * unseen, so a made-up far-future time cannot hold the top (audit of SU-115). {@code withSeen} false reads the players
+     * table alone (every row unseen), for a panel without the grant on the seen table.
+     */
+    List<SeenPlayer> offlinePlayers(String contains, java.util.Collection<String> online, int offset, int limit, boolean withSeen, long maxAtMs) throws Exception;
+
+    /** How many players {@link #offlinePlayers} would list in all. */
+    int countOffline(String contains, java.util.Collection<String> online) throws Exception;
+
+    /** One player who ever joined, with their last-seen row when there is one (and {@code withSeen}). */
+    Optional<SeenPlayer> seenPlayer(String id, boolean withSeen) throws Exception;
+
+    /** The seen table's name, for the words when its grant is missing. */
+    default String seenTable() {
+        return "bsp_su_seen";
+    }
 }

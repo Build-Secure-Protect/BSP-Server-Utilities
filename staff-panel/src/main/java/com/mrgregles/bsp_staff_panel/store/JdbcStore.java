@@ -1004,6 +1004,88 @@ public final class JdbcStore implements PanelStore {
         return out;
     }
 
+    // ------------------------------------------------------------------ offline players (SU-115)
+
+    private static final String SEEN_COLS = "p.uuid, p.name, s.uuid IS NOT NULL, s.name, s.at_ms, s.server, s.dimension, s.x, s.y, s.z, s.kind, s.line";
+
+    /** {@code AND p.uuid NOT IN (?, ...)} for the online players, or nothing. */
+    private static String notOnline(java.util.Collection<String> online) {
+        return online.isEmpty() ? "" : " AND p.uuid NOT IN (" + String.join(", ", java.util.Collections.nCopies(online.size(), "?")) + ")";
+    }
+
+    private static String like(String contains) {
+        return "%" + contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+    }
+
+    private static int bindNames(PreparedStatement ps, String contains, java.util.Collection<String> online) throws SQLException {
+        int i = 1;
+        ps.setString(i++, like(contains)); // the table's collation ignores case
+        for (String id : online) {
+            ps.setString(i++, id.toLowerCase(java.util.Locale.ROOT));
+        }
+        return i;
+    }
+
+    private static SeenPlayer seenRow(ResultSet rs, boolean withSeen) throws SQLException {
+        if (!withSeen || !rs.getBoolean(3)) {
+            return SeenPlayer.unseen(rs.getString(1), rs.getString(2));
+        }
+        return new SeenPlayer(rs.getString(1), rs.getString(2), true, rs.getString(4), rs.getLong(5), rs.getString(6), rs.getString(7), rs.getInt(8), rs.getInt(9),
+                rs.getInt(10), rs.getString(11), rs.getString(12) == null ? "" : rs.getString(12));
+    }
+
+    @Override
+    public synchronized List<SeenPlayer> offlinePlayers(String contains, java.util.Collection<String> online, int offset, int limit, boolean withSeen, long maxAtMs) throws SQLException {
+        String sql = withSeen
+                ? "SELECT " + SEEN_COLS + " FROM " + shared + "players p LEFT JOIN " + shared + "seen s ON s.uuid = p.uuid WHERE p.name LIKE ?" + notOnline(online)
+                + " ORDER BY (s.at_ms IS NULL OR s.at_ms > ?), CASE WHEN s.at_ms > ? THEN NULL ELSE s.at_ms END DESC, p.name, p.uuid LIMIT ? OFFSET ?"
+                : "SELECT p.uuid, p.name, FALSE FROM " + shared + "players p WHERE p.name LIKE ?" + notOnline(online) + " ORDER BY p.name, p.uuid LIMIT ? OFFSET ?";
+        List<SeenPlayer> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            int i = bindNames(ps, contains, online);
+            if (withSeen) {
+                ps.setLong(i++, maxAtMs);
+                ps.setLong(i++, maxAtMs);
+            }
+            ps.setInt(i++, limit);
+            ps.setInt(i, offset);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(seenRow(rs, withSeen));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized int countOffline(String contains, java.util.Collection<String> online) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT COUNT(*) FROM " + shared + "players p WHERE p.name LIKE ?" + notOnline(online))) {
+            bindNames(ps, contains, online);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    @Override
+    public synchronized Optional<SeenPlayer> seenPlayer(String id, boolean withSeen) throws SQLException {
+        String sql = withSeen
+                ? "SELECT " + SEEN_COLS + " FROM " + shared + "players p LEFT JOIN " + shared + "seen s ON s.uuid = p.uuid WHERE p.uuid = ?"
+                : "SELECT p.uuid, p.name, FALSE FROM " + shared + "players p WHERE p.uuid = ?";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, id.toLowerCase(java.util.Locale.ROOT));
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(seenRow(rs, withSeen)) : Optional.empty();
+            }
+        }
+    }
+
+    @Override
+    public String seenTable() {
+        return (shared + "seen").replace("`", "");
+    }
+
     @Override
     public String talkLinesTable() {
         return (shared + "talk_lines").replace("`", "");

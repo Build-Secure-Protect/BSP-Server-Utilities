@@ -144,6 +144,57 @@ public final class MemoryStore implements PanelStore {
                 .sorted(java.util.Map.Entry.comparingByValue(String.CASE_INSENSITIVE_ORDER)).limit(limit).map(e -> new String[]{e.getKey(), e.getValue()}).toList();
     }
 
+    /** Where players were last seen, by UUID (tests, the demo): rows as the game servers write them. */
+    public final Map<String, SeenPlayer> seen = new HashMap<>();
+    /** Tests: the seen table refused, as a missing grant does; or missing, as before BSP-Server Utilities 0.18.0. */
+    public volatile boolean seenRefused, seenMissing;
+
+    private java.util.stream.Stream<SeenPlayer> offline(String contains, java.util.Collection<String> online) {
+        String c = contains.toLowerCase(java.util.Locale.ROOT);
+        java.util.Set<String> on = new java.util.HashSet<>();
+        online.forEach(x -> on.add(x.toLowerCase(java.util.Locale.ROOT)));
+        return players.entrySet().stream().filter(e -> !on.contains(e.getKey().toLowerCase(java.util.Locale.ROOT)) && e.getValue().toLowerCase(java.util.Locale.ROOT).contains(c))
+                .map(e -> seen.getOrDefault(e.getKey(), SeenPlayer.unseen(e.getKey(), e.getValue())))
+                .map(r -> new SeenPlayer(r.id(), players.get(r.id()), r.seen(), r.seenName(), r.atMs(), r.server(), r.dimension(), r.x(), r.y(), r.z(), r.kind(), r.line()));
+    }
+
+    @Override
+    public synchronized List<SeenPlayer> offlinePlayers(String contains, java.util.Collection<String> online, int offset, int limit, boolean withSeen, long maxAtMs) throws Exception {
+        if (withSeen && seenMissing) {
+            throw new java.sql.SQLException("Table 'bsp.bsp_su_seen' doesn't exist", "42S02");
+        }
+        if (withSeen && seenRefused) {
+            throw new java.sql.SQLException("SELECT command denied to user 'bsp_panel' for table 'bsp_su_seen'");
+        }
+        java.util.function.Predicate<SeenPlayer> top = r -> r.seen() && r.atMs() <= maxAtMs; // as JdbcStore: far-future rows sort with the unseen
+        Comparator<SeenPlayer> order = Comparator.comparing((SeenPlayer r) -> !top.test(r)).thenComparing(Comparator.comparingLong((SeenPlayer r) -> top.test(r) ? r.atMs() : 0).reversed())
+                .thenComparing(SeenPlayer::name, String.CASE_INSENSITIVE_ORDER).thenComparing(SeenPlayer::id);
+        return offline(contains, online).map(r -> withSeen ? r : SeenPlayer.unseen(r.id(), r.name()))
+                .sorted(withSeen ? order : Comparator.comparing(SeenPlayer::name, String.CASE_INSENSITIVE_ORDER).thenComparing(SeenPlayer::id)).skip(offset).limit(limit).toList();
+    }
+
+    @Override
+    public synchronized int countOffline(String contains, java.util.Collection<String> online) {
+        return (int) offline(contains, online).count();
+    }
+
+    @Override
+    public synchronized Optional<SeenPlayer> seenPlayer(String id, boolean withSeen) throws Exception {
+        if (withSeen && seenMissing) {
+            throw new java.sql.SQLException("Table 'bsp.bsp_su_seen' doesn't exist", "42S02");
+        }
+        if (withSeen && seenRefused) {
+            throw new java.sql.SQLException("SELECT command denied to user 'bsp_panel' for table 'bsp_su_seen'");
+        }
+        String name = players.get(id.toLowerCase(java.util.Locale.ROOT));
+        if (name == null) {
+            return Optional.empty();
+        }
+        SeenPlayer r = withSeen ? seen.get(id.toLowerCase(java.util.Locale.ROOT)) : null;
+        return Optional.of(r == null ? SeenPlayer.unseen(id.toLowerCase(java.util.Locale.ROOT), name)
+                : new SeenPlayer(r.id(), name, r.seen(), r.seenName(), r.atMs(), r.server(), r.dimension(), r.x(), r.y(), r.z(), r.kind(), r.line()));
+    }
+
     @Override
     public synchronized Optional<String[]> findPlayer(String name) {
         return players.entrySet().stream().filter(e -> e.getValue().equalsIgnoreCase(name) || e.getKey().equalsIgnoreCase(name)).findFirst()

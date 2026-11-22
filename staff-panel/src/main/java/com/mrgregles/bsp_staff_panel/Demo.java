@@ -364,7 +364,48 @@ final class Demo {
         }
     }
 
-    private static final String[] OFFLINE = {"Velvet_Hare", "Vermillion", "Old_Timer", "GriefLord22"};
+    private static final String[] OFFLINE = offlineNames();
+
+    /** Everyone offline in the demo: a few named in other parts (bans, Find a player) and enough more for SHOW MORE. */
+    private static String[] offlineNames() {
+        java.util.List<String> n = new java.util.ArrayList<>(java.util.List.of("Velvet_Hare", "Vermillion", "Old_Timer", "GriefLord22", "Moss_Lad", "Juniper7",
+                "Ash_Vale", "Tumble", "Otter_Bay", "Quill_Fox", "Larkspur", "Cinder_Jo", "Fen_Walker", "Hollyhock", "Bramble_K", "Jumbo_Jet", "Bajuka"));
+        String[] a = {"Amber", "Birch", "Coral", "Dusk", "Ember", "Flint", "Gale", "Heron", "Ivy", "Jade", "Kelp", "Lumen", "Maple", "Nettle", "Onyx", "Pike"};
+        String[] b = {"fox", "_wolf", "Moth", "_Rook", "lark", "_99", "Shade", "_jr"};
+        for (int i = 0; n.size() < 90; i++) {
+            n.add(a[i % a.length] + b[(i / a.length + i) % b.length]);
+        }
+        return n.toArray(new String[0]);
+    }
+
+    /**
+     * Where the demo's offline players were last seen (SU-116): most with a logout, one the 5-minute record of a server that
+     * stopped without one, and three never recorded (they last left before the record began).
+     */
+    static void offline(com.mrgregles.bsp_staff_panel.store.PanelStore store) {
+        if (!(store instanceof com.mrgregles.bsp_staff_panel.store.MemoryStore m)) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        String[] servers = {"Frostwarf", "Moongrove", "Boulderbrook", "Stormfall", "BSP-Spawn"};
+        String[] dims = {"minecraft:overworld", "minecraft:overworld", "minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"};
+        Random r = new Random(7);
+        long[] ago = {12 * 60_000L, 3 * 3_600_000L, 26 * 3_600_000L, 4 * 86_400_000L};
+        int i = 0;
+        for (String n : OFFLINE) {
+            String id = java.util.UUID.nameUUIDFromBytes(n.getBytes()).toString();
+            m.players.put(id, n);
+            if (n.equals("Old_Timer") || n.equals("Hollyhock") || n.equals("Bajuka")) {
+                continue; // no record yet
+            }
+            long at = now - (i < ago.length ? ago[i] : (long) (Math.pow(1.13, i) * 3_600_000L));
+            i++;
+            String dim = n.equals("Moss_Lad") ? "minecraft:the_nether" : n.equals("Ash_Vale") ? "minecraft:the_end" : dims[r.nextInt(dims.length)];
+            String kind = n.equals("Juniper7") ? "seen" : "logout";
+            m.seen.put(id, new com.mrgregles.bsp_staff_panel.store.PanelStore.SeenPlayer(id, n, true, n, at, servers[r.nextInt(servers.length)], dim,
+                    r.nextInt(3000) - 1500, dim.endsWith("nether") ? 64 : 40 + r.nextInt(40), r.nextInt(3000) - 1500, kind, ""));
+        }
+    }
 
     /** A made-up inventory for {@code --demo} (SU-39): the same shape as BSP-Server Utilities' {@code WebItems}. */
     static String demoItems(String player, long now) {

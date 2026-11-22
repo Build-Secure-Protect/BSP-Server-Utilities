@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-22
+
+Where each player was last seen, for the staff web panel's offline players (panel 0.7.0). A server jar only: the network protocol is still 10, so players need no new modpack. Install on every game server, then the one new database grant and panel 0.7.0 (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.7.0).
+
+### Added
+- Where each player was last seen, for the staff web panel's offline players: every server with shared storage writes, in a new shared table `bsp_su_seen`, the server, world and block where each player logged off (a server stop counts), and while they are online every 5 minutes and 10 seconds after they arrive, so a crash leaves a place at most 5 minutes old. One row per player, the newest kept whichever server writes last; each carries a signed copy for the panel.
+
 ## [0.17.0] - 2026-11-22
 
 Private staff messages: staff write privately to a player in game or from the staff web panel, the player answers in their own window. **The network protocol is 10: players need the new modpack**, and every server needs 0.17.0. Install with staff panel 0.6.0 and its two database grants (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.6.0).

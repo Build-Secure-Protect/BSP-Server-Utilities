@@ -232,6 +232,42 @@ public final class PanelServer {
     }
 
     private volatile com.mrgregles.bsp_staff_panel.talk.PlayerTalk playerTalk;
+    private volatile com.mrgregles.bsp_staff_panel.players.OfflineDesk offline;
+
+    /** Offline players (SU-115; D653 to D671): the Players tab's OFFLINE group, the map's offline rows, an offline player's card. */
+    public PanelServer withOffline(com.mrgregles.bsp_staff_panel.players.OfflineDesk d) {
+        this.offline = d;
+        return this;
+    }
+
+    /**
+     * {@code /api/players/offline} ({@code q}, {@code offset}, {@code limit}) a page of offline players, the most recently
+     * seen first; {@code /api/players/seen} ({@code player}, a UUID) one player with where they were last seen. Every rank (D664).
+     */
+    private void offlinePost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        if (session(ex, id).isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.players.OfflineDesk d = offline;
+        if (d == null) {
+            json(ex, 200, refused("Offline players are not set up on this panel."));
+            return;
+        }
+        if (path.equals("/api/players/seen")) {
+            json(ex, 200, d.one(str(b, "player")));
+            return;
+        }
+        json(ex, 200, d.list(str(b, "q"), intOf(b, "offset", 0), intOf(b, "limit", com.mrgregles.bsp_staff_panel.players.OfflineDesk.PAGE)));
+    }
+
+    private static int intOf(JsonObject b, String k, int otherwise) {
+        try {
+            return b.has(k) && b.get(k).isJsonPrimitive() ? b.get(k).getAsInt() : otherwise;
+        } catch (RuntimeException bad) {
+            return otherwise;
+        }
+    }
 
     /**
      * Private staff messages to players (SU-110; D630 to D652): each new line, from the game or the panel, goes to every open
@@ -506,6 +542,7 @@ public final class PanelServer {
             case "/api/grave/items" -> graveItems(ex, id, body);
             case "/api/items" -> items(ex, id, body);
             case "/api/players/find" -> playersFind(ex, id, body);
+            case "/api/players/offline", "/api/players/seen" -> offlinePost(ex, id, path, body);
             case "/api/items/add", "/api/items/remove", "/api/items/undo" -> itemsEdit(ex, id, path, body);
             case "/api/tp/places" -> tpPlaces(ex, id);
             case "/api/tp" -> tp(ex, id, body);

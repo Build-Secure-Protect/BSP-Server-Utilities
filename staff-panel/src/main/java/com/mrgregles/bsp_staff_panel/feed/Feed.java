@@ -28,6 +28,13 @@ public final class Feed {
     }
 
     private final Map<String, Entry> servers = new ConcurrentHashMap<>();
+    /** The skin last seen for each player, so an offline player's head can still be drawn (SU-115); the newest 5,000, this run only. */
+    private final Map<String, String> lastSkins = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>(256, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+            return size() > 5000;
+        }
+    });
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private final LongSupplier clock;
     private volatile long lastMessageAt;
@@ -101,6 +108,7 @@ public final class Feed {
             return true;
         }
         servers.put(server, new Entry(server, heardAt, o));
+        rememberSkins(o);
         lastMessageAt = clock.getAsLong();
         listeners.forEach(Runnable::run);
         return true;
@@ -161,7 +169,21 @@ public final class Feed {
     }
 
     /** A player's skin address as their server last sent it, or null. */
+    private void rememberSkins(JsonObject snapshot) {
+        for (JsonElement p : snapshot.getAsJsonArray("players")) {
+            if (p.isJsonObject() && p.getAsJsonObject().has("id") && p.getAsJsonObject().get("skin") != null && p.getAsJsonObject().get("skin").isJsonPrimitive()) {
+                lastSkins.put(p.getAsJsonObject().get("id").getAsString(), p.getAsJsonObject().get("skin").getAsString());
+            }
+        }
+    }
+
+    /** A player's skin address: from the feed while online, else the last one seen this run (an offline player's head); null when unknown. */
     public String skinOf(String playerId) {
+        String now = liveSkinOf(playerId);
+        return now != null ? now : lastSkins.get(playerId);
+    }
+
+    private String liveSkinOf(String playerId) {
         for (Entry e : servers.values()) {
             for (JsonElement p : e.snapshot.getAsJsonArray("players")) {
                 if (p.isJsonObject() && p.getAsJsonObject().has("id") && playerId.equals(p.getAsJsonObject().get("id").getAsString())) {

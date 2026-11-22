@@ -501,6 +501,33 @@ public final class MemoryBackend implements StorageBackend {
         return n - steals.size();
     }
 
+    private final Map<UUID, Seen> seenRows = new HashMap<>();
+    /** Tests: players whose row the table refuses (one bad row among good ones); a batch holding one is refused whole, as a database's is. */
+    public final java.util.Set<UUID> refuseSeen = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    @Override
+    public synchronized void saveSeen(List<Seen> rows) throws Exception {
+        check();
+        for (Seen r : rows) {
+            if (refuseSeen.contains(r.player())) {
+                throw new java.sql.SQLException("Incorrect string value for column 'name' (test)");
+            }
+        }
+        for (Seen r : rows) {
+            Seen old = seenRows.get(r.player());
+            if (old == null || r.atMs() >= old.atMs()) {
+                seenRows.put(r.player(), r);
+            }
+        }
+    }
+
+    @Override
+    @Nullable
+    public synchronized Seen loadSeen(UUID player) throws Exception {
+        check();
+        return seenRows.get(player);
+    }
+
     /** How many steals the table holds (tests). */
     public synchronized int stealCount() {
         return steals.size();

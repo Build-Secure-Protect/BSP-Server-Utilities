@@ -276,6 +276,27 @@ public interface StorageBackend extends com.mrgregles.bsp_server_utilities.talk.
     /** Deletes steals that ended before the given time; returns how many went. */
     int pruneSteals(long beforeMs) throws Exception;
 
+    // ------------------------------------------------------------------ where each player was last seen, for the staff panel (SU-114, D656, D657)
+
+    /**
+     * Where a player was last seen on the network, one row per player in {@code <prefix>seen}: their name then, when
+     * ({@code atMs}), on which server, in which dimension and at which block; {@code kind} {@link #SEEN_LOGOUT} when it is
+     * their logout (a server stop counts) or {@link #SEEN_REFRESH} for the record written every 5 minutes while online
+     * (still the newest after a crash); {@code line} is all of it signed with the action key, which is what the staff
+     * panel believes (empty without a key).
+     */
+    record Seen(UUID player, String name, long atMs, String server, String dimension, int x, int y, int z, String kind, String line) {
+    }
+
+    String SEEN_LOGOUT = "logout", SEEN_REFRESH = "seen";
+
+    /** Writes each row unless the table already holds a newer one for that player (a row as new as the stored one replaces it). */
+    void saveSeen(List<Seen> rows) throws Exception;
+
+    /** A player's row, or null when none was written. */
+    @Nullable
+    Seen loadSeen(UUID player) throws Exception;
+
     String describe();
 
     void close() throws Exception;

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline Players Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap">
+<style>
+/* The refined page for offline players on the staff web panel (D653 to D670: AQ A, AR A, AS A). Sample data; every name is made up.
+   Each look on its own board; the frames use the panel's own tokens (panel.css). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1240px; margin:0 auto; padding-block:28px 56px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; text-wrap:balance; } h2{ font-size:18px; margin:0; color:var(--acc); text-wrap:balance; }
+h3{ font-size:15px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:90ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; }
+@media (max-width:1100px){ .stage{ justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; max-width:360px; margin-inline:auto; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:92ch; } ol b{ color:var(--fg); }
+.note{ font-size:13px; color:var(--muted); margin:0; max-width:92ch; }
+
+/* ---------- the panel (its own tokens, panel.css) ---------- */
+.ph,.pc{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff; --off:#aab0bc; --offsub:#808796;
+  background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; flex:none; }
+.ph{ width:340px; height:720px; border:8px solid #050608; border-radius:30px; }
+.pc{ width:980px; height:600px; border:8px solid #050608; border-radius:10px; flex-direction:row; }
+.ph *,.pc *{ box-sizing:border-box; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .rd{ color:var(--coral); } .gd{ color:var(--gold); }
+.grow{ flex:1; min-width:0; }
+/* computer side rail */
+.side{ width:170px; flex:none; background:var(--bg2); border-right:1px solid var(--ln); padding:12px 8px; display:flex; flex-direction:column; gap:2px; }
+.side .brand{ font:700 12px var(--mono); letter-spacing:.1em; color:var(--teal); padding:2px 8px 12px; }
+.side .nav{ padding:7px 9px; border-radius:7px; color:var(--mu); font-size:13px; }
+.side .nav.on{ background:#19d3b01a; color:var(--teal); }
+.pmain{ flex:1; min-width:0; padding:14px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; position:relative; }
+/* phone */
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.ptop{ flex:none; display:flex; align-items:center; gap:10px; padding:4px 12px 8px; font:700 13px var(--mono); letter-spacing:.08em; color:var(--teal); }
+.pscroll{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:9px; padding:0 10px 10px; }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:7px 4px 12px; background:var(--bg2); border-top:1px solid var(--ln); font-size:10.5px; color:var(--mu); }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; } .tnav b{ width:18px; height:18px; border-radius:5px; background:#2a2f3a; display:block; }
+.tnav .on{ color:var(--teal); } .tnav .on b{ background:var(--teal); }
+/* list pieces */
+.tiles{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:5px 8px; font-size:11px; color:var(--mu); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile b{ display:block; font:700 17px var(--mono); color:var(--tx); } .tile.net{ border-color:#19d3b055; } .tile.net b{ color:var(--teal); }
+.tile.offt b{ color:var(--off); }
+.chips{ display:flex; gap:5px; overflow:hidden; }
+.chip{ flex:none; padding:3px 8px; border-radius:999px; background:var(--pn); border:1px solid var(--ln); font-size:11.5px; display:inline-flex; gap:5px; align-items:center; white-space:nowrap; }
+.chip i{ width:7px; height:7px; border-radius:50%; background:var(--teal); display:block; } .chip i.o{ background:var(--dim); }
+.chip.role{ font-size:10px; padding:0 6px; color:var(--vio); border-color:#b58cff55; background:#b58cff1a; }
+.chip.tag{ font-size:10px; padding:0 6px; color:var(--gold); border-color:#5a4a1a; background:#2a2614; }
+.chip.offc{ font-size:10px; padding:0 6px; color:var(--off); border-color:#3a3f4b; background:#23262e; letter-spacing:.06em; font-weight:600; }
+.pbar{ display:flex; align-items:center; gap:8px; }
+.pcount .big{ font:700 18px var(--mono); } .pcount .mu{ font-size:12.5px; }
+.search{ height:30px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); padding:0 10px; font-size:12.5px; color:var(--dim); display:flex; align-items:center; width:220px; flex:none; }
+.ph .search{ width:auto; flex:1; }
+.seg{ display:flex; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; flex:none; }
+.seg span{ padding:3px 9px; border-radius:6px; font-size:12px; color:var(--mu); } .seg .on{ background:#2a2f3a; color:var(--tx); }
+.gcard{ background:var(--pn); border:1px solid var(--ln); border-radius:11px; overflow:hidden; flex:none; }
+.ghead{ display:flex; align-items:center; gap:8px; padding:7px 11px; background:#1d2129; border-left:4px solid var(--teal); font-size:13px; }
+.ghead .nm{ font-weight:600; } .ghead .mu{ font-size:11.5px; } .ghead .chev{ margin-left:auto; color:var(--mu); }
+.ghead.offg{ border-left-color:#4a505c; } .ghead.offg .nm{ color:var(--off); }
+.prow{ display:flex; align-items:center; gap:9px; padding:6px 11px; border-top:1px solid #20242d; }
+.prow.sel{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.prow .nm{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prow .sub{ font:11px var(--mono); color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pname{ display:flex; align-items:center; gap:5px; min-width:0; }
+.mini{ display:flex; align-items:center; gap:4px; font:600 11px var(--mono); color:var(--soft); flex:none; }
+.hrt{ width:9px; height:8px; background:#e23b3b; clip-path:polygon(50% 100%,0 35%,15% 0,50% 22%,85% 0,100% 35%); display:inline-block; }
+/* offline greying: readable, not faint */
+.prow.off .nm{ color:var(--off); font-weight:500; } .prow.off .sub{ color:var(--offsub); }
+.prow.off .face{ filter:grayscale(1) brightness(.7); }
+.seen{ font:600 11px var(--mono); color:var(--offsub); flex:none; }
+.more{ display:flex; justify-content:center; padding:7px; border-top:1px solid #20242d; font:600 11.5px var(--mono); color:var(--teal); letter-spacing:.04em; }
+.subh{ padding:6px 11px 3px; font:700 10px var(--mono); letter-spacing:.12em; color:var(--dim); border-top:1px solid #20242d; display:flex; justify-content:space-between; }
+/* faces: made-up skins */
+.face{ width:24px; height:24px; border-radius:3px; flex:none; background:linear-gradient(180deg,var(--h,#3b2414) 0 28%,var(--s,#d9a066) 28%); position:relative; }
+.face::after{ content:""; position:absolute; left:18%; right:18%; top:52%; height:12%; background:linear-gradient(90deg,#fff 0 20%,#2a2a2a 20% 33%,transparent 33% 67%,#2a2a2a 67% 80%,#fff 80%); }
+.f1{ --h:#3b2414; --s:#f2c9a0; } .f2{ --h:#d8b04a; --s:#d9a066; } .f3{ --h:#1a1a1a; --s:#a8714a; } .f4{ --h:#7a4a1f; --s:#f2c9a0; } .f5{ --h:#5b5f6b; --s:#6b4a33; } .f6{ --h:#2b4a7a; --s:#d9a066; } .f7{ --h:#8a2a2a; --s:#f2c9a0; }
+.face.big{ width:44px; height:44px; border-radius:5px; } .face.mid{ width:34px; height:34px; } .face.sm{ width:18px; height:18px; border-radius:2px; }
+/* the card */
+.pdet{ position:absolute; right:22px; top:58px; width:330px; max-height:520px; background:var(--bg2); border:1px solid var(--ln); border-radius:12px; padding:10px 12px 12px;
+  box-shadow:0 14px 40px rgba(0,0,0,.55); display:flex; flex-direction:column; gap:8px; overflow:hidden; z-index:3; }
+.ph .pdet{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:80%; border-radius:16px 16px 0 0; border-width:1px 0 0; }
+.grab{ width:40px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto; flex:none; }
+.dtop{ display:flex; gap:10px; align-items:center; }
+.grip{ width:9px; align-self:stretch; background-image:radial-gradient(#6b7180 1px,transparent 1.5px); background-size:4px 4px; flex:none; }
+.dname{ font-weight:700; font-size:16px; }
+.dsub{ font-size:11.5px; color:var(--mu); }
+.x{ color:var(--mu); font-size:15px; flex:none; }
+.loc{ font:12px var(--mono); color:var(--soft); }
+.keys{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.key{ height:32px; border-radius:9px; background:var(--pn); border:1px solid var(--ln); color:var(--soft); font-weight:600; font-size:12px; display:grid; place-items:center; white-space:nowrap; }
+.key.danger{ color:var(--coral); border-color:#5a2a2a; } .key.tlk{ color:var(--teal); border-color:#19d3b055; }
+.sect{ font:700 10.5px var(--mono); letter-spacing:.12em; color:var(--teal); display:flex; justify-content:space-between; align-items:center; }
+.sect .r{ font:500 10.5px var(--mono); letter-spacing:0; color:var(--mu); }
+.igrid{ display:grid; grid-template-columns:repeat(9,1fr); gap:2px; }
+.islot{ aspect-ratio:1; background:#0c0e12; border:1px solid #23262e; border-radius:3px; position:relative; }
+.islot.it::before{ content:""; position:absolute; inset:22%; border-radius:2px; background:var(--c,#7a8090); }
+.islot .ct{ position:absolute; right:2px; bottom:0; font:600 8px var(--mono); color:#fff; }
+.hot{ margin-top:4px; }
+.note2{ font-size:11px; color:var(--mu); }
+.box{ background:var(--pn); border:1px solid var(--ln); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:5px; }
+.lnk{ font:700 11px var(--mono); color:var(--teal); letter-spacing:.04em; white-space:nowrap; }
+.sl{ display:flex; align-items:center; gap:8px; }
+.notes{ font-size:11.5px; color:var(--soft); background:var(--pn); border:1px solid var(--ln); border-radius:9px; padding:7px 9px; }
+.fold{ display:flex; justify-content:space-between; font-size:12px; padding:7px 10px; background:var(--pn); border:1px solid var(--ln); border-radius:9px; }
+.fold b{ font:700 10.5px var(--mono); letter-spacing:.1em; color:var(--soft); }
+.dimlist{ opacity:.55; pointer-events:none; }
+/* the map */
+.mapbg{ position:absolute; inset:0; background:
+  radial-gradient(ellipse 30% 22% at 70% 30%, #2f6b3a 0 60%, transparent 61%),
+  radial-gradient(ellipse 22% 30% at 25% 65%, #3d7a44 0 55%, transparent 56%),
+  radial-gradient(ellipse 40% 18% at 50% 85%, #2a5c8a 0 60%, transparent 61%),
+  radial-gradient(ellipse 18% 12% at 85% 75%, #8a7a52 0 60%, transparent 61%),
+  repeating-linear-gradient(0deg, transparent 0 23px, #ffffff08 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, #ffffff08 23px 24px),
+  linear-gradient(135deg,#4c8a4f,#3e7a45 40%,#5a8f52); }
+.mapbg.neth{ background:
+  radial-gradient(ellipse 30% 20% at 40% 40%, #d0602a 0 50%, transparent 51%),
+  radial-gradient(ellipse 22% 26% at 75% 70%, #5a1f1f 0 55%, transparent 56%),
+  repeating-linear-gradient(0deg, transparent 0 23px, #ffffff08 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, #ffffff08 23px 24px),
+  linear-gradient(135deg,#6b2323,#4a1818 50%,#7a2a20); }
+.mbar{ position:absolute; top:10px; left:10px; right:10px; display:flex; gap:6px; align-items:center; z-index:3; }
+.mc{ background:rgba(20,23,29,.92); border:1px solid var(--ln); border-radius:8px; padding:5px 9px; font-size:12px; color:var(--soft); display:flex; gap:8px; align-items:center; white-space:nowrap; }
+.mc .cb{ width:12px; height:12px; border-radius:3px; background:var(--teal); display:inline-block; vertical-align:-1px; margin-right:3px; }
+.mc .cb.no{ background:none; border:1px solid var(--dim); }
+.mwin{ position:absolute; left:10px; top:52px; width:236px; bottom:14px; background:rgba(20,23,29,.95); border:1px solid var(--ln); border-radius:10px; display:flex; flex-direction:column; overflow:hidden; z-index:3; }
+.mft{ display:flex; align-items:center; gap:6px; padding:6px 9px; border-bottom:1px solid var(--ln); font:700 10.5px var(--mono); letter-spacing:.1em; color:var(--mu); background-image:radial-gradient(#3a3f4b 1px,transparent 1.5px); background-size:4px 4px; background-position:0 2px; }
+.mft b{ font:700 11px var(--mono); color:var(--teal); background:var(--bg2); padding:0 4px; } .mft span{ background:var(--bg2); padding:0 4px; }
+.mwin .search{ width:auto; margin:7px 8px 4px; height:28px; }
+.mgrp{ display:flex; justify-content:space-between; padding:6px 11px 2px; font:600 10.5px var(--body); color:var(--mu); }
+.mrow{ display:flex; align-items:center; gap:8px; padding:4px 11px; font-size:12.5px; }
+.mrow .nm{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .mrow .d{ font:600 9.5px var(--mono); color:var(--dim); }
+.mrow.on{ background:#ffd23a14; box-shadow:inset 3px 0 0 var(--gold); }
+.mrow.off .nm{ color:var(--off); } .mrow.off .face{ filter:grayscale(1) brightness(.7); } .mrow.off .t{ font:600 9.5px var(--mono); color:var(--offsub); }
+.mrow.off.on{ background:#aab0bc14; box-shadow:inset 3px 0 0 var(--off); }
+.toggle{ display:flex; align-items:center; gap:8px; padding:5px 11px 6px; font-size:12px; color:var(--soft); }
+.sw{ width:26px; height:15px; border-radius:999px; background:#2a2f3a; position:relative; flex:none; } .sw::after{ content:""; position:absolute; top:2px; left:2px; width:11px; height:11px; border-radius:50%; background:var(--mu); }
+.sw.on{ background:#aab0bc55; } .sw.on::after{ left:13px; background:#e8eaf0; }
+.offhead{ display:flex; justify-content:space-between; padding:8px 11px 2px; margin-top:4px; border-top:1px solid var(--ln); font:700 10px var(--mono); letter-spacing:.12em; color:var(--off); }
+.mmore{ padding:5px 11px 8px; font:600 11px var(--mono); color:var(--teal); }
+.mcard{ position:absolute; right:14px; bottom:14px; width:300px; background:rgba(20,23,29,.97); border:1px solid var(--ln); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; z-index:3; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+.ph .mcard{ left:0; right:0; bottom:0; width:auto; border-radius:16px 16px 0 0; border-width:1px 0 0; }
+.gpin{ position:absolute; display:flex; flex-direction:column; align-items:center; z-index:2; transform:translate(-50%,-100%); }
+.gpin .lab{ font:600 10.5px var(--body); color:#e8eaf0; background:rgba(20,23,29,.85); border:1px solid #4a505c; border-radius:5px; padding:1px 6px; margin-bottom:3px; white-space:nowrap; }
+.gpin .hd{ padding:2px; background:#aab0bc; border-radius:4px; } .gpin .hd .face{ filter:grayscale(1) brightness(.8); }
+.gpin .stem{ width:2px; height:8px; background:#aab0bc; }
+.gpin .ring{ width:30px; height:10px; border:2px dashed #e8eaf0aa; border-radius:50%; margin-top:-5px; }
+.livehead{ position:absolute; z-index:2; padding:1px; background:#19d3b0; border-radius:3px; }
+.popup{ position:absolute; z-index:3; width:230px; background:rgba(20,23,29,.97); border:1px solid var(--ln); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:5px; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+.popup::after{ content:""; position:absolute; left:50%; bottom:-7px; width:12px; height:12px; background:rgba(20,23,29,.97); border-right:1px solid var(--ln); border-bottom:1px solid var(--ln); transform:translateX(-50%) rotate(45deg); }
+.fab{ position:absolute; right:12px; bottom:12px; z-index:3; height:36px; padding:0 14px; border-radius:999px; background:var(--teal); color:#062a24; font-weight:700; font-size:12.5px; display:grid; place-items:center; }
+.sheetlist{ position:absolute; left:0; right:0; bottom:0; max-height:68%; background:rgba(20,23,29,.98); border-top:1px solid var(--ln); border-radius:16px 16px 0 0; z-index:4; display:flex; flex-direction:column; padding-top:6px; overflow:hidden; }
+.sheetlist .search{ margin:6px 12px 4px; width:auto; flex:none; }
+.tabsw{ display:flex; margin:6px 8px 2px; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; }
+.tabsw span{ flex:1; text-align:center; padding:3px 0; border-radius:6px; font-size:11.5px; color:var(--mu); } .tabsw .on{ background:#2a2f3a; color:var(--tx); }
+.tabsw .on.offon{ color:var(--off); }
+.btnoff{ font:600 10px var(--mono); letter-spacing:.06em; color:var(--off); border:1px solid #4a505c; border-radius:999px; padding:0 7px; background:#23262e; }
+
+.states{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; width:100%; }
+.st{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180; --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --off:#aab0bc; --offsub:#808796;
+  background:var(--bg2); color:var(--tx); font:13px/1.35 var(--body); border:1px solid var(--ln); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; }
+.st *{ box-sizing:border-box; }
+.st .tagt{ font:700 10px var(--mono); letter-spacing:.12em; color:var(--gold); }
+.warn{ font-size:11px; color:var(--gold); } .lnk.off{ color:var(--dim); }
+.typing{ color:var(--tx) !important; border-color:#19d3b077 !important; }
+</style>
+</head>
+
+<body><div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:8px"><h1>Offline players, refined</h1>
+<p class="lede">Your picks drawn once more with every state: AQ look A (one OFFLINE group at the foot), AR look A (the same card with a "logged off" box) and AS look A (a switch in the map's players window, a grey pin and a corner card). The points R1 to R9 at the foot are what gets built; answer "Confirmed, defaults", or change any point. All names, places and items are sample data.</p></header>
+
+<!-- =========================================================== R1, R2, R3 -->
+<section><h2>The Players tab (R1 to R3)</h2>
+<div class="stage">
+<div>
+<div class="pc">
+ <div class="side"><div class="brand">BSP STAFF</div><div class="nav on">Players</div><div class="nav">Chat</div><div class="nav">Map</div><div class="nav">Totems</div><div class="nav">Staff</div><div class="nav">More</div></div>
+ <div class="pmain">
+  <div class="tiles"><div class="tile"><b>7</b>Main</div><div class="tile"><b>3</b>Mines</div><div class="tile"><b>2</b>Events</div><div class="tile net"><b>12</b>Network</div><div class="tile offt"><b>1,284</b>Offline</div></div>
+  <div class="pbar"><div class="grow pcount"><span class="big">12</span><span class="mu"> online · 3 teams · 1,284 offline</span></div><div class="search">Find a player…</div><div class="seg"><span class="on">Teams</span><span>Servers</span></div></div>
+  <div class="gcard"><div class="ghead" style="border-left-color:#e2a03f"><span class="nm">Ironroot</span><span class="mu">4 online</span><span class="chev">⌃</span></div>
+   <div class="prow"><span class="face f1"></span><div class="grow"><div class="pname"><span class="nm">Wren_88</span><span class="chip tag">Watch</span></div></div><span class="sub">BSP-Main</span><span class="mini"><i class="hrt"></i>10</span></div>
+   <div class="prow"><span class="face f2"></span><div class="grow"><div class="pname"><span class="nm">Pip_Stone</span></div></div><span class="sub">BSP-Mines</span><span class="mini"><i class="hrt"></i>8.5</span></div>
+  </div>
+  <div class="gcard"><div class="ghead" style="border-left-color:#4aa3ff"><span class="nm">Tidewatch</span><span class="mu">3 online</span><span class="chev">⌄</span></div></div>
+  <div class="gcard"><div class="ghead offg"><span class="nm">Offline</span><span class="mu">1,284 · last seen first</span><span class="chev">⌃</span></div>
+   <div class="prow off"><span class="face f3"></span><div class="grow"><div class="pname"><span class="nm">Moss_Lad</span><span class="chip tag">Alt?</span></div><div class="sub">BSP-Main · nether</div></div><span class="seen">12 min</span></div>
+   <div class="prow off"><span class="face f4"></span><div class="grow"><div class="pname"><span class="nm">Juniper7</span></div><div class="sub">BSP-Mines</div></div><span class="seen">3 h</span></div>
+   <div class="prow off"><span class="face f5"></span><div class="grow"><div class="pname"><span class="nm">Ash_Vale</span></div><div class="sub">BSP-Main · end</div></div><span class="seen">yest.</span></div>
+   <div class="prow off"><span class="face f7"></span><div class="grow"><div class="pname"><span class="nm">Tumble</span></div><div class="sub">BSP-Events</div></div><span class="seen">4 d</span></div>
+   <div class="prow off"><span class="face f6"></span><div class="grow"><div class="pname"><span class="nm">Otter_Bay</span></div><div class="sub">BSP-Main</div></div><span class="seen">18 Oct</span></div>
+   <div class="more">SHOW 50 MORE · 5 OF 1,284</div>
+  </div>
+ </div>
+</div>
+<div class="cap">R1: the online groups as now, then the grey OFFLINE group. The Offline tile counts everyone who ever joined and is not online now.</div>
+</div>
+<div>
+<div class="ph">
+ <div class="sbar"><span>21:16</span><span>●●●</span></div><div class="ptop">PLAYERS</div>
+ <div class="pscroll">
+  <div class="chips"><span class="chip"><i></i>Main <b>7</b></span><span class="chip"><i></i>Mines <b>3</b></span><span class="chip"><i class="o"></i>Offline <b>1,284</b></span></div>
+  <div class="pbar"><div class="search typing">ju</div><div class="seg"><span class="on">Teams</span><span>Servers</span></div></div>
+  <div class="gcard"><div class="ghead" style="border-left-color:#4aa3ff"><span class="nm">Tidewatch</span><span class="mu">1 online</span><span class="chev">⌃</span></div>
+   <div class="prow"><span class="face f2"></span><div class="grow"><div class="pname"><span class="nm">Juno_Reef</span></div><div class="sub">BSP-Main · 4, 70, 210</div></div><span class="mini"><i class="hrt"></i>10</span></div>
+  </div>
+  <div class="gcard"><div class="ghead offg"><span class="nm">Offline</span><span class="mu">3 match “ju”</span><span class="chev">⌃</span></div>
+   <div class="prow off"><span class="face f4"></span><div class="grow"><div class="pname"><span class="nm">Juniper7</span></div><div class="sub">BSP-Mines</div></div><span class="seen">3 h</span></div>
+   <div class="prow off"><span class="face f1"></span><div class="grow"><div class="pname"><span class="nm">Jumbo_Jet</span></div><div class="sub">BSP-Main · nether</div></div><span class="seen">9 d</span></div>
+   <div class="prow off"><span class="face f5"></span><div class="grow"><div class="pname"><span class="nm">Bajuka</span></div><div class="sub">not recorded</div></div><span class="seen">—</span></div>
+  </div>
+ </div>
+ <div class="tnav"><div class="on"><b></b>Players</div><div><b></b>Chat</div><div><b></b>Map</div><div><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+</div>
+<div class="cap">R2: a search reaches everyone who ever joined, by any part of the name, up to 50 matches. R3: on a phone, 20 rows, then SHOW MORE.</div>
+</div>
+</div>
+</section>
+
+<!-- =========================================================== R4, R5 -->
+<section><h2>The offline card (R4, R5)</h2>
+<div class="stage">
+<div>
+<div class="pc">
+ <div class="side"><div class="brand">BSP STAFF</div><div class="nav on">Players</div><div class="nav">Chat</div><div class="nav">Map</div><div class="nav">Totems</div><div class="nav">Staff</div><div class="nav">More</div></div>
+ <div class="pmain">
+  <div class="dimlist" style="display:flex;flex-direction:column;gap:10px;max-width:560px">
+  <div class="pbar"><div class="grow pcount"><span class="big">12</span><span class="mu"> online · 1,284 offline</span></div><div class="search">Find a player…</div></div>
+  <div class="gcard"><div class="ghead offg"><span class="nm">Offline</span><span class="mu">1,284</span></div>
+   <div class="prow off sel"><span class="face f3"></span><div class="grow"><div class="pname"><span class="nm">Moss_Lad</span></div><div class="sub">BSP-Main · nether</div></div><span class="seen">12 min</span></div>
+   <div class="prow off"><span class="face f4"></span><div class="grow"><div class="pname"><span class="nm">Juniper7</span></div><div class="sub">BSP-Mines</div></div><span class="seen">3 h</span></div>
+  </div></div>
+  <div class="pdet">
+   <div class="dtop"><span class="grip"></span><span class="face big f3" style="filter:grayscale(1) brightness(.75)"></span><div class="grow"><div class="dname" style="color:var(--off)">Moss_Lad</div><div class="dsub"><span style="color:#e2a03f">■</span> Ironroot · <span class="chip offc">OFFLINE</span> last seen 12 min ago (21:04)</div><div style="display:flex;gap:4px;margin-top:3px"><span class="chip tag">Alt?</span><span class="chip" style="font-size:10px;padding:0 6px">+ Tag</span></div></div><span class="x">✕</span></div>
+   <div class="box"><div class="loc"><span style="color:var(--off)">○</span> Logged off on BSP-Main · nether</div><div class="sl"><span class="loc grow">120, 64, -30 · 21:04</span><span class="lnk">MAP ›</span></div></div>
+   <div class="keys"><span class="key">Graves</span><span class="key">Bank</span><span class="key">Message</span><span class="key danger">Ban</span></div>
+   <div class="sect"><span>MESSAGES</span><span class="r">none</span></div>
+   <div class="sect"><span>INVENTORY</span><span class="r">saved 12 min ago · BSP-Main ↻</span></div>
+   <div class="note2">Changes reach Moss_Lad at their next login, on any server.</div>
+   <div class="igrid"><i class="islot it" style="--c:#7fb2ff"></i><i class="islot"></i><i class="islot it" style="--c:#c9ced8"><span class="ct">64</span></i><i class="islot"></i><i class="islot"></i><i class="islot it" style="--c:#b5651d"><span class="ct">12</span></i><i class="islot"></i><i class="islot"></i><i class="islot"></i>
+    <i class="islot"></i><i class="islot it" style="--c:#6fe3e1"></i><i class="islot"></i><i class="islot"></i><i class="islot it" style="--c:#4a4048"><span class="ct">30</span></i><i class="islot"></i><i class="islot"></i><i class="islot"></i><i class="islot"></i></div>
+   <div class="igrid hot"><i class="islot it" style="--c:#c9ced8"></i><i class="islot it" style="--c:#e23b3b"></i><i class="islot it" style="--c:#19d3b0"></i><i class="islot"></i><i class="islot it" style="--c:#ffd23a"><span class="ct">5</span></i><i class="islot"></i><i class="islot"></i><i class="islot it" style="--c:#b5651d"><span class="ct">32</span></i><i class="islot"></i></div>
+   <div class="fold"><b>ENDER CHEST</b><span class="mu">11 / 27 ⌄</span></div>
+   <div class="sect"><span>NOTES</span><span class="r">1</span></div>
+   <div class="notes">Kestrel · 18 Nov: asked about the alt account, said it is their brother's.</div>
+  </div>
+ </div>
+</div>
+<div class="cap">R4: the card for a normal logout. The order under the keys is as now: MESSAGES, market and bounties lines (only when there are any), INVENTORY from the newest save, then NOTES.</div>
+</div>
+</div>
+<div class="states">
+ <div class="st"><span class="tagt">A CRASH OR A KILLED SERVER</span>
+  <div class="dsub"><span class="chip offc">OFFLINE</span> last seen about 2 h ago (19:15)</div>
+  <div class="box"><div class="loc">○ Last seen on BSP-Mines · overworld</div><div class="sl"><span class="loc grow">-412, 33, 1020 · 19:15</span><span class="lnk">MAP ›</span></div><div class="warn">The server did not record a logout: this is its last 5-minute record.</div></div></div>
+ <div class="st"><span class="tagt">NO RECORD YET</span>
+  <div class="dsub"><span class="chip offc">OFFLINE</span> last seen: not recorded</div>
+  <div class="box"><div class="loc" style="color:var(--mu)">Where they logged off is not recorded yet. It is kept from their next logout.</div></div></div>
+ <div class="st"><span class="tagt">THE SIGNED COPY FAILS</span>
+  <div class="dsub"><span class="chip offc">OFFLINE</span> last seen: not known</div>
+  <div class="box"><div class="loc" style="color:var(--mu)">Last place not known: the record could not be checked.</div></div></div>
+ <div class="st"><span class="tagt">THAT WORLD'S MAP IS NOT SHOWN</span>
+  <div class="box"><div class="loc">○ Logged off on BSP-Events · overworld</div><div class="sl"><span class="loc grow">88, 64, -12 · 4 d ago</span><span class="lnk off">MAP ›</span></div><div class="warn">That world's map is not shown on the Map tab.</div></div></div>
+ <div class="st"><span class="tagt">THEY LOG ON WHILE IT IS OPEN</span>
+  <div class="dsub"><span style="color:var(--teal)">●</span> back online · ping 41 ms</div>
+  <div class="loc"><span class="tl">● </span>BSP-Main · 118, 64, -31</div>
+  <div class="note2">The card turns into their live card (stats, Teleport and Kick come back), and the row moves to their team's group.</div></div>
+ <div class="st"><span class="tagt">MORE › FIND A PLAYER (R5)</span>
+  <div class="prow off" style="border:0;padding:4px 0"><span class="face f3"></span><div class="grow"><div class="nm">Moss_Lad</div><div class="sub">offline · 12 min · BSP-Main</div></div><span class="lnk">OPEN</span></div>
+  <div class="note2">An offline result opens this same card on the Players tab, just as an online one does. The old offline page goes.</div></div>
+</div>
+</section>
+
+<!-- =========================================================== R6, R7 -->
+<section><h2>The Map tab (R6, R7)</h2>
+<div class="stage">
+<div>
+<div class="pc">
+ <div class="side"><div class="brand">BSP STAFF</div><div class="nav">Players</div><div class="nav">Chat</div><div class="nav on">Map</div><div class="nav">Totems</div><div class="nav">Staff</div><div class="nav">More</div></div>
+ <div class="pmain" style="padding:0">
+  <div class="mapbg neth"></div>
+  <div class="mbar"><span class="mc">BSP-Main ▾</span><span class="mc">Nether ▾</span><span class="mc"><span><i class="cb"></i>Players</span><span><i class="cb"></i>Warps</span><span><i class="cb no"></i>Spawns</span><span><i class="cb"></i>Graves</span></span></div>
+  <div class="mwin">
+   <div class="mft"><span>PLAYERS</span><b>12</b><span style="margin-left:auto">–</span></div>
+   <div class="search">Find a player</div>
+   <div class="toggle"><span class="sw on"></span>Show offline players</div>
+   <div class="mgrp"><span>BSP-Main</span><span>7</span></div>
+   <div class="mrow"><span class="face sm f1"></span><span class="nm">Wren_88</span><span class="d">OW</span></div>
+   <div class="mrow"><span class="face sm f6"></span><span class="nm">Kestrel</span><span class="d">NETHER</span></div>
+   <div class="mgrp"><span>BSP-Mines</span><span>3</span></div>
+   <div class="mrow"><span class="face sm f2"></span><span class="nm">Pip_Stone</span><span class="d">OW</span></div>
+   <div class="offhead"><span>OFFLINE</span><span>1,284</span></div>
+   <div class="mrow off on"><span class="face sm f3"></span><span class="nm">Moss_Lad</span><span class="t">12m</span><span class="d">NETHER</span></div>
+   <div class="mrow off"><span class="face sm f4"></span><span class="nm">Juniper7</span><span class="t">3h</span><span class="d">OW</span></div>
+   <div class="mrow off"><span class="face sm f5"></span><span class="nm">Ash_Vale</span><span class="t">1d</span><span class="d">END</span></div>
+   <div class="mrow off"><span class="face sm f7"></span><span class="nm">Tumble</span><span class="t">4d</span><span class="d">OW</span></div>
+   <div class="mrow off"><span class="face sm f5"></span><span class="nm">Bajuka</span><span class="t">—</span><span class="d"></span></div>
+   <div class="mmore">MORE</div>
+  </div>
+  <span class="livehead" style="left:300px;top:150px"><span class="face sm f6" style="display:block"></span></span>
+  <div class="gpin" style="left:540px;top:290px"><span class="lab">Moss_Lad · logged off</span><span class="hd"><span class="face mid f3" style="display:block"></span></span><span class="stem"></span><span class="ring"></span></div>
+  <div class="mcard">
+   <div class="dtop"><span class="face mid f3" style="filter:grayscale(1) brightness(.75)"></span><div class="grow"><div class="dname" style="font-size:14px;color:var(--off)">Moss_Lad</div><div class="dsub"><span class="chip offc">OFFLINE</span> logged off 12 min ago (21:04)</div></div><span class="x">✕</span></div>
+   <div class="loc">BSP-Main · Nether · 120, 64, -30</div>
+   <div class="sect"><span>HOTBAR</span><span class="r">saved 12 min ago</span></div>
+   <div class="igrid"><i class="islot it" style="--c:#c9ced8"></i><i class="islot it" style="--c:#e23b3b"></i><i class="islot it" style="--c:#19d3b0"></i><i class="islot"></i><i class="islot it" style="--c:#ffd23a"></i><i class="islot"></i><i class="islot"></i><i class="islot it" style="--c:#b5651d"></i><i class="islot"></i></div>
+   <div class="keys" style="grid-template-columns:repeat(3,1fr)"><span class="key">Items</span><span class="key">Notes</span><span class="key tlk">Open card</span></div>
+  </div>
+ </div>
+</div>
+<div class="cap">R6: the switch and the OFFLINE rows. A row with no record ("—") opens the card without a pin. R7: a click switches to the server and world where they left, centres on the block, and puts the grey pin there with the card in the corner.</div>
+</div>
+<div>
+<div class="ph">
+ <div class="sbar"><span>21:16</span><span>●●●</span></div>
+ <div style="flex:1;position:relative;overflow:hidden">
+  <div class="mapbg neth"></div>
+  <div class="mbar"><span class="mc">BSP-Main ▾</span><span class="mc">Nether ▾</span></div>
+  <div class="gpin" style="left:170px;top:210px"><span class="lab">Moss_Lad · logged off</span><span class="hd"><span class="face mid f3" style="display:block"></span></span><span class="stem"></span><span class="ring"></span></div>
+  <div class="mcard">
+   <div class="grab"></div>
+   <div class="dtop"><span class="face mid f3" style="filter:grayscale(1) brightness(.75)"></span><div class="grow"><div class="dname" style="font-size:14px;color:var(--off)">Moss_Lad</div><div class="dsub"><span class="chip offc">OFFLINE</span> 12 min ago (21:04)</div></div><span class="x">✕</span></div>
+   <div class="loc">BSP-Main · Nether</div><div class="loc">120, 64, -30</div>
+   <div class="igrid"><i class="islot it" style="--c:#c9ced8"></i><i class="islot it" style="--c:#e23b3b"></i><i class="islot it" style="--c:#19d3b0"></i><i class="islot"></i><i class="islot it" style="--c:#ffd23a"></i><i class="islot"></i><i class="islot"></i><i class="islot it" style="--c:#b5651d"></i><i class="islot"></i></div>
+   <div class="keys" style="grid-template-columns:repeat(3,1fr)"><span class="key">Items</span><span class="key">Notes</span><span class="key tlk">Open card</span></div>
+  </div>
+ </div>
+ <div class="tnav"><div><b></b>Players</div><div><b></b>Chat</div><div class="on"><b></b>Map</div><div><b></b>Totems</div><div><b></b>Staff</div><div><b></b>More</div></div>
+</div>
+<div class="cap">On a phone the switch is in the list sheet. A tap closes the sheet, moves the map, and opens this small sheet from the bottom, as following does.</div>
+</div>
+</div>
+<div class="states">
+ <div class="st"><span class="tagt">THAT WORLD'S MAP IS NOT SHOWN</span>
+  <div class="dtop"><span class="face mid f7" style="filter:grayscale(1) brightness(.75)"></span><div class="grow"><div class="dname" style="font-size:14px;color:var(--off)">Tumble</div><div class="dsub"><span class="chip offc">OFFLINE</span> logged off 4 d ago (18 Nov 22:10)</div></div></div>
+  <div class="loc">BSP-Events · Overworld · 88, 64, -12</div>
+  <div class="warn">That world's map is not shown, so the map stays where it was.</div></div>
+ <div class="st"><span class="tagt">THEY LOG ON WHILE CHOSEN</span>
+  <div class="note2">The pin goes, and they are followed as a live player (their head moves, with the trail), with the following card in place of this one.</div></div>
+ <div class="st"><span class="tagt">THE SWITCH OFF</span>
+  <div class="note2">The window is as it is today. The switch is remembered in this browser, and a chosen offline player stays chosen until the card is closed.</div></div>
+</div>
+</section>
+
+<!-- =========================================================== the points -->
+<section><h2>The points to confirm</h2>
+<div class="card"><ol>
+<li><b>R1 the list.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>The OFFLINE group sits under every online group, in both the Teams and Servers views, with the newest seen first.</li>
+ <li>Each row has a faded head, the name in light grey (#aab0bc, easy to read on the dark panel), tags, then "server · world" (the Overworld left out, as for online players), and on the right how long ago.</li>
+ <li>"How long ago" reads "12 min", "3 h", "yest.", "4 d" up to 13 days, then the date ("18 Oct"), with the year once it is not this year. A row with no record shows "—" and "not recorded", after everyone with a record, by name.</li>
+ <li>On a computer there is an "Offline" tile with the count, and the count line reads "12 online · 3 teams · 1,284 offline". At the foot: "SHOW 50 MORE · 5 OF 1,284".</li>
+ <li>The group folds like a team group, and folded it stays folded in this browser.</li>
+ </ul></li>
+<li><b>R2 the search.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>Typing filters the online groups as now, and the OFFLINE group then lists every offline player whose name holds those letters, up to 50, read from the panel's database a quarter of a second after the last key.</li>
+ <li>Its header reads "3 match “ju”", or "Nobody offline matches “ju”".</li>
+ </ul></li>
+<li><b>R3 the phone.</b> The OFFLINE group comes at the foot with 20 rows and SHOW MORE, and the server chips end with a grey "Offline 1,284" chip. A tap opens the card as the bottom sheet.</li>
+<li><b>R4 the card.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>Head and name are greyed, with an OFFLINE chip and "last seen 12 min ago (21:04)"; older than yesterday it reads "last seen 18 Nov 22:10".</li>
+ <li>In the box: "○ Logged off on BSP-Main · nether", then "120, 64, -30 · 21:04" and MAP ›, which opens the Map tab exactly as R7 does.</li>
+ <li>Keys: Graves, Bank, Message and Ban. Then MESSAGES, the market and bounties lines, INVENTORY "saved 12 min ago · BSP-Main" (changes reach them at their next login) and NOTES.</li>
+ <li>The states drawn above:
+  <ul style="margin:3px 0 0;padding-left:18px">
+  <li>A crash: "Last seen on …", with a gold "the server did not record a logout" line.</li>
+  <li>No record: "not recorded yet. It is kept from their next logout."</li>
+  <li>A failed signed copy: "Last place not known".</li>
+  <li>A world whose map is not shown: MAP › greyed, with a gold line saying so.</li>
+  <li>Logging on while open: it becomes their live card.</li>
+  </ul></li>
+ </ul></li>
+<li><b>R5 Find a player.</b> An offline result opens the same card on the Players tab, and the old offline page goes.</li>
+<li><b>R6 the map's switch.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>"Show offline players" sits under the window's search, off the first time and then remembered in this browser.</li>
+ <li>When on, a grey OFFLINE heading with the count comes after the servers. Rows have a faded head, a light-grey name, how long ago in short form ("12m", "3h", "1d", "4d", "2w", "3mo", or "—") and the world tag. Newest first, 50, then MORE.</li>
+ <li>The window's search filters the offline rows by any part of the name, as R2 does. The window's count stays the online count.</li>
+ </ul></li>
+<li><b>R7 choosing an offline player on the map.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>Anyone being followed stops being followed. The map switches to their server and world and centres on the block.</li>
+ <li>A pin goes there: their head in grey with a dashed ring, labelled "Name · logged off". It stays until another player is chosen or the card is closed.</li>
+ <li>The corner card (a small sheet on a phone) shows OFFLINE, "logged off 12 min ago (21:04)", "server · world · x, y, z", the HOTBAR from the newest save, then ITEMS (the whole inventory), NOTES, and OPEN CARD (the R4 card on the Players tab).</li>
+ <li>A world whose map is not shown: the card says so and the map stays where it was. No record: the card with "not recorded", and no pin.</li>
+ </ul></li>
+<li><b>R8 keeping up to date.</b>
+ <ul style="margin:3px 0 0;padding-left:18px">
+ <li>The offline list is read when the tab opens, a few seconds after anyone leaves the network (their logout is written first), and every 60 seconds while the Players tab, or the map with the switch on, is shown.</li>
+ <li>Someone who logs on moves to their online group at once, from the live feed.</li>
+ <li>Every rank (Moderator, Admin, Owner) sees all of it.</li>
+ </ul></li>
+<li><b>R9 the words.</b> "Offline", "last seen 12 min ago (21:04)", "Logged off on …", "Last seen on …", "The server did not record a logout: this is its last 5-minute record.", "Where they logged off is not recorded yet. It is kept from their next logout.", "Last place not known: the record could not be checked.", "That world's map is not shown on the Map tab.", "Show offline players", "Name · logged off", "SHOW 50 MORE", "3 match “ju”", "Nobody offline matches “ju”".</li>
+</ol></div>
+</section>
+
+<section><h2>After you confirm</h2>
+<div class="card"><p>Answer "Confirmed, defaults", or change any point ("R6: on every time the Map tab opens"). Then the build runs in short tasks, with your go between each:</p>
+<ul class="note" style="margin:0;padding-left:20px">
+<li>SU-114: the mod's <code>bsp_su_seen</code> table and its writes, with GameTests.</li>
+<li>SU-115: the panel's reads and endpoint, with JUnit and the grant.</li>
+<li>SU-116: the Players tab and the card.</li>
+<li>SU-117: the Map tab.</li>
+<li>SU-118: an audit.</li>
+<li>SU-119: the release, mod 0.18.0 and panel 0.7.0.</li>
+</ul></div>
+</section>
+</div></body></html>

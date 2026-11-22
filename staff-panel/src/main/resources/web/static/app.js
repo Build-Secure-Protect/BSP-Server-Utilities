@@ -52,9 +52,8 @@ async function more(main) {
     main.appendChild(back); Graves.view(main, me); return;
   }
   if (moreView === "find") {
-    const chosen = FindPlayer.chosen(); // an offline player open: back to the search, else back to More
-    const back = el("button", "btn sm ghost back", chosen ? "‹ Find a player" : "‹ More"); back.type = "button";
-    back.addEventListener("click", () => { if (chosen) FindPlayer.reset(); else moreView = "home"; render(); });
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button";
+    back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); FindPlayer.view(main); return;
   }
   if (moreView === "bans") {
@@ -377,8 +376,8 @@ function openMarket(p) { tab = "More"; moreView = "market"; Market.forPlayer(p);
 function openBounties(p) { Bounties.open({ id: p.id, name: p.name }); tab = "More"; moreView = "bounties"; render(); }
 // the Bank & Market key in a player's sheet opens their bank and market (D517)
 function openBank(p) { Bank.open({ id: p.id, name: p.name }); tab = "More"; moreView = "bank"; render(); }
-// a player who is not online opens on their Find a player page (D304, D311, D415 R2)
-function openOffline(p) { FindPlayer.open(p); tab = "More"; moreView = "find"; render(); }
+// a player who is not online opens their offline card on the Players tab (D660, R5)
+function openOffline(p) { tab = "Players"; Players.openOffline(p); render(); }
 
 // A press under way: the live feed's redraw waits for it to end, so a tap is never lost on a key drawn again under it.
 let pressing = 0, tickWaiting = false;
@@ -418,6 +417,9 @@ const App = {
   },
 };
 let moreGen = 0;
+// offline players (SU-116): a new read draws the Players tab or the map again; read each minute while either shows them
+Offline.onChange(() => { if (tab === "Players") Players.offlineChanged(live); else if (tab === "Map") MapView.redraw(); });
+Offline.whenShown(() => tab === "Players" || (tab === "Map" && typeof MapView.offlineOn === "function" && MapView.offlineOn()));
 
 // The live feed. The browser retries by itself after a network error, but not after a refusal (an ended login, the
 // Cloudflare session running out, too many pages): then the page says so, checks why and reconnects or goes to log in
@@ -440,6 +442,7 @@ function connect() {
   let servers = "";
   on("live", (e) => {
     live = JSON.parse(e.data);
+    Offline.onLive(live); // someone who left is read again once their logout is written (R8)
     staffOnline();
     Lottery.onLive(live); // a draw counting somewhere (D411)
     App.tick();
@@ -451,7 +454,7 @@ function connect() {
   on("messages", () => StaffView.messagesChanged());
   on("notes", (e) => Notes.changed(JSON.parse(e.data).player));
   on("tags", () => Tags.changed());
-  on("maps", () => MapView.mapsChanged()); // an Owner changed the maps shown (D583)
+  on("maps", () => { MapView.mapsChanged(); Offline.mapsChanged(); }); // an Owner changed the maps shown (D583)
   on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
   on("totems", (e) => Totems.event(JSON.parse(e.data))); // the board read, a steal starting or ending (SU-99)
   on("pmsg", (e) => PlayerMsg.event(JSON.parse(e.data))); // a private line to or from a player (SU-111)

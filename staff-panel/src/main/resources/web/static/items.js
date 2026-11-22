@@ -437,9 +437,9 @@ const Items = (() => {
 })();
 
 // More › Find a player (D336, D372): anyone who ever joined, by the start of their name. An online player opens their
-// sheet on the Players tab; an offline one opens here, with their items from the last save, graves and notes.
+// sheet on the Players tab, and an offline one their offline card there (D660, R5).
 const FindPlayer = (() => {
-  const st = { q: "", found: [], chosen: null, timer: 0, error: "" };
+  const st = { q: "", found: [], timer: 0, error: "" };
   async function search(q) {
     st.q = q;
     if (!q) { st.found = []; App.refreshMore(); return; }
@@ -449,7 +449,6 @@ const FindPlayer = (() => {
     App.refreshMore();
   }
   function view(main) {
-    if (st.chosen) { offline(main, st.chosen); return; }
     main.appendChild(el("h2", null, "Find a player"));
     const q = el("input", "search findq"); q.type = "search"; q.placeholder = "The start of a name, online or not"; q.value = st.q; q.maxLength = 16; q.dataset.keep = "findq";
     q.addEventListener("input", () => { clearTimeout(st.timer); const v = q.value.trim(); st.timer = setTimeout(() => search(v), 250); });
@@ -461,36 +460,17 @@ const FindPlayer = (() => {
       g.appendChild(el("div", "sub", p.server ? "online on " + p.server : "offline"));
       b.appendChild(g); b.appendChild(el("span", "tl", "OPEN"));
       // online and in the feed: their sheet; otherwise here (the feed may not have them yet: audit)
-      b.addEventListener("click", () => { if (p.server && live.players.some((x) => x.id === p.id)) openPlayerSheet(p.id); else { choose(p); App.refreshMore(); } });
+      b.addEventListener("click", () => { if (p.server && live.players.some((x) => x.id === p.id)) openPlayerSheet(p.id); else openOffline(p); });
       list.appendChild(b);
     });
     if (st.error) list.appendChild(el("div", "err", st.error));
     else if (st.q && !st.found.length) list.appendChild(el("div", "note", "Nobody whose name starts with “" + st.q + "” has played on the network."));
     main.appendChild(list);
-    main.appendChild(el("div", "note", "Everyone who has joined the network. An online player opens on the Players tab; an offline one here, with their items from their last save."));
+    main.appendChild(el("div", "note", "Everyone who has joined the network. Each opens on the Players tab: an offline player with where they logged off and their items from their last save."));
   }
-  // opening an offline player reads their items fresh (audit)
-  function choose(p) { if (!st.chosen || st.chosen.id !== p.id) Items.forget(p.id); st.chosen = p; }
   // the search box ready to type in when the page is opened on a computer
   function focus() { const q = document.querySelector(".findq"); if (q && matchMedia("(min-width: 900px)").matches) q.focus(); }
-  function offline(main, p) {
-    const who = el("div", "offwho"); const g = el("div", "grow");
-    g.appendChild(el("div", "dname", p.name)); g.appendChild(Tags.chips(p.id));
-    g.appendChild(el("div", "sub", "offline"));
-    who.appendChild(Players.face(p, 44)); who.appendChild(g); main.appendChild(who);
-    const keys = el("div", "keys"); const gr = el("button", "key", "Graves"); gr.type = "button"; gr.dataset.keep = "k:graves"; gr.addEventListener("click", () => { st.chosen = null; openGraves(p.name); });
-    keys.appendChild(gr); keys.appendChild(Bank.key(p)); keys.appendChild(PlayerMsg.key(p)); main.appendChild(keys);
-    const box = el("div", "offsheet");
-    box.appendChild(PlayerMsg.section({ id: p.id, name: p.name })); // SU-111: private messages (D640)
-    const ml = Market.line(p); // D405: their lots and orders, when they have any
-    if (ml) box.appendChild(ml);
-    const bl = Bounties.line(p); // D528
-    if (bl) box.appendChild(bl);
-    box.appendChild(Items.section(p, { live: false, redraw: () => App.refreshMore() }));
-    box.appendChild(Notes.section(p));
-    main.appendChild(box);
-  }
-  return { view, focus, reset: () => { st.chosen = null; }, chosen: () => st.chosen, open: choose };
+  return { view, focus };
 })();
 
 // More › Items (D373): the item pictures the panel has, who made them and when, and how to make a fresh set.

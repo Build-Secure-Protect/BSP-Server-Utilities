@@ -164,6 +164,22 @@ Staff write privately to a player, in game or from the staff panel, and the play
 - The Action Log has an entry when a conversation starts and one when it ends, never the lines (D644).
 - Between game servers each new line is a notice of kind `talk` (Redis and the notices table, as every notice): JSON `{"talk","player","name","kind","staff","text","at","lastStaffAt","lastPlayerAt","endedAt"}`. The server holding the player sends them the key's state and, for a staff line, the popup and a chat line, and records `told_at`; every server tells its staff online of each answer and of each end made by someone else (SU-106). The client packets are protocol 10: players need the matching modpack.
 
+## Where players were last seen (a data contract, not a Java API)
+
+Every game server with shared storage records where each player was last seen on the network, for the staff panel's offline players (SU-114; owner decisions D656, D657). The staff panel reads the table (read only: `GRANT SELECT` on `<prefix>seen`). Without shared storage nothing is kept.
+
+- **`<prefix>seen`**, one row per player: `uuid` (CHAR(36), primary key), `name` (VARCHAR(32), their name then), `at_ms` (BIGINT, when; key `at`), `server` (VARCHAR(64), this mod's server name, as in `su status`), `dimension` (VARCHAR(160), e.g. `minecraft:the_nether`), `x`, `y`, `z` (INT, the block they stood in), `kind` (`logout` for their logout, a server stop included; `seen` for the record written while they were online), `line` (TEXT, the signed copy: the JSON `{"type":"seen","player","name","at","server","dim","x","y","z","kind"}` signed with `webPanel.actionKey` as the steal and talk lines are (the HMAC-SHA256 in hex, a dot, the JSON); empty when the server has no key).
+- When it is written:
+  - At every logout, including the server a player leaves when they move to another (that server's row is then replaced by the next one).
+  - As the server stops, for everyone still on it, as logged out: their logout events come after the storage has closed.
+  - 10 seconds after a player arrives, so a crash soon after a move does not leave the server they came from.
+  - Every 5 minutes for everyone online.
+- So a row of kind `seen` for a player who is not online means their last server stopped without recording a logout (a crash, a killed process): the place is at most 5 minutes old.
+- A row only replaces a stored one at least as new (`at_ms`), so a logout written late never hides the row the next server wrote. Servers' clocks a few seconds apart can put two rows in the wrong order; the next row puts it right.
+- A write that fails waits on that server (the newest row per player) and is tried again a minute after it failed; as the server stops the waiting rows get one last try, and how many waited is in its log. A row the database refuses while others go through is tried on its own and dropped after 5 refusals (said in the log), so one bad row never holds up the rest. Machines' fake players are never recorded (one may carry its owner's UUID). Rows are never deleted: one per player who ever played since 0.18.0.
+- The panel believes a row only through its `line`, and only when the copy is of that very row: the same player, the name in `<prefix>players`, `at_ms`, server, dimension, block and kind. A copy dated more than a day ahead is not believed and does not sort first. Changing `webPanel.actionKey` makes every row written before it "not known" until that player's next row; a server clock that steps back writes rows that lose to its own older ones until it catches up.
+- Players who last left before 0.18.0 have no row until their next logout.
+
 ## Compact Machines rooms (a data contract, not a Java API)
 
 Every server with Compact Machines 6.0.3 shares its rooms (SU-54, the room limit). A room is a server plus its chunk in that server's room dimension (`compactmachines:compact_world`), never the chunk alone: every server numbers its rooms in the same order.

@@ -870,6 +870,37 @@ class PanelServerTest {
     }
 
     @Test
+    void offline_players_are_read_by_every_rank_and_by_nobody_logged_out() throws Exception {
+        String o = owner();
+        JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));
+        String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+        String kip = cookieOf(post("/api/setup", "kip@bsp.test", null,
+                "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+        assertFalse(json(post("/api/players/offline", "kip@bsp.test", kip, "{}")).get("ok").getAsBoolean(), "not set up on this panel: said");
+        String moss = "aaaaaaaa-bbbb-cccc-dddd-000000000002";
+        store.players.put(moss, "Moss_Lad");
+        store.seen.put(moss, new com.mrgregles.bsp_staff_panel.store.PanelStore.SeenPlayer(moss, "", true, "Moss_Lad", clock.get() - 60_000, "BSP-Main",
+                "minecraft:the_nether", 120, 64, -30, "logout", ""));
+        server.withOffline(new com.mrgregles.bsp_staff_panel.players.OfflineDesk(store, feed, clock::get, null));
+        assertEquals(401, post("/api/players/offline", "kip@bsp.test", null, "{}").statusCode(), "logged out: nothing");
+        assertEquals(401, post("/api/players/seen", "kip@bsp.test", null, "{\"player\":\"" + moss + "\"}").statusCode(), "nor one player");
+        JsonObject page = json(post("/api/players/offline", "kip@bsp.test", kip, "{\"q\":\"moss\",\"offset\":0,\"limit\":20}"));
+        assertTrue(page.get("ok").getAsBoolean() && page.get("total").getAsInt() == 1
+                && page.getAsJsonArray("players").get(0).getAsJsonObject().getAsJsonObject("place").get("x").getAsInt() == 120, "a Moderator reads the list (D664): " + page);
+        JsonObject one = json(post("/api/players/seen", "kip@bsp.test", kip, "{\"player\":\"" + moss + "\"}"));
+        assertTrue(one.get("ok").getAsBoolean() && one.getAsJsonObject("player").get("name").getAsString().equals("Moss_Lad"), "and one player: " + one);
+        JsonObject odd = json(post("/api/players/offline", "kip@bsp.test", kip, "{\"offset\":\"lots\",\"limit\":9999}"));
+        assertTrue(odd.get("ok").getAsBoolean() && odd.get("offset").getAsInt() == 0, "odd numbers taken as the defaults, at most a page: " + odd);
+        HttpResponse<String> js = get("/static/offline.js", "kip@bsp.test", null);
+        assertTrue(js.statusCode() == 200 && js.body().contains("const Offline") && !js.body().contains("innerHTML"), "the page's script is served, and sets no markup from the network");
+        assertTrue(get("/", "kip@bsp.test", kip).body().contains("/static/offline.js"), "the page loads it");
+        assertFalse(get("/static/players.js", "kip@bsp.test", null).body().contains("innerHTML"), "nor does the Players tab");
+        String map = get("/static/map.js", "kip@bsp.test", null).body();
+        assertTrue(java.util.regex.Pattern.compile("innerHTML\\s*+=\\s*+(?!ICONS\\.)").matcher(map).results().count() == 0, "the Map tab sets markup only from its own fixed icons");
+    }
+
+    @Test
     void bounties_are_read_by_everyone_and_changed_by_admins_or_the_bounty_power() throws Exception {
         String o = owner();
         JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));

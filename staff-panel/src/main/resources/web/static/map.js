@@ -10,6 +10,9 @@ const MapView = (() => {
   let filter = "", cardPos = null, itemsOpen = false, notesOpen = false, pinBox = null, lastLive = { servers: [], players: [] };
   let listOpen = false, sheetUp = false, fab = null, trailMap = null, lastSeen = null; // on a phone (SU-48; D393, D395 R4): the list and the card as sheets
   let mq = null, mrows = null; // the list's search box, kept while typing, and its rows
+  // offline players (SU-117; D661, D662, D670, R6, R7): the switch, kept in this browser; the one chosen and where their pin is
+  const OFF_KEY = "bsp.mapOffline";
+  let offOn = (() => { try { return localStorage.getItem(OFF_KEY) === "1"; } catch (e) { return false; } })(), offBtn = null, offSel = null, offPinMap = null;
   const show = { players: true, warps: true, spawns: true, graves: true };
   // on a computer the list floats over the map (SU-79; D549 to D556, D560, D562 to D565, D567, D568): dragged by its strip,
   // sized from its corner, folded with "–", solid while over the followed player's card; where it is kept in this browser
@@ -175,7 +178,7 @@ const MapView = (() => {
     redraw();
   }
   function unmount(main) {
-    if (host && host === main) { spot = null; clearTimeout(spotRetry); clearTimeout(spotTimer); spotMap = null; closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
+    if (host && host === main) { if (offSel) offSel.placed = false; /* its pin goes with the frame: put back when the tab opens again */ spot = null; clearTimeout(spotRetry); clearTimeout(spotTimer); spotMap = null; closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
   }
 
   // BlueMap's own bar is hidden (the panel's replaces it); clicks on heads follow, clicks on pins open the panel's box
@@ -183,7 +186,9 @@ const MapView = (() => {
     const d = frame.contentDocument; if (!d) return;
     try { frame.contentWindow.addEventListener("keydown", escKey); } catch (e) { /* not the same site */ } // Esc with the map clicked (audit)
     const st = d.createElement("style");
-    st.textContent = ".control-bar{display:none!important}.bm-marker-poi-label{display:none!important}";
+    st.textContent = ".control-bar{display:none!important}.bm-marker-poi-label{display:none!important}"
+      + ".bsp-offpin img{width:28px;height:28px;image-rendering:pixelated;filter:grayscale(1) brightness(.8);border:2px solid #aab0bc;border-radius:5px;box-shadow:0 0 0 2px #0f1115}"
+      + ".bsp-offpin .bm-marker-poi-label{display:block!important;font:600 11px sans-serif;color:#e8eaf0;background:rgba(20,23,29,.85);border:1px solid #4a505c;border-radius:5px;padding:1px 6px;white-space:nowrap}"; // an offline player's pin (R7)
     d.head.appendChild(st);
     fit(); setTimeout(fit, 800); // BlueMap sizes its drawing when it starts: once the frame has its size, ask it again
     hook();
@@ -217,6 +222,7 @@ const MapView = (() => {
 
   // ---------------------------------------------------------------- following (D389, D391, D392, D395 R3)
   function start(p) {
+    if (offSel) { offSel = null; dropOffPin(); } // following a player online: the offline one chosen goes (D662)
     follow = p.id; followName = p.name; trail = []; gone = null; gold = null; itemsOpen = false; notesOpen = false; Players.closeKeys();
     const id = mapId(p.server, p.dim);
     if (id !== cur && maps.includes(id)) switchTo(id, p);
@@ -242,6 +248,7 @@ const MapView = (() => {
   function resetSwitching() { switching = Promise.resolve(); busy = false; gen++; }
   function switchTo(id, p) {
     if (spotMap && spotMap !== id) dropSpotPin(); // the TOTEMS place's pin stays on its own map
+    if (offPinMap && offPinMap !== id) dropOffPin(); // so does an offline player's (the card stays)
     cur = id; pinBox = null; saveLast(id);
     const g = gen;
     switching = switching.then(async () => {
@@ -277,6 +284,7 @@ const MapView = (() => {
     lastLive = l;
     if (!host) return;
     hook();
+    if (offSel && !follow) { const back = l.players.find((x) => String(x.id).toLowerCase() === offSel.id); if (back) start(back); } // they logged on: followed live (R7)
     if (follow) {
       const p = l.players.find((x) => x.id === follow);
       if (p) {
@@ -349,10 +357,14 @@ const MapView = (() => {
     if (!mq) {
       mq = el("input", "search mq"); mq.type = "search"; mq.placeholder = "Find a player"; mq.dataset.keep = "mq";
       mq.addEventListener("input", () => { filter = mq.value; drawList(); });
+      offBtn = el("button", "mtoggle"); offBtn.type = "button"; offBtn.dataset.keep = "moff";
+      offBtn.addEventListener("click", () => { offOn = !offOn; try { localStorage.setItem(OFF_KEY, offOn ? "1" : "0"); } catch (e) { /* this page only */ } drawList(); });
       mrows = el("div", "mrows");
       makeWin();
     }
-    if (mq.parentNode !== list) { list.textContent = ""; list.appendChild(wft); list.appendChild(mq); list.appendChild(mrows); list.appendChild(wrz); }
+    if (mq.parentNode !== list) { list.textContent = ""; list.appendChild(wft); list.appendChild(mq); list.appendChild(offBtn); list.appendChild(mrows); list.appendChild(wrz); }
+    offBtn.textContent = ""; offBtn.classList.toggle("on", offOn); offBtn.setAttribute("aria-pressed", offOn ? "true" : "false");
+    offBtn.appendChild(el("span", "msw")); offBtn.appendChild(document.createTextNode("Show offline players"));
     if (mq.value !== filter) mq.value = filter;
     wct.textContent = String(lastLive.players.length); // everyone online, kept up to date (D568)
     const sy = list.scrollTop, ry = mrows.scrollTop;
@@ -371,8 +383,104 @@ const MapView = (() => {
       });
     });
     if (!lastLive.players.length) mrows.appendChild(el("div", "note", "Nobody is online."));
+    if (offOn) offRows(f);
     list.scrollTop = sy; mrows.scrollTop = ry;
     layoutWin();
+  }
+
+  // ---------------------------------------------------------------- offline players on the map (SU-117; R6, R7)
+  // the OFFLINE rows under the servers: the window's search finds them too, newest seen first, then MORE
+  function offRows(f) {
+    Offline.ensure(); Offline.search(f); // the same list as the Players tab's, with this window's search
+    const off = Offline.state(), rows = Offline.rows();
+    const h = el("div", "mgrp moffh"); h.appendChild(el("span", null, "OFFLINE"));
+    h.appendChild(el("span", null, !off.read ? "…" : off.total.toLocaleString("en-GB"))); mrows.appendChild(h);
+    if (off.problem) mrows.appendChild(el("div", "note moffnote", off.problem));
+    if (off.error) mrows.appendChild(el("div", "err moffnote", off.error));
+    if (off.read && !rows.length && !off.error) mrows.appendChild(el("div", "note moffnote", off.listQ ? "Nobody offline matches “" + off.listQ + "”." : "Nobody else has played."));
+    rows.forEach((p) => {
+      const r = el("button", "mrow moff" + (offSel && offSel.id === p.id ? " on" : "")); r.type = "button"; r.dataset.keep = "moff:" + p.id;
+      const face = Players.face(p, 18); face.classList.add("offface"); r.appendChild(face); r.appendChild(el("span", "nm", p.name));
+      r.appendChild(el("span", "t", p.state === "ok" ? Offline.agoShort(p.place.at) : "—"));
+      const d = p.state === "ok" ? dimSlug(p.place.dim) : "";
+      r.appendChild(el("span", "d", !d ? "" : d === "overworld" ? "OW" : d === "nether" ? "NETHER" : d === "end" ? "END" : dimLabel(d).toUpperCase()));
+      r.addEventListener("click", () => { listOpen = false; sheetUp = false; chooseOff(p); });
+      mrows.appendChild(r);
+    });
+    if (off.read && rows.length < off.total && rows.length) {
+      const m = el("button", "moffmore", off.loading ? "Reading…" : "MORE"); m.type = "button"; m.dataset.keep = "moffmore"; m.disabled = off.loading;
+      m.addEventListener("click", () => Offline.more()); mrows.appendChild(m);
+    }
+  }
+  // an offline player chosen (in the window, or MAP › on their card): nobody followed, their map at the block with a grey
+  // pin until another player is chosen or the card is closed (D662); a world without a map shown leaves the map as it is
+  function chooseOff(p) {
+    stopQuiet(); dropOffPin();
+    offSel = { id: String(p.id).toLowerCase(), name: p.name, placed: false, hidden: false };
+    itemsOpen = false; notesOpen = false; pinBox = null; Players.closeKeys();
+    Offline.remember(p);
+    placeOff(p.state ? p : Offline.card(p));
+    redraw();
+  }
+  function placeOff(c) {
+    if (!offSel || offSel.placed || c.state !== "ok" || !c.place) return;
+    const pl = c.place, id = mapId(pl.server, pl.dim);
+    offSel.placed = true;
+    if (!maps || !maps.includes(id)) { offSel.hidden = true; return; } // the card says so; the map stays where it was
+    // waited for as long as the card is open (a slow map never loses it: audit of SU-117); dropped when another is chosen
+    spot = { id, x: Number(pl.x) + 0.5, y: Number(pl.y), z: Number(pl.z) + 0.5, label: (c.name || offSel.name) + " · logged off", until: Date.now() + 600000,
+      off: { id: offSel.id, skin: !!c.skin } };
+    cur = id; saveLast(id);
+    if (frame && stage && stage.contains(frame)) applySpot();
+  }
+  function dropOffPin() {
+    offPinMap = null;
+    const b = bm();
+    try { const pop = b && b.mapViewer.markers.markerSets.get("bm-popup-set"), m = pop && pop.markers.get("bsp-offpin"); if (m) pop.remove(m); } catch (e) { /* gone */ }
+  }
+  function clearOff() { offSel = null; dropOffPin(); sheetUp = false; itemsOpen = false; notesOpen = false; redraw(); }
+  /** MAP › on an offline player's card (the Players tab): their place on this tab; false when its map is not shown. */
+  function showOffline(c) {
+    if (!c || c.state !== "ok" || !c.place || !maps || !maps.includes(mapId(c.place.server, c.place.dim))) return false;
+    chooseOff(c);
+    return true;
+  }
+  // the card of the offline player chosen (R7): as following's, greyed, with where they logged off
+  function drawOffCard() {
+    const c = Offline.card(offSel), name = c.name || offSel.name, who0 = { id: offSel.id, name, skin: !!c.skin };
+    if (!offSel.placed) placeOff(c); // their record came after the click
+    const box = el("div", "mcard moffcard" + (sheetUp ? " up" : "")); cardBox.appendChild(box);
+    box.dataset.scroll = "mcard";
+    const grab = el("button", "mgrab"); grab.type = "button"; grab.title = sheetUp ? "Down" : "Up for everything"; grab.dataset.keep = "mgrab";
+    grab.addEventListener("click", () => { sheetUp = !sheetUp; redraw(); }); box.appendChild(grab);
+    if (cardPos) { box.style.left = cardPos[0] + "px"; box.style.top = cardPos[1] + "px"; box.style.right = "auto"; box.style.bottom = "auto"; }
+    const top = el("div", "dtop"); const grip = el("div", "grip"); grip.title = "Drag"; top.appendChild(grip);
+    const x = el("button", "close", "✕"); x.type = "button"; x.title = "Close"; x.dataset.keep = "mclose"; x.addEventListener("click", clearOff);
+    const who = el("div", "grow"); who.appendChild(el("div", "dname offn", name));
+    const sub = el("div", "sub dsub offsub"); sub.appendChild(el("span", "chip offc", "OFFLINE"));
+    const pl = c.state === "ok" ? c.place : null;
+    sub.appendChild(document.createTextNode(" " + (c.state === "loading" ? "reading…" : pl ? (pl.kind === "logout" ? "logged off " : "last seen ") + Offline.when(pl.at, true) : Offline.lastSeen(c))));
+    who.appendChild(sub);
+    const face = Players.face(who0, 36); face.classList.add("offface");
+    top.appendChild(face); top.appendChild(who); top.appendChild(x); box.appendChild(top);
+    drag(grip, box);
+    if (pl) box.appendChild(el("div", "loc mono", pl.server + " · " + dimLabel(dimSlug(pl.dim)) + " · " + pl.x + ", " + pl.y + ", " + pl.z));
+    if (c.problem) box.appendChild(el("div", "offwarn", c.problem));
+    if (pl && pl.kind !== "logout") box.appendChild(el("div", "offwarn", "The server did not record a logout: this is its last 5-minute record."));
+    if (pl && offSel.hidden) box.appendChild(el("div", "offwarn", "That world's map is not shown, so the map stays where it was."));
+    if (c.state === "none") box.appendChild(el("div", "mu offmsg", "Where they logged off is not recorded yet. It is kept from their next logout."));
+    if (c.state === "bad") box.appendChild(el("div", "mu offmsg", "Last place not known: the record could not be checked."));
+    const redrawCard = () => { if (host) redraw(); };
+    const more = el("div", "mmore"); // on a phone, only once the sheet is pulled up
+    if (itemsOpen) more.appendChild(Items.section(who0, { live: false, redraw: redrawCard }));
+    else { const h = el("div", "sect"); h.appendChild(el("span", null, "HOTBAR")); h.appendChild(el("span", "mu", "from their last save")); more.appendChild(h); more.appendChild(Items.hotbar({ id: offSel.id, name }, { redraw: redrawCard })); }
+    box.appendChild(more);
+    const keys = el("div", "keys mkeys");
+    const it = el("button", "key" + (itemsOpen ? " on" : ""), itemsOpen ? "Hotbar" : "Items"); it.type = "button"; it.dataset.keep = "m:items"; it.addEventListener("click", () => { itemsOpen = !itemsOpen; if (itemsOpen) sheetUp = true; redraw(); });
+    const nt = el("button", "key" + (notesOpen ? " on" : ""), "Notes"); nt.type = "button"; nt.dataset.keep = "m:notes"; nt.addEventListener("click", () => { notesOpen = !notesOpen; if (notesOpen) sheetUp = true; redraw(); });
+    const oc = el("button", "key tlk", "Open card"); oc.type = "button"; oc.dataset.keep = "m:card"; oc.addEventListener("click", () => openOffline({ id: offSel.id, name }));
+    keys.appendChild(it); keys.appendChild(nt); keys.appendChild(oc); box.appendChild(keys);
+    if (notesOpen) { const n = Notes.section(who0); n.classList.add("mmore"); box.appendChild(n); }
   }
 
   // ---------------------------------------------------------------- the floating window (a computer only)
@@ -504,8 +612,8 @@ const MapView = (() => {
   }
   function drawCard() {
     cardBox.textContent = "";
-    stage.classList.toggle("fol", !!follow); // on a phone the players button moves up out of the sheet's way
-    if (!follow) return;
+    stage.classList.toggle("fol", !!follow || !!offSel); // on a phone the players button moves up out of the sheet's way
+    if (!follow) { if (offSel) drawOffCard(); return; }
     const p = lastLive.players.find((x) => x.id === follow);
     const box = el("div", "mcard" + (gone ? " left" : "") + (sheetUp ? " up" : "")); cardBox.appendChild(box); // "left", not "gone": the Staff tab styles that (audit)
     box.dataset.scroll = "mcard"; // its scroll kept through every redraw (audit)
@@ -552,7 +660,8 @@ const MapView = (() => {
     });
   }
   // a tapped pin (D395 R1): its name and server; for a warp or spawn, the player followed can be moved there (one tap, D348)
-  const text = (html) => { const t = document.createElement("div"); t.innerHTML = String(html || ""); return t.textContent; }; // our own escaped labels (MapLive), read back
+  // our own escaped labels (MapLive), read back as words; DOMParser's document is inert: nothing in it loads or runs (audit of SU-117)
+  const text = (html) => new DOMParser().parseFromString(String(html || ""), "text/html").documentElement.textContent;
   function drawPinBox() {
     const old = stage && stage.querySelector(".mpin"); if (old) old.remove();
     if (!pinBox || !stage) return;
@@ -723,6 +832,7 @@ const MapView = (() => {
     const id = mapId(server, dim);
     if (!maps || !maps.includes(id)) return false;
     stopQuiet(); // not following anyone: the place is what is looked at
+    if (offSel) { offSel = null; dropOffPin(); } // nor an offline player's card and pin (audit of SU-117)
     spot = { id, x: Number(x) + 0.5, y: Number(y), z: Number(z) + 0.5, label: server + " · " + x + " " + y + " " + z, until: Date.now() + SPOT_WAIT_MS };
     cur = id; saveLast(id);
     return true;
@@ -737,13 +847,21 @@ const MapView = (() => {
     const b = bm();
     if (!b || !b.mapViewer || !b.mapsMap || !b.mapsMap.has(s.id)) { spotRetry = setTimeout(applySpot, 300); return; }
     spot = null;
-    if (follow) return; // staff began following someone meanwhile: that wins
+    if (follow || (s.off && (!offSel || offSel.id !== s.off.id))) return; // staff began following someone, or chose another, meanwhile: that wins
     switchTo(s.id, s).then(() => {
       const bb = bm(); if (!bb || !bb.mapViewer || cur !== s.id) return;
       setTimeout(() => { try { if (cur === s.id && !follow) bb.mapViewer.controlsManager.position.set(s.x, s.y, s.z); } catch (e) { /* gone */ } }, 1200);
+      try { bb.mapViewer.controlsManager.position.set(s.x, s.y, s.z); } catch (e) { /* not ready: the line above puts it right */ }
       try {
         const pop = bb.mapViewer.markers.markerSets.get("bm-popup-set"); if (!pop) return;
         // the label and detail are put in as markup by BlueMap: escaped
+        if (s.off) { // an offline player's place (R7): their head in grey, kept until another is chosen or the card is closed
+          if (!offSel || offSel.id !== s.off.id) return;
+          pop.updateMarkerFromData("bsp-offpin", { type: "poi", position: { x: s.x, y: s.y + 1, z: s.z }, label: esc(s.label), detail: esc(s.label),
+            icon: s.off.skin && /^[0-9a-f-]{36}$/.test(s.off.id) ? "/api/head/" + esc(s.off.id) : "/static/map-offline.svg", anchor: { x: 14, y: 14 }, classes: ["bsp-offpin"] }); // put in as markup by BlueMap
+          offPinMap = s.id;
+          return;
+        }
         pop.updateMarkerFromData("bsp-spot", { type: "poi", position: { x: s.x, y: s.y + 1, z: s.z }, label: esc(s.label), detail: esc(s.label),
           icon: "/static/map-warp.svg", anchor: { x: 12, y: 24 }, classes: ["bsp-spot"] });
         spotMap = s.id;
@@ -758,5 +876,5 @@ const MapView = (() => {
     const b = bm();
     try { const pop = b && b.mapViewer.markers.markerSets.get("bm-popup-set"), m = pop && pop.markers.get("bsp-spot"); if (m) pop.remove(m); } catch (e) { /* gone */ }
   }
-  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged, canShow, showSpot };
+  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged, canShow, showSpot, showOffline, offlineOn: () => offOn && !!host };
 })();

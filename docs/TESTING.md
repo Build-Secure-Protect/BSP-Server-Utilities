@@ -1847,3 +1847,152 @@ Install, in this order:
 
 Then the checks in the sections SU-105 to SU-111 above, in game with two clients (a staff account and a player) and on the panel.
 
+
+## 2026-11-22: where players were last seen (SU-114)
+
+The shared table `<prefix>seen` and `players/LastSeen` (the logout, the server stop, an arrival after 10 s, everyone every 5 minutes, retries), `StorageBackend.saveSeen` / `loadSeen` (Jdbc and Memory). Owner decisions D653 to D671; the panel's side is SU-115 to SU-117.
+
+GameTests (`LastSeenGameTests`, 6): a logout writes this server, the world, the block, the name and the time, signed with the action key (the copy holds the same fields); everyone online written every 5 minutes (not before) and at their new place, an arrival 10 s after it (not before); an older row never replaces a newer one written first (a late logout from the server left), a newer one does; a server stop writes everyone there as logged out and forgets their pending arrival; a failed write keeps the newest row per player and is tried a minute after it failed (not before); without shared storage nothing is kept; without a key the row is written with an empty copy. **262/262** GameTests.
+
+Not covered: MySQL itself (`JdbcBackend.saveSeen`'s `ON DUPLICATE KEY UPDATE` guard runs only against the memory table here); real logouts and a real server stop (the events are called directly; mock players are not in the player list).
+
+On the network (after 0.18.0 on every server):
+1. Log in on one server and out again: `SELECT name, server, dimension, x, y, z, kind, FROM_UNIXTIME(at_ms/1000) FROM bsp_su_seen WHERE name = '<you>';` shows that server, world and block, kind `logout`.
+2. Move to another server and stay 15 seconds: the row shows the new server, kind `seen`; leave: kind `logout` on the new server.
+3. Stay online 6 minutes: `at_ms` moves on by about 5 minutes.
+4. Restart a server with a player on it: their row is kind `logout` from that server, at the stop.
+
+## 2026-11-22: offline players, the panel's side (SU-115)
+
+Panel version raised to 0.7.0 first (no jar built). `players/OfflineDesk` (the page of offline players, one player, signed-copy checks), `PanelStore.offlinePlayers` / `countOffline` / `seenPlayer` (Jdbc and Memory), `POST /api/players/offline` and `/api/players/seen`, `Feed.skinOf` remembering the last skin seen. The setup guide (and its User Notes copy) has the new grant line and "Updating to panel 0.7.0". The page is SU-116 and SU-117.
+
+JUnit (`OfflinePlayersTest`, 5, and `PanelServerTest.offline_players_are_read_by_every_rank_and_by_nobody_logged_out`):
+- The most recently seen come first, then those with no record by name; online players are left out, and the total counts the rest. A page starts at its offset.
+- The search finds any part of a name in any case; an underscore is a letter, never a wildcard; odd text finds nobody.
+- A place is shown only through its signed copy: the copy's place over the columns, and a crash's record said as such. Another player's copy, a bad signature, no copy, or one dated two days ahead shows as not known. Without a key (the demo) rows are taken as they are.
+- Without the grant on the seen table the names are still listed and the missing grant is named.
+- One player is found in any case, online or not, with their head from the skin last seen after they leave.
+- Every rank reads the list and one player; nobody logged out does; odd numbers are taken as the defaults.
+
+**129/129** panel tests.
+
+Not covered: MySQL itself. `JdbcStore`'s join, `LIKE` escaping and `NOT IN` run only against the memory store.
+
+On the network (after mod 0.18.0, the grant and panel 0.7.0; the page from SU-116):
+1. `SHOW GRANTS FOR 'bsp_panel'@'<host>';` lists SELECT on `bsp_su_seen`.
+2. The panel's console has no `[panel] offline players:` line after the Players tab is opened.
+
+## 2026-11-22: offline players, the Players tab (SU-116)
+
+`static/offline.js` (the list's reads, search, SHOW MORE, kept up to date, the time words), `players.js` (the OFFLINE group, the offline card, MAP ›), `app.js` (`openOffline` opens the card on the Players tab; the live feed and the maps event told), `items.js` (Find a player opens the card), CSS, `Demo.offline`, and a demo launcher on port 8207.
+
+JUnit: the served `offline.js` and `players.js` set no markup from the network, and the page loads `offline.js`. **129/129**.
+
+Checked in the browser pane with `--demo` (computer 1100 px wide and phone 375 px):
+- The Offline tile reads 92 and the count line "· 92 offline". The OFFLINE group shows 50 rows, newest first, greyed and readable; SHOW 50 MORE reads the rest (92 of 92), with no record last by name.
+- The search "ju" shows the online Juniper_K and "Offline 3 match “ju”" (Juniper7, Jumbo_Jet, Bajuka "not recorded").
+- Juniper7's card: "Last seen on …", the crash line, the hidden-map line (the demo has no BlueMap), the four keys, the inventory "saved 40 min ago" with "Changes reach … at their next login". Bajuka's: "not recorded yet".
+- More › Find a player › Old_Timer opens the card on the Players tab.
+- On a phone: 20 rows and SHOW MORE, the grey Offline chip, no sideways scroll, and the card as a bottom sheet.
+- No console errors; every request answers 200.
+
+Not covered:
+- MAP › moving to the Map tab (the demo has no map; SU-117 makes it the map's offline card).
+- A player leaving while their card is open (the demo's players never leave).
+- The minute's read.
+- Heads from the last skin (the demo has no skins).
+
+On the network (after mod 0.18.0, the grant and panel 0.7.0):
+1. Log off a test player: within about 5 seconds they are in OFFLINE at the top, "1 min", with the server and world they left from.
+2. Open their card: "Logged off on <server> · <world>", the block, MAP › opening the Map tab there, and their inventory as saved at logout.
+3. Log them on again: they leave OFFLINE at once and the open card turns live.
+
+## 2026-11-22: offline players, the Map tab (SU-117)
+
+`map.js`: the "Show offline players" switch (`bsp.mapOffline` in this browser), `offRows`, `chooseOff`, `placeOff`, the pin `bsp-offpin` in BlueMap's popup set (kept, no 30-second timer; dropped on another choice, on a map switch away from it, or on closing the card; put back when the tab opens again), `drawOffCard`, `showOffline` (the card's MAP ›), `offlineOn`. `players.js` MAP › goes there. The pin's look is injected into BlueMap's page (`.bsp-offpin`). `static/map-offline.svg` is the grey head for a player whose skin the panel has not seen. JUnit **129/129**.
+
+Checked in the browser pane with `--demo` and a **stand-in for BlueMap's page** (the scratchpad's `standin-map`, launcher `panel-demo-070-map`, port 8208: a flat board answering `switchMap`, the position and the marker sets; not BlueMap):
+- The switch adds OFFLINE 92 with 50 rows on a computer and 20 on a phone, and is remembered after a reload.
+- Ash_Vale (Moongrove's End) switches the map to `moongrove__end`, centres it on 218, -261, places `bsp-offpin` labelled "Ash_Vale · logged off", and opens the card "logged off 1 h ago (01:07) / Moongrove · End · 218, 44, -261" with the hotbar.
+- Vermillion (Stormfall's End, not shown): the map stays, Ash_Vale's pin goes, and the card says the map is not shown.
+- OPEN CARD leads to the Players tab card, and its MAP › comes back to the Map tab with the pin and card.
+- The pin is still there after 33 s and goes when the card is closed.
+- Old_Timer (no record) gets the card with "not recorded yet" and no pin.
+- Following Kestrel_88 ends the offline choice.
+- Switching off hides the rows and keeps the chosen card.
+- On a phone the card is the small sheet with the pin above it.
+- No console errors.
+
+Not covered: **real BlueMap**. The pin's head icon, its grey look and its label rely on BlueMap's poi marker markup (`img` and `.bm-marker-poi-label` inside the marker's element with its classes), which the stand-in imitates. Also not covered: a chosen player logging on (the demo's players never change).
+
+On the network (after panel 0.7.0):
+1. Map tab › Show offline players: a player who logged off a moment ago is first.
+2. Choose them: the map moves to their server and world, and their grey head with "Name · logged off" sits where they left. If the head or the label is missing or not grey, say so: the pin's markup is BlueMap's.
+3. Close the card: the pin goes.
+
+## 2026-11-22: audit of offline players (SU-118)
+
+Two fresh read-only audits (the mod side, SU-114; the panel side, SU-115 to SU-117). There were no HIGH findings, and every finding is fixed.
+
+**Mod (`players/LastSeen`):**
+- The 5-minute write drops only arrivals at least 10 s old, so a fresh arrival keeps its own row.
+- Fake players are never recorded.
+- The logout is recorded first in the shared logout listener.
+- The state is cleared at server start (`onServerStarted`).
+- The stop logs how many rows waited.
+- A batch the database refuses is tried row by row. A row refused while others went through is marked, and dropped after 5 refusals with a warning. When every unmarked row fails, the database counts as away and all wait.
+- The "writes failing" flag clears when nothing was put back.
+- Arrivals are looked up one by one, not by scanning every player.
+
+**Panel:**
+- An `actionKey` that cannot be read (an empty key) believes no place; only the demo (no key) takes rows as they are.
+- A copy must match its row: the name in the players table, `at_ms`, server, dimension, block and kind.
+- A row dated more than a day ahead sorts with the unseen (`ORDER BY` in `JdbcStore` and `MemoryStore`).
+- `p.uuid` is the last sort key. Rows whose id is not a UUID are never listed.
+- A missing `bsp_su_seen` (SQLState 42S02) says to update the game servers. The console lines no longer name each player.
+- `offline.js`:
+  - A re-read reads back every page shown (up to 1,000 rows), so SHOW MORE past 200 no longer falls back.
+  - SHOW MORE is refused while a read runs, gives way to a newer read, and starts 5 rows back so nobody is skipped when players log on between pages.
+  - The search's words take effect only when its read starts (`listQ` is the list's own words).
+  - A read says it is under way.
+  - After a leave only the cards on screen are read again, and records nobody listed or looked at for 10 minutes are let go.
+- The offline card is not rebuilt while a field in it is typed in; only the place box and the last-seen line are.
+- `map.js`:
+  - A TOTEMS place clears the offline choice and its pin.
+  - An offline spot waits 10 minutes for a slow map, not 15 s.
+  - The pin's icon address is a checked UUID, escaped.
+  - Map labels are read back through an inert `DOMParser` (was a detached `div`).
+
+**Tests:**
+- GameTests (`LastSeenGameTests`, 4 new):
+  - An arrival a second before the 5-minute write still gets its own row over a late logout.
+  - A stop while writes fail writes everyone, and a logout after the storage closed is not kept.
+  - One refused row never holds up the other and is dropped after 5 refusals, then writes go straight through.
+  - A machine's fake player with its owner's UUID never writes over the owner's place.
+  - **266/266**.
+- JUnit (`OfflinePlayersTest`: the signed-copy test reworked, plus 3 new; `PanelServerTest`: `map.js` sets markup only from its fixed icons):
+  - Copies not of that very row (name, time, place) are not believed.
+  - A far-future row never sorts first.
+  - An empty key believes nothing.
+  - At most 50 rows whatever is asked.
+  - A non-UUID row is never listed.
+  - A missing table says to update.
+  - **132/132**.
+- Checked again in the browser pane with `--demo` and the stand-in map:
+  - SHOW MORE to 92, then a re-read, keeps 92.
+  - During the search's wait the header keeps the old words; then "3 match “ju”".
+  - Juniper7's card reads as before.
+  - A TOTEMS place (from the TOTEMS tab) clears the offline card and pin and puts its own pin.
+
+Not covered: MySQL itself (`JdbcBackend.saveSeen`'s newer-wins guard and `JdbcStore`'s join, ordering and `LIKE` run only against the memory tables), real BlueMap's pin markup, and the in-flight re-flush (unreachable with the tests' synchronous storage).
+
+## 2026-11-22: release 0.18.0 / staff panel 0.7.0 (SU-119)
+
+Mod **0.18.0** (`gradle.properties`; the network protocol stays 10, so players need no new modpack) and panel **0.7.0**, with both CHANGELOG version blocks. The setup guide (and its User Notes copy) names the new jars, and its protocol line is brought up to date (0.17.0 and newer speak 10). Jars: `build/libs/bsp-server-utilities-0.18.0.jar` (reference map complete, `tools/check_refmap.py`) and `staff-panel/build/libs/bsp-staff-panel-0.7.0.jar` (JUnit 132/132). GameTests 266/266 on this code.
+
+Install, in order:
+1. `bsp-server-utilities-0.18.0.jar` on every game server (the players' modpack may stay on 0.17.0).
+2. Once one server has started with it: `SHOW TABLES IN bsp LIKE 'bsp_su_seen';` shows one row, then `GRANT SELECT ON bsp.bsp_su_seen TO 'bsp_panel'@'<host>';` on `192.168.1.25` in `sudo mariadb`.
+3. Panel 0.7.0: Stop, upload `bsp-staff-panel-0.7.0.jar`, delete the old `bsp-staff-panel.jar`, rename the new one to `bsp-staff-panel.jar`, Start.
+
+Then the checks in the SU-114, SU-116 and SU-117 sections above.
