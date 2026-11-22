@@ -1125,10 +1125,14 @@ public final class JdbcBackend implements StorageBackend {
         }
     }
 
+    /** At most this long for one player's last place (the staff window then says "offline"). */
+    static final int SEEN_READ_TIMEOUT_S = 5;
+
     @Override
     @Nullable
     public Seen loadSeen(UUID player) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement("SELECT name, at_ms, server, dimension, x, y, z, kind, line FROM " + prefix + "seen WHERE uuid = ?")) {
+            ps.setQueryTimeout(SEEN_READ_TIMEOUT_S); // a stalled read never holds up the staff window it is read for (audit of SU-121)
             ps.setString(1, player.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {

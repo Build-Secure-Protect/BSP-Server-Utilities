@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Seen Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The refined page for "last seen" in the staff window: look B of set AT (D682) with D672 to D681. Sample data; names are made up. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ul{ margin:0; padding-left:20px; } ul li{ margin-bottom:6px; max-width:88ch; font-size:13px; }
+.scene{ display:flex; flex-direction:column; gap:6px; flex:none; }
+.lab{ font-size:12px; font-weight:600; color:var(--fg); }
+.ref{ font:600 11px var(--mono); color:var(--acc); }
+.states{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.states th{ text-align:left; font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line); color:var(--fg); }
+.states td{ padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--muted); }
+.states td code{ font:11.5px var(--mono); color:var(--fg); }
+.tw{ overflow-x:auto; }
+
+/* ---------- the game ---------- */
+.world{ background:linear-gradient(160deg,#41603a,#2b3f27 45%,#4a6d9c); position:relative; overflow:hidden; border-radius:3px; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(16,16,16,.55); }
+.world > *{ position:absolute; }
+.hotbar{ left:50%; transform:translateX(-50%); bottom:6px; width:182px; height:22px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #555; }
+.pop{ background:#10151C; color:#E6EAF2; box-sizing:border-box; display:flex; flex-direction:column; gap:7px; padding:10px 12px; font-size:11px; line-height:1.35; box-shadow:0 0 0 1.5px #B58CFF; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; color:#B58CFF; white-space:nowrap; }
+.mm{ color:#9AA3B5; } .rr{ color:#FF5A4F; } .dd{ color:#6b7180; }
+.xs{ font-size:8px; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.hl{ display:flex; align-items:baseline; gap:6px; min-width:0; flex:1; }
+.hl .xs{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.key{ height:16px; padding:0 7px; display:grid; place-items:center; font:700 8px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; box-sizing:border-box; white-space:nowrap; background:transparent; box-shadow:inset 0 0 0 1px #2A2F3A; color:#9AA3B5; flex:none; }
+.key.v{ background:#B58CFF; color:#10151C; box-shadow:none; height:18px; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; }
+.inp{ height:18px; background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; font-size:9.5px; padding:0 6px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; flex:1; min-width:0; }
+.thread{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:flex-end; gap:5px; overflow:hidden; }
+.divd{ display:flex; align-items:center; gap:6px; font-size:8px; color:#9AA3B5; letter-spacing:.06em; text-transform:uppercase; }
+.divd::before,.divd::after{ content:""; flex:1; height:1px; background:#2A2F3A; }
+.bub{ max-width:78%; padding:4px 7px; font-size:9.5px; line-height:1.35; box-sizing:border-box; }
+.bub .who{ display:block; font-size:7.5px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:1px; color:#B58CFF; }
+.bub.st{ align-self:flex-end; text-align:right; background:#1d1830; box-shadow:inset -2px 0 0 #B58CFF; }
+.bub.pl{ align-self:flex-start; background:#12261f; box-shadow:inset 2px 0 0 #19D3B0; }
+.bub.pl .who{ color:#19D3B0; }
+.bub.old{ opacity:.6; }
+.tip{ background:#100010; box-shadow:inset 0 0 0 1px #5000ff; color:#fff; font-size:8.5px; line-height:1.45; padding:4px 6px; white-space:nowrap; z-index:2; }
+.tip .g{ color:#AAAAAA; }
+.cursor{ width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:9px solid #fff; transform:rotate(-30deg); z-index:3; }
+/* look B: a second head line */
+.sub2{ font-size:8.5px; color:#9AA3B5; margin-top:-4px; display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; }
+.chip{ font:700 7px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; padding:1px 5px; background:#2A2F3A; color:#c9ced8; flex:none; }
+/* look C: a strip at the top of the thread */
+.strip{ background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A, inset 2px 0 0 #6b7180; padding:5px 8px; font-size:8.5px; line-height:1.45; color:#c9ced8; }
+.strip b{ color:#E6EAF2; font-weight:600; }
+.strip .dd{ display:block; }
+</style>
+<style>
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; font-size:13px; } ol b{ color:var(--fg); }
+.pop.sm{ height:160px; }
+.hdline{ display:flex; align-items:baseline; gap:6px; min-width:0; flex:1; }
+.sub2 .gry{ overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.sub2 .rr{ flex:none; }
+.sub2.hot{ outline:1px dotted #5d4a86; outline-offset:1px; }
+.gu{ font:10.5px var(--mono); color:var(--muted); }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>Last seen in the staff window: the refined page</h1>
+<p class="lede">Look B of set AT (D682) with your defaults D672 to D681, drawn with every state. Each R point under a drawing is a detail to confirm. Answer "Confirmed, defaults", or change any by its number. Shown at 1.5 times over a 480 × 270 GUI window, the window 200 GUI px wide as built. Sample data: every name and line is made up.</p></header>
+
+<!-- ===================== R1 ===================== -->
+<section><h2>R1. The line under the name</h2>
+<div class="card"><p>Three offline players: logged off under a day ago in the nether, yesterday in the Overworld, and a long name whose server stopped without recording a logout.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R1a. Logged off 3 h ago, in the nether</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl">Pebble</span><span class="key">Close</span></div>
+<div class="sub2"><span class="chip">Offline</span><span class="gry">last seen 3 h ago (21:04) on BSP-Main · nether</span></div>
+<div class="thread">
+<div class="bub st old"><span class="who">Mrgregles · 3 Nov 10:12</span>Your claim is too close to spawn; please move it.</div>
+<div class="divd">Ended by Mrgregles · 3 Nov 11:40</div>
+<div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Pebble: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 13:30 · Ava_Builds · not seen yet</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">R1b. Yesterday, in the Overworld (no world word)</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl">Wren_88</span><span class="key">Close</span></div>
+<div class="sub2"><span class="chip">Offline</span><span class="gry">last seen yesterday (22:41) on Frostwarf</span></div>
+<div class="thread">
+<div class="bub pl"><span class="who">Wren_88 · 21 Nov 22:30</span>is there a way to get my home back</div>
+<div class="bub st"><span class="who">Mrgregles · 21 Nov 22:36</span>Yes: we will look in the morning and write here.</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Wren_88: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 21 Nov 22:30 · Wren_88</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">R1c. A long name; no logout recorded; the grey part cut</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl">Kestrel_Mountain</span><span class="key">Close</span></div>
+<div class="sub2"><span class="chip">Offline</span><span class="gry">last seen yesterday (19:02) on BSP-Creative · twilight forest</span><span class="rr">· no logout recorded</span></div>
+<div class="thread">
+<div class="bub pl"><span class="who">Kestrel_Mountain · 21 Nov 18:31</span>someone griefed my farm</div>
+<div class="bub st"><span class="who">Mrgregles · 21 Nov 18:40</span>Thanks, we are looking. Can you say where it is?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Kestrel_Mountain: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 21 Nov 18:31 · Kestrel_Mountain</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ol>
+<li><span class="ref">R1</span> <b>The line</b> (D672, D674, D682): only in the staff window (<code>/su talk &lt;player&gt;</code>), only while the player is offline and a record was found. A grey OFFLINE chip, then the words in the small grey of today's "online · Frostwarf". When: "1 min ago (21:04)" to "59 min ago", "3 h ago (21:04)" under a day, "yesterday (22:41)" for the calendar day before, "4 d ago" to 13 days, then "18 Oct" ("18 Oct 2025" in an earlier year). Times are in the staff member's own clock. Then "on BSP-Main" (the server's name, as in <code>su status</code>) and the world, left out for the Overworld: "nether", "end", or a modded world's name with its underscores as spaces ("twilight forest"). A record written while online that is still the newest (its server stopped without a logout) ends with "· no logout recorded" in red, which is always kept. When the line is too wide, the grey part is cut with "…" (R1c), and the hover has all of it. The "3 h ago" moves on while the window stays open.</li>
+</ol>
+</div></section>
+
+<!-- ===================== R2 ===================== -->
+<section><h2>R2. The hover</h2>
+<div class="card"><p>The pointer anywhere on the line shows the whole of it with the block, as the game's own tooltips look.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R2a. A logout</span>
+<div class="world" style="width:480px;height:220px">
+<div class="pop sm" style="left:90px;top:22px;width:300px">
+<div class="hd"><span class="ttl">Pebble</span><span class="key">Close</span></div>
+<div class="sub2 hot"><span class="chip">Offline</span><span class="gry">last seen 3 h ago (21:04) on BSP-Main · nether</span></div>
+<div class="thread"><div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div></div>
+</div>
+<div class="cursor" style="left:230px;top:62px"></div>
+<div class="tip" style="left:236px;top:72px">Last seen 3 h ago · 22 Nov 21:04<br><span class="g">Logged off on BSP-Main · nether<br>Block 120, 64, -30</span></div>
+</div></div>
+
+<div class="scene"><span class="lab">R2b. No logout recorded</span>
+<div class="world" style="width:480px;height:220px">
+<div class="pop sm" style="left:90px;top:22px;width:300px">
+<div class="hd"><span class="ttl">Kestrel_Mountain</span><span class="key">Close</span></div>
+<div class="sub2 hot"><span class="chip">Offline</span><span class="gry">last seen yesterday (19:02) on BSP-Creative · twilight forest</span><span class="rr">· no logout recorded</span></div>
+<div class="thread"><div class="bub st"><span class="who">Mrgregles · 21 Nov 18:40</span>Thanks, we are looking. Can you say where it is?</div></div>
+</div>
+<div class="cursor" style="left:200px;top:62px"></div>
+<div class="tip" style="left:150px;top:72px">Last seen yesterday · 21 Nov 19:02<br><span class="g">Last record on BSP-Creative · twilight forest<br>Block -812, 70, 2204<br></span><span class="rr">The server stopped without recording a logout:</span><br><span class="rr">they may have stayed up to 5 minutes longer.</span></div>
+</div></div>
+</div>
+<ol start="2">
+<li><span class="ref">R2</span> <b>The hover</b> (D673): over the whole line, chip included. The first line is the time with the full date ("22 Nov 21:04"). The second is "Logged off on SERVER · world" (the Overworld named here as "overworld"), or "Last record on ..." when no logout was recorded. The third is "Block x, y, z". A missing logout adds the two red lines of R2b.</li>
+</ol>
+</div></section>
+
+<!-- ===================== R3 ===================== -->
+<section><h2>R3. The other states</h2>
+<div class="card"><p>No record, no answer from the database (or no shared storage), and an online player for comparison.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R3a. No record yet (hovered)</span>
+<div class="world" style="width:480px;height:220px">
+<div class="pop sm" style="left:90px;top:22px;width:300px">
+<div class="hd"><span class="ttl">Oldtimer_Jo</span><span class="key">Close</span></div>
+<div class="sub2 hot"><span class="chip">Offline</span><span class="gry">last seen: not recorded</span></div>
+<div class="thread"><div class="divd">Ended by Mrgregles · 2 Sep 09:15</div></div>
+</div>
+<div class="cursor" style="left:180px;top:62px"></div>
+<div class="tip" style="left:186px;top:72px"><span class="g">No place is recorded for them yet:<br>it is written at their next logout.</span></div>
+</div></div>
+
+<div class="scene"><span class="lab">R3b. The database did not answer, or no shared storage</span>
+<div class="world" style="width:480px;height:220px">
+<div class="pop sm" style="left:90px;top:22px;width:300px">
+<div class="hd"><div class="hdline"><span class="ttl">Pebble</span><span class="xs mm">offline</span></div><span class="key">Close</span></div>
+<div class="thread"><div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div></div>
+</div></div></div>
+
+<div class="scene"><span class="lab">R3c. Online (unchanged)</span>
+<div class="world" style="width:480px;height:220px">
+<div class="pop sm" style="left:90px;top:22px;width:300px">
+<div class="hd"><div class="hdline"><span class="ttl">Wren_88</span><span class="xs mm">online · Frostwarf</span></div><span class="key">Close</span></div>
+<div class="thread"><div class="bub pl"><span class="who">Wren_88 · 15:42</span>thank you so much</div></div>
+</div></div></div>
+</div>
+<ol start="3">
+<li><span class="ref">R3</span> <b>The other states</b> (D675, D676): a player with no record shows the chip and "last seen: not recorded", with the hover of R3a. When the database did not answer, or on a server without shared storage, the head is today's one line, "offline". An online player, here or on another server, keeps "online · Frostwarf" and no database read is made.</li>
+<li><span class="ref">R4</span> <b>The window</b> (D682): the second line is 8 GUI px tall, and the conversation is 8 GUI px shorter only while it shows. The window's height is otherwise as built (as tall as the screen allows, up to 167). The line is read once as the window opens (D677). If the player logs on while it is open, the head stays until the window is opened again, as "online · ..." does today.</li>
+<li><span class="ref">R5</span> <b>The server</b> (D677 to D680): when the player is not online on any server, the server reads the player's row in <code>bsp_su_seen</code> together with the conversation, on the storage worker (one query). It sends how long ago (its own now minus the row's time, never below 0), the server, the world, the block, and whether it was a logout. The staff member's client turns "how long ago" into its own clock time, so a client clock that is off still says "3 h ago". The row is trusted as the mod's other shared tables are; the signed copy stays the panel's (D679). A read that fails sends "no answer", which is R3b. The window packet changes, so this is protocol 11 (D680): every server needs the new jar and players the new modpack together. Mod 0.19.0; the panel is unchanged at 0.7.0 (D681).</li>
+</ol>
+</div></section>
+
+<!-- ===================== R6 ===================== -->
+<section><h2>R6. The words</h2>
+<div class="card"><p>Every string, through the lang generator (<code>tools/gen_lang.py</code>), keys under <code>gui.bsp_server_utilities.talk.window.</code>.</p>
+<div class="tw"><table class="states">
+<tr><th>Key</th><th>English</th></tr>
+<tr><td><code>seen.chip</code></td><td>OFFLINE</td></tr>
+<tr><td><code>seen.line</code></td><td>last seen %s on %s</td></tr>
+<tr><td><code>seen.min</code> / <code>seen.hours</code></td><td>%s min ago (%s) / %s h ago (%s)</td></tr>
+<tr><td><code>seen.yesterday</code> / <code>seen.days</code></td><td>yesterday (%s) / %s d ago</td></tr>
+<tr><td><code>seen.no_logout</code></td><td>· no logout recorded</td></tr>
+<tr><td><code>seen.none</code> / <code>seen.none_hover</code></td><td>last seen: not recorded / No place is recorded for them yet: it is written at their next logout.</td></tr>
+<tr><td><code>seen.hover_when</code></td><td>Last seen %s · %s</td></tr>
+<tr><td><code>seen.hover_logout</code> / <code>seen.hover_record</code></td><td>Logged off on %s / Last record on %s</td></tr>
+<tr><td><code>seen.hover_block</code></td><td>Block %s, %s, %s</td></tr>
+<tr><td><code>seen.hover_crash</code></td><td>The server stopped without recording a logout: they may have stayed up to 5 minutes longer.</td></tr>
+<tr><td><code>seen.nether</code> / <code>seen.end</code> / <code>seen.overworld</code></td><td>nether / end / overworld</td></tr>
+</table></div>
+</div></section>
+</div></body></html>

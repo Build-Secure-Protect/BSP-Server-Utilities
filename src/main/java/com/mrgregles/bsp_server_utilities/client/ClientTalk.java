@@ -65,10 +65,13 @@ public final class ClientTalk {
     private static com.mrgregles.bsp_server_utilities.network.TalkViewPacket view;
     private static final java.util.List<com.mrgregles.bsp_server_utilities.network.TalkViewPacket.Entry> LINES = new java.util.ArrayList<>();
     private static String refused = "";
+    /** When the window's packet arrived, by this computer's clock: an offline player's "last seen" counts on from it (SU-121). */
+    private static long viewAt;
 
     /** The server opened the window with its thread: an open window shows it in place, else the window opens over what is open. */
     public static void acceptView(com.mrgregles.bsp_server_utilities.network.TalkViewPacket p) {
         view = p;
+        viewAt = System.currentTimeMillis();
         LINES.clear();
         LINES.addAll(p.lines());
         refused = "";
@@ -125,6 +128,11 @@ public final class ClientTalk {
     @org.jetbrains.annotations.Nullable
     public static com.mrgregles.bsp_server_utilities.network.TalkViewPacket view() {
         return view;
+    }
+
+    /** When the open window's packet arrived (this computer's clock, ms). */
+    public static long viewAt() {
+        return viewAt;
     }
 
     public static java.util.List<com.mrgregles.bsp_server_utilities.network.TalkViewPacket.Entry> lines() {

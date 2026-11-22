@@ -6,6 +6,7 @@ import com.mrgregles.bsp_server_utilities.access.StaffDirectory;
 import com.mrgregles.bsp_server_utilities.log.ActionLog;
 import com.mrgregles.bsp_server_utilities.log.LogEntry;
 import com.mrgregles.bsp_server_utilities.storage.Storage;
+import com.mrgregles.bsp_server_utilities.storage.StorageBackend;
 import com.mrgregles.bsp_server_utilities.web.WebActions;
 import com.mrgregles.bsp_server_utilities.web.WebChat;
 import net.minecraft.server.MinecraftServer;
@@ -224,6 +225,34 @@ public final class TalkService {
     /** A player's conversations of the last 90 days with their lines (the staff window, the panel). */
     public static CompletableFuture<TalkBook.History> history(MinecraftServer server, UUID player) {
         return run(server, st -> TalkBook.history(st, player));
+    }
+
+    /**
+     * The staff window's read (SU-120; owner decisions D677, D683 R5): the player's conversations and, when {@code readSeen}
+     * and the storage is shared, their row in {@code <prefix>seen}, in one step on the storage worker. {@code seenRead} is
+     * false when the row was not asked for, there is no shared storage, or its read failed (the conversation is still shown).
+     */
+    public record StaffWindow(TalkBook.History history, @Nullable StorageBackend.Seen seen, boolean seenRead) {
+    }
+
+    public static CompletableFuture<StaffWindow> staffWindow(MinecraftServer server, UUID player, boolean readSeen) {
+        return run(server, st -> {
+            TalkBook.History h = TalkBook.history(st, player);
+            if (!readSeen || !(st instanceof StorageBackend b)) {
+                return new StaffWindow(h, null, false);
+            }
+            try {
+                return new StaffWindow(h, b.loadSeen(player), true);
+            } catch (Exception e) {
+                BSPServerUtilities.LOGGER.debug("BSP-Server Utilities: where {} was last seen could not be read: {}", player, e.toString());
+                return new StaffWindow(h, null, false);
+            }
+        });
+    }
+
+    /** This mod's now for messages (tests move it). */
+    public static long now() {
+        return clock.getAsLong();
     }
 
     /** Every open conversation (the staff's {@code /su talks}). */

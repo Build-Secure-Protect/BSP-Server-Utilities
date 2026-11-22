@@ -78,14 +78,14 @@ You need these files. They are already built on your Mac:
 
 | File | Where it is on your Mac | Where it goes |
 |---|---|---|
-| `bsp-server-utilities-0.18.0.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack (0.17.0 there still joins: the same protocol) |
+| `bsp-server-utilities-0.19.0.jar` | `Github/BSP-Server Utilities/build/libs/` | every game server's `mods/`, and the players' modpack (**a new modpack**: 0.19.0 speaks protocol 11, so 0.18.0 and older no longer join) |
 | `bsp-core-1.19.2.jar` (**not** the `-slim` one: it has no database driver) | `Github/BSP-Core/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-inventorysync-0.8.1.jar` | `Github/BSP-InventorySync/build/libs/` | every game server's `mods/`, and the modpack |
 | `bsp-teleport-3.9.0.jar` | `Github/BSP-Teleport/build/libs/` | every game server's `mods/` |
 | `bsp-staff-panel-0.7.0.jar` | `Github/BSP-Server Utilities/staff-panel/build/libs/` | the panel's own server (part 6) |
 
 1. **The players' modpack.** A player can join only when their game's BSP-Server Utilities and BSP-Core speak the
-   same network protocol as the server, exactly: BSP-Server Utilities 0.17.0 and newer speak protocol 10 (0.15.0 to 0.16.x: 9; 0.12.0 to 0.14.x: 8), BSP-Core
+   same network protocol as the server, exactly: BSP-Server Utilities 0.19.0 and newer speak protocol 11 (0.17.0 to 0.18.x: 10; 0.15.0 to 0.16.x: 9; 0.12.0 to 0.14.x: 8), BSP-Core
    1.19.0 and newer protocol 15 (1.18.x: 14). Anyone else is turned away, told the mod's version differs.
    - First look at what you have now: the `bsp-` file names in a game server's `mods/` and in the published pack.
      If both already have these versions (or others with the same protocols), there is nothing to do here.
@@ -594,6 +594,9 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
   LIKE 'bsp_su_seen';` shows one row first). Then update the panel as above. Without the grant the offline players are
   still listed by name, with a line saying where they logged off cannot be read. Players who last left before 0.18.0
   show "not recorded" until their next logout.
+- **Updating to BSP-Server Utilities 0.19.0 (last seen in the in-game staff window).** No panel change and no new
+  grant: the panel stays 0.7.0. **Players need the new modpack** (the protocol is 11), so put
+  `bsp-server-utilities-0.19.0.jar` into the modpack and on every game server at the same time, as in part 1.
 - **Restarts.** The panel, Redis, MariaDB and the game servers can each be restarted on their own: each reconnects by
   itself (Redis within 30 seconds). A game server that starts before MariaDB answers waits for it (its console says
   `storage connected` when it does) and refuses banned players from its own copy of the bans meanwhile.

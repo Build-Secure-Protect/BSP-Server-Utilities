@@ -502,6 +502,9 @@ public final class MemoryBackend implements StorageBackend {
     }
 
     private final Map<UUID, Seen> seenRows = new HashMap<>();
+    /** Tests: reads of one player's row, and whether they fail while everything else works. */
+    public final java.util.concurrent.atomic.AtomicInteger seenReads = new java.util.concurrent.atomic.AtomicInteger();
+    public volatile boolean failSeenReads;
     /** Tests: players whose row the table refuses (one bad row among good ones); a batch holding one is refused whole, as a database's is. */
     public final java.util.Set<UUID> refuseSeen = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -525,6 +528,10 @@ public final class MemoryBackend implements StorageBackend {
     @Nullable
     public synchronized Seen loadSeen(UUID player) throws Exception {
         check();
+        seenReads.incrementAndGet();
+        if (failSeenReads) {
+            throw new java.sql.SQLException("seen table not readable (test)");
+        }
         return seenRows.get(player);
     }
 

@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-22
+
+When and where an offline player was last seen, in the in-game staff window of private staff messages. **The network protocol is 11: players need the new modpack**, and every server needs 0.19.0 at the same time. The staff web panel is unchanged (0.7.0) and there is no new database grant.
+
+### Added
+- The staff window of private staff messages (`/su talk <player>`) says when and where an offline player was last seen, from the shared table `bsp_su_seen`: how long ago, the server and the world, whether the server recorded a logout, or that no place is recorded yet. Without shared storage, or when the database does not answer, it says "offline" as before. Hovering the line shows the date, the place and the block.
+
 ## [0.18.0] - 2026-11-22
 
 Where each player was last seen, for the staff web panel's offline players (panel 0.7.0). A server jar only: the network protocol is still 10, so players need no new modpack. Install on every game server, then the one new database grant and panel 0.7.0 (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.7.0).

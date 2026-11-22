@@ -6,6 +6,7 @@ import com.mrgregles.bsp_server_utilities.network.TalkAnswerPacket;
 import com.mrgregles.bsp_server_utilities.network.TalkLinePacket;
 import com.mrgregles.bsp_server_utilities.network.TalkViewPacket;
 import com.mrgregles.bsp_server_utilities.storage.Storage;
+import com.mrgregles.bsp_server_utilities.storage.StorageBackend;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -50,21 +51,39 @@ public final class TalkWindows {
         });
     }
 
-    /** The staff window for a player (refused for staff by the command, D641). */
+    /**
+     * The staff window for a player (refused for staff by the command, D641). For a player online nowhere, where they were
+     * last seen is read with their conversations (SU-120; D672 to D683); one who logs on during the read shows as online.
+     */
     public static CompletableFuture<TalkViewPacket> openFor(ServerPlayer staff, UUID player, String name) {
         MinecraftServer server = staff.server;
-        String where = where(server, player);
-        return TalkService.history(server, player).thenApply(h -> {
+        String before = where(server, player);
+        return TalkService.staffWindow(server, player, before.isEmpty()).thenApply(w -> {
+            TalkBook.History h = w.history();
+            String where = before.isEmpty() ? where(server, player) : before;
+            TalkViewPacket.Place last = where.isEmpty() ? place(w, TalkService.now()) : TalkViewPacket.Place.NONE;
             TalkStore.Talk open = h.open();
             String shown = h.talks().isEmpty() ? name : h.talks().get(0).name();
             TalkViewPacket v = new TalkViewPacket(true, player, shown, where, open == null ? 0 : open.openedAt(), open == null ? "" : open.openedBy(),
-                    open == null || !open.untold(), entries(h.lines()));
+                    open == null || !open.untold(), entries(h.lines()), last);
             if (!staff.hasDisconnected()) {
                 WATCHING.put(staff.getUUID(), new Watch(player, shown, true));
                 TalkDelivery.send(staff, v);
             }
             return v;
         });
+    }
+
+    /** Where an offline player was last seen, as the window shows it (D675, D676): not known, not recorded, or the row. */
+    static TalkViewPacket.Place place(TalkService.StaffWindow w, long now) {
+        if (!w.seenRead()) {
+            return TalkViewPacket.Place.NONE;
+        }
+        StorageBackend.Seen r = w.seen();
+        if (r == null) {
+            return TalkViewPacket.Place.NO_RECORD;
+        }
+        return TalkViewPacket.Place.found(now - r.atMs(), r.server(), r.dimension(), r.x(), r.y(), r.z(), StorageBackend.SEEN_LOGOUT.equals(r.kind()));
     }
 
     /** Where the player is on the network: this server's name, another's, or empty when offline. */

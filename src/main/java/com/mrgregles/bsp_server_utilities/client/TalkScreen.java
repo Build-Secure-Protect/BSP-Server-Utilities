@@ -3,6 +3,7 @@ package com.mrgregles.bsp_server_utilities.client;
 import com.mrgregles.bsp_server_utilities.network.ServerUtilsNetwork;
 import com.mrgregles.bsp_server_utilities.network.TalkActionPacket;
 import com.mrgregles.bsp_server_utilities.network.TalkViewPacket;
+import com.mrgregles.bsp_server_utilities.talk.SeenWords;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
@@ -10,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -30,16 +32,20 @@ import java.util.Locale;
  * the conversation" and the window closes by itself after 5 seconds.</li>
  * <li>Staff's, for a player: the name and where they are, staff lines on the right with their writers, the player's on the
  * left, earlier conversations of the last 90 days dimmed above "Ended by ..." dividers, "Open since 14:02 · who · not seen
- * yet" and END CONVERSATION, which turns into a red SURE? END for 3 seconds.</li>
+ * yet" and END CONVERSATION, which turns into a red SURE? END for 3 seconds. For a player online nowhere a second head line
+ * says where they were last seen (SU-121; D672 to D683, {@code tools/preview/lastseen_refined.html}): a grey OFFLINE chip,
+ * "last seen 3 h ago (21:04) on BSP-Main · nether", a red "· no logout recorded" that is always kept, the place and block
+ * on hover; the conversation is 8 GUI px shorter then.</li>
  * </ul>
  * Newest at the foot, older up the wheel; lines arrive live from the server ({@link ClientTalk}). The box takes 256
  * characters with a count from 200; Enter or SEND sends; a refused line shows its reason in red under the box. Keys are
  * drawn by hand and act on release; key presses stay inside ({@link ScreenKeys}); Esc or CLOSE goes back.
  */
 public class TalkScreen extends Screen {
-    static final int W = 200, MAX_H = 167, MIN_H = 120, PAD = 8, KEY_H = 12, BOX_H = 16, SEND_W = 36, MAX_TEXT = 256, COUNT_FROM = 200;
+    static final int W = 200, MAX_H = 167, MIN_H = 120, PAD = 8, KEY_H = 12, BOX_H = 16, SEND_W = 36, MAX_TEXT = 256, COUNT_FROM = 200, SEEN_H = 8;
     private static final float SMALL = 0.75f;
     private static final long ARM_MS = 3_000L, CLOSE_AFTER_MS = 5_000L;
+    private static final int CHIP_INK = 0xFFC9CED8;
     private static final int STAFF_BG = 0xFF1D1830, PLAYER_BG = 0xFF12261F, OLD_BG = 0xFF15171D, OLD_INK = 0xFF6B7180, RED = 0xFFFF5A4F, ARMED = 0xFFD63B2F;
     private static final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT), DAY = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.ROOT);
 
@@ -191,17 +197,20 @@ public class TalkScreen extends Screen {
         String close = Tr.t("talk.window.close");
         int cw = Ui.width(f, close, SMALL) + 12, cx = x + W - PAD - cw;
         String title = v.staff() ? v.name() : Tr.t("talk.window.title");
-        String sub = v.staff() ? (v.where().isEmpty() ? Tr.t("talk.window.offline") : Tr.t("talk.window.online", v.where())) : "";
-        Component t = Component.literal(Ui.fit(f, title.toUpperCase(Locale.ROOT), W - 2 * PAD - cw - 50, 1f)).withStyle(ChatFormatting.BOLD);
+        boolean seenLine = seenLine(v);
+        String sub = !v.staff() || seenLine ? "" : v.where().isEmpty() ? Tr.t("talk.window.offline") : Tr.t("talk.window.online", v.where());
+        int titleRoom = sub.isEmpty() ? cx - (x + PAD) - 4 : W - 2 * PAD - cw - 50; // the whole width to CLOSE when nothing sits beside it (audit of SU-121)
+        Component t = Component.literal(Ui.fit(f, title.toUpperCase(Locale.ROOT), titleRoom, 1f)).withStyle(ChatFormatting.BOLD);
         Ui.text(g, f, t, x + PAD, y + PAD, Ui.VIOLET, 1f);
         if (!sub.isEmpty()) {
             int sx = x + PAD + f.width(t) + 6;
             Ui.text(g, f, Ui.fit(f, sub, cx - sx - 4, 0.6f), sx, y + PAD + 2, Ui.MUTED, 0.6f);
         }
         ghostKey(g, f, cx, y + PAD - 2, cw, close, mouseX, mouseY, this::onClose);
+        List<FormattedCharSequence> tip = seenLine ? drawSeen(g, f, v.last(), x + PAD, y + PAD + 12, W - 2 * PAD, mouseX, mouseY) : List.of();
 
         // the thread, newest at the foot
-        int areaTop = y + PAD + 14, areaBottom = boxY() - 4, areaH = areaBottom - areaTop;
+        int areaTop = y + PAD + 14 + (seenLine ? SEEN_H : 0), areaBottom = boxY() - 4, areaH = areaBottom - areaTop;
         List<Item> items = items(f, v, lines);
         int total = 0;
         for (Item it : items) {
@@ -314,6 +323,90 @@ public class TalkScreen extends Screen {
             Ui.text(g, f, fl.get(i), x + PAD, ly, footInk, 0.6f);
             ly += 6;
         }
+        if (!tip.isEmpty()) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 400);
+            g.renderTooltip(f, tip, mouseX, mouseY);
+            g.pose().popPose();
+        }
+    }
+
+    // ------------------------------------------------------------------ last seen (SU-121)
+
+    /** The second head line shows for staff when the player is online nowhere and their place is known or known to be missing. */
+    private static boolean seenLine(TalkViewPacket v) {
+        return v.staff() && v.where().isEmpty() && v.last() != null && v.last().state() != TalkViewPacket.Place.UNKNOWN;
+    }
+
+    /** "3 h ago (21:04)", "yesterday (22:41)", "4 d ago", "18 Oct". */
+    private static String whenWords(SeenWords.When w) {
+        return switch (w.step()) {
+            case MINUTES -> Tr.t("talk.window.seen.min", w.n(), w.clock());
+            case HOURS -> Tr.t("talk.window.seen.hours", w.n(), w.clock());
+            case YESTERDAY -> Tr.t("talk.window.seen.yesterday", w.clock());
+            case DAYS -> Tr.t("talk.window.seen.days", w.n());
+            case DATE -> w.date();
+        };
+    }
+
+    /** The hover's "3 h ago", "yesterday", "4 d ago", "18 Oct". */
+    private static String agoWords(SeenWords.When w) {
+        return switch (w.step()) {
+            case MINUTES -> Tr.t("talk.window.seen.ago_min", w.n());
+            case HOURS -> Tr.t("talk.window.seen.ago_hours", w.n());
+            case YESTERDAY -> Tr.t("talk.window.seen.ago_yesterday");
+            case DAYS -> Tr.t("talk.window.seen.days", w.n());
+            case DATE -> w.date();
+        };
+    }
+
+    /** "BSP-Main · nether"; the Overworld named only when {@code always} (the hover). */
+    private static String placeWords(TalkViewPacket.Place p, boolean always) {
+        String world = switch (SeenWords.world(p.dimension())) {
+            case OVERWORLD -> always ? Tr.t("talk.window.seen.overworld") : "";
+            case NETHER -> Tr.t("talk.window.seen.nether");
+            case END -> Tr.t("talk.window.seen.end");
+            case OTHER -> SeenWords.otherName(p.dimension());
+        };
+        return world.isEmpty() ? p.server() : p.server() + " \u00b7 " + world;
+    }
+
+    /** Draws the chip and the line at {@code (lx, ly)} within {@code lw}; the hover's lines when the pointer is on it. */
+    private List<FormattedCharSequence> drawSeen(GuiGraphics g, Font f, TalkViewPacket.Place p, int lx, int ly, int lw, int mx, int my) {
+        Component chip = Component.literal(Tr.t("talk.window.seen.chip")).withStyle(ChatFormatting.BOLD);
+        int chipW = (int) Math.ceil(f.width(chip) * 0.6f) + 6;
+        g.fill(lx, ly, lx + chipW, ly + 7, Ui.DIM);
+        Ui.text(g, f, chip, lx + 3, ly + 1, CHIP_INK, 0.6f);
+        int tx = lx + chipW + 4, room = lx + lw - tx;
+        List<Component> hover = new ArrayList<>();
+        if (p.found()) {
+            long seenAt = ClientTalk.viewAt() - p.ageMs(); // counts on while the window stays open
+            SeenWords.When w = SeenWords.when(seenAt, System.currentTimeMillis(), ZoneId.systemDefault());
+            String tail = p.logout() ? "" : Tr.t("talk.window.seen.no_logout");
+            int tailW = tail.isEmpty() ? 0 : Ui.width(f, tail, 0.6f);
+            String grey = Ui.fit(f, Tr.t("talk.window.seen.line", whenWords(w), placeWords(p, false)), room - (tailW > 0 ? tailW + 3 : 0), 0.6f);
+            Ui.text(g, f, grey, tx, ly + 1, Ui.MUTED, 0.6f);
+            if (!tail.isEmpty()) {
+                Ui.text(g, f, tail, tx + Ui.width(f, grey, 0.6f) + 3, ly + 1, RED, 0.6f);
+            }
+            hover.add(Component.literal(w.step() == SeenWords.Step.DATE ? Tr.t("talk.window.seen.hover_on", w.full()) // never the date twice (audit)
+                    : Tr.t("talk.window.seen.hover_when", agoWords(w), w.full())));
+            String place = placeWords(p, true);
+            hover.add(Component.literal(p.logout() ? Tr.t("talk.window.seen.hover_logout", place) : Tr.t("talk.window.seen.hover_record", place)).withStyle(ChatFormatting.GRAY));
+            hover.add(Component.literal(Tr.t("talk.window.seen.hover_block", p.x(), p.y(), p.z())).withStyle(ChatFormatting.GRAY));
+            if (!p.logout()) {
+                hover.add(Component.literal(Tr.t("talk.window.seen.hover_crash")).withStyle(s -> s.withColor(RED & 0xFFFFFF)));
+            }
+        } else {
+            Ui.text(g, f, Ui.fit(f, Tr.t("talk.window.seen.none"), room, 0.6f), tx, ly + 1, Ui.MUTED, 0.6f);
+            hover.add(Component.literal(Tr.t("talk.window.seen.none_hover")).withStyle(ChatFormatting.GRAY));
+        }
+        if (mx < lx || mx >= lx + lw || my < ly - 1 || my >= ly + SEEN_H) {
+            return List.of();
+        }
+        List<FormattedCharSequence> out = new ArrayList<>();
+        hover.forEach(c -> out.addAll(f.split(c, 300))); // the no-logout sentence in two lines, as drawn (audit)
+        return out;
     }
 
     /** Why a line or an end was refused, in words (each key written out, so the lang check sees it). */

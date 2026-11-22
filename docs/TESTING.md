@@ -1996,3 +1996,48 @@ Install, in order:
 3. Panel 0.7.0: Stop, upload `bsp-staff-panel-0.7.0.jar`, delete the old `bsp-staff-panel.jar`, rename the new one to `bsp-staff-panel.jar`, Start.
 
 Then the checks in the SU-114, SU-116 and SU-117 sections above.
+
+## 2026-11-22: last seen in the staff window, the server's side (SU-120)
+
+The staff window (`/su talk <player>`) for a player online on no server carries where they were last seen (owner decisions D672 to D683; `tools/preview/lastseen_refined.html`). The window packet `TalkViewPacket` gains the place (`Place`: not known, not recorded, or found with how long ago, server, dimension, block and whether it was a logout), so the network protocol is **11**. `TalkWindows.openFor` reads the conversations and the player's `bsp_su_seen` row in one storage step (`TalkService.staffWindow`). The client's line and hover come in SU-121: until then a client shows "offline" as before.
+
+GameTests **275/275** (`TalkLastSeenGameTests`, 9 new): `/su talk` for an offline player carries 3 h ago, the server, the nether and the block, as a logout; a record written while online says no logout; no row is "not recorded" after one read; a player online here is never looked up; a failed read still opens the conversation as plain offline; without shared storage it is plain offline and the shared table is untouched; a player who logs on during the read shows as online; a row ahead of the server's clock is 0 ago, and the player's own window never carries a place; the packet keeps the place, cuts the server to 64 and the dimension to 160 characters, and sends a negative age as 0.
+
+Untested: against real MySQL (the read is the existing `loadSeen`, by primary key); in a client (nothing on screen yet, SU-121); a player online on another server (read from the client check's list, as `where` always was; the GameTests use players on this server).
+
+## 2026-11-22: last seen in the staff window, the screen (SU-121)
+
+`client/TalkScreen` draws a second head line in the staff window for a player online nowhere (D682, D683 R1 to R4): a grey OFFLINE chip, then "last seen 3 h ago (21:04) on BSP-Main · nether" (the Overworld left out, a modded world by its name), a red "· no logout recorded" that is always kept while the grey part is cut with "…", or "last seen: not recorded". The thread is 8 GUI px shorter while the line shows. Hovering the line shows "Last seen 3 h ago · 22 Nov 21:04", "Logged off on BSP-Main · nether" (or "Last record on …"), "Block 120, 64, -30", and the red no-logout sentence; for no record, the sentence that the place is written at the next logout. The time counts on from when the window's packet arrived (`ClientTalk.viewAt`), less the server's age. The steps and world words are in `talk/SeenWords`; 20 lang keys `talk.window.seen.*` from `tools/gen_lang.py` (`tools/check_lang.py`: 0 missing).
+
+GameTests **277/277** (2 new in `TalkLastSeenGameTests`): minutes (at least 1, a moment ahead counts as now), hours under a day (also when it was the day before), yesterday, 4 and 13 days, then "8 Nov" and "18 Oct 2025"; the viewer's own calendar decides yesterday (the same moment is "2 d" in UTC and "yesterday" two hours west); the three vanilla worlds, and modded ones by their path with spaces.
+
+**Untested in a client.** To check in game, with two accounts (staff and a player) on 0.19.0 clients:
+1. The player logs off in the nether; staff run `/su talk <player>`: the second line reads "last seen 1 min ago (HH:MM) on <server> · nether", and after a few minutes with the window open it counts on.
+2. Hover the line: the full date, "Logged off on <server> · nether", the block where they stood.
+3. Kill the player's server process while they are on it (a test server), then `/su talk` from another server: the red "· no logout recorded" and the two-line red sentence in the hover.
+4. A player who has not logged off since 0.18.0 was installed: "last seen: not recorded" and its hover.
+5. A long name with a long server name and a modded world: the grey part ends in "…" and the red tail still shows.
+6. An online player: the head is "online · <server>" on one line, as before.
+
+## 2026-11-22: audit of last seen in the staff window (SU-122)
+
+A fresh read-only audit of SU-120 and SU-121 found no high-severity defect; every finding is fixed:
+1. A long offline name was cut in the head (the title kept room for the old "offline" beside it): the title has the whole width to CLOSE when nothing sits beside it, so "KESTREL_MOUNTAIN" shows whole.
+2. On the night the clocks go back, 24 h 20 min on one calendar day said "yesterday": the same calendar day is always "N h ago" (`SeenWords`, GameTest with Europe/London on 25 Oct 2026, plus the 59 min / 60 min edge).
+3. The no-logout sentence in the hover wrapped to three lines: the hover is 300 px wide, so it is two.
+4. Past 13 days the hover said the date twice: "Last seen 18 Oct 22:10" (new key `talk.window.seen.hover_on`).
+5. In the second or two after a player leaves a server, the window can show the older 5-minute row as "no logout recorded": documented in `docs/API.md` (opening it again shows the logout).
+6. A stalled read of `<prefix>seen` held up the whole window: the read gives up after 5 seconds (`JdbcBackend.SEEN_READ_TIMEOUT_S`) and the window says "offline". Untested against real MySQL.
+7. A test-only comment in `MemoryBackend` was moved back onto its field.
+
+GameTests **277/277**; `tools/check_lang.py` 0 missing. Still untested in a client (the checks in SU-121 above; for step 5 there, a 16-letter name now shows whole).
+
+## 2026-11-22: release 0.19.0 (SU-123)
+
+Mod **0.19.0** (`gradle.properties`), the `CHANGELOG.md` [0.19.0] block, and the setup guide (and its User Notes copy): the jar row names 0.19.0 and a new modpack, the protocol line says 0.19.0 and newer speak 11, and "Updating to BSP-Server Utilities 0.19.0" says what to do. The staff panel is unchanged (0.7.0), with no new grant. Jar: `build/libs/bsp-server-utilities-0.19.0.jar` (reference map complete, `tools/check_refmap.py`; it holds `talk/SeenWords` and the 21 `talk.window.seen.*` lines). GameTests 277/277 on this code.
+
+Install, all at once (protocol 11):
+1. Put `bsp-server-utilities-0.19.0.jar` into the players' modpack and publish it.
+2. Put it on every game server, replacing 0.18.0, and restart them. A 0.18.0 game is turned away, told the mod's version differs.
+
+Then the in-game checks in the SU-121 section above.

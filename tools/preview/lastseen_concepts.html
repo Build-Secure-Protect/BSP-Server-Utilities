@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Seen Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up set AT: "last seen" in the in-game staff window (/su talk <player>) for an offline player. Sample data; names are made up. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ul{ margin:0; padding-left:20px; } ul li{ margin-bottom:6px; max-width:88ch; font-size:13px; }
+.scene{ display:flex; flex-direction:column; gap:6px; flex:none; }
+.lab{ font-size:12px; font-weight:600; color:var(--fg); }
+.ref{ font:600 11px var(--mono); color:var(--acc); }
+.states{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.states th{ text-align:left; font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line); color:var(--fg); }
+.states td{ padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--muted); }
+.states td code{ font:11.5px var(--mono); color:var(--fg); }
+.tw{ overflow-x:auto; }
+
+/* ---------- the game ---------- */
+.world{ background:linear-gradient(160deg,#41603a,#2b3f27 45%,#4a6d9c); position:relative; overflow:hidden; border-radius:3px; flex:none; }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(16,16,16,.55); }
+.world > *{ position:absolute; }
+.hotbar{ left:50%; transform:translateX(-50%); bottom:6px; width:182px; height:22px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #555; }
+.pop{ background:#10151C; color:#E6EAF2; box-sizing:border-box; display:flex; flex-direction:column; gap:7px; padding:10px 12px; font-size:11px; line-height:1.35; box-shadow:0 0 0 1.5px #B58CFF; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; color:#B58CFF; white-space:nowrap; }
+.mm{ color:#9AA3B5; } .rr{ color:#FF5A4F; } .dd{ color:#6b7180; }
+.xs{ font-size:8px; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.hl{ display:flex; align-items:baseline; gap:6px; min-width:0; flex:1; }
+.hl .xs{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.key{ height:16px; padding:0 7px; display:grid; place-items:center; font:700 8px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; box-sizing:border-box; white-space:nowrap; background:transparent; box-shadow:inset 0 0 0 1px #2A2F3A; color:#9AA3B5; flex:none; }
+.key.v{ background:#B58CFF; color:#10151C; box-shadow:none; height:18px; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; }
+.inp{ height:18px; background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; font-size:9.5px; padding:0 6px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; flex:1; min-width:0; }
+.thread{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:flex-end; gap:5px; overflow:hidden; }
+.divd{ display:flex; align-items:center; gap:6px; font-size:8px; color:#9AA3B5; letter-spacing:.06em; text-transform:uppercase; }
+.divd::before,.divd::after{ content:""; flex:1; height:1px; background:#2A2F3A; }
+.bub{ max-width:78%; padding:4px 7px; font-size:9.5px; line-height:1.35; box-sizing:border-box; }
+.bub .who{ display:block; font-size:7.5px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:1px; color:#B58CFF; }
+.bub.st{ align-self:flex-end; text-align:right; background:#1d1830; box-shadow:inset -2px 0 0 #B58CFF; }
+.bub.pl{ align-self:flex-start; background:#12261f; box-shadow:inset 2px 0 0 #19D3B0; }
+.bub.pl .who{ color:#19D3B0; }
+.bub.old{ opacity:.6; }
+.tip{ background:#100010; box-shadow:inset 0 0 0 1px #5000ff; color:#fff; font-size:8.5px; line-height:1.45; padding:4px 6px; white-space:nowrap; z-index:2; }
+.tip .g{ color:#AAAAAA; }
+.cursor{ width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:9px solid #fff; transform:rotate(-30deg); z-index:3; }
+/* look B: a second head line */
+.sub2{ font-size:8.5px; color:#9AA3B5; margin-top:-4px; display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; }
+.chip{ font:700 7px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; padding:1px 5px; background:#2A2F3A; color:#c9ced8; flex:none; }
+/* look C: a strip at the top of the thread */
+.strip{ background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A, inset 2px 0 0 #6b7180; padding:5px 8px; font-size:8.5px; line-height:1.45; color:#c9ced8; }
+.strip b{ color:#E6EAF2; font-weight:600; }
+.strip .dd{ display:block; }
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>Last seen in the staff window: three looks</h1>
+<p class="lede">Set AT. What staff see at the top of the private window after <code>/su talk Pebble</code> when Pebble is offline. Today the head says only "offline". Each look is drawn twice: a logout the server recorded, then a long name with a server that stopped without recording a logout. Shown at 1.5 times over a 480 × 270 GUI window, the window 200 GUI px wide as built. Pick one (for example "AT A"); the details of every state go on the refined page.</p></header>
+
+<!-- ===================== A ===================== -->
+<section><h2>A. A short line beside the name, the rest on hover</h2>
+<div class="card"><p>The head keeps its one line: after the name, "offline · 3 h ago · BSP-Main" in the small grey of today's "online · Frostwarf". Hovering the line shows the full sentence, the clock time and the block. Nothing else in the window moves.</p>
+<div class="stage">
+<div class="scene"><span class="lab">A1. Logged off 3 h ago, in the nether, hovered</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><div class="hl"><span class="ttl">Pebble</span><span class="xs mm">offline · 3 h ago · BSP-Main · nether</span></div><span class="key">Close</span></div>
+<div class="thread">
+<div class="bub st old"><span class="who">Mrgregles · 3 Nov 10:12</span>Your claim is too close to spawn; please move it.</div>
+<div class="divd">Ended by Mrgregles · 3 Nov 11:40</div>
+<div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Pebble: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 13:30 · Ava_Builds · not seen yet</span><span class="key warn">End conversation</span></div>
+</div>
+<div class="cursor" style="left:212px;top:42px"></div>
+<div class="tip" style="left:216px;top:52px">Last seen 3 h ago (21:04)<br><span class="g">Logged off on BSP-Main · nether<br>at 120, 64, -30</span></div>
+<span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">A2. A long name; no logout recorded</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><div class="hl"><span class="ttl">Kestrel_Mountain</span><span class="xs mm">offline · 2 d ago · BSP-Cre…</span></div><span class="key">Close</span></div>
+<div class="thread">
+<div class="bub pl"><span class="who">Kestrel_Mountain · 20 Nov 18:31</span>someone griefed my farm</div>
+<div class="bub st"><span class="who">Mrgregles · 20 Nov 18:40</span>Thanks, we are looking. Can you say where it is?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Kestrel_Mountain: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 20 Nov 18:31 · Kestrel_Mountain</span><span class="key warn">End conversation</span></div>
+</div>
+<div class="tip" style="left:226px;top:52px">Last seen 2 d ago (20 Nov 19:02)<br><span class="g">On BSP-Creative · overworld at -812, 70, 2204<br>The server stopped without recording a logout:<br>its last record, at most 5 minutes old</span></div>
+<span class="hotbar"></span></div></div>
+</div>
+<ul><li>Smallest change; the cost is that a long name cuts the line (A2) and the world and block need a hover.</li></ul>
+</div></section>
+
+<!-- ===================== B ===================== -->
+<section><h2>B. A second line under the name</h2>
+<div class="card"><p>The head grows by one small line: a grey OFFLINE chip, then "last seen 3 h ago (21:04) on BSP-Main · nether" across the whole width. The block is on hover. The thread is 8 GUI px shorter while the player is offline; online players keep today's one-line head.</p>
+<div class="stage">
+<div class="scene"><span class="lab">B1. Logged off 3 h ago, in the nether</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl">Pebble</span><span class="key">Close</span></div>
+<div class="sub2"><span class="chip">Offline</span><span>last seen 3 h ago (21:04) on BSP-Main · nether</span></div>
+<div class="thread">
+<div class="bub st old"><span class="who">Mrgregles · 3 Nov 10:12</span>Your claim is too close to spawn; please move it.</div>
+<div class="divd">Ended by Mrgregles · 3 Nov 11:40</div>
+<div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Pebble: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 13:30 · Ava_Builds · not seen yet</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">B2. A long name; no logout recorded</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl">Kestrel_Mountain</span><span class="key">Close</span></div>
+<div class="sub2"><span class="chip">Offline</span><span>last seen 2 d ago · BSP-Creative <span class="rr">· no logout recorded</span></span></div>
+<div class="thread">
+<div class="bub pl"><span class="who">Kestrel_Mountain · 20 Nov 18:31</span>someone griefed my farm</div>
+<div class="bub st"><span class="who">Mrgregles · 20 Nov 18:40</span>Thanks, we are looking. Can you say where it is?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Kestrel_Mountain: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 20 Nov 18:31 · Kestrel_Mountain</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ul><li>The whole sentence is readable without a hover, for any name. Past a day the clock time moves to the hover so "no logout recorded" still fits (B2). The cost is one line less of conversation, and B2's red tail is the only red in the head.</li></ul>
+</div></section>
+
+<!-- ===================== C ===================== -->
+<section><h2>C. A note at the top of the conversation</h2>
+<div class="card"><p>The head stays "offline" as today. A dark note sits above the oldest line in the thread, like the dividers, and scrolls with it: who, when, where and the block in two short lines. It is there only while the player is offline.</p>
+<div class="stage">
+<div class="scene"><span class="lab">C1. Logged off 3 h ago, in the nether</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><div class="hl"><span class="ttl">Pebble</span><span class="xs mm">offline</span></div><span class="key">Close</span></div>
+<div class="thread">
+<div class="strip"><b>Last seen 3 h ago (21:04)</b> on BSP-Main · nether<span class="dd">Logged off at 120, 64, -30</span></div>
+<div class="bub st old"><span class="who">Mrgregles · 3 Nov 10:12</span>Your claim is too close to spawn; please move it.</div>
+<div class="divd">Ended by Mrgregles · 3 Nov 11:40</div>
+<div class="bub st"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Pebble: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 13:30 · Ava_Builds · not seen yet</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">C2. A long name; no logout recorded</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><div class="hl"><span class="ttl">Kestrel_Mountain</span><span class="xs mm">offline</span></div><span class="key">Close</span></div>
+<div class="thread">
+<div class="strip"><b>Last seen 2 d ago (20 Nov 19:02)</b> on BSP-Creative<span class="dd">At -812, 70, 2204 · the server did not record a logout</span></div>
+<div class="bub pl"><span class="who">Kestrel_Mountain · 20 Nov 18:31</span>someone griefed my farm</div>
+<div class="bub st"><span class="who">Mrgregles · 20 Nov 18:40</span>Thanks, we are looking. Can you say where it is?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Kestrel_Mountain: they see it when they next log on</span></span><span class="key v">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 20 Nov 18:31 · Kestrel_Mountain</span><span class="key warn">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ul><li>Room for the whole place and the block with no hover, and the head is untouched. The cost is that with a long conversation the note scrolls off the top until staff scroll up.</li></ul>
+</div></section>
+
+<!-- ===================== the states ===================== -->
+<section><h2>The states, in every look</h2>
+<div class="card"><p>The same words whichever look is picked; the look decides only where they sit.</p>
+<div class="tw"><table class="states">
+<tr><th>When</th><th>The words</th></tr>
+<tr><td>Online here or on another server</td><td><code>online · Frostwarf</code> as today (no change)</td></tr>
+<tr><td>Offline, logout recorded</td><td><code>last seen 12 min ago (21:04)</code>, <code>3 h ago (21:04)</code>, <code>yesterday (22:41)</code>, <code>4 d ago (18 Nov 22:10)</code>, then <code>18 Oct</code>; with <code>on BSP-Main</code> and the world when it is not the Overworld</td></tr>
+<tr><td>Offline, the server stopped without a logout</td><td>the same, with <code>no logout recorded</code> (the place is at most 5 minutes older than that)</td></tr>
+<tr><td>Offline, no record (last left before 0.18.0)</td><td><code>offline · last seen: not recorded</code></td></tr>
+<tr><td>The database did not answer, or no shared storage</td><td><code>offline</code> as today</td></tr>
+</table></div>
+</div></section>
+</div></body></html>
