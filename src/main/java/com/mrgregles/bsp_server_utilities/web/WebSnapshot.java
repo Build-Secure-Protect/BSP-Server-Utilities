@@ -45,6 +45,7 @@ public final class WebSnapshot {
         }
         WebMarket.addTo(o); // the market and the lottery's phase (SU-50)
         WebTotems.addTo(o); // where the panel reads BSP-Core's board (SU-96)
+        WebTalk.addTo(o); // which servers take private staff messages from the panel (SU-109)
         JsonArray list = new JsonArray();
         for (ServerPlayer p : players) {
             list.add(player(server, p));

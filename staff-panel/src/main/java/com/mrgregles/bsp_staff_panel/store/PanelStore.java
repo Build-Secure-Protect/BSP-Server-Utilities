@@ -298,4 +298,31 @@ public interface PanelStore {
 
     /** Drops changes older than {@code beforeMs}; how many went. */
     int prunePoints(long beforeMs) throws Exception;
+    // ------------------------------------------------------------------ private staff messages to players (SU-110, D630 to D652)
+
+    /**
+     * A conversation between staff and one player as BSP-Server Utilities keeps it ({@code <prefix>talks}, written only by
+     * the game servers; docs/API.md "Private staff messages"): {@code endedAt} 0 while open. Not signed: the panel takes
+     * who wrote what only from the lines' signed copies, and uses this row for the state and "not seen yet".
+     */
+    record Talk(long id, String player, String name, long openedAt, String openedBy, long endedAt, String endedBy, long lastStaffAt, long lastPlayerAt, long toldAt) {
+    }
+
+    /** One line ({@code <prefix>talk_lines}): {@code kind} staff, player or end; {@code line} its signed copy, which is what the panel shows. */
+    record TalkLine(long id, String uid, long talk, String player, long at, String kind, String staff, String text, String server, String line) {
+    }
+
+    /** A player's conversations, newest first (at most {@code limit}). */
+    List<Talk> talksOf(String player, int limit) throws Exception;
+
+    /** Every open conversation. */
+    List<Talk> openTalks() throws Exception;
+
+    /** These conversations' lines, oldest first. */
+    List<TalkLine> talkLines(List<Long> talks) throws Exception;
+
+    /** The lines table's name, for the words when its grant is missing. */
+    default String talkLinesTable() {
+        return "bsp_su_talk_lines";
+    }
 }

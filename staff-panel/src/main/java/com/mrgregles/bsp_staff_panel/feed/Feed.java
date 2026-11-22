@@ -225,6 +225,11 @@ public final class Feed {
                 .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
     }
 
+    /** Live servers that take private staff messages from the panel (their snapshot's {@code talk}, SU-109), the busiest first. */
+    public List<String> liveWithTalk() {
+        return liveWith("talk").stream().sorted(java.util.Comparator.comparing((String n) -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
     /** Live servers where BSP-Core 1.18 reads a player's bank and market (their snapshot's {@code bank}), database connected first, then the busiest. */
     public List<String> liveWithBank() {
         return liveWith("bank").stream().sorted(java.util.Comparator.comparing((String n) -> !flag(n, "lotteryUp"))

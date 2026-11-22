@@ -397,6 +397,8 @@ public final class WebActions {
             case "bounty_extend" -> WebBounties.extend(server, a, id, by);
             case "bounty_blank_notes" -> WebBounties.blankNotes(server, a, id, by);
             case "totem_board" -> WebTotems.board(server, id); // the TOTEMS page (SU-96): every staff account reads it (D614)
+            case "talk_send" -> WebTalk.send(server, a, id, by); // private staff messages (SU-109): every rank (D630)
+            case "talk_end" -> WebTalk.end(server, a, id, by);
             default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
         };
     }

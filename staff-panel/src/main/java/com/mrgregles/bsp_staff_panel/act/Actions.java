@@ -120,6 +120,14 @@ public final class Actions {
         return askAll(servers, by, rank, fields, by, PER_MINUTE, "actions", waitSeconds);
     }
 
+    /** Private staff messages to players (SU-110, D642): their own allowance, as in game. */
+    public static final int MESSAGES_PER_MINUTE = 30;
+
+    /** A private staff line or end (SU-110): counted apart from other actions, {@link #MESSAGES_PER_MINUTE} a minute, as in game (D642). */
+    public Answer message(String server, String by, String rank, JsonObject fields) {
+        return askAll(java.util.List.of(server), by, rank, fields, "talk:" + by, MESSAGES_PER_MINUTE, "messages", waitSeconds).get(server);
+    }
+
     /** A read that changes nothing on the game server (SU-39), counted apart from actions, {@link #READS_PER_MINUTE} a minute. */
     public Answer read(String server, String by, String rank, JsonObject fields) {
         return read(server, by, rank, fields, waitSeconds);

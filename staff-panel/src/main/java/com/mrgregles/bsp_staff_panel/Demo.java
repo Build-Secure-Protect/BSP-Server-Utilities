@@ -117,6 +117,9 @@ final class Demo {
             if (what.equals("market_cancel_lot") || what.equals("market_cancel_order")) {
                 extra = ",\"data\":{\"result\":\"ok\",\"piecesBack\":" + (what.endsWith("order") ? 7200 : 0) + "}";
             }
+            if (what.equals("talk_send") || what.equals("talk_end")) { // SU-111: written to the made-up tables, as a game server would
+                extra = ",\"data\":" + demoTalk(what, act, now);
+            }
             if (what.equals("inv_read")) {
                 extra = ",\"data\":" + demoItems(com.google.gson.JsonParser.parseString(body).getAsJsonObject().get("player").getAsString(), now);
             }
@@ -131,6 +134,8 @@ final class Demo {
                     : what.equals("bank_refund") ? (refused ? "The other player no longer has that much. Nothing changed: refund it without them if you mean to."
                     : "Refunded (demo: nothing was sent to a game server). They are told in game.")
                     : what.equals("totem_board") ? "demo board"
+                    : what.equals("talk_send") ? (extra.contains("\"SENT\"") ? "Sent (demo: nothing was sent to a game server)." : "Wren_88 has no open conversation with staff.")
+                    : what.equals("talk_end") ? (extra.contains("\"ENDED\"") ? "Ended (demo: nothing was sent to a game server)." : "They have no open conversation with staff.")
                     : what.equals("bounty_list") ? "demo bounties" : what.equals("bounty_history") ? "demo history" : what.equals("bounty_players") ? "demo players"
                     : what.equals("bounty_add") ? "Placed (demo: nothing was sent to a game server). The target is told in game."
                     : what.equals("bounty_remove") ? "Taken off the board (demo: nothing was sent to a game server)."
@@ -140,10 +145,92 @@ final class Demo {
                     : what.equals("market_cancel_order") ? "Cancelled: 7,200 pieces went back to their bank (demo: nothing was sent to a game server)."
                     : what.equals("lottery_draw") ? (extra.contains("busy") ? "A draw is already running on the network." : "Drawn on BSP-Spawn: the countdown has begun on every server (demo: nothing was paid).")
                     : "Done (demo: nothing was sent to a game server).";
+            refused = refused || extra.contains("\"NO_TALK\"");
             holder[0].acceptMessage(com.mrgregles.bsp_staff_panel.act.Actions.line("a", at, "answer",
                     com.mrgregles.bsp_staff_panel.crypto.Signed.seal(key, "{\"id\":\"" + uid + "\",\"ok\":" + (!extra.contains("\"busy\"") && !refused) + ",\"message\":\"" + msg + "\"" + extra + "}")));
         }).start(); }, System::currentTimeMillis);
         return holder[0];
+    }
+
+    // ------------------------------------------------------------------ private messages to players (SU-111)
+
+    private static volatile com.mrgregles.bsp_staff_panel.store.MemoryStore talkStore;
+    private static long nextTalk = 100, nextLine = 1000;
+
+    /** The JSON a game server signs for a line (unsigned in the demo, which reads rows as they are). */
+    private static String talkCopy(String uid, long talk, String player, String name, long at, String kind, String staff, String text) {
+        JsonObject o = new JsonObject();
+        o.addProperty("type", "talk");
+        o.addProperty("v", 1);
+        o.addProperty("uid", uid);
+        o.addProperty("talk", talk);
+        o.addProperty("player", player);
+        o.addProperty("name", name);
+        o.addProperty("at", at);
+        o.addProperty("kind", kind);
+        o.addProperty("staff", staff);
+        o.addProperty("text", text);
+        o.addProperty("server", "BSP-Spawn");
+        return o.toString();
+    }
+
+    private static synchronized String addLine(long talk, String player, String name, long at, String kind, String staff, String text) {
+        String uid = java.util.UUID.randomUUID().toString();
+        String copy = talkCopy(uid, talk, player, name, at, kind, staff, text);
+        talkStore.addTalkLine(new com.mrgregles.bsp_staff_panel.store.PanelStore.TalkLine(nextLine++, uid, talk, player, at, kind, staff, text, "BSP-Spawn", copy));
+        return copy;
+    }
+
+    /**
+     * Made-up conversations for {@code --demo} (SU-111): Newbie_Sam (online) waiting on staff, Kestrel_88 (online) with
+     * an earlier ended conversation and staff waiting on them, Wren_88 (offline) not told yet.
+     */
+    static void pmsg(com.mrgregles.bsp_staff_panel.store.MemoryStore store) {
+        talkStore = store;
+        long now = System.currentTimeMillis(), m = 60_000L, d = 86_400_000L;
+        String sam = uuidOf("Newbie_Sam"), kes = uuidOf("Kestrel_88"), wren = uuidOf("Wren_88");
+        store.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(1, sam, "Newbie_Sam", now - 20 * m, "Mrgregles", 0, "", now - 20 * m, now - 4 * m, now - 20 * m));
+        addLine(1, sam, "Newbie_Sam", now - 20 * m, "staff", "Mrgregles", "Hi Sam, we saw a report about the chest at your base. Did someone take your things?");
+        addLine(1, sam, "Newbie_Sam", now - 4 * m, "player", "", "Yes, my diamonds were gone this morning");
+        store.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(2, kes, "Kestrel_88", now - 9 * d, "Mrgregles", now - 9 * d + 70 * m, "Ava_Builds", now - 9 * d, now - 9 * d + 30 * m, now - 9 * d));
+        addLine(2, kes, "Kestrel_88", now - 9 * d, "staff", "Mrgregles", "Your claim is too close to spawn; please move it.");
+        addLine(2, kes, "Kestrel_88", now - 9 * d + 30 * m, "player", "", "Done, moved it 200 blocks east.");
+        addLine(2, kes, "Kestrel_88", now - 9 * d + 70 * m, "end", "Ava_Builds", "");
+        store.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(3, kes, "Kestrel_88", now - 2 * 60 * m, "Ava_Builds", 0, "", now - 2 * 60 * m, 0, now - 2 * 60 * m));
+        addLine(3, kes, "Kestrel_88", now - 2 * 60 * m, "staff", "Ava_Builds", "We have put your claim back. Is it right now?");
+        store.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(4, wren, "Wren_88", now - d, "Mrgregles", 0, "", now - d, 0, 0));
+        addLine(4, wren, "Wren_88", now - d, "staff", "Mrgregles", "Please read the rules about farms on spawn.");
+    }
+
+    /** A demo {@code talk_send} or {@code talk_end}: written to the made-up tables; the answer as a game server's. */
+    private static synchronized String demoTalk(String what, JsonObject act, long now) {
+        JsonObject data = new JsonObject();
+        com.mrgregles.bsp_staff_panel.store.MemoryStore s = talkStore;
+        String player = act.get("player").getAsString(), name = act.get("name").getAsString(), by = act.get("by").getAsString();
+        com.mrgregles.bsp_staff_panel.store.PanelStore.Talk open = null;
+        try {
+            open = s == null ? null : s.openTalks().stream().filter(t -> t.player().equals(player)).findFirst().orElse(null);
+        } catch (java.sql.SQLException ignored) {
+            // the demo's store does not fail
+        }
+        if (s == null || what.equals("talk_end") && open == null) {
+            data.addProperty("outcome", "NO_TALK");
+            return data.toString();
+        }
+        if (what.equals("talk_send")) {
+            if (open == null) {
+                open = new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(nextTalk++, player, name, now, by, 0, "", now, 0, 0);
+            }
+            s.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(open.id(), player, name, open.openedAt(), open.openedBy(), 0, "", now, open.lastPlayerAt(), open.toldAt()));
+            data.addProperty("outcome", "SENT");
+            data.addProperty("line", addLine(open.id(), player, name, now, "staff", by, act.get("text").getAsString()));
+        } else {
+            s.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(open.id(), player, name, open.openedAt(), open.openedBy(), now, by, open.lastStaffAt(), open.lastPlayerAt(), open.toldAt()));
+            data.addProperty("outcome", "ENDED");
+            data.addProperty("line", addLine(open.id(), player, name, now, "end", by, ""));
+        }
+        data.addProperty("where", "");
+        return data.toString();
     }
 
     /**
@@ -454,6 +541,7 @@ final class Demo {
                 o.addProperty("bank", true); // SU-72: and 1.18's staff calls
                 o.addProperty("bounties", true); // SU-77: and 1.19's Bounty Board
                 o.addProperty("totems", true); // SU-99: and its board for the TOTEMS tab
+                o.addProperty("talk", true); // SU-111: and private messages
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");

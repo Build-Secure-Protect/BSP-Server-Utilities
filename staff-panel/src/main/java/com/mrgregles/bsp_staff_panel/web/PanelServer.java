@@ -231,6 +231,23 @@ public final class PanelServer {
         return this;
     }
 
+    private volatile com.mrgregles.bsp_staff_panel.talk.PlayerTalk playerTalk;
+
+    /**
+     * Private staff messages to players (SU-110; D630 to D652): each new line, from the game or the panel, goes to every open
+     * page as a {@code pmsg} event with the line and the waiting count (the red count on More).
+     */
+    public PanelServer withPlayerTalk(com.mrgregles.bsp_staff_panel.talk.PlayerTalk d) {
+        this.playerTalk = d;
+        d.onEvent(e -> {
+            String msg = "event: pmsg\ndata: " + GSON.toJson(e) + "\n\n";
+            for (Live l : live) {
+                write(l, msg);
+            }
+        });
+        return this;
+    }
+
     /** The Bounty Board (SU-76; D524 to D538). */
     public PanelServer withBounties(com.mrgregles.bsp_staff_panel.market.BountyDesk d) {
         this.bountyDesk = d;
@@ -497,6 +514,7 @@ public final class PanelServer {
             case "/api/bounties", "/api/bounties/history", "/api/bounties/players", "/api/bounties/add", "/api/bounties/remove", "/api/bounties/extend",
                  "/api/bounties/blank" -> bountyPost(ex, id, path, body);
             case "/api/totems", "/api/totems/player" -> totemsPost(ex, id, path, body);
+            case "/api/pmsg", "/api/pmsg/list", "/api/pmsg/send", "/api/pmsg/end" -> playerTalkPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
             case "/api/staff/add" -> staffAdd(ex, id, body);
@@ -1764,6 +1782,35 @@ public final class PanelServer {
             store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (o.get("ok").getAsBoolean() ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
         }
         json(ex, 200, o);
+    }
+
+    /**
+     * Private staff messages to players (SU-110): {@code /api/pmsg} ({@code id}, {@code name}) a player's conversations,
+     * {@code /api/pmsg/list} the open ones, {@code /api/pmsg/send} ({@code id}, {@code name}, {@code text}),
+     * {@code /api/pmsg/end} ({@code id}, {@code name}); every rank (D630). An end is in the panel's log.
+     */
+    private void playerTalkPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.talk.PlayerTalk d = playerTalk;
+        if (d == null) {
+            json(ex, 200, refused("Player messages are not set up on this panel."));
+            return;
+        }
+        Account me = a.get();
+        JsonObject out = switch (path) {
+            case "/api/pmsg" -> d.history(str(b, "id"), str(b, "name"));
+            case "/api/pmsg/list" -> d.list();
+            case "/api/pmsg/send" -> d.send(me, str(b, "id"), str(b, "name"), str(b, "text"));
+            default -> d.end(me, str(b, "id"), str(b, "name"));
+        };
+        if (path.equals("/api/pmsg/end") && out.has("ok") && out.get("ok").getAsBoolean()) {
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, "ended the private conversation with " + str(b, "name")));
+        }
+        json(ex, 200, out);
     }
 
     /** The TOTEMS page (SU-97): every rank reads it (D614); {@code days} 1, 7, 30 or 90; {@code id} a player's UUID for their row. */

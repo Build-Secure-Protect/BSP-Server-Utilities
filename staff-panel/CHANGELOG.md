@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-22
+
+Private messages to players. Needs BSP-Server Utilities 0.17.0 on the game servers (players need its new modpack: protocol 10) and two more database grants (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.6.0).
+
+### Added
+- Private messages to players, the page: a MESSAGES section in every player's card (the Players tab) and on an offline player's page (More › Find a player), under the keys. Staff lines on the right in violet with their writer, the player's on the left, the newest at the foot, a line arriving live lit for 10 seconds; earlier conversations of the last 90 days folded behind "Ended by …" (tap to show); a box of up to 256 characters with SEND (Enter), which keeps the words and says why when a line is refused; "Open since …, started by … · not seen yet" and END CONVERSATION, which asks "Sure? End" for 3 seconds. A MESSAGE key among the player's keys goes to the section, with a red dot while their reply waits.
+- More › Player messages: the open conversations, replies waiting on staff first (lit red, with how long), then the rest ("sent 2 h", "offline · not seen it yet"); a tap opens the player at MESSAGES. A red count on More says how many replies wait on staff, kept live.
+- `--demo` shows three made-up conversations, and SEND and END work in it.
+- Private messages to players, the panel's server side: `POST /api/pmsg` (`id`, `name`: a player's conversations of the last 90 days, the open one with who started it, who is waiting and since when, and whether the player was told), `POST /api/pmsg/list` (the open conversations, those waiting on staff first, the longest wait first, with the count of waiting replies), `POST /api/pmsg/send` (`id`, `name`, `text`, up to 256 characters) and `POST /api/pmsg/end` (`id`, `name`), for every rank. Sends and ends go to the player's own game server, else to the busiest that takes them, and have their own allowance of 30 a minute for each staff member, as in game. An end is in the panel's log.
+- The messages are read from the game servers' `bsp_su_talks` and `bsp_su_talk_lines`, which need two more grants: `GRANT SELECT ON bsp.bsp_su_talks TO 'bsp_panel'@'<host>';` and `GRANT SELECT ON bsp.bsp_su_talk_lines TO 'bsp_panel'@'<host>';`. A line is shown only through its signed copy, so nobody with the database alone can put words in anyone's mouth. New lines arrive live on every open page (a `pmsg` event with the waiting count).
+
 ## [0.5.0] - 2026-11-21
 
 The TOTEMS tab: who is stealing which totems and how fast. Needs BSP-Server Utilities 0.16.0 on the game servers and one more database grant (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.5.0).

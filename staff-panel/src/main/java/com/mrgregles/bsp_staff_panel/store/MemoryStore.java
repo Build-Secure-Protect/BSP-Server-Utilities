@@ -499,4 +499,46 @@ public final class MemoryStore implements PanelStore {
         pointRows.removeIf(p -> p.at() < beforeMs);
         return n - pointRows.size();
     }
+    // ------------------------------------------------------------------ private staff messages to players (SU-110)
+
+    private final java.util.Map<Long, Talk> talkRows = new java.util.LinkedHashMap<>();
+    private final List<TalkLine> talkLineRows = new ArrayList<>();
+    /** Tests: reading the messages fails, as a database without the grant. */
+    public volatile boolean failTalkReads;
+
+    /** Tests and the demo: a conversation row as a game server writes it (replaced by id). */
+    public synchronized void putTalk(Talk t) {
+        talkRows.put(t.id(), t);
+    }
+
+    /** Tests and the demo: a line as a game server writes it. */
+    public synchronized void addTalkLine(TalkLine l) {
+        talkLineRows.add(l);
+    }
+
+    private void talkCheck() throws java.sql.SQLException {
+        if (failTalkReads) {
+            throw new java.sql.SQLException("SELECT command denied to user 'bsp_panel' for table 'bsp_su_talks' (test)");
+        }
+    }
+
+    @Override
+    public synchronized List<Talk> talksOf(String player, int limit) throws java.sql.SQLException {
+        talkCheck();
+        return talkRows.values().stream().filter(t -> t.player().equalsIgnoreCase(player))
+                .sorted(Comparator.comparingLong(Talk::openedAt).thenComparingLong(Talk::id).reversed()).limit(limit).toList();
+    }
+
+    @Override
+    public synchronized List<Talk> openTalks() throws java.sql.SQLException {
+        talkCheck();
+        return talkRows.values().stream().filter(t -> t.endedAt() == 0).toList();
+    }
+
+    @Override
+    public synchronized List<TalkLine> talkLines(List<Long> talks) throws java.sql.SQLException {
+        talkCheck();
+        java.util.Set<Long> want = new java.util.HashSet<>(talks);
+        return talkLineRows.stream().filter(l -> want.contains(l.talk())).sorted(Comparator.comparingLong(TalkLine::id)).toList(); // the order taken
+    }
 }

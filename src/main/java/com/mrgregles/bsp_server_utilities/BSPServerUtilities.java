@@ -55,6 +55,8 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
         com.mrgregles.bsp_server_utilities.support.SupportService.registerNotices(); // Support BSP (SU-89)
         com.mrgregles.bsp_server_utilities.support.NetworkJoins.registerNotices(); // a join to the network or a move (SU-90)
+        com.mrgregles.bsp_server_utilities.talk.TalkDelivery.register(); // private staff messages reaching players and staff on every server (SU-106)
+        com.mrgregles.bsp_server_utilities.web.WebTalk.register(); // and the staff web panel, live (SU-109)
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();
@@ -117,6 +119,7 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.onLogin(p);
                 com.mrgregles.bsp_server_utilities.support.SupportService.onLogin(p);
                 com.mrgregles.bsp_server_utilities.support.SupportChat.onLogin(p);
+                com.mrgregles.bsp_server_utilities.talk.TalkDelivery.onLogin(p); // the MESSAGE STAFF key's state, the popup for lines sent while away
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogin(p);
                 com.mrgregles.bsp_server_utilities.web.WebNotes.sendTo(p);
             }
@@ -129,6 +132,8 @@ public class BSPServerUtilities {
                 StaffDirectory.onLogout(p);
                 com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onLogout(p);
                 com.mrgregles.bsp_server_utilities.support.SupportChat.onLogout(p);
+                com.mrgregles.bsp_server_utilities.talk.TalkDelivery.onLogout(p);
+                com.mrgregles.bsp_server_utilities.talk.TalkWindows.onLogout(p);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> ImageService.forget(e.getEntity().getUUID()));
@@ -161,6 +166,8 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.mobs.Crowding.tick(e.getServer()); // crowded drops and arrows, every 30 s
                 com.mrgregles.bsp_server_utilities.rooms.RoomOutbox.tick(e.getServer()); // notices about other servers' rooms, sent again when missed
                 com.mrgregles.bsp_server_utilities.steals.StealRecorder.tick(e.getServer()); // totem steals: a failed write again each minute, 90-day prune
+                com.mrgregles.bsp_server_utilities.talk.TalkService.tick(e.getServer()); // private staff messages: the 90-day prune every 6 hours
+                com.mrgregles.bsp_server_utilities.talk.TalkDelivery.tick(e.getServer()); // popups for lines sent while away, once the rules let the player through
             }
         });
         LOGGER.info("BSP-Server Utilities loaded");

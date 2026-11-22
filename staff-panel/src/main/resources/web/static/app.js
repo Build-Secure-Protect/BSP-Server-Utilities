@@ -17,7 +17,8 @@ function nav() {
     s.addEventListener("click", () => { tab = t; render(); });
     side.appendChild(s);
     // new chat while it is not on screen (D308): a red number for lines naming you or asking for staff, else a dot
-    const bd = t === "Chat" && typeof ChatView !== "undefined" ? ChatView.badge() : t === "Staff" && typeof StaffView !== "undefined" ? StaffView.badge() : null;
+    const bd = t === "Chat" && typeof ChatView !== "undefined" ? ChatView.badge() : t === "Staff" && typeof StaffView !== "undefined" ? StaffView.badge()
+      : t === "More" && typeof PlayerMsg !== "undefined" ? PlayerMsg.badge() : null; // More: replies waiting on staff (D639, R7)
     if (bd) { b.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); s.appendChild(el("span", bd === "dot" ? "bdot" : "badge", bd === "dot" ? "" : bd)); }
     b.dataset.keep = "tab:" + t; s.dataset.keep = "nav:" + t;
   }
@@ -82,6 +83,10 @@ async function more(main) {
     const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); if (moreView === "market") Market.view(main); else Lottery.view(main); return;
   }
+  if (moreView === "pmsg") { // SU-111: the open conversations with players (R7)
+    const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
+    main.appendChild(back); PlayerMsg.view(main); return;
+  }
   if (moreView === "broadcast") {
     const back = el("button", "btn sm ghost back", "‹ More"); back.type = "button"; back.addEventListener("click", () => { moreView = "home"; render(); });
     main.appendChild(back); Announce.view(main, live, me); return;
@@ -108,6 +113,11 @@ async function more(main) {
     moreView = "broadcast"; render();
   });
   menu.appendChild(b);
+  const pm = el("button", "item menuitem"); pm.type = "button"; pm.dataset.keep = "more:pmsg";
+  const pmg = el("div", "grow"); pmg.appendChild(el("div", "nm", "Player messages")); pmg.appendChild(el("div", "sub", "Open conversations with players, replies waiting first"));
+  pm.appendChild(pmg); const waitingNow = PlayerMsg.badge(); if (waitingNow) pm.appendChild(el("span", "pcountbadge", waitingNow)); pm.appendChild(el("span", "mu", "›"));
+  pm.addEventListener("click", () => { PlayerMsg.refreshList(); moreView = "pmsg"; render(); });
+  menu.appendChild(pm);
   const fp = el("button", "item menuitem"); fp.type = "button";
   const fg = el("div", "grow"); fg.appendChild(el("div", "nm", "Find a player")); fg.appendChild(el("div", "sub", "Anyone who has joined, online or not: items, graves, notes"));
   fp.appendChild(fg); fp.appendChild(el("span", "mu", "›"));
@@ -382,7 +392,7 @@ const App = {
   // Drawn again for staff or for an answer that arrived: the Players tab and an open player, or the Map's card, or an
   // offline player's page (More › Find a player: their items or notes). Focus, caret and scrolling are kept.
   refresh() {
-    if (tab === "More") { if (moreView === "find") App.refreshMore(); return; }
+    if (tab === "More") { if (moreView === "find" || moreView === "pmsg") App.refreshMore(); return; }
     if (tab === "Map") { MapView.redraw(); return; }
     if (tab === "Totems") { Totems.redraw(); return; } // a player's notes read (NOTES under their row)
     if (tab !== "Players") return;
@@ -444,6 +454,7 @@ function connect() {
   on("maps", () => MapView.mapsChanged()); // an Owner changed the maps shown (D583)
   on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
   on("totems", (e) => Totems.event(JSON.parse(e.data))); // the board read, a steal starting or ending (SU-99)
+  on("pmsg", (e) => PlayerMsg.event(JSON.parse(e.data))); // a private line to or from a player (SU-111)
   on("ended", () => { drop(es); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
   on("replaced", () => { drop(es); replaced(); });
@@ -460,7 +471,7 @@ setInterval(() => {
 
 // after a gap in the feed: the chat, the room and messages, tags, the lottery and notes read again
 function afterGap() {
-  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged(); Totems.resync();
+  ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged(); Totems.resync(); PlayerMsg.resync();
 }
 
 function replaced() {
@@ -538,5 +549,6 @@ async function whoAmI() {
   await render();
   ChatView.start();
   StaffView.start();
+  PlayerMsg.start(); // the red count on More
   connect();
 })();

@@ -48,6 +48,7 @@ public final class Main {
         com.mrgregles.bsp_staff_panel.act.Actions actions;
         com.mrgregles.bsp_staff_panel.chat.Chat chat;
         com.mrgregles.bsp_staff_panel.totems.TotemDesk totems;
+        com.mrgregles.bsp_staff_panel.talk.PlayerTalk playerTalk;
         String actionKey, mapRoot;
         java.util.function.Supplier<String> redisState = () -> "Redis: not used (demo)";
         if (demo) {
@@ -64,6 +65,8 @@ public final class Main {
             chat = new com.mrgregles.bsp_staff_panel.chat.Chat(store, null, System::currentTimeMillis);
             com.mrgregles.bsp_staff_panel.act.Actions demoActions = actions;
             totems = new com.mrgregles.bsp_staff_panel.totems.TotemDesk(store, feed, () -> demoActions, System::currentTimeMillis, null);
+            playerTalk = new com.mrgregles.bsp_staff_panel.talk.PlayerTalk(store, feed, () -> demoActions, System::currentTimeMillis, null);
+            Demo.pmsg((MemoryStore) store); // made-up conversations with players (SU-111)
             Runnable stopTotemsDemo, stopChatDemo0 = stopFeed;
             try {
                 stopTotemsDemo = Demo.totems((MemoryStore) store, totems); // made-up steals and points, and a steal every two minutes
@@ -147,10 +150,14 @@ public final class Main {
             com.mrgregles.bsp_staff_panel.totems.TotemDesk signedTotems = new com.mrgregles.bsp_staff_panel.totems.TotemDesk(store, signedFeed, () -> acts,
                     System::currentTimeMillis, c.actionKey()); // only steals the game servers signed (SU-97)
             totems = signedTotems;
+            com.mrgregles.bsp_staff_panel.talk.PlayerTalk signedTalk = new com.mrgregles.bsp_staff_panel.talk.PlayerTalk(store, signedFeed, () -> acts,
+                    System::currentTimeMillis, c.actionKey()); // only lines the game servers signed (SU-110)
+            playerTalk = signedTalk;
             java.util.concurrent.atomic.AtomicLong lastRedis = new java.util.concurrent.atomic.AtomicLong();
             RedisListener redis = new RedisListener(c.redisHost(), c.redisPort(), c.redisUser(), c.redisPassword(), c.webChannel(),
                     m -> {
-                        if (!signedChat.acceptMessage(m) && !acts.acceptMessage(m) && !signedTotems.acceptMessage(m) && signedFeed.acceptMessage(m)) {
+                        if (!signedChat.acceptMessage(m) && !acts.acceptMessage(m) && !signedTotems.acceptMessage(m) && !signedTalk.acceptMessage(m)
+                                && signedFeed.acceptMessage(m)) {
                             lastRedis.set(System.currentTimeMillis());
                         }
                     }).start();
@@ -204,7 +211,7 @@ public final class Main {
                 .withMarket(new com.mrgregles.bsp_staff_panel.market.MarketDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBank(new com.mrgregles.bsp_staff_panel.market.BankDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis))
-                .withTotems(totems).start();
+                .withTotems(totems).withPlayerTalk(playerTalk).start();
         if (!mapRoot.isEmpty() && !java.nio.file.Files.isRegularFile(Path.of(mapRoot, "index.html"))) {
             System.out.println("The map's folder " + mapRoot + " holds no index.html yet: BlueMap writes it on its first start (or check the mount).");
         }

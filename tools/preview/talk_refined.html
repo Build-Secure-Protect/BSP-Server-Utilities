@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Messages Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The refined page for private staff messaging: AM A, AN B, AO A, AP A (D648 to D651), with the points to confirm. Sample data; names are made up. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:22px; justify-content:center; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; }
+@media (max-width:760px){ .stage{ justify-content:flex-start; flex-wrap:nowrap; } }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:10px; max-width:88ch; } ol b{ color:var(--fg); }
+.scene{ display:flex; flex-direction:column; gap:6px; flex:none; }
+.lab{ font-size:12px; font-weight:600; color:var(--fg); }
+.note{ font-size:12px; color:var(--muted); }
+
+/* ---------- the game: world, palette, keys ---------- */
+.g{ --P:#10151C; --S:#0C0E12; --D:#2A2F3A; --M:#9AA3B5; --T:#E6EAF2; --V:#B58CFF; --Q:#19D3B0; --GO:#FFD23A; --R:#FF5A4F; }
+.world{ background:linear-gradient(160deg,#41603a,#2b3f27 45%,#4a6d9c); position:relative; overflow:hidden; border-radius:3px; flex:none; font-family:var(--body); }
+.world::before{ content:""; position:absolute; inset:0; background:rgba(16,16,16,.55); }
+.world > *{ position:absolute; }
+.hotbar{ left:50%; transform:translateX(-50%); bottom:6px; width:182px; height:22px; background:rgba(0,0,0,.45); box-shadow:inset 0 0 0 2px #555; }
+.pop{ background:#10151C; color:#E6EAF2; box-sizing:border-box; display:flex; flex-direction:column; gap:7px; padding:10px 12px; font-size:11px; line-height:1.35; }
+.pop.v{ box-shadow:0 0 0 1.5px #B58CFF; } .pop.r{ box-shadow:0 0 0 1.5px #FF5A4F; }
+.ttl{ font:600 12px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; }
+.vv{ color:#B58CFF; } .qq{ color:#19D3B0; } .mm{ color:#9AA3B5; } .rr{ color:#FF5A4F; } .gg{ color:#FFD23A; }
+.sm{ font-size:9px; } .xs{ font-size:8px; }
+.hd{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.keys{ display:flex; gap:6px; align-items:center; }
+.key{ height:20px; padding:0 10px; display:grid; place-items:center; font:700 9px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; background:#2A2F3A; color:#E6EAF2; box-sizing:border-box; white-space:nowrap; }
+.key.v{ background:#B58CFF; color:#10151C; } .key.q{ background:#19D3B0; color:#10151C; }
+.key.ghost{ background:transparent; box-shadow:inset 0 0 0 1px #2A2F3A; color:#9AA3B5; }
+.key.warn{ background:#3a2a2a; color:#ff8f86; box-shadow:inset 0 0 0 1px #D63B2F; }
+.key.sm{ height:16px; padding:0 7px; font-size:8px; }
+.inp{ height:18px; background:#0C0E12; box-shadow:inset 0 0 0 1px #2A2F3A; color:#E6EAF2; font-size:9.5px; padding:0 6px; box-sizing:border-box; display:flex; align-items:center; white-space:nowrap; overflow:hidden; flex:1; min-width:0; }
+.inp.focus{ box-shadow:inset 0 0 0 1px #19D3B0; }
+.pop > .inp{ flex:none; }
+.inp .cur{ display:inline-block; width:1px; height:10px; background:#E6EAF2; margin-left:1px; }
+.thread{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:flex-end; gap:5px; overflow:hidden; }
+.divd{ display:flex; align-items:center; gap:6px; font-size:8px; color:#9AA3B5; letter-spacing:.06em; text-transform:uppercase; }
+.divd::before,.divd::after{ content:""; flex:1; height:1px; background:#2A2F3A; }
+/* look A bubbles */
+.bub{ max-width:78%; padding:4px 7px; font-size:9.5px; line-height:1.35; box-sizing:border-box; }
+.bub .who{ display:block; font-size:7.5px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:1px; }
+.bub.st{ align-self:flex-start; background:#1d1830; box-shadow:inset 2px 0 0 #B58CFF; }
+.bub.st .who{ color:#B58CFF; }
+.bub.me{ align-self:flex-end; background:#12261f; box-shadow:inset -2px 0 0 #19D3B0; text-align:right; }
+.bub.me .who{ color:#19D3B0; }
+/* look B lines */
+.ln{ font-size:9.5px; line-height:1.35; word-break:break-word; }
+.ln .t{ font:8px var(--mono); color:#6b7180; margin-right:4px; }
+/* chat */
+.mcchat{ font-family:var(--mono); font-size:10px; background:rgba(0,0,0,.5); color:#fff; padding:3px 6px; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; }
+.mcchat .lav{ color:#B58CFF; } .mcchat .lnk{ color:#55FFFF; text-decoration:underline; } .mcchat .gr{ color:#AAAAAA; } .mcchat .gold{ color:#FFAA00; }
+
+/* ---------- the inventory corner ---------- */
+.inv{ width:176px; height:166px; background:#c6c6c6; box-shadow:inset 2px 2px 0 #fff, inset -2px -2px 0 #555; border-radius:2px; }
+.inv .pm{ position:absolute; left:26px; top:8px; width:49px; height:70px; background:#000; }
+.inv .tx{ position:absolute; left:97px; top:6px; font-size:7px; color:#404040; }
+.inv .slots{ position:absolute; left:8px; top:84px; width:160px; height:74px; background:repeating-linear-gradient(90deg,#8b8b8b 0 16px,#c6c6c6 16px 18px); opacity:.9; }
+.ck{ height:14px; box-sizing:border-box; background:rgba(16,21,28,.94); box-shadow:inset 0 0 0 1px #2A2F3A; display:grid; place-items:center; font:500 6px var(--body); color:#9AA3B5; white-space:nowrap; }
+.ck .hrt{ color:#FF6B8A; margin-right:2px; }
+.ck .env{ margin-right:2px; }
+.ck.hot{ box-shadow:inset 0 0 0 1px #19D3B0; color:#19D3B0; }
+/* look A: TEAM's look, violet envelope, red edge and words while flashing */
+.ckA .env{ color:#B58CFF; } .ckA.f1{ box-shadow:inset 0 0 0 1px #FF5A4F; color:#FF5A4F; } .ckA.f1 .env{ color:#FF5A4F; }
+/* look B: violet key, red fill while flashing */
+.ckB{ box-shadow:inset 0 0 0 1px #5d4a86; color:#B58CFF; } .ckB.hot{ box-shadow:inset 0 0 0 1px #B58CFF; background:#1d1830; }
+.ckB.f1{ background:#8a1f1a; box-shadow:inset 0 0 0 1px #FF5A4F; color:#fff; }
+/* look C: grey key, a red dot that pulses */
+.ckC{ position:relative; } .ckC .dotr{ position:absolute; right:-2px; top:-2px; width:5px; height:5px; border-radius:50%; background:#FF5A4F; box-shadow:0 0 0 1px #10151C; }
+.ckC.f0 .dotr{ background:#7a2a26; }
+.bigk{ zoom:2.4; display:flex; gap:2px; }
+.keyrow{ display:flex; gap:14px; align-items:center; min-height:56px; }
+.keyrow .lab{ width:170px; flex:none; }
+.tipx{ background:#100010; box-shadow:inset 0 0 0 1px #5000ff; color:#fff; font-size:6px; padding:3px 4px; white-space:nowrap; }
+@keyframes flashA{ 0%,49%{ box-shadow:inset 0 0 0 1px #FF5A4F; color:#FF5A4F; } 50%,100%{ box-shadow:inset 0 0 0 1px #2A2F3A; color:#9AA3B5; } }
+@keyframes flashB{ 0%,49%{ background:#8a1f1a; color:#fff; } 50%,100%{ background:rgba(16,21,28,.94); color:#B58CFF; } }
+@keyframes flashC{ 0%,49%{ background:#FF5A4F; } 50%,100%{ background:#7a2a26; } }
+.live.ckA{ animation:flashA 1s steps(1) infinite; } .live.ckB{ animation:flashB 1s steps(1) infinite; } .live.ckC .dotr{ animation:flashC 1s steps(1) infinite; }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.pn{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c;
+  background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); box-sizing:border-box; position:relative; overflow:hidden; display:flex; flex-direction:column; flex:none; }
+.pn *{ box-sizing:border-box; }
+.pn .mu{ color:var(--mu); } .pn .dm{ color:var(--dim); }
+.desk{ width:520px; border:1px solid var(--ln); border-radius:10px; }
+.phone{ width:340px; height:700px; border:8px solid #050608; border-radius:30px; }
+.dtop{ display:flex; gap:10px; align-items:center; padding:12px 14px 8px; }
+.head{ width:40px; height:40px; border-radius:4px; flex:none; background:linear-gradient(135deg,#7a5a3a 0 50%,#5a3f28 50%); box-shadow:inset 0 -12px 0 #3a6ea8; }
+.head.s{ width:26px; height:26px; }
+.head.b{ background:linear-gradient(135deg,#d8b080 0 50%,#b88a5a 50%); box-shadow:inset 0 -9px 0 #8a3a3a; }
+.head.c{ background:linear-gradient(135deg,#3a3a3a 0 50%,#222 50%); box-shadow:inset 0 -9px 0 #3a8a5a; }
+.dname{ font-weight:600; font-size:16px; } .sub{ font-size:11.5px; color:var(--mu); }
+.pkeys{ display:flex; gap:6px; flex-wrap:wrap; padding:0 14px 10px; }
+.pk{ height:28px; padding:0 10px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); font-size:12px; display:grid; place-items:center; color:var(--soft); }
+.pk.on{ border-color:var(--vio); color:var(--vio); }
+.pk.danger{ color:#ff8f86; border-color:#5a2a2a; }
+.sect{ font:10.5px Silkscreen,var(--mono); color:var(--mu); padding:6px 14px 4px; display:flex; justify-content:space-between; align-items:center; }
+.msgs{ padding:4px 14px 8px; display:flex; flex-direction:column; gap:6px; }
+.pb{ max-width:80%; padding:6px 9px; border-radius:10px; font-size:12.5px; line-height:1.4; }
+.pb .w{ display:block; font-size:10.5px; color:var(--mu); margin-bottom:1px; }
+.pb.st{ align-self:flex-end; background:#241d38; border:1px solid #3d3160; }
+.pb.st .w b{ color:var(--vio); font-weight:600; }
+.pb.pl{ align-self:flex-start; background:var(--pn); border:1px solid var(--ln); }
+.pb.pl .w b{ color:var(--teal); font-weight:600; }
+.pdiv{ display:flex; align-items:center; gap:8px; font-size:10.5px; color:var(--dim); }
+.pdiv::before,.pdiv::after{ content:""; flex:1; height:1px; background:var(--ln); }
+.pl2{ font-size:12.5px; line-height:1.45; }
+.pl2 .t{ font:10.5px var(--mono); color:var(--dim); margin-right:5px; }
+.pl2 .s{ color:var(--vio); font-weight:600; } .pl2 .p{ color:var(--teal); font-weight:600; }
+.compose{ display:flex; gap:6px; padding:8px 14px 12px; border-top:1px solid var(--ln); background:var(--bg2); align-items:center; }
+.pin{ flex:1; min-width:0; height:36px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; padding:0 12px; font-size:13px; color:var(--dim); white-space:nowrap; overflow:hidden; }
+.psend{ height:36px; padding:0 14px; border-radius:10px; background:var(--vio); color:#0f1115; font-weight:600; display:grid; place-items:center; flex:none; font-size:13px; }
+.pend{ height:30px; padding:0 10px; border-radius:8px; color:#ff8f86; border:1px solid #5a2a2a; display:grid; place-items:center; font-size:12px; flex:none; }
+.pend.armed{ background:#5a2a2a; color:#fff; }
+.unans{ display:inline-flex; gap:5px; align-items:center; font-size:11px; color:var(--coral); }
+.unans i{ width:7px; height:7px; border-radius:50%; background:var(--coral); display:block; }
+.state{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; letter-spacing:.04em; text-transform:uppercase; }
+.state.open{ background:#241d38; color:var(--vio); } .state.ended{ background:var(--pn); color:var(--dim); }
+.lrow{ display:flex; gap:10px; align-items:center; padding:9px 12px; border-bottom:1px solid var(--ln); }
+.lrow .last{ font-size:12px; color:var(--mu); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lrow.hot{ background:#1c1416; box-shadow:inset 3px 0 0 var(--coral); }
+.tbl{ width:100%; border-collapse:collapse; font-size:12px; }
+.tbl th{ text-align:left; font:10px Silkscreen,var(--mono); color:var(--mu); font-weight:400; padding:6px 8px; border-bottom:1px solid var(--ln); }
+.tbl td{ padding:7px 8px; border-bottom:1px solid var(--ln); vertical-align:top; }
+.fold{ margin:0 14px 10px; border:1px solid var(--ln); border-radius:10px; background:var(--bg2); }
+.fold .fh{ display:flex; gap:8px; align-items:center; padding:9px 11px; }
+.sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.ptop{ flex:none; display:flex; align-items:center; gap:10px; padding:6px 14px 10px; }
+.brand{ font:15px Silkscreen,var(--mono); color:var(--teal); }
+.tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); margin-top:auto; }
+.tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); position:relative; }
+.tnav div.on{ color:var(--teal); }
+.tnav b{ width:18px; height:18px; border:2px solid currentColor; border-radius:5px; display:block; }
+.badge{ position:absolute; top:-5px; right:-6px; min-width:16px; height:16px; border-radius:8px; background:var(--coral); color:#10151c; font:700 10px var(--body); display:grid; place-items:center; padding:0 3px; }
+.ph2{ font-size:16px; font-weight:600; padding:0 14px 8px; }
+</style>
+<style>
+.ln2{ font-size:9.5px; } .cnt{ font:8px var(--mono); color:#6b7180; }
+.endline{ align-self:center; font-size:8.5px; color:#9AA3B5; background:#0C0E12; padding:3px 8px; box-shadow:inset 0 0 0 1px #2A2F3A; }
+.key.armed{ background:#D63B2F; color:#fff; box-shadow:none; }
+.inp.dim{ opacity:.5; }
+.pb.new{ box-shadow:0 0 0 2px rgba(181,140,255,.35); }
+.empty{ margin:4px 14px 10px; padding:12px; border:1px dashed var(--ln); border-radius:10px; color:var(--mu); font-size:12px; }
+.ref{ font:600 11px var(--mono); color:var(--acc); }
+</style>
+</head>
+<body><div class="wrap g">
+<header><h1>Private staff messages: the refined page</h1>
+<p class="lede">Your picks drawn once more with the details: the private window as look A of set AM (D648), the popup as look B of AN (D649), the MESSAGE STAFF key as look A of AO (D650) and the panel as look A of AP (D651). Each R point under a drawing is a detail to confirm; answer "Confirmed, defaults", or change any by its number. Sample data: every name and line is made up.</p></header>
+
+<!-- ===================== R1, R2: the window ===================== -->
+<section><h2>R1 and R2: the private window</h2>
+<div class="card"><p>The player's window in its three moments: a staff line waiting (the key flashing), just after their reply, and as staff end the conversation. At 1.5 times over a 480 × 270 GUI window.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R1a. A staff line waiting</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop v" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl vv">Staff messages</span><span class="key ghost sm">Close</span></div>
+<div class="thread">
+<div class="bub st"><span class="who">Mrgregles · staff · 14:02</span>Hi Wren, we saw a report about the chest at your base. Did someone take your things?</div>
+<div class="bub me"><span class="who">You · 14:05</span>Yes, my diamonds were gone this morning</div>
+<div class="bub st"><span class="who">Ava_Builds · staff · 14:09</span>Thanks. We are checking the logs now; we will tell you here what we find.</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp focus">ok thank<span class="cur"></span></span><span class="key v sm" style="height:18px">Send</span></div>
+<div class="hd"><span class="xs mm">Only staff read this conversation. Staff end it when it is done.</span><span class="cnt">8/256</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">R1b. Just replied: the flash stops</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop v" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl vv">Staff messages</span><span class="key ghost sm">Close</span></div>
+<div class="thread">
+<div class="bub me"><span class="who">You · 14:05</span>Yes, my diamonds were gone this morning</div>
+<div class="bub st"><span class="who">Ava_Builds · staff · 14:09</span>Thanks. We are checking the logs now; we will tell you here what we find.</div>
+<div class="bub me"><span class="who">You · 14:11</span>ok thank you</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to staff</span></span><span class="key v sm" style="height:18px">Send</span></div>
+<div class="hd"><span class="xs mm">Only staff read this conversation. Staff end it when it is done.</span><span></span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">R1c. Staff ended it: a last line, then it closes</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop v" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl vv">Staff messages</span><span class="key ghost sm">Close</span></div>
+<div class="thread">
+<div class="bub st"><span class="who">Ava_Builds · staff · 15:40</span>We found who took them and gave them back to your chest. Have a good day!</div>
+<div class="bub me"><span class="who">You · 15:42</span>thank you so much</div>
+<span class="endline">Staff ended the conversation · closing in 5 s</span>
+</div>
+<div style="display:flex;gap:5px"><span class="inp dim"><span class="mm">The conversation has ended</span></span><span class="key v sm" style="height:18px;opacity:.4">Send</span></div>
+<span class="xs mm">Staff will write again here if they need you.</span>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ol>
+<li><span class="ref">R1</span> <b>The player's window</b>: 200 GUI px wide, as tall as the screen allows up to 167, centred; the newest line at the foot, older ones up the wheel; staff lines "NAME · STAFF · 14:09" in violet on the left, the player's "YOU · 14:11" in teal on the right; times in the player's own clock, "18 Nov 14:02" for earlier days. The player sees only the open conversation, never ended ones (D633). The box takes 256 characters, the count shows from 200, colour codes are stripped (D642); Enter or SEND sends; an empty box sends nothing; a refused line (10 a minute) shows its reason in red under the box. A line arriving while the window is open appears in it at once, with no popup. CLOSE or Esc back to the inventory or the game; keys kept inside the window. When staff end it: the line "Staff ended the conversation", the box dimmed, closing by itself after 5 s (D633).</li>
+</ol>
+</div>
+
+<div class="card"><p>The staff window after <code>/su talk Pebble</code> (an offline player), and END CONVERSATION armed.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R2a. An offline player, with an earlier conversation</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop v" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl vv">Pebble</span><span class="xs mm">offline · last seen 2 h ago</span><span class="key ghost sm">Close</span></div>
+<div class="thread">
+<div class="bub st" style="opacity:.6"><span class="who">Mrgregles · 3 Nov 10:12</span>Your claim is too close to spawn; please move it.</div>
+<div class="divd">Ended by Mrgregles · 3 Nov 11:40</div>
+<div class="bub st" style="align-self:flex-end;text-align:right;box-shadow:inset -2px 0 0 #B58CFF"><span class="who">Ava_Builds · 13:30</span>We have put your claim back. Is it right now?</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Pebble: they see it when they next log on</span></span><span class="key v sm" style="height:18px">Send</span></div>
+<div class="hd"><span class="xs mm">Open since 13:30 · Ava_Builds · not seen yet</span><span class="key warn sm">End conversation</span></div>
+</div><span class="hotbar"></span></div></div>
+
+<div class="scene"><span class="lab">R2b. END CONVERSATION pressed once</span>
+<div class="world" style="width:480px;height:300px">
+<div class="pop v" style="left:90px;top:22px;width:300px;height:250px">
+<div class="hd"><span class="ttl vv">Wren_88</span><span class="xs mm">online · Frostwarf</span><span class="key ghost sm">Close</span></div>
+<div class="thread">
+<div class="bub st" style="align-self:flex-end;text-align:right;box-shadow:inset -2px 0 0 #B58CFF"><span class="who">Ava_Builds · 15:40</span>We found who took them and gave them back to your chest. Have a good day!</div>
+<div class="bub me" style="align-self:flex-start;text-align:left;box-shadow:inset 2px 0 0 #19D3B0"><span class="who">Wren_88 · 15:42</span>thank you so much</div>
+</div>
+<div style="display:flex;gap:5px"><span class="inp"><span class="mm">Write to Wren_88</span></span><span class="key v sm" style="height:18px">Send</span></div>
+<div class="hd"><span class="xs rr">Their key goes and the window closes.</span><span class="key armed sm">Sure? End</span></div>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ol>
+<li><span class="ref">R2</span> <b>The staff window</b> (<code>/su talk &lt;player&gt;</code>, D638): the same card with the player's name, "online · Frostwarf" or "offline · last seen 2 h ago"; staff lines (every writer named) on the right, the player's on the left; earlier conversations of the last 90 days above, dimmed, each closed by an "Ended by NAME · date" divider. The foot: "Open since 13:30 · Ava_Builds" (who started it) and "not seen yet" while an offline player has not logged on since. END CONVERSATION turns into a red "Sure? End" for 3 seconds; the second press ends it for everyone, the player's key goes on whichever server they are, and the window shows "You ended the conversation" with the box ready to start a new one. Staff with the window open on any server see lines arrive live. Staff can open it for any player who ever joined, online or not; with nothing yet it says "Write to start a conversation: they get a popup at once, or when they next log on". For another staff member it refuses (D641).</li>
+</ol>
+</div></section>
+
+<!-- ===================== R3, R4: popup and chat ===================== -->
+<section><h2>R3 and R4: the popup and the chat lines</h2>
+<div class="card"><p>The popup's three wordings, and every chat line the feature sends.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R3a. One line, online</span>
+<div class="world" style="width:340px;height:220px">
+<div class="pop v" style="left:50px;top:40px;width:240px;align-items:center;text-align:center">
+<span style="font-size:20px;line-height:1;color:#B58CFF">✉</span>
+<span class="ttl vv" style="font-size:13px">Staff message</span>
+<span class="mm" style="font-size:10px">Mrgregles of staff sent you a private message.</span>
+<div class="keys"><span class="key ghost">Later</span><span class="key v">Open</span></div>
+</div><span class="hotbar"></span></div></div>
+<div class="scene"><span class="lab">R3b. Several staff, or several lines</span>
+<div class="world" style="width:340px;height:220px">
+<div class="pop v" style="left:50px;top:40px;width:240px;align-items:center;text-align:center">
+<span style="font-size:20px;line-height:1;color:#B58CFF">✉</span>
+<span class="ttl vv" style="font-size:13px">Staff message</span>
+<span class="mm" style="font-size:10px">Staff sent you 3 private messages.</span>
+<div class="keys"><span class="key ghost">Later</span><span class="key v">Open</span></div>
+</div><span class="hotbar"></span></div></div>
+<div class="scene"><span class="lab">R3c. At login, sent while they were away</span>
+<div class="world" style="width:340px;height:220px">
+<div class="pop v" style="left:50px;top:40px;width:240px;align-items:center;text-align:center">
+<span style="font-size:20px;line-height:1;color:#B58CFF">✉</span>
+<span class="ttl vv" style="font-size:13px">Staff message</span>
+<span class="mm" style="font-size:10px">While you were away, Ava_Builds of staff sent you a private message.</span>
+<div class="keys"><span class="key ghost">Later</span><span class="key v">Open</span></div>
+</div><span class="hotbar"></span></div></div>
+</div>
+<ol>
+<li><span class="ref">R3</span> <b>The popup</b> (D635, D636, D649): 160 GUI px wide, centred, the envelope and title in violet, the sentence in grey, never the message's words. OPEN (or Enter) opens the window; LATER (or Esc) closes it and the key keeps flashing. Keys act on release, so a held click from the game never presses them. It waits while any other screen is open, or for 10 s after the player was hurt, then shows; one popup covers every line that arrived meanwhile (R3b counts them, naming the writer when there is one). Not shown when the window is already open. At login: 5 s after the network join, after the rules popup is answered and after the Support BSP line; a move between servers never shows it again for lines already announced.</li>
+</ol>
+<div class="stage" style="flex-direction:column;align-items:stretch;gap:10px">
+<span class="lab">R4. The chat lines</span>
+<div class="mcchat"><span><span class="lav">[Staff]</span> You have a private message from staff. <span class="lnk">[OPEN]</span></span></div>
+<div class="mcchat"><span><span class="lav">[Staff]</span> While you were away, staff sent you a private message. <span class="lnk">[OPEN]</span></span></div>
+<div class="mcchat"><span><span class="lav">[Staff]</span> Staff ended your conversation. Thank you!</span></div>
+<span class="note">Above: what the player gets. Below: what staff get in game.</span>
+<div class="mcchat"><span><span class="lav">[Staff msg] Wren_88 replied:</span> Yes, my diamonds were gone this morning <span class="lnk">[OPEN]</span></span></div>
+<div class="mcchat"><span><span class="lav">[Staff msg]</span> <span class="gr">Ava_Builds ended the conversation with Wren_88.</span></span></div>
+<div class="mcchat"><span class="lav">[Staff msg] Open conversations (3):</span><span><span class="lnk">Wren_88</span> <span style="color:#FF5555">waiting 4 min</span> · Frostwarf</span><span><span class="lnk">Pebble</span> <span class="gr">sent 2 h · offline, not seen yet</span></span><span><span class="lnk">Kestrel_x</span> <span class="gr">sent 1 d · offline</span></span></div>
+</div>
+<ol start="2">
+<li><span class="ref">R4</span> <b>Chat</b>: the player's line with each popup, [OPEN] running <code>/su talk</code> (D637); "Staff ended your conversation. Thank you!" when it ends. Staff in game on every server (D639): each reply cut to one line with [OPEN] (runs <code>/su talk Wren_88</code>), and a grey line when someone ends a conversation, so nobody answers into a closed one. <code>/su talks</code> lists the open conversations, waiting replies first in red, each name clickable. <code>/su msg Wren_88 &lt;text&gt;</code> answers "Sent to Wren_88 (online on Frostwarf)." or "... (offline: they see it when they next log on)."</li>
+</ol>
+</div></section>
+
+<!-- ===================== R5: the key ===================== -->
+<section><h2>R5: the MESSAGE STAFF key</h2>
+<div class="card"><p>2.4 times: at rest, under the mouse, and flashing (live). Then in the inventory at 1.5 times with the tooltip.</p>
+<div class="stage" style="flex-direction:column;align-items:flex-start;gap:20px;padding:22px 20px">
+<div class="keyrow"><span class="lab">At rest · under the mouse · flashing</span>
+<div class="bigk"><span class="ck ckA" style="width:66px"><span><span class="env">✉</span>MESSAGE STAFF</span></span><span class="ck ckA hot" style="width:66px"><span><span class="env">✉</span>MESSAGE STAFF</span></span><span class="ck ckA live" style="width:66px"><span><span class="env">✉</span>MESSAGE STAFF</span></span></div></div>
+</div>
+<div class="stage">
+<div class="scene"><span class="lab">A line waiting, under the mouse</span>
+<div class="world" style="width:720px;height:405px"><div style="position:absolute;left:0;top:0;width:480px;height:270px;transform:scale(1.5);transform-origin:0 0">
+<div class="inv" style="position:absolute;left:152px;top:52px"><span class="pm"></span><span class="tx">Crafting</span><span class="slots"></span></div>
+<span class="ck" style="position:absolute;left:2px;top:2px;width:40px">TEAM</span><span class="ck" style="position:absolute;left:44px;top:2px;width:40px">KITS</span>
+<span class="ck" style="position:absolute;left:86px;top:2px;width:62px"><span><span class="hrt">❤</span>SUPPORT BSP</span></span>
+<span class="ck ckA live" style="position:absolute;left:150px;top:2px;width:66px"><span><span class="env">✉</span>MESSAGE STAFF</span></span>
+<span class="ck" style="position:absolute;left:218px;top:2px;width:40px">BANNED</span>
+<span class="tipx" style="position:absolute;left:150px;top:19px">A message from staff is waiting: click to read and answer</span>
+</div></div></div>
+</div>
+<ol>
+<li><span class="ref">R5</span> <b>The key</b> (D650): 66 × 14 GUI px, TEAM's dark key with a violet ✉ and "MESSAGE STAFF" in grey at TEAM's size; edge and words teal under the mouse (the envelope stays violet); while the newest line is from staff, edge, envelope and words red for half a second and back, also under the mouse. Tooltip "A message from staff is waiting: click to read and answer" while flashing, "Your conversation with staff" otherwise. A click opens the window over the inventory; CLOSE goes back to it. It stands right of SUPPORT BSP (where SUPPORT BSP would be when there is no support link), placed every frame by the same code (past every widget, the panel and its tab rows, the recipe book; down a row when the left half is full; not drawn when there is no room); JEI and EMI are told its place. Shown only while the player has an open conversation, in the survival and creative inventory; a client setting <code>messageButton = true</code> hides it for players who want <code>/su talk</code> only. Region Guard's BANNED already steps past every widget, so it never overlaps this key; to keep the order TEAM, KITS, SUPPORT BSP, MESSAGE STAFF, BANNED on narrow windows too, a small request <b>SU-RG2</b> asks Region Guard to start after this key as it starts after SUPPORT BSP (by class name, as SU-RG1 did).</li>
+</ol>
+</div></section>
+
+<!-- ===================== R6, R7: the panel ===================== -->
+<section><h2>R6 and R7: the staff panel</h2>
+<div class="card"><p>A player's card on a computer with a reply waiting, a player staff never wrote to, and More › Player messages.</p>
+<div class="stage">
+<div class="scene"><span class="lab">R6a. A reply waiting</span>
+<div class="pn desk">
+<div class="dtop"><span class="head"></span><div style="flex:1"><div class="dname">Wren_88</div><div class="sub">ping 42 ms · Frostwarf · overworld</div></div><span class="mu">✕</span></div>
+<div class="pkeys"><span class="pk">Teleport</span><span class="pk">Graves</span><span class="pk">Bank</span><span class="pk on">Message ●</span><span class="pk danger">Kick</span><span class="pk danger">Ban</span></div>
+<div class="sect"><span>MESSAGES</span><span><span class="state open">open</span> <span class="unans"><i></i>waiting 4 min</span></span></div>
+<div class="msgs">
+<div class="pdiv">Ended by Ava_Builds · 12 Nov 18:20 · ▸ show</div>
+<div class="pb st"><span class="w"><b>Mrgregles</b> · 14:02</span>Hi Wren, we saw a report about the chest at your base. Did someone take your things?</div>
+<div class="pb pl new"><span class="w"><b>Wren_88</b> · 14:05</span>Yes, my diamonds were gone this morning</div>
+</div>
+<div class="compose"><span class="pin">Write to Wren_88 (they see it at once)</span><span class="psend">Send</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 12px"><span class="mu" style="font-size:11.5px">Open since 14:02, started by Mrgregles</span><span class="pend">End conversation</span></div>
+</div></div>
+
+<div class="scene"><span class="lab">R6b. Never written to (an offline player's page)</span>
+<div class="pn desk">
+<div class="dtop"><span class="head c"></span><div style="flex:1"><div class="dname">Kestrel_x</div><div class="sub">offline · last seen 1 d ago</div></div><span class="mu">‹ Back</span></div>
+<div class="sect"><span>MESSAGES</span><span class="state ended">none</span></div>
+<div class="empty">Start a conversation: they get a popup at once, or when they next log on. A MESSAGE STAFF key shows in their inventory until a member of staff ends it.</div>
+<div class="compose"><span class="pin">Write to Kestrel_x</span><span class="psend">Send</span></div>
+<div class="sect"><span>ITEMS · LAST SAVE</span></div>
+<div style="margin:0 14px 14px;height:60px;border-radius:10px;background:var(--pn);border:1px solid var(--ln)"></div>
+</div>
+<span class="lab" style="margin-top:8px">R7. More › Player messages</span>
+<div class="pn desk">
+<div class="ph2" style="padding-top:12px">Player messages</div>
+<div class="lrow hot"><span class="head s"></span><div style="flex:1;min-width:0"><div><b>Wren_88</b> <span class="mu" style="font-size:11px">online · Frostwarf</span></div><div class="last">Yes, my diamonds were gone this morning</div></div><span class="unans"><i></i>4 min</span></div>
+<div class="lrow"><span class="head s b"></span><div style="flex:1;min-width:0"><div><b>Pebble</b> <span class="mu" style="font-size:11px">offline · not seen it yet</span></div><div class="last">Ava_Builds: We have put your claim back. Is it right now?</div></div><span class="mu" style="font-size:11px">sent 2 h</span></div>
+<div class="lrow"><span class="head s c"></span><div style="flex:1;min-width:0"><div><b>Kestrel_x</b> <span class="mu" style="font-size:11px">offline</span></div><div class="last">Mrgregles: Please read the rules about farms on spawn.</div></div><span class="mu" style="font-size:11px">sent 1 d</span></div>
+<div class="mu" style="font-size:11.5px;padding:10px 12px">Open conversations only. Ended ones stay on each player's card for 90 days.</div>
+</div>
+</div>
+</div>
+<ol>
+<li><span class="ref">R6</span> <b>The section</b> (D640, D651): in every rank's player card (the Players tab) and on an offline player's page (More › Find a player), under the keys and above Market, Bounties, Items and Notes. MESSAGE among the keys scrolls to it, with a red dot while a reply waits. Staff lines right in violet with the writer, the player's left; the newest at the foot, lit for 10 s when it arrives live. Earlier conversations of the last 90 days folded behind "Ended by NAME · date · ▸ show". The box: 256 characters, the count from 200, SEND or Ctrl+Enter; the reason in red under it when refused (a staff account, too long, 30 a minute). "Open since 14:02, started by Mrgregles", END CONVERSATION with "Sure? End" for 3 s. "waiting 4 min" counts up each minute while the player wrote last. A player never written to (R6b) shows only the box and the sentence. Sends go through the game server holding the player, or any running server when they are offline; with no game server answering the panel says "No game server is answering: try again in a moment" and keeps the words in the box.</li>
+<li><span class="ref">R7</span> <b>The list</b> (D639, D640): More › Player messages, open conversations only; first those whose player wrote last, the longest wait first, lit red with the wait; then the rest, the newest staff line first, with "sent 2 h" and "not seen it yet" for an offline player who has not logged on since. A click opens the player's card (online) or page (offline) at MESSAGES. The red count on More is the number of conversations waiting on staff; it updates live.</li>
+<li><span class="ref">R8</span> <b>The words</b>: "Staff messages" (the window's title), "Staff message" (the popup), "MESSAGE STAFF" (the key), "Player messages" (the panel list), "[Staff]" before the player's chat lines and "[Staff msg]" before staff's; "End conversation", "Sure? End"; "waiting 4 min", "sent 2 h", "not seen it yet".</li>
+</ol>
+</div></section>
+
+<section><h2>What happens after you confirm</h2>
+<div class="card"><p>SU-105: the two shared tables, the rules (who may write, one conversation each, ending, 90 days) and their GameTests; then SU-106 delivery across servers and at login, SU-107 commands, SU-108 the screens and key, SU-109 the panel's actions in the mod, SU-110 the panel's side, SU-111 the page, SU-112 audit, SU-113 release (mod 0.17.0, panel 0.6.0, protocol 10).</p></div>
+</section>
+</div></body></html>

@@ -1734,3 +1734,116 @@ Tests: GameTests **220/220** (new: failed attempts folded and capped; rows waiti
 
 On the network, add to the earlier checks: after a lag spike (`/tick` is not in 1.20.1; a heavy area or a backup), steal a test totem: `SELECT ticks, expected_s, ended_ms - started_ms FROM bsp_su_steals ORDER BY id DESC LIMIT 1;` shows `ticks` close to `expected_s * 20`, and the panel does not flag it.
 
+## 2026-11-21: private staff messages, the record (SU-105)
+
+The rules and the storage of private staff messages (docs/API.md "Private staff messages", D630 to D652): `talk/TalkStore`, `TalkBook` (the rules), `TalkTable` and `TalkData` (the world's save), `TalkService` (who may write, the limits, the Action Log), the two shared tables in `JdbcBackend`. Nothing reaches a player or the panel yet: delivery is SU-106, the commands SU-107, the screens SU-108, the panel SU-109 to SU-111.
+
+GameTests (`TalkGameTests`, 9): a staff line opens one conversation that a second staff member's line joins, each line naming its writer, the key's flash state, one Action Log entry for the start; the player cannot write first and nothing is opened by trying, then answers, which stops the flash; a staff member who did not write last ends it, once, the player cannot write after, the next staff line opens a new conversation, the player sees only the open one, the Action Log has each start and the end; a player who is not staff cannot write or end, nobody writes to staff (in game or from the panel), the panel and the console may; empty, 257 characters, colour codes and invisible characters, the 31st staff line and the player's 11th in a minute, and both again a minute later; the 90-day prune drops old lines, ends a conversation left with no line (an end line by nobody, heard by the listeners), drops an ended one with no line, keeps one with a newer line and one being opened this minute; two servers opening at once keep one conversation and only the first end counts; a lone server keeps it in the world's save and reads it back the same; every line's signed copy matches its row, and without a key the copy is empty.
+
+Not covered by the GameTests: the MySQL tables themselves (the memory table plays them; the unique key `(player, is_open)` with NULLs is MySQL's behaviour); LuckPerms staff groups (who is staff is given to the tests).
+
+On the network, after installing (any one game server with shared storage):
+1. Start the server: no storage warning; in MySQL, `SHOW CREATE TABLE bsp_su_talks;` and `SHOW CREATE TABLE bsp_su_talk_lines;` show both tables, `talks` with `UNIQUE KEY one_open (player, is_open)`.
+
+## 2026-11-21: private staff messages reach people (SU-106)
+
+Each line written is told to the other servers (notice `talk`, docs/API.md) and handled alike on each (`talk/TalkDelivery`): the player's key state (`TalkStatePacket`), the popup (`TalkPopupPacket`, the writer and a count, never the words), the chat lines (D652 R4), `told_at`; staff told of answers and of ends; at login the conversation is read and staff lines never told bring the popup 6 s later, after the rules. Protocol 10 (`ServerUtilsNetwork`). The client only keeps the state (`client/ClientTalk`): the key, the popup screen and the window are SU-108, `/su talk` and the other commands SU-107, so [OPEN] does nothing yet.
+
+GameTests (`TalkDeliveryGameTests`, 8): a staff line gives the player here a flashing key, one popup naming the writer and the [OPEN] line (running `/su talk`) without the words, staff hear nothing, and `told_at` is recorded; the answer stops the flash and reaches every staff member here as one cut line with [OPEN] for that player, nobody else; the end takes the key away with the thank-you line and tells the other staff who ended it with whom, not the ender; a line written on another server reaches the player here through the notices table, and the told mark is shared; lines sent while away bring one popup (count 2, the one writer, the away wording) only 6 s after the rules let the player through, and never again on the next login; three lines from two writers name nobody; a line arriving during the login read is handled after it; a conversation that ends itself after 90 days takes the key away and tells no staff.
+
+Not covered: the client (the packets reach only the client's copy); Redis itself (the notices table carries them in the test); the real player list and LuckPerms (given to the tests).
+
+On the network, after installing on two servers with the new modpack (the key and popup are drawn from SU-108; until then check the chat lines):
+1. Staff on server A: `/su msg <player> hello` (SU-107) while the player is on server B: on B the player gets "[Staff] You have a private message from staff. [OPEN]".
+2. The player answers (SU-108's window): every staff member online on A and B gets "[Staff msg] <player> replied: ...".
+3. With the player offline, write to them, then have them log on: the "While you were away" line comes about 6 s after joining (after the rules popup for a new player); moving to the other server does not repeat it.
+
+## 2026-11-21: private staff messages, the commands and the window's data (SU-107)
+
+`talk/TalkCommands` (`/su msg`, `/su talk`, `/su talk <player>`, `/su talks`), `talk/TalkWindows` (who has which window open here, the view, live lines, the window's SEND / END / close), packets `TalkViewPacket`, `TalkLinePacket`, `TalkAnswerPacket` (server to client) and `TalkActionPacket` (client to server), `StorageBackend.playerByName`. `/su` is open to every player now: each part keeps its own permission, and `/su` alone tells a player which parts are theirs. The windows themselves are drawn in SU-108.
+
+GameTests (`TalkCommandGameTests`, 6): `/su msg` finds a player online here (answers where), one offline in the network's list in any case (answers that they see it at next login), refuses an unknown name and staff; a player who is not staff cannot run `/su msg`, `/su talks` or `/su talk <player>`, and `/su talk` tells them when nothing is open; `/su talk` sends the player's window with only the open conversation and its lines then arrive live; `/su talk <player>` sends the staff window with the earlier conversation and its end, where they are and who started the open one, and refuses staff; an answer arrives live in the player's and the staff window but not to staff without the window, an empty line is refused with its reason, the player's window has no END, a staff key for a window not open does nothing, END reaches both windows, and a closed window gets nothing more; `/su talks` lists the waiting replies first, the longest wait first, with "waiting 9 min", then the rest with "sent 10 min" and "offline, not seen yet", each name running `/su talk <name>`.
+
+Not covered: the network-wide name lookup through the client check's list and Forge's name cache (the tests use the player list and the network's players table); the client.
+
+In game, after installing (with SU-108 for the windows):
+1. As staff: `/su msg <player on another server> hello` answers "Sent to … (online on <server>)"; for someone offline, "(offline: they see it when they next log on)".
+2. `/su talks` lists the conversation; click the name: the staff window opens.
+3. As a player with no conversation: `/su` says "Use /su talk to open your conversation with staff."; `/su talk` says none is open.
+
+## 2026-11-21: private staff messages, the screens (SU-108)
+
+The client: `client/TalkButton` (the MESSAGE STAFF key, look A of set AO, D650), `client/TalkPopupScreen` (look B of set AN, D649), `client/TalkScreen` (look A of set AM, D648, for the player and for staff), `ClientTalk` (the popup shown at a quiet moment; the window opened from the server's view), `messageButton` in `bsp_server_utilities-client.toml`, the JEI and EMI exclusion areas, `CornerPlace.place(..., w)`. SUPPORT BSP no longer steps round this key (this key steps round it). Lang lines `gui.bsp_server_utilities.talk.*`.
+
+GameTests (`TalkKeyGameTests`, 1): the key stands two pixels right of SUPPORT BSP, where SUPPORT BSP would be when it is hidden, steps past another mod's button, goes down a row past the left half of the window, and SUPPORT BSP's own placing is unchanged. Everything else here is drawn in the player's game: **untested in a client**.
+
+In game (two clients: a staff account and a player; mod and modpack with protocol 10):
+1. Staff: `/su msg <player> Hello`. The player (no screen open): the STAFF MESSAGE popup within a moment, an envelope, "<staff> of staff sent you a private message.", LATER and OPEN; the chat line "[Staff] You have a private message from staff. [OPEN]".
+2. Open the inventory: MESSAGE STAFF stands right of SUPPORT BSP (or right of KITS when there is no support link), flashing red every half second; its tooltip says a message is waiting. With the recipe book open, and with JEI or EMI, it overlaps nothing; on a narrow window it moves down a row or hides.
+3. LATER: the popup closes, the key keeps flashing. Get hurt, then have staff write again: the popup waits 10 s after the hurt, and appears only once you close the inventory.
+4. Click the key: the window opens over the inventory: "STAFF MESSAGES", the staff line on the left in violet, "NAME · STAFF · time". Type past 200 characters: the count shows; at 256 it stops. Enter sends: your line on the right in teal; the key stops flashing.
+5. Staff: `/su talk <player>`: the staff window with the player's name and "online · <server>", their line on the left, staff lines on the right, "Open since … · <staff>"; answer from the player's window: it appears live in the staff window.
+6. Staff: END CONVERSATION turns into a red SURE? END with "Their key goes and their window closes."; wait 3 s, it goes back; press twice: the player's window shows "Staff ended the conversation", closes after 5 s, the key is gone; the staff window shows "Ended by …" and "Write to start a new conversation."
+7. A player with the window open and no message to send: Esc closes it and returns to the inventory or the game.
+8. Turn `messageButton = false` in the player's client config: no key; `/su talk` still opens the window.
+
+## 2026-11-21: private staff messages from the panel, the game server's part (SU-109)
+
+`web/WebTalk`: the actions `talk_send` and `talk_end` (through `WebActions`), the live kind `talk` (every line written here, its signed copy) and the snapshot's `talk` (docs/API.md). The panel's side is SU-110 and SU-111.
+
+GameTests (`WebTalkGameTests`, 3): a Moderator's `talk_send` writes a staff line under the staff member's name and answers with its signed copy, where the player is (empty: offline) and `SENT`, the same copy told live, the conversation opened by them and the Action Log's start by "<name> (panel)"; the snapshot says `talk`; `talk_end` ends it with a signed end line told live, a second end answers `NO_TALK`, a line to staff, an empty line and a name that is not a name are refused; lines written in game (a staff line and the player's answer) are told live too, and nothing is told or taken while the panel is off on the server (the line is still written).
+
+Not covered: Redis (the live lines are caught before `publishWeb`); the panel.
+
+On the network (after SU-110 and SU-111, or by hand on Redis):
+1. `redis-cli SUBSCRIBE bsp_su:<channel>:web` on mc-main, then `/su msg <player> hello` in game: a message of kind `talk` with `"kind":"staff"`.
+
+## 2026-11-22: private messages to players, the panel's side (SU-110)
+
+Panel version raised to 0.6.0 first (no jar built). `talk/PlayerTalk` (history, the open list, send, end, live lines), `PanelStore.talksOf` / `openTalks` / `talkLines` (Jdbc and Memory), `Feed.liveWithTalk`, `Actions.message` (its own allowance, 30 a minute), `/api/pmsg`, `/api/pmsg/list`, `/api/pmsg/send`, `/api/pmsg/end`, the `pmsg` event, the Redis chain in `Main`. The setup guide (and its User Notes copy) has the two new grant lines and "Updating to panel 0.6.0". The page is SU-111.
+
+JUnit (`PlayerTalkTest`, 7, and `PanelServerTest.player_messages_are_read_by_every_rank_and_by_nobody_logged_out`): only lines whose signed copy is of that very line are shown, with the copy's words, the rest counted; a signed end line closes a conversation its row calls open; the open list waiting on staff first, the longest wait first, with where an online player is, "not seen it yet" and the newest line, and the waiting count; send and end to the player's own server, else the busiest that takes messages, never one that does not, none when no server takes them, by the staff account's name and rank, the line shown at once and taken once when its live copy arrives; empty, long and bad requests refused before anything is asked; live lines only when signed with this panel's key and not old, once, with the waiting count; a missing grant said with the table's name. **120/120** panel tests.
+
+Not covered: MySQL itself (`JdbcStore`'s new reads run only against the memory store); the real Redis.
+
+On the network (after mod 0.17.0, the grants and panel 0.6.0; the page from SU-111):
+1. `SHOW GRANTS FOR 'bsp_panel'@'<host>';` lists SELECT on `bsp_su_talks` and `bsp_su_talk_lines`.
+2. The panel's console has no `[panel] player messages:` line after a page reads them.
+
+## 2026-11-22: private messages to players, the page (SU-111)
+
+`static/pmsg.js` (`PlayerMsg`: the section, the MESSAGE key, More › Player messages, the More badge, the `pmsg` event, the resync after a gap), wired in `players.js` (the card), `items.js` (the offline page), `app.js` (More, the badge, the event) and `app.html`; `panel.css` (a `pmsg` block at the end); `Demo` (three conversations; `talk_send` and `talk_end` written to the memory tables; `talk` in the demo's snapshots). Checked in the browser pane with `--demo` (panel 0.6.0 jar): the More badge, Kestrel_88's card (the earlier conversation folded behind "Ended by Ava_Builds", unfolded; SEND lit the new line and cleared the box; END asked "Sure? End" and folded the conversation behind "Ended by Demo_Owner"), More › Player messages (Newbie_Sam waiting first in red, Wren_88 "offline · not seen it yet", the ended one gone), Wren_88's offline page at MESSAGES, Newbie_Sam's red dot on MESSAGE and "waiting 5 min", a phone's sheet; no console errors.
+
+JUnit: `PanelServerTest.player_messages_are_read_by_every_rank_and_by_nobody_logged_out` also checks the script is served, sets no markup, and is loaded by the page. **120/120**.
+
+On the network (mod 0.17.0 with the new modpack, the grants, panel 0.6.0):
+1. In game, `/su msg <player> hello` as staff: the player's card on the panel shows the line within a second, lit, without reloading.
+2. The player answers in game: their line appears on the left, More's red count goes up, More › Player messages lists them first in red.
+3. Send from the panel: the player gets the popup in game. END from the panel: their MESSAGE STAFF key goes in game, and the conversation folds on the panel.
+
+## 2026-11-22: audit of private staff messages (SU-112)
+
+Two fresh read-only audits (the mod side, the panel side); each serious finding checked against the code, then fixed:
+1. **Mod: the database down since the start** left every staff message request and the login read unanswered (`Storage.submit` dropped the task when `ready()` failed): a new `Storage.submit(task, failed)` always answers; a failed login read is tried again every 30 s; a name looked up fails as "could not be saved", never as "nobody of that name".
+2. **Mod: a line could land in a conversation ended a moment before**: lines go in only while it is open (one statement in MySQL); a staff line then opens a new conversation, an answer is refused; a late notice of an ended conversation never brings the key back.
+3. **Mod: lines during the login read reached staff twice**: only the player's part waits for the read. A quick relog keeps its own buffer.
+4. **Mod, smaller**: the login popup reads again before showing (never twice after a quick move); a conversation ending itself is in the Action Log; long names (command blocks, `/execute as`) are cut to the columns and packets, never thrown; two prunes never lose an end line; who wrote last (`last_kind`, the table's order) decides the flash, not two servers' clocks; an offline operator counts as staff when operators do.
+5. **Panel: a conversation row moved to another player carried its lines**: a line is shown only under the player its signed copy names; player names on lines are the signed ones.
+6. **Panel: More › Player messages could freeze the page** (a redraw loop while the list loaded): one read at a time, one redraw when it is back.
+7. **Panel, smaller**: who started or ended a conversation and whether it is open come from signed lines only; the waiting count is worked out off the Redis thread after a burst (event `count`) and never taken over by an older read; the newest 20,000 lines and 2,000 conversations are kept, not the oldest; a newer history read always wins; a SEND click is never lost to a redraw; "waiting" counts up each minute; SEND is not offered when no server can answer; a send with no answer yet says it may still arrive; bounded caches; one send per player at a time.
+
+GameTests (`TalkAuditGameTests`, 9; two older tests now let the storage run after the tick): **256/256**. JUnit (`PlayerTalkTest`, 3 new and 2 changed): **123/123**. Checked in the browser pane with `--demo`: five redraws while the list loaded (no freeze, drawn once), a send clearing the waiting mark and the count, no script errors.
+
+Not covered: MySQL itself (the open-only insert's `INSERT ... SELECT`, the `last_kind` column and the newest-20,000 query run only against the memory tables); the panel's front end has no automatic tests (checked by hand above).
+
+## 2026-11-22: release 0.17.0 / staff panel 0.6.0 (SU-113)
+
+Private staff messages (SU-105 to SU-112). Versions: mod 0.17.0 (`gradle.properties`), panel 0.6.0, network protocol 10. GameTests 256/256, panel JUnit 123/123.
+
+Install, in this order:
+1. `bsp-server-utilities-0.17.0.jar` on every game server (delete the 0.16.0 jar) and in the players' modpack (protocol 10: a player on the old modpack cannot join).
+2. Once one server has started with it: the two grants in `docs/STAFF_PANEL_SETUP.md` › Running it › Updating to panel 0.6.0.
+3. The panel: Stop, upload `bsp-staff-panel-0.6.0.jar`, delete the old `bsp-staff-panel.jar`, rename the new one to `bsp-staff-panel.jar`, Start.
+
+Then the checks in the sections SU-105 to SU-111 above, in game with two clients (a staff account and a player) and on the panel.
+

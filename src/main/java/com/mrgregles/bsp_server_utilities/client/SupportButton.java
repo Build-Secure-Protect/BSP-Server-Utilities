@@ -90,14 +90,14 @@ public final class SupportButton {
 
     /** What stands in the way on this screen now, and where BSP-Core's row ends ({x, y} to start from, or null). */
     @Nullable
-    private static int[] place(AbstractContainerScreen<?> screen, AbstractWidget self) {
+    static int[] place(AbstractContainerScreen<?> screen, AbstractWidget self) {
         List<int[]> blocked = new ArrayList<>();
         int rowY = Integer.MAX_VALUE, rowEnd = -1;
         for (var child : screen.children()) {
             if (child instanceof AbstractWidget w && w != self && w.visible) {
                 String name = w.getClass().getName();
-                if (name.equals(RG_CORNER)) {
-                    continue; // BANNED steps past this key, not the other way round
+                if (name.equals(RG_CORNER) || name.equals(TalkButton.CORNER)) {
+                    continue; // BANNED and MESSAGE STAFF step past this key, not the other way round
                 }
                 blocked.add(new int[]{w.getX(), w.getY(), w.getWidth(), w.getHeight()});
                 if (name.equals(BSP_CORNER)) {

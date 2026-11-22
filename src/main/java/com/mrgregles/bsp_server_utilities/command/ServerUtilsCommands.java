@@ -108,6 +108,10 @@ public final class ServerUtilsCommands {
                         .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
                         .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
                 .then(com.mrgregles.bsp_server_utilities.support.SupportCommands.node())
+                // private staff messages (SU-107, D637, D638): /su msg, /su talk [player], /su talks
+                .then(com.mrgregles.bsp_server_utilities.talk.TalkCommands.nodes().get(0))
+                .then(com.mrgregles.bsp_server_utilities.talk.TalkCommands.nodes().get(1))
+                .then(com.mrgregles.bsp_server_utilities.talk.TalkCommands.nodes().get(2))
                 .then(Commands.literal("serverimages").requires(Perms::canEdit)
                         .executes(c -> serverImages(c.getSource()))
                         .then(Commands.literal("list").executes(c -> serverImages(c.getSource())))
@@ -167,14 +171,18 @@ public final class ServerUtilsCommands {
         return Perms.canEdit(source) || staff(source);
     }
 
-    /** {@code /su} also for every player where Compact Machines 6.0.3 runs, who are then shown {@code /su rooms} only (SU-58). */
+    /**
+     * {@code /su} also for every player: {@code /su talk} opens their conversation with staff (SU-107, D637), and where
+     * Compact Machines 6.0.3 runs {@code /su rooms} shows their rooms (SU-58).
+     */
     private static boolean editorStaffOrRooms(CommandSourceStack source) {
-        return editorOrStaff(source) || com.mrgregles.bsp_server_utilities.compat.CompactMachines.present();
+        return editorOrStaff(source) || source.getPlayer() != null || com.mrgregles.bsp_server_utilities.compat.CompactMachines.present();
     }
 
     private static int openPanel(com.mojang.brigadier.context.CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         if (!Perms.canEdit(c.getSource())) {
-            c.getSource().sendFailure(Component.translatable(staff(c.getSource()) ? "message.bsp_server_utilities.staff.away_only" : "message.bsp_server_utilities.rooms.only_rooms"));
+            c.getSource().sendFailure(Component.translatable(staff(c.getSource()) ? "message.bsp_server_utilities.staff.away_only"
+                    : com.mrgregles.bsp_server_utilities.compat.CompactMachines.present() ? "message.bsp_server_utilities.rooms.only_rooms" : "message.bsp_server_utilities.talk.cmd.players"));
             return 0;
         }
         AdminPanel.open(c.getSource().getPlayerOrException());

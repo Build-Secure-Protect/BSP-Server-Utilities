@@ -53,6 +53,7 @@ public final class ClientSetup {
         // the presence check's card (D220, D222)
         ClientAfkCheck.register();
         ClientSupport.register();
+        ClientTalk.register(); // private staff messages (SU-106)
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();
             for (StaffViewPacket.Row r : ClientStaff.rows()) {

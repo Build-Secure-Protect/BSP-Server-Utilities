@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-22
+
+Private staff messages: staff write privately to a player in game or from the staff web panel, the player answers in their own window. **The network protocol is 10: players need the new modpack**, and every server needs 0.17.0. Install with staff panel 0.6.0 and its two database grants (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.6.0).
+
+### Added
+- Private staff messages, the record: one conversation per player that every staff member shares, written by staff and answered by the player, kept in two new shared tables `bsp_su_talks` and `bsp_su_talk_lines` (or in the world on a server without shared storage). Only staff write to players and never to other staff; lines are plain text of up to 256 characters, 30 a minute for each staff member and 10 for a player; any staff member ends a conversation and the next staff line starts a new one. Lines are kept 90 days; a conversation left with no line ends itself. The Action Log records each conversation's start and end. Each line carries a signed copy for the staff web panel.
+- Private staff messages reach people on every server: when staff write, the player gets a popup (who wrote, never the words) and a chat line with [OPEN], and their MESSAGE STAFF key appears and flashes until they answer; a player who was offline gets the popup a few seconds after they next log on (after the rules), once, on whichever server. Every staff member online hears each answer, and the other staff hear when someone ends a conversation. The network protocol is 10: players need the new modpack.
+- Private staff messages, the commands: `/su msg <player> <text>` writes to a player online or not (found anywhere on the network, or among everyone who ever joined) and says where they are; `/su talk <player>` opens the staff window with their conversations of the last 90 days; `/su talks` lists the open conversations, those waiting on staff first; players use `/su talk` for their own conversation, so `/su` is open to every player (each part keeps its own permission). Lines arrive live in every open window.
+- Private staff messages, the screens: the MESSAGE STAFF key in the inventory (right of SUPPORT BSP, clear of every other button, the recipe book, JEI and EMI; flashing red while a staff line waits; a client setting `messageButton` hides it), the STAFF MESSAGE popup (shown at a quiet moment: no other screen open and not hurt in the last 10 seconds), and the private window for the player and for staff (speech bubbles, live lines, a 256-character box, END CONVERSATION for staff with SURE? within 3 seconds).
+- Private staff messages from the staff web panel, the game server's part: the signed actions `talk_send` and `talk_end` (every panel rank, the same rules as in game), each line told to the panel live (kind `talk`, its signed copy), and `talk` in the snapshot.
+
 ## [0.16.0] - 2026-11-21
 
 Totem steals and BSP-Core's board for the staff web panel's TOTEMS tab (panel 0.5.0). Install with panel 0.5.0 and the one new database grant in `docs/STAFF_PANEL_SETUP.md` (Running it › Updating to panel 0.5.0). The network protocol is still 9: players need no new modpack for this.

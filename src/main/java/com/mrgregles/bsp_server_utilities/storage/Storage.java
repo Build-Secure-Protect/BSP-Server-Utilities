@@ -274,6 +274,32 @@ public final class Storage {
         });
     }
 
+    /**
+     * As {@link #submit(Task)}, with {@code failed} told of any failure, also when {@link #ready()} fails before the task
+     * runs (the database down since the start), so a caller waiting on the result always hears back (audit of SU-105:
+     * staff messages' futures stayed open).
+     */
+    public void submit(Task task, Consumer<Exception> failed) {
+        work.add(() -> {
+            try {
+                ready();
+                task.run();
+            } catch (Exception e) {
+                errors++;
+                String message = e.toString();
+                if (!message.equals(lastError)) {
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities storage: {}", message);
+                }
+                lastError = message;
+                try {
+                    failed.accept(e);
+                } catch (RuntimeException ignored) {
+                    // the caller's own trouble is not the storage's
+                }
+            }
+        });
+    }
+
     /** Runs every queued task on the calling thread (tests, and the last flush of an unthreaded storage). */
     public void drain() {
         Runnable r;

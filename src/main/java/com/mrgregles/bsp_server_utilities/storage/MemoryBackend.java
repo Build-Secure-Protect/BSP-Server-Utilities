@@ -167,6 +167,13 @@ public final class MemoryBackend implements StorageBackend {
     }
 
     @Override
+    @Nullable
+    public synchronized com.mrgregles.bsp_server_utilities.players.Joined playerByName(String name) throws Exception {
+        check();
+        return players.values().stream().filter(j -> j.name().equalsIgnoreCase(name)).findFirst().orElse(null);
+    }
+
+    @Override
     public synchronized com.mrgregles.bsp_server_utilities.players.PlayerCounts playerCounts(long sinceMs, int limit) throws Exception {
         check();
         List<com.mrgregles.bsp_server_utilities.players.Joined> all = new ArrayList<>(players.values());
@@ -497,6 +504,95 @@ public final class MemoryBackend implements StorageBackend {
     /** How many steals the table holds (tests). */
     public synchronized int stealCount() {
         return steals.size();
+    }
+
+    // ------------------------------------------------------------------ private staff messages (SU-105)
+
+    private final com.mrgregles.bsp_server_utilities.talk.TalkTable talks = new com.mrgregles.bsp_server_utilities.talk.TalkTable();
+
+    /** The conversations as a table (tests read and change it directly). */
+    public com.mrgregles.bsp_server_utilities.talk.TalkTable talkTable() {
+        return talks;
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk openTalk(UUID player) throws Exception {
+        check();
+        return talks.openTalk(player);
+    }
+
+    @Override
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk openOrCreateTalk(UUID player, String name, long at, String by) throws Exception {
+        check();
+        return talks.openOrCreateTalk(player, name, at, by);
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk talk(long id) throws Exception {
+        check();
+        return talks.talk(id);
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> talksOf(UUID player) throws Exception {
+        check();
+        return talks.talksOf(player);
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> openTalks() throws Exception {
+        check();
+        return talks.openTalks();
+    }
+
+    @Override
+    public boolean insertTalkLine(com.mrgregles.bsp_server_utilities.talk.TalkStore.Line line, boolean whileOpen) throws Exception {
+        check();
+        return talks.insertTalkLine(line, whileOpen);
+    }
+
+    @Override
+    public void touchTalk(long id, String kind, long at, String name) throws Exception {
+        check();
+        talks.touchTalk(id, kind, at, name);
+    }
+
+    @Override
+    public boolean endTalk(long id, long at, String by) throws Exception {
+        check();
+        return talks.endTalk(id, at, by);
+    }
+
+    @Override
+    public void talkTold(long id, long at) throws Exception {
+        check();
+        talks.talkTold(id, at);
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Line> talkLines(List<Long> ids) throws Exception {
+        check();
+        return talks.talkLines(ids);
+    }
+
+    @Override
+    public int pruneTalkLines(long beforeMs) throws Exception {
+        check();
+        return talks.pruneTalkLines(beforeMs);
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> talksWithoutLines(long openedBefore) throws Exception {
+        check();
+        return talks.talksWithoutLines(openedBefore);
+    }
+
+    @Override
+    public void deleteTalks(List<Long> ids) throws Exception {
+        check();
+        talks.deleteTalks(ids);
     }
 
     @Override

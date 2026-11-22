@@ -479,8 +479,9 @@ const FindPlayer = (() => {
     g.appendChild(el("div", "sub", "offline"));
     who.appendChild(Players.face(p, 44)); who.appendChild(g); main.appendChild(who);
     const keys = el("div", "keys"); const gr = el("button", "key", "Graves"); gr.type = "button"; gr.dataset.keep = "k:graves"; gr.addEventListener("click", () => { st.chosen = null; openGraves(p.name); });
-    keys.appendChild(gr); keys.appendChild(Bank.key(p)); main.appendChild(keys);
+    keys.appendChild(gr); keys.appendChild(Bank.key(p)); keys.appendChild(PlayerMsg.key(p)); main.appendChild(keys);
     const box = el("div", "offsheet");
+    box.appendChild(PlayerMsg.section({ id: p.id, name: p.name })); // SU-111: private messages (D640)
     const ml = Market.line(p); // D405: their lots and orders, when they have any
     if (ml) box.appendChild(ml);
     const bl = Bounties.line(p); // D528

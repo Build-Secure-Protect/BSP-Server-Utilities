@@ -949,6 +949,66 @@ public final class JdbcStore implements PanelStore {
         return out;
     }
 
+    // ------------------------------------------------------------------ private staff messages to players (SU-110)
+
+    private static final String TALK_COLS = "id, player, name, opened_at, opened_by, ended_at, ended_by, last_staff_at, last_player_at, told_at";
+
+    private static List<Talk> talkRows(PreparedStatement ps) throws SQLException {
+        List<Talk> out = new ArrayList<>();
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                out.add(new Talk(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getLong(4), rs.getString(5), rs.getLong(6), rs.getString(7),
+                        rs.getLong(8), rs.getLong(9), rs.getLong(10)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized List<Talk> talksOf(String player, int limit) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLS + " FROM " + shared + "talks WHERE player = ? ORDER BY opened_at DESC, id DESC LIMIT ?")) {
+            ps.setString(1, player.toLowerCase(java.util.Locale.ROOT));
+            ps.setInt(2, limit);
+            return talkRows(ps);
+        }
+    }
+
+    @Override
+    public synchronized List<Talk> openTalks() throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLS + " FROM " + shared + "talks WHERE is_open = 1 ORDER BY id DESC LIMIT 2000")) {
+            return talkRows(ps); // the newest 2,000 (audit)
+        }
+    }
+
+    @Override
+    public synchronized List<TalkLine> talkLines(List<Long> talks) throws SQLException {
+        List<TalkLine> out = new ArrayList<>();
+        if (talks.isEmpty()) {
+            return out;
+        }
+        String marks = String.join(", ", java.util.Collections.nCopies(talks.size(), "?"));
+        // the newest 20,000 in the order the table took them, never the oldest (audit of SU-111); turned back to oldest first below
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, uid, talk, player, at_ms, kind, staff, text, server, line FROM " + shared + "talk_lines"
+                + " WHERE talk IN (" + marks + ") ORDER BY id DESC LIMIT 20000")) {
+            for (int i = 0; i < talks.size(); i++) {
+                ps.setLong(i + 1, talks.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new TalkLine(rs.getLong(1), rs.getString(2), rs.getLong(3), rs.getString(4), rs.getLong(5), rs.getString(6), rs.getString(7),
+                            rs.getString(8), rs.getString(9), rs.getString(10) == null ? "" : rs.getString(10)));
+                }
+            }
+        }
+        java.util.Collections.reverse(out);
+        return out;
+    }
+
+    @Override
+    public String talkLinesTable() {
+        return (shared + "talk_lines").replace("`", "");
+    }
+
     @Override
     public String stealsTable() {
         return (shared + "steals").replace("`", "");

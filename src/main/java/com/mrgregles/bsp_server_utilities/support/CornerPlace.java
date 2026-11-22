@@ -21,21 +21,27 @@ public final class CornerPlace {
      */
     @Nullable
     public static int[] place(List<int[]> blocked, @Nullable int[] after, int screenW, int screenH) {
+        return place(blocked, after, screenW, screenH, W);
+    }
+
+    /** The same for a key {@code w} wide (the MESSAGE STAFF key, 66, D652 R5). */
+    @Nullable
+    public static int[] place(List<int[]> blocked, @Nullable int[] after, int screenW, int screenH, int w) {
         int x = MARGIN, y = MARGIN;
         if (after != null) {
             x = after[0];
             y = after[1];
         }
-        int limit = Math.max(MARGIN + W, screenW / 2);
+        int limit = Math.max(MARGIN + w, screenW / 2);
         for (int tries = 0; tries < 256; tries++) {
-            if (x + W > limit) {
+            if (x + w > limit) {
                 x = MARGIN;
                 y += H + GAP;
             }
             if (y + H > screenH) {
                 return null;
             }
-            int[] hit = overlap(blocked, x, y);
+            int[] hit = overlap(blocked, x, y, w);
             if (hit == null) {
                 return new int[]{x, y};
             }
@@ -45,9 +51,9 @@ public final class CornerPlace {
     }
 
     @Nullable
-    private static int[] overlap(List<int[]> blocked, int x, int y) {
+    private static int[] overlap(List<int[]> blocked, int x, int y, int w) {
         for (int[] b : blocked) {
-            if (x < b[0] + b[2] && x + W > b[0] && y < b[1] + b[3] && y + H > b[1]) {
+            if (x < b[0] + b[2] && x + w > b[0] && y < b[1] + b[3] && y + H > b[1]) {
                 return b;
             }
         }

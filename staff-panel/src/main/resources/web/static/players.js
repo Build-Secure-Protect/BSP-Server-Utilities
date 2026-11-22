@@ -199,6 +199,7 @@ const Players = (() => {
     top.appendChild(head(p, 48)); top.appendChild(who); top.appendChild(x); box.appendChild(top);
     box.appendChild(livePart(p));
     box.appendChild(actionsFor(p));
+    box.appendChild(PlayerMsg.section({ id: p.id, name: p.name })); // SU-111: private messages, under the keys (D652 R6)
     const ml = Market.line(p); // D405: their lots and orders, when they have any
     if (ml) box.appendChild(ml);
     const bl = Bounties.line(p); // D528: bounties on them, placed or hunted by them
@@ -247,7 +248,7 @@ const Players = (() => {
     kick.addEventListener("click", () => { kickOpen = kickOpen === p.id ? null : p.id; result = null; App.refresh(); });
     const graves = el("button", "key", "Graves"); graves.type = "button"; graves.dataset.keep = "k:graves";
     graves.addEventListener("click", () => { openId = null; kickOpen = null; result = null; Players.leave(); openGraves(p.name); });
-    keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(Bank.key(p)); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
+    keys.appendChild(Teleport.key(p, lastLive)); keys.appendChild(graves); keys.appendChild(Bank.key(p)); keys.appendChild(PlayerMsg.key(p)); keys.appendChild(kick); keys.appendChild(Bans.key(p)); wrap.appendChild(keys);
     const tp = Teleport.box(p, lastLive); if (tp) wrap.appendChild(tp); // SU-43
     const bn = Bans.box(p); if (bn) wrap.appendChild(bn); // SU-44
     if (kickOpen === p.id) {

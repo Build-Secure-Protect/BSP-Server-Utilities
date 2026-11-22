@@ -125,7 +125,7 @@ ROOMS = {
     "reason.freed": "freed by staff",
     # giving a room back (SU-58, D448), and /su typed by a player who is not staff
     "given_back": "You gave back your Compact Machine room on %s (%s).",
-    "only_rooms": "Use /su rooms to see your Compact Machine rooms.",
+    "only_rooms": "Use /su rooms to see your Compact Machine rooms, or /su talk for your conversation with staff.",
     # freed by staff from the ROOMS tab (SU-59, D453 R7: without the staff member's name)
     "freed": "Staff freed your Compact Machine room on %s (%s).",
     "revive_refused_own": "You own %s of %s Compact Machine rooms: give one back in /su rooms before placing this room's machine again.",
@@ -141,7 +141,7 @@ KEYS.update({"message.bsp_server_utilities.rooms." + k: v for k, v in ROOMS.item
 KEYS.update({
     "message.bsp_server_utilities.staff.away": "You show as away on the staff panels. /su away again when you are back.",
     "message.bsp_server_utilities.staff.back": "You show as online again on the staff panels.",
-    "message.bsp_server_utilities.staff.away_only": "Staff who are not admins can use /su away only.",
+    "message.bsp_server_utilities.staff.away_only": "Staff who are not admins can use /su away, /su msg, /su talk and /su talks.",
     "message.bsp_server_utilities.afk.now": "You are now AFK.",
     "message.bsp_server_utilities.afk.back": "You are back.",
     "message.bsp_server_utilities.afk.warn": "You will be checked for being idle in 1 minute.",
@@ -968,6 +968,93 @@ KEYS["message.bsp_server_utilities.support.no_page"] = "No support page is set u
 KEYS["message.bsp_server_utilities.status.support"] = "Support BSP: link %s; chat line on joining the network %s."
 KEYS["message.bsp_server_utilities.status.support_on"] = "set"
 KEYS["message.bsp_server_utilities.status.support_off"] = "not set"
+
+# Private staff messages (SU-106, D630 to D652): the chat lines players and staff get (D652 R4)
+TALK = {
+    "tag": "[Staff]",
+    "staff_tag": "[Staff msg]",
+    "new": "You have a private message from staff.",
+    "away": "While you were away, staff sent you a private message.",
+    "ended": "Staff ended your conversation. Thank you!",
+    "open": "[OPEN]",
+    "open_hover": "Open the conversation",
+    "replied": "%s replied:",
+    "staff_ended": "%s ended the conversation with %s.",
+}
+KEYS.update({"message.bsp_server_utilities.talk." + k: v for k, v in TALK.items()})
+# the commands (SU-107, D637, D638, D652 R2 and R4)
+TALK_CMD = {
+    "players": "Use /su talk to open your conversation with staff.",
+    "players_only": "Only a player has a conversation with staff.",
+    "unknown": "Nobody called %s has played on the network.",
+    "none_open": "You have no open conversation with staff.",
+    "sent_online": "Sent to %s (online on %s).",
+    "sent_offline": "Sent to %s (offline: they see it when they next log on).",
+    "no_open": "No open conversations with players.",
+    "open_header": "[Staff msg] Open conversations (%s):",
+    "waiting": "waiting %s",
+    "sent": "sent %s",
+    "offline": "offline",
+    "offline_unseen": "offline, not seen yet",
+    "refused.not_staff": "Only staff send private messages to players.",
+    "refused.to_staff": "%s is staff: use the staff room.",
+    "refused.empty": "There is nothing to send.",
+    "refused.too_long": "At most 256 characters.",
+    "refused.too_fast": "That is 30 messages in a minute: wait a moment.",
+    "refused.no_talk": "%s has no open conversation with staff.",
+    "refused.failed": "The message could not be saved: try again in a moment.",
+}
+KEYS.update({"message.bsp_server_utilities.talk.cmd." + k: v for k, v in TALK_CMD.items()})
+# the screens (SU-108, D648 to D652): the MESSAGE STAFF key, the popup, the private window
+TALK_GUI = {
+    "button": "MESSAGE STAFF",
+    "button.tip": "Your conversation with staff",
+    "button.tip_waiting": "A message from staff is waiting: click to read and answer",
+    "popup.title": "STAFF MESSAGE",
+    "popup.later": "LATER",
+    "popup.open": "OPEN",
+    "popup.one": "Staff sent you a private message.",
+    "popup.many": "Staff sent you %s private messages.",
+    "popup.one_by": "%s of staff sent you a private message.",
+    "popup.many_by": "%s of staff sent you %s private messages.",
+    "popup.away_one": "While you were away, staff sent you a private message.",
+    "popup.away_many": "While you were away, staff sent you %s private messages.",
+    "popup.away_one_by": "While you were away, %s of staff sent you a private message.",
+    "popup.away_many_by": "While you were away, %s of staff sent you %s private messages.",
+    "window.title": "STAFF MESSAGES",
+    "window.close": "CLOSE",
+    "window.send": "SEND",
+    "window.box": "Write to staff",
+    "window.box_staff": "Write to %s",
+    "window.box_ended": "The conversation has ended",
+    "window.online": "online \u00b7 %s",
+    "window.offline": "offline",
+    "window.who_staff": "%s \u00b7 staff \u00b7 %s",
+    "window.who_you": "you \u00b7 %s",
+    "window.who": "%s \u00b7 %s",
+    "window.ended_player": "Staff ended the conversation",
+    "window.ended_by": "Ended by %s \u00b7 %s",
+    "window.ended_itself": "Ended after 90 days with no line \u00b7 %s",
+    "window.ended_new": "Ended by %s. Write to start a new conversation.",
+    "window.ended_itself_new": "Ended after 90 days with no line. Write to start a new conversation.",
+    "window.start": "Write to start a conversation: they get a popup at once, or when they next log on.",
+    "window.none_yet": "No messages with this player in the last 90 days.",
+    "window.private": "Only staff read this conversation. Staff end it when it is done.",
+    "window.closing": "Staff will write again here if they need you. Closing in %s s.",
+    "window.open_since": "Open since %s \u00b7 %s",
+    "window.not_seen": "not seen yet",
+    "window.end": "END CONVERSATION",
+    "window.sure_end": "SURE? END",
+    "window.end_warning": "Their key goes and their window closes.",
+    "refused.not_staff": "Only staff write to players.",
+    "refused.to_staff": "They are staff: use the staff room.",
+    "refused.empty": "There is nothing to send.",
+    "refused.too_long": "At most 256 characters.",
+    "refused.too_fast": "That is too many messages in a minute: wait a moment.",
+    "refused.no_talk": "The conversation has ended.",
+    "refused.failed": "Not saved: try again in a moment.",
+}
+KEYS.update({"gui.bsp_server_utilities.talk." + k: v for k, v in TALK_GUI.items()})
 
 
 def main():

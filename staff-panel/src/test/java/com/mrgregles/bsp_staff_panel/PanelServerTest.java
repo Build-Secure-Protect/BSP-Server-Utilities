@@ -845,6 +845,31 @@ class PanelServerTest {
     }
 
     @Test
+    void player_messages_are_read_by_every_rank_and_by_nobody_logged_out() throws Exception {
+        String o = owner();
+        JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));
+        String kt = kipLink.get("link").getAsString().substring((URL + "/setup#").length());
+        String ks = json(post("/api/setup/info", "kip@bsp.test", null, "{\"token\":\"" + kt + "\"}")).get("secret").getAsString();
+        String kip = cookieOf(post("/api/setup", "kip@bsp.test", null,
+                "{\"token\":\"" + kt + "\",\"secret\":\"" + ks + "\",\"code\":\"" + code(ks) + "\",\"password\":\"" + PW + "\"}"));
+        assertFalse(json(post("/api/pmsg/list", "kip@bsp.test", kip, "{}")).get("ok").getAsBoolean(), "not set up on this panel: said");
+        String wren = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+        store.putTalk(new com.mrgregles.bsp_staff_panel.store.PanelStore.Talk(1, wren, "Wren_88", clock.get() - 60_000, "Ana", 0, "", clock.get() - 60_000, clock.get() - 30_000, 0));
+        store.addTalkLine(new com.mrgregles.bsp_staff_panel.store.PanelStore.TalkLine(1, "u-1", 1, wren, clock.get() - 30_000, "player", "", "help", "Frostwarf", ""));
+        server.withPlayerTalk(new com.mrgregles.bsp_staff_panel.talk.PlayerTalk(store, feed, () -> actions, clock::get, null));
+        assertEquals(401, post("/api/pmsg/list", "kip@bsp.test", null, "{}").statusCode(), "logged out: nothing");
+        JsonObject list = json(post("/api/pmsg/list", "kip@bsp.test", kip, "{}"));
+        assertTrue(list.get("ok").getAsBoolean() && list.get("waiting").getAsInt() == 1 && list.getAsJsonArray("open").size() == 1, "a Moderator reads the list (D630): " + list);
+        JsonObject h = json(post("/api/pmsg", "kip@bsp.test", kip, "{\"id\":\"" + wren + "\"}"));
+        assertTrue(h.get("ok").getAsBoolean() && h.getAsJsonArray("talks").size() == 1 && h.get("name").getAsString().equals("Wren_88"), "and a player's conversations: " + h);
+        JsonObject empty = json(post("/api/pmsg/send", "owner@bsp.test", o, "{\"id\":\"" + wren + "\",\"name\":\"Wren_88\",\"text\":\"  \"}"));
+        assertFalse(empty.get("ok").getAsBoolean(), "an empty line refused");
+        HttpResponse<String> js = get("/static/pmsg.js", "kip@bsp.test", null);
+        assertTrue(js.statusCode() == 200 && js.body().contains("const PlayerMsg") && !js.body().contains("innerHTML"), "the page's script is served, and sets no markup from the network");
+        assertTrue(get("/", "kip@bsp.test", kip).body().contains("/static/pmsg.js"), "the page loads it");
+    }
+
+    @Test
     void bounties_are_read_by_everyone_and_changed_by_admins_or_the_bounty_power() throws Exception {
         String o = owner();
         JsonObject kipLink = json(post("/api/staff/add", "owner@bsp.test", o, "{\"email\":\"kip@bsp.test\",\"mcName\":\"Kip\",\"rank\":\"MODERATOR\"}"));

@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * JEI, when installed: its bookmark and ingredient lists leave the SUPPORT BSP key free (owner decision D592), as
+ * JEI, when installed: its bookmark and ingredient lists leave the SUPPORT BSP and MESSAGE STAFF keys free (D592, D652 R5), as
  * BSP-Core's plugin does for TEAM and KITS. Found and loaded only by JEI, in the player's game.
  */
 @JeiPlugin
@@ -31,8 +31,14 @@ public class SupportJeiPlugin implements IModPlugin {
         reg.addGlobalGuiHandler(new IGlobalGuiHandler() {
             @Override
             public Collection<Rect2i> getGuiExtraAreas() {
-                int[] r = SupportButton.area(Minecraft.getInstance().screen);
-                return r == null ? List.of() : List.of(new Rect2i(r[0], r[1], r[2], r[3]));
+                var screen = Minecraft.getInstance().screen;
+                java.util.List<Rect2i> out = new java.util.ArrayList<>(2);
+                for (int[] r : new int[][]{SupportButton.area(screen), com.mrgregles.bsp_server_utilities.client.TalkButton.area(screen)}) {
+                    if (r != null) {
+                        out.add(new Rect2i(r[0], r[1], r[2], r[3]));
+                    }
+                }
+                return out;
             }
         });
     }

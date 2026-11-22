@@ -119,6 +119,11 @@ public final class JdbcBackend implements StorageBackend {
                     + " grace_until BIGINT NOT NULL, reason VARCHAR(32) NOT NULL, told BOOLEAN NOT NULL, owner_name VARCHAR(16) NOT NULL DEFAULT '', PRIMARY KEY (server, x, z), KEY owner (owner)) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "cm_servers (server VARCHAR(64) NOT NULL PRIMARY KEY, heard_at BIGINT NOT NULL) DEFAULT CHARSET=utf8mb4");
             st.executeUpdate(STEALS_TABLE.replace("<prefix>", prefix)); // totem steals for the staff panel (SU-95), kept 90 days
+            st.executeUpdate(TALKS_TABLE.replace("<prefix>", prefix)); // private staff messages (SU-105), lines kept 90 days
+            st.executeUpdate(TALK_LINES_TABLE.replace("<prefix>", prefix));
+            if (!hasColumn(prefix + "talks", "last_kind")) { // a talks table from before the audit of SU-111 (never released; development databases)
+                st.executeUpdate("ALTER TABLE " + prefix + "talks ADD COLUMN last_kind VARCHAR(8) NOT NULL DEFAULT '', ADD KEY open_talks (is_open)");
+            }
             warnCharsets();
             if (!hasColumn(prefix + "steals", "line")) { // a steals table from before the signed copy (never released; development databases)
                 st.executeUpdate("ALTER TABLE " + prefix + "steals ADD COLUMN line TEXT NULL");
@@ -456,6 +461,21 @@ public final class JdbcBackend implements StorageBackend {
             ps.setLong(2, s.revision());
             ps.executeUpdate();
         }
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.players.Joined playerByName(String name) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name, first_at, first_server FROM " + prefix + "players WHERE name = ? LIMIT 1")) {
+            ps.setString(1, name); // the table's utf8mb4 collation compares without case
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    UUID id = uuidOrNull(rs.getString(1));
+                    return id == null ? null : new com.mrgregles.bsp_server_utilities.players.Joined(id, rs.getString(2), rs.getLong(3), rs.getString(4));
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -1091,6 +1111,232 @@ public final class JdbcBackend implements StorageBackend {
             } while (n >= PRUNE_BATCH);
         }
         return total;
+    }
+
+    // ------------------------------------------------------------------ private staff messages (SU-105, D630 to D652)
+
+    /**
+     * One row per conversation; {@code is_open} is 1 while open and NULL once ended, so the unique key allows one open
+     * conversation per player and any number of ended ones (MySQL lets NULLs repeat in a unique key).
+     */
+    public static final String TALKS_TABLE = "CREATE TABLE IF NOT EXISTS <prefix>talks (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, player CHAR(36) NOT NULL,"
+            + " name VARCHAR(32) NOT NULL, opened_at BIGINT NOT NULL, opened_by VARCHAR(32) NOT NULL, ended_at BIGINT NOT NULL DEFAULT 0,"
+            + " ended_by VARCHAR(32) NOT NULL DEFAULT '', last_staff_at BIGINT NOT NULL DEFAULT 0, last_player_at BIGINT NOT NULL DEFAULT 0,"
+            + " told_at BIGINT NOT NULL DEFAULT 0, is_open TINYINT NULL DEFAULT 1, last_kind VARCHAR(8) NOT NULL DEFAULT '',"
+            + " UNIQUE KEY one_open (player, is_open), KEY open_talks (is_open), KEY ended (ended_at)) DEFAULT CHARSET=utf8mb4";
+
+    /** Every line of every conversation, with its signed copy (docs/API.md "Private staff messages"). */
+    public static final String TALK_LINES_TABLE = "CREATE TABLE IF NOT EXISTS <prefix>talk_lines (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, uid CHAR(36) NOT NULL,"
+            + " talk BIGINT NOT NULL, player CHAR(36) NOT NULL, at_ms BIGINT NOT NULL, kind VARCHAR(8) NOT NULL, staff VARCHAR(32) NOT NULL DEFAULT '',"
+            + " text VARCHAR(512) NOT NULL DEFAULT '', server VARCHAR(64) NOT NULL, line TEXT NULL,"
+            + " UNIQUE KEY uid (uid), KEY talk (talk, at_ms), KEY player (player, at_ms), KEY at (at_ms)) DEFAULT CHARSET=utf8mb4";
+
+    private static final String TALK_COLUMNS = "id, player, name, opened_at, opened_by, ended_at, ended_by, last_staff_at, last_player_at, told_at, last_kind";
+
+    private List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> talks(PreparedStatement ps) throws SQLException {
+        List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> out = new ArrayList<>();
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                UUID player = uuidOrNull(rs.getString(2));
+                if (player == null) {
+                    continue; // not a row this mod wrote
+                }
+                out.add(new com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk(rs.getLong(1), player, rs.getString(3), rs.getLong(4), rs.getString(5),
+                        rs.getLong(6), rs.getString(7), rs.getLong(8), rs.getLong(9), rs.getLong(10), rs.getString(11) == null ? "" : rs.getString(11)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk openTalk(UUID player) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLUMNS + " FROM " + prefix + "talks WHERE player = ? AND is_open = 1")) {
+            ps.setString(1, player.toString());
+            List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> l = talks(ps);
+            return l.isEmpty() ? null : l.get(0);
+        }
+    }
+
+    @Override
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk openOrCreateTalk(UUID player, String name, long at, String by) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "talks (player, name, opened_at, opened_by, is_open) VALUES (?, ?, ?, ?, 1)")) {
+            ps.setString(1, player.toString());
+            ps.setString(2, clip(name, 32));
+            ps.setLong(3, at);
+            ps.setString(4, clip(by, 32));
+            ps.executeUpdate(); // skipped when one is open already: the unique key keeps it to one
+        }
+        com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk t = openTalk(player);
+        if (t == null) {
+            throw new SQLException("no open conversation after opening one for " + player);
+        }
+        return t;
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk talk(long id) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLUMNS + " FROM " + prefix + "talks WHERE id = ?")) {
+            ps.setLong(1, id);
+            List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> l = talks(ps);
+            return l.isEmpty() ? null : l.get(0);
+        }
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> talksOf(UUID player) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLUMNS + " FROM " + prefix + "talks WHERE player = ? ORDER BY opened_at DESC, id DESC")) {
+            ps.setString(1, player.toString());
+            return talks(ps);
+        }
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> openTalks() throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLUMNS + " FROM " + prefix + "talks WHERE is_open = 1")) {
+            return talks(ps);
+        }
+    }
+
+    @Override
+    public boolean insertTalkLine(com.mrgregles.bsp_server_utilities.talk.TalkStore.Line l, boolean whileOpen) throws SQLException {
+        if (whileOpen) {
+            // one statement: the line goes in only while the conversation is open, so an end on another server a moment before keeps it out (audit)
+            try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "talk_lines (uid, talk, player, at_ms, kind, staff, text, server, line)"
+                    + " SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? FROM " + prefix + "talks WHERE id = ? AND is_open = 1")) {
+                ps.setString(1, l.uid());
+                ps.setLong(2, l.talk());
+                ps.setString(3, l.player().toString());
+                ps.setLong(4, l.at());
+                ps.setString(5, l.kind());
+                ps.setString(6, clip(l.staff(), 32));
+                ps.setString(7, clip(l.text(), 512));
+                ps.setString(8, clip(l.server(), 64));
+                ps.setString(9, l.line());
+                ps.setLong(10, l.talk());
+                if (ps.executeUpdate() == 1) {
+                    return true;
+                }
+            }
+            com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk t = talk(l.talk());
+            return t != null && t.open(); // open and nothing added: the same uid was there already
+        }
+        try (PreparedStatement ps = conn().prepareStatement("INSERT IGNORE INTO " + prefix + "talk_lines (uid, talk, player, at_ms, kind, staff, text, server, line)"
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+            ps.setString(1, l.uid());
+            ps.setLong(2, l.talk());
+            ps.setString(3, l.player().toString());
+            ps.setLong(4, l.at());
+            ps.setString(5, l.kind());
+            ps.setString(6, clip(l.staff(), 32));
+            ps.setString(7, clip(l.text(), 512));
+            ps.setString(8, clip(l.server(), 64));
+            ps.setString(9, l.line());
+            ps.executeUpdate();
+        }
+        return true;
+    }
+
+    @Override
+    public void touchTalk(long id, String kind, long at, String name) throws SQLException {
+        String column = kind.equals(com.mrgregles.bsp_server_utilities.talk.TalkStore.KIND_PLAYER) ? "last_player_at" : "last_staff_at";
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "talks SET " + column + " = GREATEST(" + column + ", ?), last_kind = ?"
+                + (name.isEmpty() ? "" : ", name = ?") + " WHERE id = ?")) {
+            ps.setLong(1, at);
+            ps.setString(2, kind.equals(com.mrgregles.bsp_server_utilities.talk.TalkStore.KIND_PLAYER) ? "player" : "staff");
+            int i = 3;
+            if (!name.isEmpty()) {
+                ps.setString(i++, clip(name, 32));
+            }
+            ps.setLong(i, id);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public boolean endTalk(long id, long at, String by) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "talks SET ended_at = ?, ended_by = ?, is_open = NULL WHERE id = ? AND is_open = 1")) {
+            ps.setLong(1, Math.max(1, at));
+            ps.setString(2, clip(by, 32));
+            ps.setLong(3, id);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    @Override
+    public void talkTold(long id, long at) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("UPDATE " + prefix + "talks SET told_at = GREATEST(told_at, ?) WHERE id = ?")) {
+            ps.setLong(1, at);
+            ps.setLong(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Line> talkLines(List<Long> ids) throws SQLException {
+        List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Line> out = new ArrayList<>();
+        if (ids.isEmpty()) {
+            return out;
+        }
+        String marks = String.join(", ", java.util.Collections.nCopies(ids.size(), "?"));
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, uid, talk, player, at_ms, kind, staff, text, server, line FROM " + prefix + "talk_lines"
+                + " WHERE talk IN (" + marks + ") ORDER BY id")) { // the order the table took them, never two servers' clocks (audit)
+            for (int i = 0; i < ids.size(); i++) {
+                ps.setLong(i + 1, ids.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UUID player = uuidOrNull(rs.getString(4));
+                    if (player == null) {
+                        continue;
+                    }
+                    out.add(new com.mrgregles.bsp_server_utilities.talk.TalkStore.Line(rs.getLong(1), rs.getString(2), rs.getLong(3), player, rs.getLong(5),
+                            rs.getString(6), rs.getString(7), rs.getString(8), rs.getString(9), rs.getString(10) == null ? "" : rs.getString(10)));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public int pruneTalkLines(long beforeMs) throws SQLException {
+        int total = 0, n;
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "talk_lines WHERE at_ms < ? LIMIT " + PRUNE_BATCH)) {
+            do {
+                ps.setLong(1, beforeMs);
+                n = ps.executeUpdate();
+                total += n;
+            } while (n >= PRUNE_BATCH);
+        }
+        return total;
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.talk.TalkStore.Talk> talksWithoutLines(long openedBefore) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + TALK_COLUMNS + " FROM " + prefix + "talks t WHERE opened_at < ?"
+                + " AND NOT EXISTS (SELECT 1 FROM " + prefix + "talk_lines l WHERE l.talk = t.id) LIMIT " + PRUNE_BATCH)) {
+            ps.setLong(1, openedBefore);
+            return talks(ps);
+        }
+    }
+
+    @Override
+    public void deleteTalks(List<Long> ids) throws SQLException {
+        if (ids.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "talks WHERE id = ? AND is_open IS NULL")) {
+            for (long id : ids) {
+                ps.setLong(1, id);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    private static String clip(@Nullable String s, int max) {
+        return s == null ? "" : s.length() <= max ? s : s.substring(0, max);
     }
 
     @Override

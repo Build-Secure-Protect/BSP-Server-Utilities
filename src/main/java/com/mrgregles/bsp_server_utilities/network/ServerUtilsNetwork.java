@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "9"; // 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "10"; // 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -194,6 +194,25 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminSupportEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminSupportEditPacket::encode).decoder(AdminSupportEditPacket::decode)
                 .consumerMainThread(AdminSupportEditPacket::handle).add();
+        // private staff messages (SU-106, D630 to D652); protocol 10.
+        CHANNEL.messageBuilder(TalkStatePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TalkStatePacket::encode).decoder(TalkStatePacket::decode)
+                .consumerMainThread(TalkStatePacket::handle).add();
+        CHANNEL.messageBuilder(TalkPopupPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TalkPopupPacket::encode).decoder(TalkPopupPacket::decode)
+                .consumerMainThread(TalkPopupPacket::handle).add();
+        CHANNEL.messageBuilder(TalkViewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TalkViewPacket::encode).decoder(TalkViewPacket::decode)
+                .consumerMainThread(TalkViewPacket::handle).add();
+        CHANNEL.messageBuilder(TalkLinePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TalkLinePacket::encode).decoder(TalkLinePacket::decode)
+                .consumerMainThread(TalkLinePacket::handle).add();
+        CHANNEL.messageBuilder(TalkAnswerPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TalkAnswerPacket::encode).decoder(TalkAnswerPacket::decode)
+                .consumerMainThread(TalkAnswerPacket::handle).add();
+        CHANNEL.messageBuilder(TalkActionPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(TalkActionPacket::encode).decoder(TalkActionPacket::decode)
+                .consumerMainThread(TalkActionPacket::handle).add();
     }
 
     /** Client to server. */

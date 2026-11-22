@@ -13,9 +13,11 @@ import java.util.UUID;
 
 /**
  * What the shared storage needs from a database: the notice table that carries messages between servers when Redis is
- * not there (or as its safety net), then each feature's own tables, added here as the feature is built.
+ * not there (or as its safety net), then each feature's own tables, added here as the feature is built. Private staff
+ * messages (SU-105) have their methods in {@link com.mrgregles.bsp_server_utilities.talk.TalkStore}, which a world's save
+ * also keeps on a server without shared storage.
  */
-public interface StorageBackend {
+public interface StorageBackend extends com.mrgregles.bsp_server_utilities.talk.TalkStore {
     /** A notice between servers; {@code id} is 0 until the table assigns one. */
     record Notice(long id, String uid, long createdAt, String source, String kind, String payload) {
     }
@@ -136,6 +138,10 @@ public interface StorageBackend {
 
     /** How many players the list holds, the first joins at or after {@code sinceMs} (newest first, at most {@code limit}) and the newest of all. */
     com.mrgregles.bsp_server_utilities.players.PlayerCounts playerCounts(long sinceMs, int limit) throws Exception;
+
+    /** A player who ever joined the network, by name in any case (private staff messages to someone offline, SU-107), or null. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.players.Joined playerByName(String name) throws Exception;
 
     /** The network's player counter settings, or null when none were ever saved. */
     @Nullable
