@@ -981,5 +981,14 @@
   "gui.bsp_server_utilities.talk.refused.too_long": "At most 256 characters.",
   "gui.bsp_server_utilities.talk.refused.too_fast": "That is too many messages in a minute: wait a moment.",
   "gui.bsp_server_utilities.talk.refused.no_talk": "The conversation has ended.",
-  "gui.bsp_server_utilities.talk.refused.failed": "Not saved: try again in a moment."
+  "gui.bsp_server_utilities.talk.refused.failed": "Not saved: try again in a moment.",
+  "gui.bsp_server_utilities.worlds.create": "Create new world",
+  "gui.bsp_server_utilities.worlds.loading": "Loading worlds…",
+  "gui.bsp_server_utilities.worlds.tag.hardcore": "HARDCORE",
+  "gui.bsp_server_utilities.worlds.tag.locked": "LOCKED",
+  "gui.bsp_server_utilities.worlds.tag.unsupported": "UNSUPPORTED",
+  "gui.bsp_server_utilities.worlds.tag.older": "OLDER VERSION",
+  "gui.bsp_server_utilities.worlds.tag.newer": "NEWER VERSION",
+  "gui.bsp_server_utilities.worlds.tag.experimental": "EXPERIMENTAL",
+  "gui.bsp_server_utilities.worlds.tag.selected": "SELECTED"
 }

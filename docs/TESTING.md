@@ -2041,3 +2041,53 @@ Install, all at once (protocol 11):
 2. Put it on every game server, replacing 0.18.0, and restart them. A 0.18.0 game is turned away, told the mod's version differs.
 
 Then the in-game checks in the SU-121 section above.
+
+## 2026-11-22: singleplayer worlds as a grid (SU-124)
+
+The Select World screen (Singleplayer) shows the worlds as a scrolling grid of cards (artboard W1). It is still vanilla's `SelectWorldScreen`, and vanilla's `WorldSelectionList` is still the model: it loads the worlds, filters them on search, holds the selection and enables the buttons. `client/WorldGridHook` (on `ScreenEvent.Init.Post`) takes the list out of the screen's input and narration and puts `client/WorldGridWidget` in its place, in the same bounds and Tab position. `mixin/WorldListGridMixin` (client) stops that one list drawing its rows and its scrollbar, so its background (the resource pack's, or FancyMenu's) stays. `mixin/WorldListEntryAccess` reads each entry's level summary and the icon texture vanilla loaded for it: the grid loads no texture of its own, and vanilla closes them when the list changes or the screen closes. Every action goes to vanilla's entry: click `setSelected`, double-click or Enter `joinWorld`, "+" `CreateWorldScreen.openFresh`. The layout is in `menus/WorldGridLayout`, plain arithmetic. There are 9 lang keys `worlds.*` from `tools/gen_lang.py` (`tools/check_lang.py`: 0 missing). The client setting is `menus.worldGrid` (true to begin with).
+
+GameTests **282/282** (5 new in `WorldGridGameTests`):
+- columns 4 at 480, 5 at 576, 6 at 640 and 960, at least 2, never more than 6;
+- cards at least 96 wide, filling the row between the 12 px margins and clear of the 4 px track;
+- 16:9 pictures over a 22 px text block, 6 px gaps;
+- a row and a half visible at 480 x 270;
+- the scroll clamped, the last card scrolled into view, the thumb and its drag;
+- clicks in a gap or outside the area land on no card;
+- the arrows step cards and rows and leave the grid at its edges;
+- the picture's "cover" crop.
+
+The GameTest server is a dedicated server: it ran with the jar's client mixins and `WorldGridHook` present and logged no mixin or class-loading error.
+
+**Untested in a client.** To check in game, in the "Build Secure Protect (Adding Mods)" instance with this jar (FancyMenu and the BSP-UI pack as in the pack):
+1. **Grid basics.** Video Settings, GUI Scale 4 on a 1920 x 1080 window (480 x 270), then 3 (640 x 360), then 2 (960 x 540); the owner's Mac at scale 5 too. Each time open Singleplayer:
+   - with no worlds (move `saves/` aside): only "+ Create new world". Vanilla opens Create World by itself when there is no world at all; that stays.
+   - with 1, 7 and 30 worlds (copy one world folder): 4 columns at 480 wide, 6 at 640 and 960, whatever the number of worlds; the 30 scroll with the wheel and by dragging the thumb, which turns teal under the mouse; the last row stops at the bottom.
+   - resize the window while the screen is open: the grid lays itself out again with no doubled cards.
+2. **Actions.** Click a world: teal border, faint glow, SELECTED tag; Play, Edit, Re-Create and Delete light up. Each of them opens exactly the vanilla screen; Cancel goes back. Double-click a card: it plays. Select, then Enter: it plays. "+ Create new world" opens Create World.
+3. **Keyboard.** From the search box, Down or Tab reaches the grid and selects the first world; the arrows move across and down (the last row's Down goes to the last card); Up from the first row returns to the search box; Tab reaches the buttons. With a screen reader or the narrator on (Ctrl+B), each card reads like vanilla's entries.
+4. **Search.** Type part of a name: the cards filter live; clear it: all return.
+5. **States.**
+   - A Hardcore world: gold HARDCORE.
+   - A world from an older Minecraft: coral OLDER VERSION. One from a newer version: coral NEWER VERSION; hovering its picture shows vanilla's two red lines, and Play asks vanilla's question.
+   - A world open in another instance: coral LOCKED. Hovering shows vanilla's red line, and a click does nothing, as vanilla's list does.
+   - An experimental world: gold EXPERIMENTAL.
+6. **Icons.** A world with `icon.png` (save and quit once in it) shows its picture cropped top and bottom, crisp (nearest-neighbour). One without shows vanilla's default picture. Open and close Singleplayer 20 times: no growth in AllTheLeaks' report and no texture warning in `logs/latest.log`.
+7. **Off switch.** `worldGrid = false` under `[menus]` in `config/bsp_server_utilities-client.toml` and reopen the screen (or restart): vanilla's list.
+8. **Compatibility.** FancyMenu loads its `select_world_screen` layer with no error in the log. A dedicated server with this jar starts cleanly (the GameTest server above did).
+
+## 2026-11-22: audit of singleplayer worlds as a grid (SU-126)
+
+A fresh read-only audit of SU-124 found one high-severity defect and six low ones; all are fixed:
+1. **Opening Singleplayer crashed the client** with the default setting. `client/WorldGridHook` reordered Forge's `ScreenEvent.Init.getListenersList()`, which is read-only (`Collections.unmodifiableList`), and its fallback threw again from the same list. The hook now reorders the screen's own list (`screen.children()`), and the fallback (`undo`) touches only that list and never throws. The grid still takes the list's place in the Tab order.
+2. At GUI width 640 (cards 96 wide) even the date alone was too wide ("22/11/2026, 20:04" is 92 px, the room 88) and was cut with "…". It now falls back to the date without the time ("22/11/2026").
+3. The docs said OLDER VERSION is "as Minecraft flags them", but Minecraft flags no older world on a stable game. They now say the tag marks a world saved by an older Minecraft.
+4. A single tag wider than its card was dropped: it is now cut with "…". SELECTED stays last, after the warnings, and drops first when the row is full (the teal border still shows the selection).
+5. Two GameTest assertions proved nothing. The out-of-area click now checks a point above the area and the last row's card at the bottom. The arrow start now matches the grid: with nothing chosen, any arrow goes to the first world (the create card when there is none), and `WorldGridWidget.keyPressed` uses `WorldGridLayout.move` for it.
+6. TESTING SU-124 step 1 tied columns to world counts. It now says 4 columns at 480 wide and 6 at 640 and 960, whatever the number of worlds.
+7. NEWER VERSION, an extra tag beyond the brief, is kept (owner: defaults).
+
+GameTests **282/282**. One run had one failure in a staff-panel test (`a_players_bank_and_market_are_read_and_refunded_by_those_who_may`, untouched by this work), which passed on the next run: an intermittent failure to look at separately. The jar `build/libs/bsp-server-utilities-0.20.0.jar` is rebuilt, and its reference map is complete.
+
+**Still untested in a client.** No dev client was opened: the session had no screen control. The first in-game check is simply that Singleplayer opens (SU-124 step 1); then the rest of SU-124's steps.
+
+In game (the owner, 2026-11-22, the rebuilt 0.20.0 jar): Singleplayer opens and the grid works. The rest of SU-124's steps (sizes, every button, keys, search, the tags, icons and leaks, the off switch, FancyMenu's log) are not reported yet.

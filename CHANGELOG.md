@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-22
+
+Singleplayer's worlds as a grid. A change in the game only: servers need nothing new and the network protocol is still 11, as 0.19.0's.
+
+### Added
+- Singleplayer's Select World screen shows the worlds as a scrolling grid of cards in place of Minecraft's list: "+ Create new world" first, then each world with its picture (cropped to fill the card), its name, its game mode and when it was last played, newest first as before. Tags on the picture mark Hardcore, locked (open in another game), unsupported and experimental worlds as Minecraft reports them, and worlds saved by an older or a newer Minecraft. Click to select, double-click or Enter to play; the arrows move across the grid; the mouse wheel and the scrollbar scroll; the search box, Play, Edit, Delete, Re-Create and Cancel work exactly as before. The client setting `worldGrid` (`[menus]` in `config/bsp_server_utilities-client.toml`) turns it off and gives Minecraft's own list.
+
 ## [0.19.0] - 2026-11-22
 
 When and where an offline player was last seen, in the in-game staff window of private staff messages. **The network protocol is 11: players need the new modpack**, and every server needs 0.19.0 at the same time. The staff web panel is unchanged (0.7.0) and there is no new database grant.

@@ -82,6 +82,10 @@ If your machines keep chunks loaded (an RFTools Builder, a Mekanism machine with
 
 Dropped items and experience orbs last 5 minutes of the server's time whether or not anyone is near, so piles left where nobody goes are gone by the time someone passes; your death drops last 15 minutes, time to run back for them. A Shatter Totem on the ground is never removed. When an admin clears the ground you are warned 60 and 30 seconds before.
 
+## For players: your singleplayer worlds
+
+Singleplayer's Select World screen shows your worlds as a grid of cards: "+ Create new world" first, then each world with its picture, its name, its game mode and when you last played it, the most recent first. Tags on the picture mark HARDCORE, LOCKED (open in another game), UNSUPPORTED and EXPERIMENTAL worlds, and OLDER VERSION or NEWER VERSION for a world saved by another Minecraft. Click a card to select it and double-click (or press Enter) to play; the arrow keys move across the grid, and the mouse wheel or the scrollbar scrolls. The search box and the Play, Edit, Delete, Re-Create and Cancel buttons are Minecraft's own and work as always. To keep Minecraft's plain list, set `worldGrid = false` under `[menus]` in `config/bsp_server_utilities-client.toml`.
+
 ## For admins: setting up
 
 ![The setup card](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_card.png)

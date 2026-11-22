@@ -14,7 +14,9 @@
   ],
   "server": [],
   "client": [
-    "ForgeGuiMixin"
+    "ForgeGuiMixin",
+    "WorldListGridMixin",
+    "WorldListEntryAccess"
   ],
   "injectors": {
     "defaultRequire": 1

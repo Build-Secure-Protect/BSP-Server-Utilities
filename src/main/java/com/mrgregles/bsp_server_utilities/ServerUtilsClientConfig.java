@@ -12,6 +12,8 @@ public final class ServerUtilsClientConfig {
     public static final ForgeConfigSpec.BooleanValue SUPPORT_BUTTON;
     /** The MESSAGE STAFF key in the inventory while staff have a conversation open with the player (D652 R5). */
     public static final ForgeConfigSpec.BooleanValue MESSAGE_BUTTON;
+    /** Singleplayer's Select World screen as a grid of world cards (artboard W1). */
+    public static final ForgeConfigSpec.BooleanValue WORLD_GRID;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -20,6 +22,10 @@ public final class ServerUtilsClientConfig {
                 .define("supportButton", true);
         MESSAGE_BUTTON = b.comment("Show the MESSAGE STAFF key in the inventory while staff have a conversation open with you (/su talk opens it too).")
                 .define("messageButton", true);
+        b.pop();
+        b.push("menus");
+        WORLD_GRID = b.comment("Show Singleplayer's Select World screen as a grid of world cards; false keeps Minecraft's own list.")
+                .define("worldGrid", true);
         b.pop();
         SPEC = b.build();
     }
@@ -40,6 +46,15 @@ public final class ServerUtilsClientConfig {
     public static boolean supportButton() {
         try {
             return SUPPORT_BUTTON.get();
+        } catch (IllegalStateException e) {
+            return true;
+        }
+    }
+
+    /** Whether the Select World screen shows the grid; true before the config is loaded. */
+    public static boolean worldGrid() {
+        try {
+            return WORLD_GRID.get();
         } catch (IllegalStateException e) {
             return true;
         }

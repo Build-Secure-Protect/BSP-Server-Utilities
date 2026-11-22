@@ -1077,6 +1077,19 @@ TALK_GUI = {
     "refused.failed": "Not saved: try again in a moment.",
 }
 KEYS.update({"gui.bsp_server_utilities.talk." + k: v for k, v in TALK_GUI.items()})
+# Singleplayer's Select World screen as a grid of world cards (artboard W1)
+WORLDS_GUI = {
+    "create": "Create new world",
+    "loading": "Loading worlds\u2026",
+    "tag.hardcore": "HARDCORE",
+    "tag.locked": "LOCKED",
+    "tag.unsupported": "UNSUPPORTED",
+    "tag.older": "OLDER VERSION",
+    "tag.newer": "NEWER VERSION",
+    "tag.experimental": "EXPERIMENTAL",
+    "tag.selected": "SELECTED",
+}
+KEYS.update({"gui.bsp_server_utilities.worlds." + k: v for k, v in WORLDS_GUI.items()})
 
 
 def main():
