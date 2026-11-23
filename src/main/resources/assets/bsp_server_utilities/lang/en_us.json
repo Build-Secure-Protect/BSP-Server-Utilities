@@ -990,5 +990,8 @@
   "gui.bsp_server_utilities.worlds.tag.older": "OLDER VERSION",
   "gui.bsp_server_utilities.worlds.tag.newer": "NEWER VERSION",
   "gui.bsp_server_utilities.worlds.tag.experimental": "EXPERIMENTAL",
-  "gui.bsp_server_utilities.worlds.tag.selected": "SELECTED"
+  "gui.bsp_server_utilities.worlds.tag.selected": "SELECTED",
+  "gui.bsp_server_utilities.servers.tag.incompatible": "INCOMPATIBLE",
+  "gui.bsp_server_utilities.servers.tag.lan": "LAN",
+  "gui.bsp_server_utilities.servers.join": "JOIN"
 }

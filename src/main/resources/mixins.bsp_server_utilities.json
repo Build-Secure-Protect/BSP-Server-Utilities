@@ -15,7 +15,8 @@
   "server": [],
   "client": [
     "ForgeGuiMixin",
-    "WorldListGridMixin",
+    "GriddedListMixin",
+    "ServerEntryAccess",
     "WorldListEntryAccess"
   ],
   "injectors": {

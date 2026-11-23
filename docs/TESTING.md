@@ -2091,3 +2091,70 @@ GameTests **282/282**. One run had one failure in a staff-panel test (`a_players
 **Still untested in a client.** No dev client was opened: the session had no screen control. The first in-game check is simply that Singleplayer opens (SU-124 step 1); then the rest of SU-124's steps.
 
 In game (the owner, 2026-11-22, the rebuilt 0.20.0 jar): Singleplayer opens and the grid works. The rest of SU-124's steps (sizes, every button, keys, search, the tags, icons and leaks, the off switch, FancyMenu's log) are not reported yet.
+
+## 2026-11-22: Multiplayer servers as a grid (SU-127)
+
+**What it does.** The Multiplayer screen shows the servers as a grid in the Select World grid's look. The featured server (client setting `menus.featuredServer`, `buildsecureprotect.com`: a host, or a domain its hosts end with) is a card across the whole width on top. Every other saved server and every LAN game is a square card, in the list's own order. Vanilla's "Scanning for games on your local network" comes last.
+
+**How it is built.**
+- The screen is still vanilla's `JoinMultiplayerScreen`, and its `ServerSelectionList` is still the model: the saved servers, the LAN games, the selection and the buttons.
+- `client/ServerGridHook` and `GriddedLists.takeOver` put `client/ServerGridWidget` in the list's place. The Select World grid takes over its list the same way.
+- `mixin/GriddedListMixin` stops the list drawing rows and its scrollbar.
+- Vanilla pings each server and uploads its icon inside each row's render. So for each card on screen, the grid runs that render with drawing switched off (an empty clip), as vanilla runs it for each row on screen. Builtin Servers' and Forge's additions to that render run too. `mixin/ServerEntryAccess` reads the icon texture vanilla keeps.
+- Every action goes to vanilla:
+  - click: `screen.setSelected`;
+  - double-click or Enter: `joinSelectedServer`;
+  - Shift and an arrow: the entry's own Shift+Up/Down.
+- The hovers are vanilla's words: the ping, the player list on the count, the version in red when incompatible. Builtin Servers' badge has its hover, through `compat/BuiltinServers`. Forge's mods-match icon is drawn by `ForgeHooksClient.drawForgePingInfo` (top right of a square, under the count on the BSP card).
+- The layout is in `menus/ServerGridLayout`, plain arithmetic. There are 2 new lang keys, `servers.tag.*`, from `tools/gen_lang.py`.
+
+GameTests **286/286** (4 new in `ServerGridGameTests`):
+- the featured card spans the row of squares, and squares use the Select World columns, inside the margins;
+- without a featured server every server is a square;
+- the content ends after the scanning line, the scroll is clamped and cards scroll into view;
+- the arrows go between the featured card and the first row;
+- which addresses are the featured server's: the domain and names under it, any case, a port, a trailing dot, IPv6 in brackets; not look-alikes; an empty setting features nothing.
+
+**Untested in a client.** To check in game, in the Adding Mods instance with this jar (FancyMenu, Builtin Servers and BSP-UI as in the pack):
+1. **Layout.** Open Multiplayer at GUI 480 x 270, 640 x 360 and 960 x 540, and the owner's Mac at scale 5. BSP Official is the full-width card on top, with its icon, name, gold BUILTIN tag, the two-line message in its colours, the player count and green bars. Other servers are squares in 4 columns at 480 and 6 at 640 and 960. "Scanning for games on your local network" comes last.
+2. **Pinging and icons.** Each server's bars cycle teal while it pings, then turn green (or coral for one that is down, with "Can't connect to server" as its message). Each server's own icon appears. Add a server that does not exist: coral bars and its message. Add a server on another Minecraft version: coral INCOMPATIBLE tag and its version in red.
+3. **Hovers.** Over the bars: "Ping: N ms". Over the count: who is on. Over BUILTIN: Builtin Servers' sentence. Over Forge's small icon: the mods match.
+4. **Actions.**
+   - Click a card: teal border, SELECTED; Join Server, Edit and Delete light up. For BSP Official, Edit and Delete stay off and their hover says the modpack forces it (Builtin Servers).
+   - Double-click joins, and so does Enter.
+   - Direct Connection, Add Server, Edit, Delete (its confirm), Refresh and Back are vanilla's.
+   - After Add or Edit the grid shows the change.
+5. **Keyboard.** Tab reaches the grid and selects the first card. Down goes from BSP to the first square, Up from the first row back to BSP, and the arrows move along the rows. Shift and an arrow moves the chosen square one place (the order is saved in `servers.dat`; BSP stays on top whatever its place).
+6. **Scrolling.** With 20 or more servers: the wheel, dragging the thumb (teal under the mouse), and the selected card kept in view.
+7. **LAN.** Open a singleplayer world to LAN on another instance on the same network: a square with a teal LAN tag, "LAN World", the world's name and its address (hidden if Hide Server Address is on). Double-click joins.
+8. **FancyMenu.** Its header strip and background still draw, with no error in the log. Its help text at mid-left (x 12, 92 wide) now sits over the first column of squares; move it in FancyMenu's editor if it is in the way.
+9. **Off switches.** `serverGrid = false`: vanilla's list. `featuredServer = ""`: every server a square.
+10. **Leaks.** Open and close Multiplayer 20 times: no growth in AllTheLeaks' report and no texture warning in the log.
+
+## 2026-11-22: audit of Multiplayer servers as a grid (SU-128)
+
+A fresh read-only audit of SU-127 found no high-severity defect, one medium and nine low ones. All of them are fixed except the FancyMenu part of 7:
+1. **Vanilla's icon actions were missing.** Vanilla joins a server with one click on the right half of its row icon, and moves it with the arrows on the left half. A hovered server card (or every card in touchscreen mode) now shows three keys:
+   - `<` moves it one place earlier in the list;
+   - JOIN joins it;
+   - `>` moves it one place later.
+   They call vanilla's own `swap` (an invoker on `mixin/ServerEntryAccess`) and `joinSelectedServer`, with vanilla's conditions (not before the first, not after the last).
+2. A card partly scrolled out of the area still answered hovers over the title and the buttons. Hovers now answer only inside the area.
+3. The scroll went back to the top after Edit, Add, Delete or a resize, while vanilla's list keeps its scroll. The grid now keeps it per list (`GriddedLists.scrollOf` / `rememberScroll`).
+4. On the BSP card a long name pushed the tags over the player count. The tags now get up to half the room, and a tag with no room is not drawn.
+5. A square's tags could run under Forge's mods-match icon. They now stop short of it when the server reports one.
+6. The hover over an incompatible server's count now shows its player list, as vanilla does.
+7. Other mods' settings and the featured match:
+   - Builtin Servers' `badgeVisible` is respected (`compat/BuiltinServers.badgeVisible`).
+   - When several entries match `featuredServer`, the one Builtin Servers added is chosen, so a player's own older entry for the domain does not take the top card.
+   - **Not fixed:** FancyMenu's "show server icons" switch (on in the pack) does not hide the grid's icons.
+8. If a grid setting was turned off while the screen stayed open, the list stayed marked and showed empty. A list is now released when its grid is off (`GriddedLists.release`), for both screens.
+9. The failure path put the list back in the input but not the narration. It now goes back through `addListener`, without being drawn twice.
+10. Docs and version:
+    - the mod version is raised to 0.21.0;
+    - the CHANGELOG now says what a LAN square shows;
+    - `ServerEntryAccess`'s comment no longer claims vanilla closes the server icons (the grid only reads their location).
+
+Untested in a client: the checks in SU-127 above, plus hovering a server and using `<`, JOIN and `>` (the order is saved; `<` is off on the first server and `>` on the last), and opening Edit on a long list and cancelling (the grid stays where it was).
+
+In game (the owner, 2026-11-23, the 0.21.0 jar): the Multiplayer grid works. The individual steps above are not reported one by one.

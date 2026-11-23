@@ -14,6 +14,10 @@ public final class ServerUtilsClientConfig {
     public static final ForgeConfigSpec.BooleanValue MESSAGE_BUTTON;
     /** Singleplayer's Select World screen as a grid of world cards (artboard W1). */
     public static final ForgeConfigSpec.BooleanValue WORLD_GRID;
+    /** Multiplayer's server list as a grid: the featured server full width on top, the others as squares below. */
+    public static final ForgeConfigSpec.BooleanValue SERVER_GRID;
+    /** The server address (a host, or a domain its hosts end with) shown full width on top of the Multiplayer grid. */
+    public static final ForgeConfigSpec.ConfigValue<String> FEATURED_SERVER;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -26,6 +30,10 @@ public final class ServerUtilsClientConfig {
         b.push("menus");
         WORLD_GRID = b.comment("Show Singleplayer's Select World screen as a grid of world cards; false keeps Minecraft's own list.")
                 .define("worldGrid", true);
+        SERVER_GRID = b.comment("Show Multiplayer's server list as a grid: the featured server full width on top, the others as squares; false keeps Minecraft's own list.")
+                .define("serverGrid", true);
+        FEATURED_SERVER = b.comment("The server shown full width on top of the Multiplayer grid: a host, or a domain its hosts end with (empty: none).")
+                .define("featuredServer", "buildsecureprotect.com");
         b.pop();
         SPEC = b.build();
     }
@@ -57,6 +65,24 @@ public final class ServerUtilsClientConfig {
             return WORLD_GRID.get();
         } catch (IllegalStateException e) {
             return true;
+        }
+    }
+
+    /** Whether the Multiplayer screen shows the grid; true before the config is loaded. */
+    public static boolean serverGrid() {
+        try {
+            return SERVER_GRID.get();
+        } catch (IllegalStateException e) {
+            return true;
+        }
+    }
+
+    /** The featured server's address; "buildsecureprotect.com" before the config is loaded. */
+    public static String featuredServer() {
+        try {
+            return FEATURED_SERVER.get();
+        } catch (IllegalStateException e) {
+            return "buildsecureprotect.com";
         }
     }
 }

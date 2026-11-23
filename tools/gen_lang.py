@@ -1090,6 +1090,13 @@ WORLDS_GUI = {
     "tag.selected": "SELECTED",
 }
 KEYS.update({"gui.bsp_server_utilities.worlds." + k: v for k, v in WORLDS_GUI.items()})
+# Multiplayer's server list as a grid (the featured server full width, the others as squares)
+SERVERS_GUI = {
+    "tag.incompatible": "INCOMPATIBLE",
+    "tag.lan": "LAN",
+    "join": "JOIN",
+}
+KEYS.update({"gui.bsp_server_utilities.servers." + k: v for k, v in SERVERS_GUI.items()})
 
 
 def main():

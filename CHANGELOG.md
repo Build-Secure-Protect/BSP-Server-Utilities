@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-22
+
+Multiplayer's servers as a grid. A change in the game only: servers need nothing new and the network protocol is still 11.
+
+### Added
+- Multiplayer's server list shows the servers as a grid in place of Minecraft's list: the BSP server in a card across the whole width on top (its icon, name, message of the day, player count and ping), then every other saved server as a square card (its icon, name, the first line of its message, player count and ping) and every LAN game as a square (LAN World, the world's name and its address), in the list's own order, then "Scanning for games on your local network". Tags mark incompatible versions, LAN games, the Builtin Servers badge and the selected card; hovering the ping bars, the player count or the badge shows what Minecraft (or Builtin Servers) shows there. Click to select, double-click or Enter to join; hovering a server shows Minecraft's icon actions as keys (< moves it one place earlier in the list, JOIN joins it, > one place later); the arrows move across the grid (up from the first row to the BSP card); Shift and an arrow moves a server in the list; the scroll position is kept when the screen comes back from Edit, Add or Delete; the mouse wheel and the scrollbar scroll; Join Server, Direct Connection, Add Server, Edit, Delete, Refresh and Back work exactly as before. Client settings in `[menus]` of `config/bsp_server_utilities-client.toml`: `serverGrid` turns it off and gives Minecraft's own list; `featuredServer` (`buildsecureprotect.com`) names the server on top: a host, or a domain its hosts end with.
+
+### Changed
+- The Select World grid and the Multiplayer grid share one way of taking over Minecraft's list (`client/GriddedLists`); the mixin that stops the replaced list drawing its rows is `GriddedListMixin` (was `WorldListGridMixin`).
+
 ## [0.20.0] - 2026-11-22
 
 Singleplayer's worlds as a grid. A change in the game only: servers need nothing new and the network protocol is still 11, as 0.19.0's.

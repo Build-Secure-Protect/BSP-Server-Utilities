@@ -89,22 +89,12 @@ public final class WorldGridLayout {
 
         /** The scrollbar thumb's {y, height}, or null when everything fits. */
         public int[] thumb(int scroll) {
-            if (maxScroll <= 0) {
-                return null;
-            }
-            int view = viewH();
-            int h = Math.max(MIN_THUMB, Math.min(view, view * view / Math.max(1, contentH())));
-            int y = top + (int) ((long) (view - h) * clamp(scroll) / maxScroll);
-            return new int[]{y, h};
+            return WorldGridLayout.thumb(top, viewH(), contentH(), maxScroll, clamp(scroll));
         }
 
         /** The scroll position for the thumb's top at {@code thumbY}. */
         public int scrollForThumb(double thumbY, int thumbH) {
-            int room = viewH() - thumbH;
-            if (room <= 0) {
-                return 0;
-            }
-            return clamp((thumbY - top) * maxScroll / room);
+            return clamp(WorldGridLayout.scrollForThumb(top, viewH(), maxScroll, thumbY, thumbH));
         }
 
         /**
@@ -139,6 +129,25 @@ public final class WorldGridLayout {
     }
 
     private WorldGridLayout() {
+    }
+
+    /** A scrollbar thumb's {y, height} in a track from {@code top}, {@code view} tall, or null when nothing scrolls. */
+    public static int[] thumb(int top, int view, int contentH, int maxScroll, int scroll) {
+        if (maxScroll <= 0) {
+            return null;
+        }
+        int h = Math.max(MIN_THUMB, Math.min(view, view * view / Math.max(1, contentH)));
+        int y = top + (int) ((long) (view - h) * Math.max(0, Math.min(maxScroll, scroll)) / maxScroll);
+        return new int[]{y, h};
+    }
+
+    /** The scroll position (unclamped) for a thumb {@code thumbH} tall whose top is at {@code thumbY}. */
+    public static double scrollForThumb(int top, int view, int maxScroll, double thumbY, int thumbH) {
+        int room = view - thumbH;
+        if (room <= 0) {
+            return 0;
+        }
+        return (thumbY - top) * maxScroll / room;
     }
 
     /** The number of columns for a grid area {@code areaW} wide: as many cards of at least 96 as fit, 2 to 6. */
