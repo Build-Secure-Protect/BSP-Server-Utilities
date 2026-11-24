@@ -275,4 +275,40 @@ public class LogGameTests {
         h.assertTrue(LogOpenPacket.decode(buf).equals(open), "the screen's data round trips");
         h.succeed();
     }
+
+    /**
+     * Why the bank and bounty tests failed now and then (2026-11-24): the persisted test world's log is full, so a new
+     * entry pushes the oldest out, and a count of one kind before and after misses the new entry when the one pushed out
+     * was of that kind. {@link LogWatch} tells new entries apart by uid. The world's entries are put back in the same tick.
+     */
+    @GameTest(template = EMPTY)
+    public void a_new_entry_in_a_full_log_is_seen_although_the_oldest_goes(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        LogData d = LogData.get(server);
+        List<LogEntry> kept = d.entries();
+        try {
+            d.prune(Long.MAX_VALUE);
+            d.add(ActionLog.entryForServer("Console", LogEntry.BANK, "the oldest, a bank line"));
+            for (int i = 1; i < LogData.MAX; i++) {
+                d.add(ActionLog.entryForServer("Console", LogEntry.CMD, "/filler " + i));
+            }
+            int counted = ActionLog.recent(server, LogData.MAX, false, List.of(LogEntry.BANK)).size();
+            LogWatch watch = LogWatch.start(server);
+            LogEntry fresh = ActionLog.entryForServer("Console", LogEntry.BANK, "a new bank line");
+            h.assertTrue(d.add(fresh) && d.entries().size() == LogData.MAX, "the log stays at its cap");
+            List<LogEntry> bank = ActionLog.recent(server, LogData.MAX, false, List.of(LogEntry.BANK));
+            h.assertTrue(counted == 1 && bank.size() == counted && bank.get(0).uid().equals(fresh.uid()),
+                    "the oldest bank line went for the new one, so a count before and after misses it (the old test check)");
+            List<LogEntry> added = watch.added(server, LogEntry.BANK);
+            h.assertTrue(added.size() == 1 && added.get(0).uid().equals(fresh.uid()), "the watch sees exactly the new line: " + added.size());
+            h.assertTrue(watch.added(server, LogEntry.CMD).isEmpty(), "and nothing of another kind");
+        } finally {
+            d.prune(Long.MAX_VALUE);
+            for (int i = kept.size() - 1; i >= 0; i--) {
+                d.add(kept.get(i)); // oldest first, so the oldest is the next pushed out (the same entries, now in time order)
+            }
+        }
+        h.assertTrue(d.entries().size() == kept.size(), "the world's log is as it was");
+        h.succeed();
+    }
 }

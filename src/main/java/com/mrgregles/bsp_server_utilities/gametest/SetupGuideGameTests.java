@@ -152,10 +152,10 @@ public class SetupGuideGameTests {
             SetupService.turnOn(server, Feature.RULES);
             h.assertTrue(RulesService.enabled() == rulesConfig, "rules on again");
 
-            int before = ActionLog.recent(server, 5000, true, List.of()).size();
+            LogWatch watch = LogWatch.start(server);
             SetupService.turnOff(server, Feature.LOG);
             ActionLog.record(server, ActionLog.entryForServer("Console", LogEntry.CMD, "/say off " + UUID.randomUUID()));
-            h.assertTrue(ActionLog.recent(server, 5000, true, List.of()).size() == before, "the action log off: nothing recorded");
+            h.assertTrue(watch.added(server).isEmpty(), "the action log off: nothing recorded");
             SetupService.turnOn(server, Feature.LOG);
 
             SetupService.turnOff(server, Feature.DESPAWN);

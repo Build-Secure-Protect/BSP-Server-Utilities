@@ -194,7 +194,7 @@ public class WebBountyGameTests {
             // ---- adds (D526, D529, D531)
             String add = ",\"target\":\"" + wren + "\",\"name\":\"Wren_88\",\"tier\":-1,\"amount\":25000,\"bonus\":5000,\"bonusWithinMs\":" + D + ",\"durationMs\":" + 3 * D
                     + ",\"notes\":\"Seen near spawn\",\"reason\":\"Event bounty\"";
-            int logged = bountyLog(server).size();
+            LogWatch watch = LogWatch.start(server);
             WebActions.Answer mod = done(WebActions.handle(server, action("a1-" + m, now, "MODERATOR", "bounty_add", add)));
             h.assertTrue(!mod.ok() && b.calls.isEmpty() && mod.message().contains("bounty power"), "a Moderator cannot add, even with a signed action: " + mod.message());
             WebActions.Answer noWhy = done(WebActions.handle(server, action("a2-" + m, now, "ADMIN", "bounty_add", add.replace("Event bounty", " "))));
@@ -205,7 +205,7 @@ public class WebBountyGameTests {
             h.assertTrue(added.ok() && b.calls.equals(List.of("add Wren_88 -1 25000 5000 " + D + " " + 3 * D + " [Seen near spawn] Ana_Admin (panel)")),
                     "a Moderator with the bounty power adds; BSP-Core gets exactly the target, price, bonus, window, time, notes and who: " + b.calls);
             h.assertTrue(added.message().startsWith("Placed on Wren_88: 25,000 pieces for 3 days, bonus 5,000 pieces within 1 day"), "the answer says what was placed: " + added.message());
-            h.assertTrue(bountyLog(server).size() == logged + 1 && bountyLog(server).get(0).text().equals("bounty add on Wren_88: 25,000 pieces for 3 days, bonus 5,000 pieces within 1 day: Event bounty")
+            h.assertTrue(watch.added(server, LogEntry.BOUNTY).size() == 1 && bountyLog(server).get(0).text().equals("bounty add on Wren_88: 25,000 pieces for 3 days, bonus 5,000 pieces within 1 day: Event bounty")
                     && bountyLog(server).get(0).actor().equals("Ana_Admin (panel)"), "in the Action Log with who and why: " + bountyLog(server).get(0).text());
             b.calls.clear();
             done(WebActions.handle(server, action("a5-" + m, now, "OWNER", "bounty_add", add.replace("\"tier\":-1", "\"tier\":2").replace("\"amount\":25000", "\"amount\":3").replace("\"bonus\":5000", "\"bonus\":0"))));
@@ -216,13 +216,13 @@ public class WebBountyGameTests {
                 h.assertTrue(!done(WebActions.handle(server, action("a6" + bad.hashCode() + "-" + m, now, "OWNER", "bounty_add", bad))).ok(), "refused: " + bad);
             }
             h.assertTrue(b.calls.isEmpty(), "nothing bad reached BSP-Core: " + b.calls);
-            logged = bountyLog(server).size();
+            watch = LogWatch.start(server);
             for (String key : List.of("unreachable", "time", "price", "bonus", "bonus_time", "staff", "protected")) {
                 b.answer = key;
                 WebActions.Answer no = done(WebActions.handle(server, action("a7" + key + "-" + m, now, "OWNER", "bounty_add", add)));
                 h.assertTrue(!no.ok() && no.data().getAsJsonObject().get("result").getAsString().equals(key) && !no.message().contains("(" + key + ")"), "a refused add worded (" + key + "): " + no.message());
             }
-            h.assertTrue(bountyLog(server).size() == logged, "a refused add is not in the Action Log");
+            h.assertTrue(watch.added(server, LogEntry.BOUNTY).isEmpty(), "a refused add is not in the Action Log");
             b.answer = "ok";
 
             // ---- remove, extend, blank (D530, D532)
@@ -252,13 +252,13 @@ public class WebBountyGameTests {
             WebActions.Answer bl = done(WebActions.handle(server, action("k1-" + m, now, "OWNER", "bounty_blank_notes", one)));
             h.assertTrue(bl.ok() && b.calls.get(1).equals("blank b-1 Ana_Admin (panel)") && bountyLog(server).get(0).text().equals("bounty notes blanked b-1 on Wren_88: Abuse of the board"), "notes blanked, logged");
             h.assertTrue(!done(WebActions.handle(server, action("k2-" + m, now, "OWNER", "bounty_blank_notes", one.replace("b-1", "b 1; x")))).ok(), "a bounty id that cannot be one is refused");
-            logged = bountyLog(server).size();
+            watch = LogWatch.start(server);
             for (String key : List.of("unreachable", "gone", "max")) {
                 b.answer = key;
                 WebActions.Answer no = done(WebActions.handle(server, action("x" + key + "-" + m, now, "OWNER", "bounty_extend", one + ",\"addMs\":" + D)));
                 h.assertTrue(!no.ok() && !no.message().contains("(" + key + ")"), "a refused change worded (" + key + "): " + no.message());
             }
-            h.assertTrue(bountyLog(server).size() == logged, "a refused change is not logged");
+            h.assertTrue(watch.added(server, LogEntry.BOUNTY).isEmpty(), "a refused change is not logged");
             b.answer = "failed";
             WebActions.Answer threw = done(WebActions.handle(server, action("xf-" + m, now, "OWNER", "bounty_remove", one + ",\"refund\":true")));
             h.assertTrue(!threw.ok() && threw.message().contains("may still have happened") && bountyLog(server).get(0).text().contains("BSP-Core error, it may have happened"),

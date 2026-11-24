@@ -2403,3 +2403,20 @@ GameTests **302/302** on two runs (14 in `StreamerGameTests`; new: the added pos
 7. **Your earlier choices:** the newly listed menus are HIDDEN once; anything you set SHOWN before stays SHOWN unless it is one of those.
 
 **Owner's test (2026-11-24):** passed: "The audit fixes work".
+
+## 2026-11-24: the bank and bounty panel tests that failed now and then
+
+**Cause:** the test world under `run/` persists, and its action log is full: 5000 entries (`LogData.MAX`), about two days of runs. A new entry then pushes out the oldest one. `WebBankGameTests` and `WebBountyGameTests` counted the bank or bounty lines before and after an action and expected one more. When the line pushed out was itself a bank or bounty line from an earlier run, the count stayed the same, although the new line was written. Which line was oldest changed from run to run, so a different test failed each time. Nothing is written later or asynchronously: `ActionLog.record` adds to the world's copy at once, and the tests run in one tick.
+
+**Fix (tests only):** `gametest/LogWatch` remembers every entry's uid at a point and returns the entries added since. The bank, bounty and setup-guide checks use it in place of a count. `LogGameTests.a_new_entry_in_a_full_log_is_seen_although_the_oldest_goes` fills the log to its cap with a bank line oldest, shows that the old count misses the new line, and shows that the watch sees it. The world's entries are put back in the same tick.
+
+**Other tests that read the log**, checked: the rest look for a line by its text or a marker among the newest, or take the newest of a kind. A full log only drops the oldest, so they are not affected.
+
+GameTests **303/303** on five runs in a row.
+
+**Audit of the fix (same day):**
+- The setup guide's "the action log off: nothing recorded" check counted every line on every server. On a full log that count can never change, so it passed whatever happened. It now asks the watch for any new line of any kind from any server (`LogWatch.added(server)`).
+- The lottery's "a refused draw is not in the Action Log" counted draws among the newest 200 lines. A wrongly logged draw would push one line out of that window, which could be an old draw, so the count could stay the same and the check pass. It now uses the watch too.
+- The new full-log test puts the world's entries back in time order rather than the order they were added: the same entries, and the oldest is still pushed out first.
+
+GameTests **303/303** on three more runs in a row after the audit.

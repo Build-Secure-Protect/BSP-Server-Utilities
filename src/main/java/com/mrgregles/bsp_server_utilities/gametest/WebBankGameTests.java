@@ -256,7 +256,7 @@ public class WebBankGameTests {
 
             // ---- bank_refund: Admins, Owners, the BANK power (D503, D504), a reason (D510)
             String pay = ",\"player\":\"" + wren + "\",\"name\":\"Wren_88\",\"row\":1234,\"type\":\"PAID\",\"with\":\"Steve_42\",\"pieces\":320,\"coins\":0,\"other\":true,\"reason\":\"Paid by mistake\"";
-            int logged = bankLog(server).size();
+            LogWatch watch = LogWatch.start(server);
             WebActions.Answer mod = done(WebActions.handle(server, action("f1-" + m, now, "MODERATOR", "bank_refund", pay)));
             h.assertTrue(!mod.ok() && bank.calls.isEmpty() && mod.message().contains("bank power"), "a Moderator cannot refund, even with a signed action: " + mod.message());
             WebActions.Answer noWhy = done(WebActions.handle(server, action("f2-" + m, now, "ADMIN", "bank_refund", pay.replace("Paid by mistake", "  "))));
@@ -265,8 +265,8 @@ public class WebBankGameTests {
             h.assertTrue(powered.ok() && bank.calls.equals(List.of("refund " + wren + " 1234 320 0 true Ana_Admin (panel)")),
                     "a Moderator with the BANK power refunds; BSP-Core gets exactly the row, amounts, other and who: " + bank.calls);
             h.assertTrue(powered.message().equals("Refunded 320 pieces of Wren_88's row 1234, also on Steve_42. They are told in game."), "the answer says what went out: " + powered.message());
-            List<LogEntry> after = bankLog(server);
-            h.assertTrue(after.size() == logged + 1 && after.get(0).actor().equals("Ana_Admin (panel)")
+            List<LogEntry> after = watch.added(server, LogEntry.BANK);
+            h.assertTrue(after.size() == 1 && after.get(0).actor().equals("Ana_Admin (panel)")
                     && after.get(0).text().equals("refund Wren_88 row 1234 (PAID Steve_42): 320 pieces, also on Steve_42: Paid by mistake"),
                     "the refund is in the Action Log with the staff member and the reason: " + after.get(0).text());
 
@@ -284,7 +284,7 @@ public class WebBankGameTests {
             }
             h.assertTrue(bank.calls.isEmpty(), "nothing bad reached BSP-Core: " + bank.calls);
 
-            logged = bankLog(server).size();
+            watch = LogWatch.start(server);
             for (String key : List.of("unreachable", "no_row", "amount", "nothing", "too_much", "no_coins", "not_payment", "other_unknown", "other_row", "own_coins",
                     "already", "short", "other_short")) {
                 bank.refundAnswer = key;
@@ -294,11 +294,11 @@ public class WebBankGameTests {
                 boolean offer = no.data().getAsJsonObject().get("withoutOther").getAsBoolean();
                 h.assertTrue(offer == (key.equals("other_short") || key.equals("other_row")), "the refund without the other player offered only when they are the trouble (D508): " + key);
             }
-            h.assertTrue(bankLog(server).size() == logged, "a refused refund is not in the Action Log");
+            h.assertTrue(watch.added(server, LogEntry.BANK).isEmpty(), "a refused refund is not in the Action Log");
             bank.refundAnswer = "failed";
             WebActions.Answer threw = done(WebActions.handle(server, action("f7-" + m, now, "ADMIN", "bank_refund", pay)));
             h.assertTrue(!threw.ok() && threw.message().contains("may still have happened") && !threw.message().contains("Nothing changed")
-                    && bankLog(server).size() == logged + 1 && bankLog(server).get(0).text().contains("BSP-Core error, it may have happened"),
+                    && watch.added(server, LogEntry.BANK).size() == 1 && bankLog(server).get(0).text().contains("BSP-Core error, it may have happened"),
                     "BSP-Core throwing is never called \"nothing changed\" (it may have thrown after the money moved), and is logged as unsure (audit): " + threw.message());
             String floodgate = pay.replace("\"name\":\"Wren_88\"", "\"name\":\".Wren_88\"");
             bank.refundAnswer = "ok";
@@ -320,21 +320,21 @@ public class WebBankGameTests {
                     ",\"order\":\"ord-3\",\"name\":\"Wren_88\",\"what\":\"4 Netherite Ingot at 2400\",\"reason\":\"Asked to\",\"bank\":true")));
             h.assertTrue(co.ok() && co.message().contains("7200 pieces went back to Wren_88's bank") && co.data().getAsJsonObject().get("piecesBack").getAsLong() == 7200
                     && bankLog(server).get(0).text().endsWith("Asked to (7200 pieces back)"), "a request cancelled, the pieces back said and logged: " + co.message());
-            logged = bankLog(server).size();
+            watch = LogWatch.start(server);
             for (String key : List.of("gone", "unreachable")) {
                 bank.cancelAnswer = new BspCore.Cancelled(key, 0);
                 WebActions.Answer no = done(WebActions.handle(server, action("c4" + key + "-" + m, now, "OWNER", "market_cancel_lot", lot)));
                 h.assertTrue(!no.ok() && !no.message().contains("(" + key + ")") && no.message().contains("Nothing changed"), "a refused cancel worded (" + key + "): " + no.message());
             }
-            h.assertTrue(bankLog(server).size() == logged, "a refused cancel is not in the Action Log");
+            h.assertTrue(watch.added(server, LogEntry.BANK).isEmpty(), "a refused cancel is not in the Action Log");
             bank.cancelAnswer = new BspCore.Cancelled("failed", 0);
             WebActions.Answer threwC = done(WebActions.handle(server, action("c4f-" + m, now, "OWNER", "market_cancel_lot", lot)));
             h.assertTrue(!threwC.ok() && threwC.message().contains("may still have happened") && bankLog(server).get(0).text().endsWith("(BSP-Core error, it may have happened)"),
                     "a cancel BSP-Core threw on: unsure, and logged so (audit): " + threwC.message());
-            logged = bankLog(server).size();
+            watch = LogWatch.start(server);
             WebActions.Answer badId = done(WebActions.handle(server, action("c5-" + m, now, "OWNER", "market_cancel_lot", lot.replace("lot-7", "lot 7; drop"))));
             h.assertTrue(!badId.ok() && badId.message().equals("No such lot."), "a lot id that cannot be one is refused");
-            h.assertTrue(bankLog(server).size() == logged, "a refused cancel is not in the Action Log");
+            h.assertTrue(watch.added(server, LogEntry.BANK).isEmpty(), "a refused cancel is not in the Action Log");
         } finally {
             BspCore.useRealBank();
             BspCore.useRealEconomy();

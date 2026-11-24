@@ -242,14 +242,14 @@ public class WebMarketGameTests {
                     && drawn.data().getAsJsonObject().get("result").getAsString().equals("ok"), "an Admin draws, by name with (panel): " + drawn.message());
             h.assertTrue(ActionLog.recent(server, 30, false, List.of()).stream().anyMatch(e -> e.actor().equals("Ana_Admin (panel)") && e.text().equals("lottery draw")),
                     "a draw that began is in the Action Log");
-            long drawsLogged = ActionLog.recent(server, 200, false, List.of()).stream().filter(e -> e.text().equals("lottery draw")).count();
+            LogWatch watch = LogWatch.start(server);
             for (String key : List.of("busy", "nobody", "empty")) {
                 eco.drawAnswer = key;
                 WebActions.Answer no = done(WebActions.handle(server, action("a9" + key + "-" + m, now, "OWNER", "lottery_draw", "")));
                 h.assertTrue(!no.ok() && no.data().getAsJsonObject().get("result").getAsString().equals(key) && !no.message().contains("(" + key + ")"),
                         "a refused draw (" + key + ") worded: " + no.message());
             }
-            h.assertTrue(ActionLog.recent(server, 200, false, List.of()).stream().filter(e -> e.text().equals("lottery draw")).count() == drawsLogged,
+            h.assertTrue(watch.added(server).isEmpty(),
                     "a refused draw is not in the Action Log");
             String badName = WebActions.sign(KEY, "{\"v\":1,\"id\":\"ab-" + m + "\",\"at\":" + now + ",\"by\":\"not a name!\",\"rank\":\"ADMIN\",\"server\":\""
                     + Storage.currentServerId() + "\",\"action\":\"lottery_draw\"}");
