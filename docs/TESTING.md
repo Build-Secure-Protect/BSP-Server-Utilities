@@ -2158,3 +2158,248 @@ A fresh read-only audit of SU-127 found no high-severity defect, one medium and 
 Untested in a client: the checks in SU-127 above, plus hovering a server and using `<`, JOIN and `>` (the order is saved; `<` is off on the first server and `>` on the last), and opening Edit on a long list and cancelling (the grid stays where it was).
 
 In game (the owner, 2026-11-23, the 0.21.0 jar): the Multiplayer grid works. The individual steps above are not reported one by one.
+
+## 2026-11-24: Streamer Mode, the proof (SU-131)
+
+**What it does.** A second, clean picture of the game for OBS (owner decisions D700 to D714), shown in a window titled "BSP Stream". The player's own window is unchanged.
+
+**How it is built.**
+- `mixin/GameRendererStreamMixin`: right after the world is drawn (at `Lighting.setupFor3DItems` in `GameRenderer.render`), `client/StreamerMode.streamPass` copies the world into its own picture (`glBlitFramebuffer`) and draws the HUD, the open menu and the toasts into it. Then Minecraft draws them again for the player, so the player's pass comes last (D710).
+- Hidden in that pass only:
+  - Forge HUD parts by id, cancelled in `RenderGuiOverlayEvent.Pre`: `minecraft:debug_text`, `journeymap:waypoint_icons`, `bsp_core:sentinel_strip`, `bsp_core:recall_offer`;
+  - JourneyMap's minimap through `mixin/JourneyMapHudMixin` (a `@Pseudo` mixin on `HudOverlayHandler.onRenderOverlay`, which does nothing without JourneyMap);
+  - menus in `journeymap.client.ui.` and BSP-Teleport's `BandScreen` and `PortalScreen`: the game behind them, darkened, and the "Menu hidden" card.
+- `client/StreamWindow`: a second GLFW window whose OpenGL context shares Minecraft's. At the end of each frame it copies the picture to its own screen (fitted whole, black bars where the shapes differ) and shows it without waiting for the screen's refresh. Only raw OpenGL runs in its context. Closing it turns Streamer Mode off.
+- `client/StreamerEyeKey`: the eye key, 14 x 14 in the top-right corner of the title screen and the pause screen, stepping left past anything there. In this proof a click switches Streamer Mode on or off (the menu comes with SU-132).
+- Also: a key (unbound) and `/streamer` (`on`, `off`). The hidden items are the first switch-on defaults (`streamer/StreamerRules.DEFAULT_HIDDEN`, D707).
+- Every minute while on, the log says the average cost per frame: "Streamer Mode: stream picture N ms, stream window N ms a frame on average".
+- `tools/check_refmap.py` skips `@Pseudo` mixins: they target another mod by its own names and need no reference map entries.
+
+GameTests **291/291** (5 new in `StreamerGameTests`):
+- what is hidden and shown at first switch-on;
+- menus hidden by class, nested class or package, not by look-alike names;
+- the eye key's place, stepping left, never past the middle;
+- the frame rate gate;
+- fitting the picture to the stream window.
+
+The first run had one failure, `a_players_bank_and_market_are_read_and_refunded_by_those_who_may`, which waits for an Action Log line. It is not this change's and passed on the second run (a flaky test).
+
+**Untested in a client.** To check in the Adding Mods instance with `bsp-server-utilities-0.22.0.jar` (in place of 0.21.0) and OBS on the Mac:
+1. **The key on the title screen.** The eye key is in the top-right corner of the pack's FancyMenu layout, over nothing; its hover says "Streamer Mode (off)".
+2. **On.** Click it. A window "BSP Stream" opens without taking the focus from the game. The key turns red with a dot. The stream window shows the title screen, moving as the game's does (and FancyMenu's animations at their usual speed).
+3. **In game.** Join a world or a server, then press F3, and have JourneyMap's minimap on. The game window shows both; BSP Stream shows neither. The hotbar, chat, hearts and other mods' HUDs show in both.
+4. **Menus.** Open JourneyMap's full-screen map (J), its waypoint manager and the Teleport band: BSP Stream shows the game darkened with the "Menu hidden" card. The inventory and other menus show normally in both.
+5. **OBS.** Add a source: macOS Screen Capture, method Window, then choose "BSP Stream". It shows the clean picture:
+   - with BSP Stream behind the game window;
+   - on another monitor;
+   - with the game in full screen (F11).
+
+   Minimised, it is expected to freeze or go black.
+6. **Resizing.** Resize BSP Stream: the picture keeps its shape with black bars. Resize the game window or press F11: BSP Stream follows.
+7. **Off.** Click the eye key again, or close BSP Stream with its red button: the window goes and chat says Streamer Mode is off. Also try `/streamer`, `/streamer on` and `/streamer off`, and a key set in Controls › Key Binds › BSP-Server Utilities › "Streamer Mode on or off".
+8. **The cost.** In the same spot, note the F3 frame rate with Streamer Mode off and then on. After a minute on, send the log's "Streamer Mode: stream picture ... ms, stream window ... ms" lines (`logs/latest.log`).
+9. **With shaders and Distant Horizons.** Repeat 3 with Oculus shaders on: BSP Stream shows the shaded world.
+10. **The log.** No error naming Streamer Mode, BSP Stream, `GameRendererStreamMixin` or `JourneyMapHudMixin`.
+11. **Known for now:** the mouse pointer is not in the stream (Minecraft never draws it; the system does).
+
+**First test (2026-11-24, the owner's Mac, Apple M4 Pro, the "Streamer Mode" instance):**
+- **The eye key** showed in the top-right corner but covered the corner of FancyMenu's Discord box, which is a FancyMenu element, not a widget. Fixed: `compat/FancyMenu` reads where FancyMenu's elements stand (by name; none without FancyMenu). It leaves out backgrounds a quarter of the screen or bigger, and FancyMenu's stand-ins for the screen's own widgets. The key steps past them.
+- **Clicking it did not turn Streamer Mode on.** The log said "NSGL: Failed to create OpenGL context" each time, and the message went only to the log because the title screen has no chat. The cause: Forge's early loading screen makes the game's window with OpenGL 4.1 core, and the stream window asked for 3.2, which macOS will not share with it. Fixed: the stream window now copies the game window's context version, profile and forward-compatibility (the log says which: "opening the stream window with OpenGL 4.1"). Messages on the title screen show as a popup in the corner.
+- GameTests 291/291 after the fixes. To test again: steps 1 to 11 above with the new `bsp-server-utilities-0.22.0.jar`.
+
+**Second test (2026-11-24, the same Mac and instance, jar sha1 d9902523…):**
+- Passed:
+  - step 2: BSP Stream opens and does not take the focus;
+  - step 5: OBS captures it.
+- The log said "opening the stream window with OpenGL 4.1 (profile 204801)", with no GL error.
+- **The cost** (step 8), in a singleplayer world at 2048 x 1536 and about 70 to 107 frames a second:
+  - the stream picture 1.37 to 1.97 ms a frame;
+  - the stream window 0.72 to 0.87 ms a frame;
+  - about 2.1 to 2.8 ms a frame in all, from the log's three one-minute lines.
+
+  The frame rate setting (60 or 30, SU-132) cuts it in proportion.
+- Step 3 passed: F3 and JourneyMap's minimap are gone from BSP Stream (owner, 2026-11-24).
+- Not yet reported: steps 1 (where the eye key stands now), 4 (the "Menu hidden" card), 6, 7, 9 and 10.
+
+## 2026-11-24: Streamer Mode's menu (SU-132)
+
+**What it does.** Look C as confirmed (D713, D714, `tools/preview/streamer_refined.html`). The eye key, and `/streamer` without a word, open `client/StreamerScreen`:
+- **The first page:**
+  - the on/off switch, with the key's name;
+  - the output: the stream window chosen; Spout2 greyed, saying "Windows only" on a Mac and "next build" on Windows;
+  - the frame rate: Match, 60 or 30;
+  - a live preview of the stream picture;
+  - the OBS line;
+  - a tile per mod with "n of m hidden" (teal when any) and its first two items;
+  - "Other mods' menus" as one switch.
+- **A mod's page:** each item with its words and a HIDDEN or SHOWN switch (click the row), gold lines where a mod's update is needed, HIDE ALL, SHOW ALL, BACK (or Backspace), and the mouse wheel to scroll.
+- ✕ or Esc goes back to where it was opened.
+
+**How it is built.**
+- `streamer/StreamerCatalog` is the known mods and items: Minecraft, JourneyMap, BSP-Teleport, BSP-Core and BSP Region Guard (each shown only when installed), their language keys, and the first switch-on defaults.
+- Each mod's page adds every other HUD part it registers with Forge (`GuiOverlayManager.getOverlays()`), named from its path. "Other mods" lists every other mod's parts under the mod's name.
+- `StreamerRules.menuHidden`: Streamer Mode's own menu is always a card in the stream. A menu is also a card when hidden by class or package, or, with "Other mods' menus" on, when it is not Minecraft's, Forge's or Mojang's.
+- The settings are in `[streamer]` of the client config (`output`, `frameRate`, `hidden`), saved at each change.
+- The box is 440 x 242 and made smaller to fit a narrower window (the owner's GUI scale 5 is about 409 wide).
+- The key still switches Streamer Mode on and off directly.
+
+GameTests **296/296**: 7 in `StreamerGameTests`, 2 of them new:
+- the own menu is always hidden; other mods' menus are hidden only with the switch on, never Minecraft's, Forge's or Mojang's;
+- the catalog lists each item once, every tile and item has its words in the language file, every default is an item that can be switched back, and parts with no words are named from their path.
+
+The run included another session's work in the same folder (BSP-Core's player reset).
+
+**Untested in a client.** In the Streamer Mode instance with the new `bsp-server-utilities-0.22.0.jar`:
+1. **Opening.** The eye key on the title screen and the pause screen opens the menu; so does `/streamer` in game. At GUI scale 5 it fits the window, smaller, with nothing cut off.
+2. **The switch.** ON opens BSP Stream; the preview then shows the stream picture live (the world without F3 or the minimap). OFF closes it, and the preview says Streamer Mode is off. The key's name shows beside it once set in Controls.
+3. **Output and frame rate.** Hovering Spout2 says why it is greyed. Choosing 60 or 30 lowers the cost in the log's "Streamer Mode: stream picture ..." line against Match.
+4. **Tiles.** Minecraft, JourneyMap, BSP-Teleport, BSP-Core, BSP Region Guard and Other mods, each with its count. Other mods lists the pack's other HUD parts by mod (Botania, Create, Mekanism and more).
+5. **A mod's page.** Clicking a row switches it: Hidden goes from BSP Stream at once, Shown comes back. HIDE ALL and SHOW ALL. The BSP-Teleport rows have the gold line. The wheel scrolls a long page. BACK and Backspace return.
+6. **Kept.** Quit and start the game again: the choices, the output and the frame rate are as left (`config/bsp_server_utilities-client.toml`, `[streamer]`).
+7. **Other mods' menus.** Switch it on and open a Mekanism or Create machine: BSP Stream shows the "Menu hidden" card. The inventory and Minecraft's own menus still show.
+8. **In the stream.** With the menu open, BSP Stream shows the "Menu hidden" card, not the menu.
+9. **Not yet:** chat lines with coordinates only, BSP-Teleport's coordinates only (request SU-TP2), and Spout2 come with SU-133 and SU-134.
+
+**Owner's test (2026-11-24):** steps 1 to 8 passed: the menu opens and fits; the switch and the live preview; switching items changes BSP Stream at once ("from all I was able to check"; the code to be audited in SU-135); the choices are kept after a restart; 60 and 30 lower the cost; Other mods' menus shows the card for a machine; the menu itself is a card in the stream.
+
+## 2026-11-24: JourneyMap's minimap without its coordinates (SU-136)
+
+**What it does.** The owner asked for a JourneyMap option that keeps the minimap in the stream but hides the coordinate lines under it (D715). JourneyMap's page has a new item, "Minimap coordinates", hidden at first.
+- With "Minimap" shown and "Minimap coordinates" hidden, BSP Stream shows the map but not its location line or its region line.
+- Its other lines stay: biome, time, day, light level, weather, speed, and so on.
+
+**How it is built.**
+- JourneyMap 6.0.7 draws each line over and under the minimap through `journeymap.client.ui.minimap.LabelVars.draw(GuiGraphics, MultiBufferSource, Component)`, called from `DisplayVars.drawInfoLabels` (checked with `javap`).
+- `mixin/JourneyMapLabelMixin` (`@Pseudo`, nothing without JourneyMap) skips such a line in the stream picture when it holds coordinates.
+- What counts as coordinates is `StreamerRules.hasCoordinates`:
+  - two numbers with a comma between, with an axis label or a "(light)" allowed;
+  - or two numbers each after an axis.
+- That covers every form of JourneyMap's location line (`jm.common.location_*`: `x: 1, y: 2, z: 3`, `1, 2, 3`, `1, 2 (3), 4`, `1, 3`) and its region line (`Region: x:0 z:-1`).
+
+GameTests **297/297** (8 in `StreamerGameTests`; new: those coordinate forms match, and times, days, light, speed, biome, fps, moon, weather and dimension lines do not). The first run failed only `the_board_is_read_by_everyone_and_changed_by_those_who_may`, which waits for an Action Log line, and it passed on the second. That is the same kind of flake as the bank test in SU-131 and not this change's.
+
+**Untested in a client.** In the Streamer Mode instance with the new jar:
+1. Turn Streamer Mode on. On JourneyMap's page, set "Minimap" to SHOWN and keep "Minimap coordinates" HIDDEN.
+2. In JourneyMap's minimap options, show the location line, the region line, the biome and the time under the map.
+3. BSP Stream shows the minimap, the biome and the time, but not the location or region lines. The game window shows them all.
+4. Switch the location line between JourneyMap's plain and verbose forms (and with or without y): hidden in each.
+5. Set "Minimap coordinates" to SHOWN: the lines come back in BSP Stream.
+
+**Owner's test (2026-11-24):** passed: "The minimap coordinates are hidden, and work as intended".
+
+## 2026-11-24: Streamer Mode, chat coordinates and the API for other mods (SU-133)
+
+**What it does.**
+- **Chat.** Minecraft's page has "Chat: lines with coordinates", hidden at first (D716).
+  - The stream leaves out every chat message that holds a position, whole however it wraps.
+  - When the chat screen is open and the text being typed holds a position, the stream's input box is left empty.
+  - With "Chat" hidden, the input box is always empty in the stream.
+  - What counts as a position (`StreamerRules.hasCoordinates`): two numbers with a comma between, two numbers each after an axis, or now also three numbers with only spaces between (`/tp 100 64 -200`).
+- **The API.** `api.StreamerMode.hidesNow(String id)` (docs/API.md), for request SU-TP2:
+  - BSP-Teleport's items are now "Teleport band: coordinates" (`bsp_teleport:band_coordinates`) and "Portal screen: position" (`bsp_teleport:portal_coordinates`).
+  - Until BSP-Teleport asks about an item, its whole menu is hidden in its place, as before.
+  - Once it asks, the menu shows and BSP-Teleport hides only the numbers, and the gold line on its page goes.
+  - Settings saved by earlier builds with the whole-menu entries are read as the new items.
+
+**How it is built.**
+- `mixin/ChatComponentStreamMixin`: during the stream picture only, chat draws a copy of its lines without the left-out messages (`StreamerRules.keptChatLines`). Its own lines go back as soon as it has drawn, and `StreamerMode` puts them back even if drawing stopped half way (`client/StreamChatAccess`).
+- `mixin/ChatScreenStreamMixin` skips the input box in the stream picture.
+- `StreamerCatalog.Item.fallbackScreen` and `StreamerRules.menuHidden(hidden, handled, class)`.
+- `client/StreamerMode.askedHidingNow` remembers which items a mod handles itself.
+
+GameTests **299/299** on two runs in a row (10 in `StreamerGameTests`):
+- the band and portal screen are hidden whole until BSP-Teleport asks, each on its own;
+- earlier saved entries are migrated;
+- chat positions in Minecraft's teleport message, a typed `/tp` and a player's words; not in times, counts or "Day 4 of 30";
+- a message wrapped over three lines is left out whole.
+
+The first run failed only the two flaky Action Log tests (bank and board), together; they passed on the next two runs. A separate session is proposed for them.
+
+**Untested in a client.** In the Streamer Mode instance with the new jar:
+1. Turn Streamer Mode on. In chat, say "my base is at 100 64 -200", and "come to 1200, -340" in a message long enough to wrap. Neither shows in BSP Stream; both show in the game window. A plain message shows in both.
+2. Teleport yourself (`/tp ~10 ~ ~`): Minecraft's "Teleported ... to x, y, z" is missing from BSP Stream.
+3. Open chat and type `/tp 100 64 -200`: BSP Stream's input box stays empty while it holds the numbers; typing plain words shows them.
+4. Set "Chat: lines with coordinates" to SHOWN: the messages come back in BSP Stream.
+5. The Teleport band (with today's BSP-Teleport): still a "Menu hidden" card in BSP Stream, and its page in the menu has the gold line. Set "Teleport band: coordinates" to SHOWN: the band shows in BSP Stream.
+6. If the settings file from the earlier test had BSP-Teleport's band hidden, its page now shows "Teleport band: coordinates" as HIDDEN.
+
+**Owner's test (2026-11-24):** passed: "The chat coordinates are hidden and work as intended".
+
+## 2026-11-24: Streamer Mode's Spout2 output (SU-134)
+
+**What it does.** On 64-bit Windows (Intel or AMD), the menu's output can be **Spout2** (D717). There is no window: the stream picture is sent as the Spout sender "BSP Stream", which OBS takes with Off-World-Live's Spout2 plugin (Sources › Spout2 Capture › BSP Stream).
+- **Swapping:** choosing it while Streamer Mode is on swaps over at once, and choosing Stream window swaps back.
+- **When Spout2 fails:** if it cannot start, or Spout refuses a frame, the stream window opens instead and chat says why.
+- **Elsewhere:** on a Mac, Linux or Windows on ARM, the Spout2 key stays greyed and says why.
+
+**How it is built.**
+- **The library:** Spout's `SpoutLibrary.dll` from Spout SDK 2.007.018 (github.com/leadedge/Spout2 release `Spout-SDK-binaries_2-007-018.zip`, sha256 of the zip 6b6101ad…27ea; the 64-bit statically linked "MT" build, 483,328 bytes, sha256 c76ac338…d923, needing only Windows' own libraries). It ships unchanged at `src/main/resources/natives/windows-x64/` with its BSD-2-Clause notice (`SpoutLibrary-LICENSE.txt`).
+- **Loading:** `client/SpoutOutput` copies it to `<game folder>/bsp_server_utilities/natives/SpoutLibrary-2.007.018.dll`, checked against its SHA-256 every time, and loads it with JNA, which Minecraft carries. It calls `GetSpout()`, then the Spout object's methods through its method table: `SetSenderName` (slot 0), `ReleaseSender` (2), `SendTexture` (4) and `IsInitialized` (6), the slots declared before the first overloaded name in `SpoutLibrary.h`, so the compiler's grouping of overloads cannot move them.
+- **Each stream frame:** `SendTexture(picture, GL_TEXTURE_2D, w, h, invert, main framebuffer)` on the render thread. The OpenGL bindings Spout may touch are read before and put back after.
+
+GameTests **300/300** on two runs (12 in `StreamerGameTests`; new: where Spout2 may run, and the jar's library being Spout 2.007.018's unchanged 64-bit file with its licence notice).
+
+**Untested anywhere.** It needs a Windows PC: 64-bit, Intel or AMD, with OBS 30 or newer and Off-World-Live's Spout2 plugin for that OBS version (github.com/Off-World-Live/obs-spout2-plugin/releases).
+1. **Install** the pack with this jar. In OBS, check Sources › + has "Spout2 Capture".
+2. **Choose Spout2.** In game, Esc › eye key › Output: SPOUT2 · WINDOWS (teal), then ON. Chat says "sending over Spout2 as BSP Stream"; no BSP Stream window opens. The menu's line says "Sending over Spout2".
+3. **Add it in OBS:** Sources › + › Spout2 Capture › Sender: BSP Stream. It shows the game without F3 or the minimap, live.
+4. **Hiding:** open JourneyMap's full-screen map: the "Menu hidden" card in OBS. Switch an item in the menu: OBS changes at once.
+5. **Swapping:** choose STREAM WINDOW while on: the BSP Stream window opens and the Spout2 source in OBS freezes or goes empty. Choose SPOUT2 again: the window closes and OBS's source is live again.
+6. **OFF:** OBS's source goes empty.
+7. **The cost.** Note the F3 frame rate off and on, and the log's "Streamer Mode: stream picture ... ms, stream window ... ms" line. With Spout2 the second figure is Spout's send.
+8. **The log:** "Streamer Mode: Spout 2.007.018 loaded; sending as "BSP Stream"", and no error. The game folder has `bsp_server_utilities/natives/SpoutLibrary-2.007.018.dll`.
+9. **On a laptop with two graphics cards:** if OBS shows black, set OBS and Java (Minecraft) to the same card in Windows' Graphics settings.
+10. **If it fails,** chat says "Spout2 could not start (...)" and the stream window opens instead. Send the log's lines from "Streamer Mode" and "Spout2".
+11. **On the Mac,** the SPOUT2 key stays greyed with "Spout2 works on 64-bit Windows (Intel or AMD) only".
+
+## 2026-11-24: audit of Streamer Mode, and its fixes (SU-135)
+
+Two fresh, independent read-only reviews of every Streamer Mode file: one of the drawing, OpenGL, window, Spout and chat hooks, one of the rules, menu, settings, API and adapters. Each finding was checked against the code (and Minecraft's bytecode with `javap`). Fixed:
+1. **Command suggestions** showed the block the player looks at (`/tp ` offers its position), and a command typed in part ("/tp 100 64") showed. Now, while chat or its coordinates are hidden, the stream leaves out:
+   - the suggestion list and usage lines (`mixin/CommandSuggestionsStreamMixin`);
+   - the typed text when it is a command or holds a position (`StreamerRules.hideTyping`, with the grey suggestion in the box);
+   - chat's hover text and tags (`ChatComponentStreamMixin` returns none during the stream pass).
+
+   The chat screen hook is now plain `@Inject`s, which hide the box for that one draw, so another chat mod's `@Redirect` cannot clash with it.
+2. **Positions written other ways** were missed. The rule now also catches:
+   - "/locate"'s `[1234, ~, -560]`;
+   - `x=100, z=-200` and `X 100 Y 64 Z -200`;
+   - `100/64/-200` and `XYZ: 100.5 / 64 / -200.5`;
+   - `~` as a number.
+
+   "1,000 coins" no longer counts.
+3. **Menus that draw positions** were not listed. They are added and hidden at first:
+   - this mod's admin screen (a new "BSP-Server Utilities" tile);
+   - BSP-Teleport's admin screen;
+   - BSP-Core's admin screen and Accelerator screen;
+   - Region Guard's region screen.
+4. **New defaults never reached existing players** (Forge writes the list once). A new setting `appliedDefaults` lists the defaults already applied; any other is added once (`StreamerCatalog.applyDefaults`).
+5. **Menus ran twice as fast** in the player's window with Streamer Mode on: the title panorama and the credits move by the frame time. The stream pass gives menus no frame time.
+6. **After a resize or F11** the stream window could keep showing the old picture: the game may give the new texture the old one's name. The picture is attached afresh every frame.
+7. **F1:** the stream drew HUD layers F1 had hidden. It now follows Minecraft's own rule.
+8. **A failure during the stream pass** now ends it after chat is whole again and the frame is drawn (`mc.tell`), not inside the drawing.
+9. **Stencil:** the stream picture gets a stencil when the game's has one. **Alpha:** the picture's alpha is made solid after drawing, so Spout2 never passes on see-through areas.
+10. **Smaller fixes:**
+    - a failed swap of output while on now takes the whole off path;
+    - BSP-Teleport's gold line goes as soon as it hides its numbers itself;
+    - FancyMenu is asked again 30 s after a failed read;
+    - JourneyMap's hooks name their methods with full signatures;
+    - `tools/check_refmap.py` skips only `@Pseudo` mixins that set `remap = false`.
+
+**Not changed:**
+- The rules review thought JourneyMap's `journeymap:waypoint_icons` might not exist. JourneyMap 6.0.7 does register that HUD part (`registerBelow(..., "waypoint_icons", ...)` drawing its waypoint decorations, checked with `javap`), so hiding it works.
+- The totem animation and the nausea warp are drawn before the stream pass's point in the frame, so they are missing from the stream: cosmetic, left.
+- "Score 3, 2" still counts as a position: rare, and leaving it out is the safe side.
+
+GameTests **302/302** on two runs (14 in `StreamerGameTests`; new: the added position forms and "1,000" not counting, what is typed, every BSP menu that draws positions hidden at first, and applying new defaults once without re-hiding what a player switched off).
+
+**To check in game** with the new jar (a recheck of what changed; the earlier steps passed):
+1. **Suggestions:** Streamer Mode on, chat open. Look at a block and type `/tp `. The game window offers its position; BSP Stream shows neither the box's text nor the suggestions.
+2. **Hover text:** hover a chat message with a hover text. Nothing in BSP Stream.
+3. **The panorama:** on the title screen with Streamer Mode on, it turns at its usual speed.
+4. **Resizing:** resize the game window and press F11. BSP Stream follows at once and never freezes on an old picture.
+5. **F1:** in game, the HUD goes from both windows.
+6. **New menus:** with an admin account, open `/su`: BSP Stream shows the "Menu hidden" card. The menu's new "BSP-Server Utilities" tile lists it.
+7. **Your earlier choices:** the newly listed menus are HIDDEN once; anything you set SHOWN before stays SHOWN unless it is one of those.
+
+**Owner's test (2026-11-24):** passed: "The audit fixes work".

@@ -14,8 +14,14 @@
   ],
   "server": [],
   "client": [
+    "ChatComponentStreamMixin",
+    "ChatScreenStreamMixin",
+    "CommandSuggestionsStreamMixin",
     "ForgeGuiMixin",
+    "GameRendererStreamMixin",
     "GriddedListMixin",
+    "JourneyMapHudMixin",
+    "JourneyMapLabelMixin",
     "ServerEntryAccess",
     "WorldListEntryAccess"
   ],

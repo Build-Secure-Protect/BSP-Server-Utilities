@@ -86,6 +86,17 @@ Dropped items and experience orbs last 5 minutes of the server's time whether or
 
 Singleplayer's Select World screen shows your worlds as a grid of cards: "+ Create new world" first, then each world with its picture, its name, its game mode and when you last played it, the most recent first. Tags on the picture mark HARDCORE, LOCKED (open in another game), UNSUPPORTED and EXPERIMENTAL worlds, and OLDER VERSION or NEWER VERSION for a world saved by another Minecraft. Click a card to select it and double-click (or press Enter) to play; the arrow keys move across the grid, and the mouse wheel or the scrollbar scrolls. The search box and the Play, Edit, Delete, Re-Create and Cancel buttons are Minecraft's own and work as always. To keep Minecraft's plain list, set `worldGrid = false` under `[menus]` in `config/bsp_server_utilities-client.toml`.
 
+## For players: Streamer Mode
+
+Streaming on Twitch or YouTube without giving away where your base is: Streamer Mode makes a second, clean picture of the game for OBS, while your own window shows everything as usual.
+
+- **Open it** with the eye key in the top-right corner of the title screen or the pause screen (Esc), or `/streamer`. Turn it ON there, or with a key you set in Controls › Key Binds › BSP-Server Utilities.
+- **Choose what OBS must not see,** mod by mod: the F3 screen; chat messages that hold coordinates (and your typing when it holds some); JourneyMap's minimap, or only its coordinate lines with the map kept; its waypoint markers and menus; BSP-Teleport's coordinates; BSP-Core's sentinel strip, recall card and Team screen; Region Guard's Land Office screen; any HUD part of any other mod; and other mods' menus. A hidden menu shows as a small "Menu hidden" card. Everything that shows a place is hidden at first.
+- **In OBS:** add a Window Capture (macOS Screen Capture, Window, on a Mac) of the window "BSP Stream". On 64-bit Windows you can pick Spout2 instead: no extra window, add "Spout2 Capture" › BSP Stream from Off-World-Live's free Spout2 plugin.
+- The menu shows a live preview of what OBS gets. A frame rate of 60 or 30 costs your game less than Match.
+- Never hidden: what is drawn into the world itself (JourneyMap's waypoint beams, F3+B and F3+G, a held map, the landscape).
+- **About the .dll in the jar:** Spout2 uses Spout's own library, `SpoutLibrary.dll` (Spout SDK 2.007.018 by Lynn Jarvis, BSD-2-Clause, unchanged, its licence beside it in `natives/windows-x64/`). It is loaded only when you choose Spout2 on 64-bit Windows; on a Mac, on Linux and on servers it is never touched.
+
 ## For admins: setting up
 
 ![The setup card](https://raw.githubusercontent.com/Build-Secure-Protect/BSP-Server-Utilities/main/docs/curseforge/images/setup_card.png)
@@ -235,6 +246,7 @@ With BSP-Core installed and its storage on MySQL, nothing needs setting up: the 
 | `/rules` | everyone | the rules, read only |
 | `/actionlog` | everyone | the newest 100 log entries, coordinates hidden |
 | `/afk` | everyone | AFK until your next action |
+| `/streamer [on \| off]` | everyone, in their own game | Streamer Mode's menu, or switch it |
 | `/su away` | staff | show as away on the staff panels, until typed again |
 | `/serverutils`, `/su` | operators, BSP-Core admins | the admin panel |
 | `/su status` | operators, BSP-Core admins | storage, server name, LuckPerms, BSP-Core, staff groups, AFK (and whether macros count), chunk and drop settings, the client check, the player counter, server images, the setup guide |

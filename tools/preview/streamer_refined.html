@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streamer Mode Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Set AU refined (look C, D713): the Streamer Mode menu and its two buttons (D700 to D712). Sample data; each frame is 480 x 270 GUI px (1920 x 1080 at GUI scale 4), drawn at 1.5x. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:18px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:80ch; }
+section{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:84ch; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:16px; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+@media (max-width:760px){ .stage{ flex-wrap:nowrap; justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); max-width:720px; margin-top:6px; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:86ch; } ol b{ color:var(--fg); }
+.pick{ display:flex; gap:8px; flex-wrap:wrap; }
+.tb{ font:600 11px var(--body); letter-spacing:.06em; text-transform:uppercase; background:var(--board); border:1px solid var(--line); color:var(--fg); padding:5px 10px; cursor:pointer; border-radius:3px; }
+
+/* ---------- the in-game frame: 480 x 270 GUI px, scaled 1.5 ---------- */
+.fw{ width:720px; height:405px; flex:none; position:relative; }
+.fw.sm{ width:480px; height:270px; }
+.f{ --P:#10151C; --S:#0B0E13; --D:#2A2F3A; --H:#3A4150; --M:#9AA3B5; --T:#E6EAF2; --I:#6B7180; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C;
+  position:absolute; left:0; top:0; width:480px; height:270px; transform:scale(1.5); transform-origin:0 0; overflow:hidden;
+  font:500 7px/1.25 var(--body); color:var(--T); background:linear-gradient(170deg,#3e5d39,#2a3f27 45%,#4a6f9c); }
+.fw.sm .f{ transform:none; }
+.f .dim{ position:absolute; inset:0; background:rgba(5,7,10,.62); }
+.box{ position:absolute; background:var(--P); box-shadow:0 0 0 1px var(--D); }
+.ttl{ font:600 8.5px Oswald,var(--body); letter-spacing:.14em; text-transform:uppercase; color:var(--Q); white-space:nowrap; }
+.m{ color:var(--M); } .i{ color:var(--I); } .q{ color:var(--Q); } .g{ color:var(--G); } .r{ color:var(--R); }
+.k{ display:inline-grid; place-items:center; height:12px; padding:0 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); font:600 6px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+.k.on{ box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); }
+.k.off{ color:var(--I); opacity:.55; }
+.seg{ display:inline-flex; gap:0; } .seg .k + .k{ margin-left:-1px; }
+.sw{ display:inline-flex; align-items:center; gap:3px; height:11px; padding:0 4px 0 3px; font:600 5.6px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--I); white-space:nowrap; }
+.sw i{ width:5px; height:5px; background:var(--I); }
+.sw.h{ color:var(--Q); box-shadow:inset 0 0 0 1px rgba(25,211,176,.6); } .sw.h i{ background:var(--Q); }
+.big{ display:inline-flex; align-items:center; gap:5px; height:15px; padding:0 6px; font:600 7px Oswald,var(--body); letter-spacing:.12em; background:var(--S); box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); }
+.big b{ width:16px; height:8px; background:var(--Q); position:relative; } .big b::after{ content:""; position:absolute; right:1px; top:1px; width:6px; height:6px; background:var(--P); }
+.dot{ display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--R); box-shadow:0 0 4px var(--R); }
+.row{ display:flex; align-items:center; gap:5px; }
+.it{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:3px 5px; box-shadow:inset 0 -1px 0 #1A1F27; }
+.it .n{ font-weight:600; } .it .s{ font-size:5.8px; color:var(--M); margin-top:1px; }
+.it .need{ font-size:5.6px; color:var(--G); margin-top:1px; }
+.mod{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:4px 6px; box-shadow:inset 0 -1px 0 #1A1F27; color:var(--T); font-weight:600; }
+.mod .c{ font:500 5.8px var(--mono); color:var(--M); }
+.mod.sel{ background:#141B24; box-shadow:inset 2px 0 0 var(--Q), inset 0 -1px 0 #1A1F27; }
+.mod.sel .c{ color:var(--Q); }
+.foot{ position:absolute; left:0; right:0; bottom:0; height:13px; display:flex; align-items:center; gap:4px; padding:0 8px; font-size:5.6px; color:var(--I); box-shadow:inset 0 1px 0 var(--D); background:var(--S); }
+.bar{ position:absolute; left:0; right:0; top:0; height:20px; display:flex; align-items:center; gap:8px; padding:0 8px; box-shadow:inset 0 -1px 0 var(--D); }
+.lbl{ font:600 5.6px Oswald,var(--body); letter-spacing:.12em; color:var(--I); text-transform:uppercase; white-space:nowrap; }
+.bar{ gap:6px; } .bar .k{ padding:0 4px; }
+.x{ margin-left:auto; color:var(--M); font-weight:600; font-size:8px; }
+.scroll{ position:absolute; right:2px; width:2px; background:#1C2026; } .scroll b{ position:absolute; left:0; right:0; background:var(--H); }
+.prev{ position:relative; background:linear-gradient(170deg,#3e5d39,#2a3f27 45%,#4a6f9c); box-shadow:0 0 0 1px var(--D); overflow:hidden; }
+.prev .hb{ position:absolute; left:50%; bottom:3px; width:46%; height:6%; transform:translateX(-50%); background:rgba(0,0,0,.45); box-shadow:0 0 0 1px rgba(255,255,255,.25); }
+.prev .mm{ position:absolute; right:3px; top:3px; width:22%; height:36%; border:1px dashed rgba(255,107,92,.9); display:grid; place-items:center; font:600 4.5px Oswald,var(--body); color:var(--R); letter-spacing:.08em; background:rgba(0,0,0,.25); }
+.tile{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:5px 6px; display:flex; flex-direction:column; gap:2px; }
+.tile .n{ font-weight:600; font-size:7px; } .tile .c{ font:500 5.8px var(--mono); color:var(--M); }
+.tile.hot{ box-shadow:inset 0 0 0 1px var(--H); } .tile .c.q{ color:var(--Q); }
+/* the pause screen and its vanilla buttons, as the BSP-UI pack draws them */
+.vb{ position:absolute; height:20px; background:#151A22; box-shadow:inset 0 0 0 1px #2C3440; display:grid; place-items:center; color:#E6EAF2; font:500 7px var(--body); }
+.vb.new{ box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); }
+.ck{ position:absolute; height:14px; padding:0 6px; display:grid; place-items:center; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); font:600 5.6px Oswald,var(--body); letter-spacing:.1em; }
+.ck.new{ box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); }
+.mark{ position:absolute; border:1px dashed var(--G); pointer-events:none; }
+
+/* ---------- set AU refined ---------- */
+.tip{ position:absolute; background:#0B0E13; box-shadow:0 0 0 1px var(--H); color:var(--T); font-size:6px; padding:3px 5px; white-space:nowrap; z-index:3; }
+.it.cov{ opacity:.45; }
+.grp{ padding:4px 6px 2px; font:600 5.8px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; color:var(--M); background:#0E1218; }
+.win{ background:#1d1f24; border-radius:6px; box-shadow:0 0 0 1px #3a3d44, 0 8px 24px rgba(0,0,0,.35); overflow:hidden; flex:none; }
+.win .tbar{ height:22px; display:flex; align-items:center; gap:6px; padding:0 8px; background:#2a2c31; color:#cfd3db; font:500 11px var(--body); }
+.win .tbar i{ width:10px; height:10px; border-radius:50%; background:#ff5f57; } .win .tbar i:nth-child(2){ background:#febc2e; } .win .tbar i:nth-child(3){ background:#28c840; }
+.win .tbar span{ margin-left:auto; margin-right:auto; }
+.off-note{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; font-size:6px; color:var(--M); background:#0B0E13; padding:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Streamer Mode: look C refined (set AU)</h1>
+    <p class="lede">Look C as picked (D713): a first page with the switch, the output, the frame rate, a live preview of what OBS gets and a tile per mod; a page per mod. Each frame is the 480 × 270 GUI-pixel screen (1920 × 1080 at GUI scale 4); the large ones are drawn 1.5 times bigger. Mods, items and counts are this pack's; the world is a drawn stand-in.</p>
+  </header>
+
+  <section><h2>R1. The first page, on, with the stream window</h2>
+    <div class="stage"><div><div class="fw"><div class="f" id="r1"></div></div>
+      <div class="cap">The green line says the stream window is open and how to add it in OBS. The preview is the stream picture itself, live (here the minimap and F3 are gone from it). A tile's count turns teal when anything in it is hidden. The key is set in Controls › Key Binds › BSP Server Utilities.</div></div></div></section>
+
+  <section><h2>R2. The output's states</h2>
+    <div class="stage">
+      <div><div class="fw sm"><div class="f" id="r2a"></div></div><div class="cap">On Windows with Spout2 chosen: no window opens; OBS takes it with the Spout2 plugin's source.</div></div>
+      <div><div class="fw sm"><div class="f" id="r2b"></div></div><div class="cap">On a Mac: Spout2 is greyed out and says why when hovered.</div></div>
+      <div><div class="fw sm"><div class="f" id="r2c"></div></div><div class="cap">Off: no stream window and nothing sent. The choices can still be set beforehand.</div></div>
+    </div></section>
+
+  <section><h2>R3. A mod's page</h2>
+    <div class="stage">
+      <div><div class="fw"><div class="f" id="r3a"></div></div><div class="cap">Minecraft. With "Chat: all of it" hidden, the line rule above it is covered and greyed. HIDE ALL and SHOW ALL for the whole page.</div></div>
+      <div><div class="fw"><div class="f" id="r3b"></div></div><div class="cap">BSP-Teleport, before its update: the gold line says the whole band and portal screen are hidden until then. After the update the gold lines go and only the numbers are hidden.</div></div>
+      <div><div class="fw"><div class="f" id="r3c"></div></div><div class="cap">Other mods: every HUD part the other mods register, grouped by mod and read from the game, so a mod added later appears by itself. All shown at first.</div></div>
+    </div></section>
+
+  <section><h2>R4. The eye key</h2>
+    <div class="stage">
+      <div><div class="fw sm"><div class="f" id="r4a"></div></div><div class="cap">The pause screen in singleplayer or on a server, Streamer Mode off: a dim eye in the top-right corner, its name on hover.</div></div>
+      <div><div class="fw sm"><div class="f" id="r4b"></div></div><div class="cap">The title screen (the pack's FancyMenu layout behind it), Streamer Mode on: ringed red with a red dot.</div></div>
+    </div></section>
+
+  <section><h2>R5. What OBS gets</h2>
+    <div class="stage">
+      <div><div class="win" style="width:480px"><div class="tbar"><i></i><i></i><i></i><span>BSP Stream</span></div><div class="fw sm" style="height:270px"><div class="f" id="r5a"></div></div></div>
+        <div class="cap">The stream window (a Mac here): titled "BSP Stream", the game's size by default, resizable. The player is in game: no minimap, no F3, the hotbar as usual.</div></div>
+      <div><div class="fw sm"><div class="f" id="r5b"></div></div><div class="cap">The player has JourneyMap's full-screen map open: the stream shows the game behind it and the "Menu hidden" card.</div></div>
+    </div></section>
+
+  <section><h2>To confirm</h2>
+    <div class="card"><ol>
+      <li><b>R1. The first page.</b> One box, 440 × 242 at a 480 × 270 screen, centred and the same size on bigger screens (GUI scale makes it larger). Left: the switch with its key, the output, the frame rate (Match, 60, 30), the live preview, the OBS line. Right: a tile per mod with "n of m hidden", and "Other mods' menus" as one switch. ✕ or Esc closes it; every change is saved at once.</li>
+      <li><b>R2. The outputs.</b> Stream window: a second window titled "BSP Stream" opens when Streamer Mode turns on and closes when it turns off. Spout2 (Windows only): sends as "BSP Stream", no window; greyed with a reason on a Mac. Off: nothing is made or sent.</li>
+      <li><b>R3. A mod's page.</b> Its items, each with a HIDDEN or SHOWN switch and a line saying what it covers; HIDE ALL and SHOW ALL; BACK. Gold lines where a mod's own update is needed. Other mods grouped by mod, read from the game.</li>
+      <li><b>R4. The eye key.</b> 14 × 14 in the top-right corner of the pause screen and the title screen, its name on hover, red ring and dot while on. Steps left past anything already in that corner.</li>
+      <li><b>R5. The stream.</b> Hidden HUD parts are simply not drawn; a hidden menu becomes the game behind it with the "Menu hidden" card. The player's own window never changes.</li>
+      <li><b>First switch-on (D707):</b> everything that shows a place hidden, everything else shown.</li>
+    </ol></div></section>
+</div>
+<script>
+const MODS = [
+  { n:"Minecraft", items:[
+    ["F3 debug screen","The whole screen, with the lines JourneyMap and Distant Horizons add",1],
+    ["Chat: lines with coordinates","Lines with three numbers in a row, like 120, 64, -340",1],
+    ["Chat: all of it","",0],["Player list (Tab)","Who is online",0],["Boss bars","",0],["Titles","",0],["Action bar","Text above the hotbar",0]]},
+  { n:"JourneyMap", items:[
+    ["Minimap","With its coordinates, biome and time lines",1],
+    ["Waypoint markers","Icons and names on the screen",1],
+    ["Its menus","Full-screen map, waypoint manager, options",1]]},
+  { n:"BSP-Teleport", items:[
+    ["Band: coordinates","x y z under homes, warps and teammates",1,"Until BSP-Teleport updates, the whole band is hidden"],
+    ["Portal screen: position","The portal's x, y, z line",1,"Until BSP-Teleport updates, the whole screen is hidden"]]},
+  { n:"BSP-Core", items:[
+    ["Sentinel strip","Your totem's coordinates, intruders' distances",1],
+    ["Recall card","The arrow and distance to your totem",1],
+    ["Alliance screens","Coordinates allies share: the whole screen",1],
+    ["Steal timer","",0],["X-ray ring","",0],["Siege ring","",0]]},
+  { n:"BSP Region Guard", items:[["Land Office screen","“Land Office at x, y, z”: the whole screen",1]]},
+  { n:"Other mods", items:[["Mekanism: HUD","",0],["Create: goggles","",0],["Immersive Aircraft: HUD","",0],["PneumaticCraft: HUD","",0]], total:24 },
+];
+const h = s => { const t = document.createElement("template"); t.innerHTML = s.trim(); return t.content.firstElementChild; };
+const hid = m => m.items.filter(x => x[2]).length;
+const count = m => `${hid(m)} of ${m.total || m.items.length} hidden`;
+const sw = on => `<span class="sw ${on ? "h" : ""}"><i></i>${on ? "Hidden" : "Shown"}</span>`;
+const item = x => `<div class="it"><div><div class="n">${x[0]}</div>${x[1] ? `<div class="s">${x[1]}</div>` : ""}${x[3] ? `<div class="need">${x[3]}</div>` : ""}</div>${sw(x[2])}</div>`;
+const never = `<div class="foot"><span>Never hidden: what is drawn in the world (JourneyMap’s beams, F3+B and F3+G, X-ray, a held map).</span></div>`;
+const out = (wide) => `<span class="lbl">Output</span><span class="seg"><span class="k on">Stream window</span><span class="k off">Spout2 · Windows</span></span>
+  <span class="lbl">FPS</span><span class="seg"><span class="k on">Match</span><span class="k">60</span><span class="k">30</span></span>`;
+const world = id => { const f = document.getElementById(id); f.appendChild(h('<div class="dim"></div>')); return f; };
+
+/* pause screens: vanilla 1.20.1 layout */
+function pause(id, extra) { const f = world(id);
+  f.appendChild(h('<div style="position:absolute;left:0;right:0;top:44px;text-align:center;font-size:8px;color:#E6EAF2">Game Menu</div>'));
+  const c = 240, y0 = 66;
+  [[c-102,y0,204,"Back to Game"],[c-102,y0+24,98,"Advancements"],[c+4,y0+24,98,"Statistics"],[c-102,y0+48,98,"Give Feedback"],[c+4,y0+48,98,"Report Bugs"],
+   [c-102,y0+72,98,"Options..."],[c+4,y0+72,98,"Open to LAN"],[c-102,y0+96,204,"Save and Quit to Title"]].forEach(([x,y,w,t]) =>
+     f.appendChild(h(`<div class="vb" style="left:${x}px;top:${y}px;width:${w}px">${t}</div>`)));
+  extra(f);
+}
+
+const panel = (f, w, hgt) => { const b = h(`<div class="box" style="left:${(480-w)/2}px;top:${(270-hgt)/2}px;width:${w}px;height:${hgt}px"></div>`); f.appendChild(b); return b; };
+function overview(id, o) { const f = world(id); const b = panel(f, 440, 242);
+  b.appendChild(h(`<div class="bar"><span class="ttl">Streamer mode</span><span class="x">✕</span></div>`));
+  const L = h('<div style="position:absolute;left:8px;top:26px;width:176px;bottom:18px;display:flex;flex-direction:column;gap:6px"></div>');
+  L.appendChild(h(`<div class="row"><span class="big" style="${o.on ? "" : "box-shadow:inset 0 0 0 1px var(--D);color:var(--I)"}"><b style="${o.on ? "" : "background:var(--I)"}"></b>${o.on ? "ON" : "OFF"}</span><span class="m" style="font-size:5.8px">Key: not set</span></div>`));
+  L.appendChild(h(`<div class="row" style="flex-wrap:wrap;gap:4px"><span class="lbl" style="width:100%">Output</span><span class="seg"><span class="k ${o.spout ? "" : "on"}">Stream window</span><span class="k ${o.spout ? "on" : (o.mac ? "off" : "")}" id="${id}-sp">Spout2 · Windows</span></span></div>`));
+  L.appendChild(h(`<div class="row"><span class="lbl">Frame rate</span><span class="seg"><span class="k on">Match</span><span class="k">60</span><span class="k">30</span></span></div>`));
+  const pv = o.on ? `<div class="prev" style="width:176px;height:99px"><div class="hb"></div></div>` : `<div class="prev" style="width:176px;height:99px"><div class="off-note">Streamer Mode is off.<br>Nothing goes to OBS until you turn it on.</div></div>`;
+  L.appendChild(h(`<div><div class="lbl" style="margin-bottom:2px">What OBS gets, live</div>${pv}</div>`));
+  const line = !o.on ? `<span class="i">The stream window opens when you turn it on.</span>` : o.spout ? `<span class="dot" style="background:var(--Q);box-shadow:none;margin-right:3px"></span>Sending over Spout2 as “BSP Stream”. In OBS: Spout2 Capture › BSP Stream.`
+     : `<span class="dot" style="background:var(--Q);box-shadow:none;margin-right:3px"></span>Stream window open. In OBS: Window Capture › “BSP Stream”.`;
+  L.appendChild(h(`<div class="m" style="font-size:5.8px;line-height:1.35">${line}</div>`));
+  b.appendChild(L);
+  const G = h('<div style="position:absolute;left:192px;right:8px;top:26px;bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start"></div>');
+  MODS.forEach(m => G.appendChild(h(`<div class="tile"><div class="n">${m.n} <span class="i" style="float:right">›</span></div><div class="c ${hid(m) ? "q" : ""}">${count(m)}</div><div class="i" style="font-size:5.6px">${m.items.slice(0,2).map(x => x[0]).join(" · ")}…</div></div>`)));
+  G.appendChild(h(`<div class="tile" style="grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between"><span class="n" style="font-size:6.5px">Other mods’ menus</span>${sw(0)}</div>`));
+  b.appendChild(G); b.appendChild(h(never));
+  if (o.tip) f.appendChild(h(`<div class="tip" style="left:${(480-440)/2+70}px;top:${(270-242)/2+76}px">Spout2 works on Windows only. Use the stream window on a Mac.</div>`));
+  return f; }
+overview("r1", { on:1 });
+overview("r2a", { on:1, spout:1 });
+overview("r2b", { on:1, mac:1, tip:1 });
+overview("r2c", { on:0 });
+function page(id, m, extra) { const f = world(id); const b = panel(f, 440, 242);
+  b.appendChild(h(`<div class="bar"><span class="k">‹ Back</span><span class="ttl">${m.n}</span><span class="i" style="font-size:6px">${count(m)}</span><span style="margin-left:auto" class="row"><span class="k">Hide all</span><span class="k">Show all</span></span><span class="x" style="margin-left:4px">✕</span></div>`));
+  const R = h('<div style="position:absolute;left:8px;right:8px;top:26px;bottom:18px;background:var(--S);box-shadow:inset 0 0 0 1px var(--D);overflow:hidden"></div>');
+  extra(R); b.appendChild(R); b.appendChild(h(never)); return f; }
+page("r3a", { n:"Minecraft", items:MODS[0].items.map((x,i) => i === 2 ? [x[0],x[1],1] : x) }, R => {
+  MODS[0].items.forEach((x, i) => { const y = i === 2 ? [x[0], "Every chat line", 1] : x; const el = h(item(y)); if (i === 1) { el.classList.add("cov"); el.querySelector(".s").textContent = "Covered by “Chat: all of it”"; } R.appendChild(el); }); });
+page("r3b", MODS[2], R => { MODS[2].items.forEach(x => R.appendChild(h(item(x))));
+  R.appendChild(h(`<div style="padding:6px;font-size:5.8px" class="i">Not needed: the band slot by the hotbar, the access icons and the portal warm-up box show no coordinates.</div>`)); });
+page("r3c", { n:"Other mods", items:[], total:24 }, R => {
+  [["Botania",["Mana bar","Petal radial"]],["Create",["Goggles readout","Value settings","Schematic tools"]],["Immersive Aircraft",["Aircraft HUD"]],["Mekanism",["MekaSuit HUD","Radiation"]],["PneumaticCraft",["Pneumatic armor HUD","Minigun"]]].forEach(([n, xs]) => {
+    R.appendChild(h(`<div class="grp">${n}</div>`)); xs.forEach(x => R.appendChild(h(item([x, "", 0])))); });
+  R.parentElement && 0; });
+document.querySelector("#r3c .bar .i").textContent = "0 of 24 hidden";
+document.querySelector("#r3c .box").appendChild(h('<div class="scroll" style="top:27px;bottom:19px"><b style="top:0;height:35%"></b></div>'));
+pause("r4a", f => { f.appendChild(h('<div class="ck" style="right:2px;top:2px;width:14px;padding:0;color:var(--M)">◉</div>'));
+  f.appendChild(h('<div class="tip" style="right:20px;top:4px">Streamer Mode (off)</div>')); });
+(() => { const f = document.getElementById("r4b");
+  f.appendChild(h('<div style="position:absolute;left:0;right:0;top:30px;text-align:center;font:600 22px Oswald,var(--body);letter-spacing:.18em;color:#E6EAF2">BUILD SECURE PROTECT</div>'));
+  [["Singleplayer",90],["Multiplayer",114],["Mods",138],["Options...",168]].forEach(([t,y]) => f.appendChild(h(`<div class="vb" style="left:140px;top:${y}px;width:200px">${t}</div>`)));
+  f.appendChild(h('<div class="ck new" style="right:2px;top:2px;width:14px;padding:0;box-shadow:inset 0 0 0 1px var(--R);color:var(--R)">◉</div>'));
+  f.appendChild(h('<div class="dot" style="position:absolute;right:1px;top:1px;width:4px;height:4px"></div>'));
+  f.appendChild(h('<div class="tip" style="right:20px;top:4px">Streamer Mode (on)</div>')); })();
+(() => { const f = document.getElementById("r5a");
+  f.appendChild(h('<div style="position:absolute;left:50%;bottom:4px;width:182px;height:22px;transform:translateX(-50%);background:rgba(0,0,0,.45);box-shadow:0 0 0 1px rgba(255,255,255,.3)"></div>'));
+  f.appendChild(h('<div style="position:absolute;left:50%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%);color:#fff;font:600 9px var(--mono);display:grid;place-items:center">+</div>')); })();
+(() => { const f = document.getElementById("r5b");
+  f.appendChild(h('<div style="position:absolute;left:50%;bottom:4px;width:182px;height:22px;transform:translateX(-50%);background:rgba(0,0,0,.45);box-shadow:0 0 0 1px rgba(255,255,255,.3)"></div>'));
+  f.appendChild(h('<div style="position:absolute;inset:0;background:rgba(5,7,10,.35)"></div>'));
+  f.appendChild(h('<div class="box" style="left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;text-align:center"><div class="ttl" style="color:var(--M)">Menu hidden</div><div class="i" style="font-size:6px;margin-top:2px">Streamer Mode</div></div>')); })();
+</script>
+</body>
+</html>

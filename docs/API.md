@@ -1,6 +1,24 @@
 # BSP-Server Utilities API for other mods
 
-Package `com.mrgregles.bsp_server_utilities.api`. Nothing is offered yet; this file grows with the features (staff online, the action log) and lists every class, method and event other mods may use. Anything outside the `api` package may change without notice.
+Package `com.mrgregles.bsp_server_utilities.api`. This file lists every class, method and event other mods may use, and the data contracts other programs read. Anything outside the `api` package may change without notice.
+
+## Streamer Mode (`api.StreamerMode`, client side)
+
+Streamer Mode (from 0.22.0) draws a second, clean picture of the game each frame for OBS, leaving out what the streamer chose; the player's own window is drawn separately with everything. A mod that draws something a streamer may want left out (coordinates in a menu, for example) asks while it draws:
+
+```java
+boolean hide = com.mrgregles.bsp_server_utilities.api.StreamerMode.hidesNow("bsp_teleport:band_coordinates");
+```
+
+- **`static boolean hidesNow(String id)`**: true only while the stream picture is being drawn and the streamer has hidden that item in Streamer Mode's menu. Draw a short placeholder instead of the hidden thing when true. Ask every time it is drawn; never keep the answer.
+- **The first call with an id** also tells Server Utilities that the mod hides that item itself, so it stops hiding the mod's whole menu in its place (what it does for a mod that has not got this call yet).
+- **Safe anywhere:** always false on a server or with a null id.
+- **Server Utilities is optional for most mods:** look the method up once by name (reflection or a `MethodHandle`), and treat a missing class or any error as false.
+- **Ids so far** (each is an item on its mod's page in the menu):
+  - `bsp_teleport:band_coordinates`: the x, y, z under the Teleport band's homes, warps and teammates;
+  - `bsp_teleport:portal_coordinates`: the portal screen's position line.
+- New ids are added here when another mod asks for one (`Requests for Other Mods`).
+
 
 
 ## Server images in chat (a text contract, not a Java API)

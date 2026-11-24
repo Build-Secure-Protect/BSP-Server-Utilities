@@ -43,6 +43,12 @@ public final class ClientSetup {
         }
     }
 
+    /** Streamer Mode's key (D704: unbound until the player sets one). */
+    @SubscribeEvent
+    public static void onKeys(net.minecraftforge.client.event.RegisterKeyMappingsEvent event) {
+        StreamerMode.onKeys(event);
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         // the client check: read the mods' files in the background, and look again after reloads
@@ -54,6 +60,7 @@ public final class ClientSetup {
         ClientAfkCheck.register();
         ClientSupport.register();
         ClientTalk.register(); // private staff messages (SU-106)
+        StreamerMode.register(); // Streamer Mode's stream picture, key and /streamer (SU-131)
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();
             for (StaffViewPacket.Row r : ClientStaff.rows()) {

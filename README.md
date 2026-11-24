@@ -17,6 +17,7 @@ Features:
 - **Crowded drops and arrows**: a chunk holding more than 256 dropped items or 128 arrows for 5 minutes is cleared down to that number, oldest first, keeping death drops and what `/su clearitems` keeps; players nearby are told. Set on the same tab's DROPS & ARROWS page, with the crowded chunks on every server and CLEAR NOW.
 - **Private staff messages**: staff write privately to a player in game (`/su msg`, `/su talk <player>`) or from the staff web panel; the player gets a popup (who wrote, never the words) and a MESSAGE STAFF key in the inventory, right of SUPPORT BSP, that flashes red until they answer; a player who was offline is told when they next log on, on whichever server. One conversation per player, shared by all staff, ended by any staff member (the key goes). Lines are kept 90 days.
 - **Support BSP**: a link to the page where players can support the server. A SUPPORT BSP key in the top left corner of the inventory (right of BSP-Core's TEAM and KITS, clear of every other button, the recipe book, JEI and EMI) and `/support` open a popup with the address (OPEN in the browser, COPY LINK); a chat line about 5 seconds after a player joins the network (not when they move between its servers) says the admin's sentence with the link. Admins set the link, the sentence and the chat line's own link in the SUPPORT tab, the same for every server; only https links are accepted.
+- **Streamer Mode** (the player's own game): a second, clean picture of the game for OBS, while the player's window shows everything. It leaves out what the streamer chooses, per mod: the F3 screen, chat messages that hold coordinates (and what they type when it holds some), JourneyMap's minimap or only its coordinate lines, its waypoint markers and menus, BSP-Teleport's coordinates, BSP-Core's sentinel strip, recall card and Team screen, Region Guard's Land Office screen, any HUD part any mod registers, and other mods' menus. A hidden menu shows as a "Menu hidden" card. OBS takes it from a window titled "BSP Stream" (Window Capture, or macOS Screen Capture in window mode) or, on 64-bit Windows, over Spout2 (Off-World-Live's OBS plugin) with no window. The menu opens from the eye key in the top-right corner of the title and pause screens, with a live preview and a frame rate setting (Match, 60, 30). Other mods can ask whether to hide something through `api.StreamerMode` ([docs/API.md](docs/API.md)).
 
 The mod is in development and has not yet been tried on a live server.
 
@@ -34,6 +35,7 @@ The mod is in development and has not yet been tried on a live server.
 - `/support`: the support page's popup (everyone).
 - `/su support`: the Support BSP settings; `/su support link <url>`, `/su support message <text>`, `/su support chatlink <url>` (`none` empties one), `/su support clear` (operators, BSP-Core admins, the console).
 - `/su talk`: your conversation with staff, when staff have written to you (everyone).
+- `/streamer`: Streamer Mode's menu; `/streamer on`, `/streamer off` (everyone, in their own game).
 - `/su msg <player> <text>`: write privately to a player, online or not; `/su talk <player>`: their conversations with staff, with END CONVERSATION; `/su talks`: the open conversations, those waiting on staff first (staff; `msg` and `talks` also the console).
 - `/broadcast <chat|title> <colour> <player|all> <server|network> <message>`: an announcement in chat, or as a title in the middle of the screen (a `|` splits off a smaller subtitle), in a colour (red, gold, grey, `"#FF8800"` and so on, `&` codes allowed), for everyone or one player, on this server or every server of the network, with a short chime (operators, BSP-Core admins, the console and RCON).
 
@@ -50,9 +52,13 @@ The server config is `serverconfig/bsp_server_utilities-server.toml` in each wor
 - **Staff**: `staff.groups` lists the LuckPerms groups that count as staff, highest first, as `group:Label:#RRGGBB` (for example `"admin:Admin:#B58CFF"`). `staff.operators` makes server operators staff too.
 - **Action log**: `log.keepDays` (7) is how long entries are kept on every server and in the shared table.
 - **Images**: Display Panels show pictures from a web address or from `config/bsp_server_utilities/images/` on that server. The server fetches the address itself (players never do), so only admins can set one; any address the server can reach is allowed, including ones on its own network. Limits are in the `[images]` section.
-- **The player's own game**: `config/bsp_server_utilities-client.toml`, `supportButton = false` hides the SUPPORT BSP key.
+- **The player's own game**: `config/bsp_server_utilities-client.toml`, `supportButton = false` hides the SUPPORT BSP key; `[streamer]` holds Streamer Mode's output, frame rate and what it hides (set in its menu).
 - **Rooms**: the `[rooms]` section: `limit` (0: no limit, rooms only counted), `scope` (`network` or `server`), `exemptGroup` (a LuckPerms group never limited; operators never are), `graceDays` (7). Use the same values on every server.
 - `/serverutils status` (or `/su status`, operators and BSP-Core admins) shows what the server is using.
+
+## Third-party code
+
+The jar carries Spout's `SpoutLibrary.dll` (Spout SDK 2.007.018, 64-bit, by Lynn Jarvis, BSD-2-Clause, unchanged) for Streamer Mode's Spout2 output, with its licence notice beside it in `natives/windows-x64/`. It is copied to `bsp_server_utilities/natives/` in the game folder and loaded only when a player chooses Spout2 on 64-bit Windows; nothing else ever loads it.
 
 ## Building
 
