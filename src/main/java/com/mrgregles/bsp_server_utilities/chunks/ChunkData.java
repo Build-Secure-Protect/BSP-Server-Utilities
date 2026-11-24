@@ -18,7 +18,8 @@ import java.util.UUID;
 /**
  * Chunk unloading's world data on this server (SavedData {@code bsp_server_utilities_chunks}): the settings' copy, the
  * suspended tickets (taken from Forge, given back when the owner returns; they survive restarts), who placed each
- * machine, when each player last left this server, and the players an admin restored while they were away (D97).
+ * machine, when each player last left this server, the players an admin restored while they were away (D97), and the
+ * players whose owners a reset still has to find again, with the loaded tickets a season reset left to check.
  */
 public final class ChunkData extends SavedData {
     private static final String NAME = "bsp_server_utilities_chunks";
@@ -50,6 +51,8 @@ public final class ChunkData extends SavedData {
     private final Map<String, UUID> placers = new HashMap<>();
     private final Map<UUID, Long> lastLeft = new HashMap<>();
     private final Set<UUID> held = new HashSet<>();
+    private final Set<UUID> rejudges = new HashSet<>();
+    private final Set<String> claimChecks = new HashSet<>();
 
     public static ChunkData get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(ChunkData::load, ChunkData::new, NAME);
@@ -121,6 +124,28 @@ public final class ChunkData extends SavedData {
         }
     }
 
+    /** Players whose unloaded tickets' owners a reset asked to find again, not done yet (kept over a restart). */
+    public Set<UUID> rejudges() {
+        return Set.copyOf(rejudges);
+    }
+
+    public void rejudgeLater(UUID player, boolean on) {
+        if (on ? rejudges.add(player) : rejudges.remove(player)) {
+            setDirty();
+        }
+    }
+
+    /** Loaded tickets charged to a player only through a claim when a season reset came, to check once the claims are given up. */
+    public Set<String> claimChecks() {
+        return Set.copyOf(claimChecks);
+    }
+
+    public void claimCheck(String ticketKey, boolean on) {
+        if (on ? claimChecks.add(ticketKey) : claimChecks.remove(ticketKey)) {
+            setDirty();
+        }
+    }
+
     private static ChunkData load(CompoundTag tag) {
         ChunkData d = new ChunkData();
         d.settings = ChunkSettings.load(tag.getCompound("settings"));
@@ -149,6 +174,16 @@ public final class ChunkData extends SavedData {
                 // a bad entry
             }
         }
+        for (Tag t : tag.getList("rejudges", Tag.TAG_STRING)) {
+            try {
+                d.rejudges.add(UUID.fromString(t.getAsString()));
+            } catch (IllegalArgumentException ignored) {
+                // a bad entry
+            }
+        }
+        for (Tag t : tag.getList("claimChecks", Tag.TAG_STRING)) {
+            d.claimChecks.add(t.getAsString());
+        }
         return d;
     }
 
@@ -167,6 +202,12 @@ public final class ChunkData extends SavedData {
         ListTag h = new ListTag();
         held.forEach(u -> h.add(StringTag.valueOf(u.toString())));
         tag.put("held", h);
+        ListTag j = new ListTag();
+        rejudges.forEach(u -> j.add(StringTag.valueOf(u.toString())));
+        tag.put("rejudges", j);
+        ListTag k = new ListTag();
+        claimChecks.forEach(x -> k.add(StringTag.valueOf(x)));
+        tag.put("claimChecks", k);
         return tag;
     }
 }

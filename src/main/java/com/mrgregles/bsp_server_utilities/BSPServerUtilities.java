@@ -81,6 +81,8 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
         // BSP-Core's player reset (PR17), by class name: listened for from the server's start
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStartingEvent e) -> com.mrgregles.bsp_server_utilities.players.PlayerReset.register());
+        // and its season reset (SR15), the same way
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStartingEvent e) -> com.mrgregles.bsp_server_utilities.players.SeasonReset.register());
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
             RulesService.onServerStarted(e.getServer());

@@ -319,6 +319,7 @@ public final class ChunkService {
     /** Ticks a reset waits before its owners are judged again, so BSP-Region Guard's own reset (PR16) has abandoned the claims first. */
     public static final int REJUDGE_DELAY_TICKS = 20;
     private static final Map<UUID, Long> REJUDGES = new HashMap<>();
+    private static long claimsDue = -1;
 
     /**
      * BSP-Core reset the player (PR17), on every server it reaches. Their suspended tickets stay suspended and when they
@@ -328,9 +329,48 @@ public final class ChunkService {
      * always-loaded list is the staff's setting and stays.
      */
     public static void forgetPlayer(MinecraftServer server, UUID player) {
-        ChunkData.get(server).hold(player, false);
-        REJUDGES.put(player, ticks + REJUDGE_DELAY_TICKS);
+        ChunkData data = ChunkData.get(server);
+        data.hold(player, false);
+        queueRejudge(data, player);
         changed();
+    }
+
+    /**
+     * BSP-Core's season reset (SR15), on every server it reaches: {@link #forgetPlayer} for every player with an entry here
+     * (an unloaded ticket or an admin's hold), as the player reset does for one. Unloaded tickets stay unloaded and
+     * when each player last left is kept; a second later each one's owner is found again (BSP-Region Guard gives every
+     * claim up for the same reset). The loaded tickets charged to a player only through a claim (those online at the
+     * reset, or not away long enough) are checked then too: one with no owner left is unloaded with no owner, as an
+     * admin's unload is, so it does not stay loaded for good (D96). Machines with no owner an admin unloaded, the placers
+     * and the always-loaded list stay. Returns how many players were forgotten.
+     */
+    public static int forgetEveryone(MinecraftServer server) {
+        ChunkData data = ChunkData.get(server);
+        ChunkSettings settings = data.settings();
+        if (settings.enabled()) {
+            for (Live l : live(server)) { // owners as the last check found them, before BSP-Region Guard's reset if it ran first
+                if (l.how() == ChunkOwners.How.CLAIM && !settings.exempt(l.ticket().modId())) {
+                    data.claimCheck(l.ticket().key(), true);
+                }
+            }
+        }
+        if (!data.claimChecks().isEmpty()) {
+            claimsDue = ticks + REJUDGE_DELAY_TICKS;
+        }
+        Set<UUID> players = new HashSet<>(data.held());
+        for (ChunkData.Suspended s : data.suspended().values()) {
+            if (s.player() != null) {
+                players.add(s.player());
+            }
+        }
+        for (UUID id : players) {
+            data.hold(id, false);
+            queueRejudge(data, id);
+        }
+        if (!players.isEmpty()) {
+            changed();
+        }
+        return players.size();
     }
 
     /**
@@ -366,7 +406,76 @@ public final class ChunkService {
         return changedOwner;
     }
 
+    /**
+     * Queues the player's owner check, kept in the world too: a reset heard as the server stops (BSP-Core answers late
+     * there, with no tick left) or just before it does is checked a second after the next start instead of never.
+     */
+    private static void queueRejudge(ChunkData data, UUID player) {
+        data.rejudgeLater(player, true);
+        REJUDGES.put(player, ticks + REJUDGE_DELAY_TICKS);
+    }
+
+    /** At start: the owner checks a reset left waiting when the server stopped, a second from now. */
+    private static void requeueRejudges(MinecraftServer server) {
+        REJUDGES.clear();
+        ChunkData data = ChunkData.get(server);
+        for (UUID id : data.rejudges()) {
+            REJUDGES.put(id, ticks + REJUDGE_DELAY_TICKS);
+        }
+        claimsDue = data.claimChecks().isEmpty() ? -1 : ticks + REJUDGE_DELAY_TICKS;
+    }
+
+    /**
+     * The season reset's loaded tickets that were a player's only through a claim: each still loaded and with no owner
+     * now is unloaded with no owner, listed, as an admin's unload is (D96); one with an owner again is left to the
+     * minute's check. Returns how many were unloaded.
+     */
+    public static int checkClaims(MinecraftServer server) {
+        claimsDue = -1;
+        ChunkData data = ChunkData.get(server);
+        int taken = 0;
+        for (String key : data.claimChecks()) {
+            data.claimCheck(key, false);
+            ChunkTickets.Ticket t = ChunkTickets.Ticket.decode(key);
+            ServerLevel level = t == null ? null : t.level(server);
+            if (level == null || ChunkTickets.live(level).stream().noneMatch(x -> x.key().equals(key))) {
+                continue;
+            }
+            OWNERS.remove(key);
+            if (ChunkOwners.find(level, t, data) == null && suspend(server, t, null)) {
+                taken++;
+            }
+        }
+        if (taken > 0) {
+            com.mrgregles.bsp_server_utilities.BSPServerUtilities.LOGGER.info("Chunk unloading: {} loaded ticket(s) held only through a claim given up in the season reset have no owner now (unloaded)", taken);
+            changed();
+        }
+        return taken;
+    }
+
+    /** Charges a ticket's owner as the last check found it (tests: BSP-Region Guard's claims are not there). */
+    public static void ownerForTests(String ticketKey, @Nullable ChunkOwners.Found found) {
+        if (found == null) {
+            OWNERS.remove(ticketKey);
+        } else {
+            OWNERS.put(ticketKey, found);
+        }
+    }
+
+    /** Whether the season reset's claim check is still waiting (tests). */
+    public static boolean claimsPending() {
+        return claimsDue >= 0;
+    }
+
+    /** What a restart does to the owner checks waiting (tests): the in-memory queue lost, the world's kept. */
+    public static void restartRejudgesForTests(MinecraftServer server) {
+        requeueRejudges(server);
+    }
+
     private static void drainRejudges(MinecraftServer server) {
+        if (claimsDue >= 0 && ticks >= claimsDue) {
+            checkClaims(server);
+        }
         if (REJUDGES.isEmpty()) {
             return;
         }
@@ -375,6 +484,7 @@ public final class ChunkService {
             if (due != null && ticks >= due) {
                 REJUDGES.remove(id);
                 rejudge(server, id);
+                ChunkData.get(server).rejudgeLater(id, false);
             }
         }
     }
@@ -387,7 +497,9 @@ public final class ChunkService {
     /** Runs a waiting reset owner check now (tests). */
     public static int rejudgeNowForTests(MinecraftServer server, UUID player) {
         REJUDGES.remove(player);
-        return rejudge(server, player);
+        int n = rejudge(server, player);
+        ChunkData.get(server).rejudgeLater(player, false);
+        return n;
     }
 
     // ------------------------------------------------------------------ lifecycle
@@ -419,8 +531,8 @@ public final class ChunkService {
         startedMs = clock.getAsLong();
         RESTORES.clear();
         OWNERS.clear();
-        REJUDGES.clear();
         ticks = 0;
+        requeueRejudges(server); // a reset's owner checks the last run had no time for
         Storage s = Storage.active();
         if (s != null) {
             ChunkSettings ours = settings(server); // read here, on the server thread, not on the storage worker

@@ -2864,3 +2864,23 @@ GameTests added (6; **357/357** in all, twice in a row):
 - Updated: `LagGoGameTests.goElsewhereThroughBspTeleportOnly` checks the arrival line is the plain text, not a key.
 
 **Untested in a client or on a real network.** 1 to 8 are built but not seen in game: check at 337 × 206 (the zoom at the legend's end in WHY with big counts, the 2 px gap under the second line, the smaller map), the waiting wording between 5 and 15 s with a server off Redis, a pick right after a TP to another server, the screen opened before the counts, OUTLINE refused in another world, and the world key as a sample starts and stops. On a real network: the arrival line from BSP-Teleport, and the late log with a server's clock set wrong.
+
+## 2026-11-24: BSP-Core's season reset (SR15)
+
+Needs a BSP-Core with `/bsp season reset` (newer than 1.24.1) on every server, with this jar. GameTests (the BSP-Core jar this mod builds against has no `isSeasonReset`, so they hook stand-in events by class name and call the handler directly): `SeasonResetGameTests.the_season_reset_is_heard_by_class_name_and_an_older_bsp_cores_season_end_is_not_one`, `SeasonResetGameTests.a_season_reset_forgets_every_players_chunk_entries_as_the_player_reset_does_and_keeps_the_rules_agreement` (in a batch of its own: it forgets every player).
+
+On the network, with two test players who have agreed to the rules, each with a chunk-loading machine on server B, both away long enough for their machines to unload, and an admin's RESTORE NOW on one of them:
+1. On server A, `/bsp season reset` as BSP-Core asks. A's log: "BSP-Core season reset (season N ended by <admin>, typed here): chunk unloading forgot ... player(s), owners checked again in a second; rules agreements kept". B's log: the same line with "ended by network" and without "typed here".
+2. On B, nothing loads because of the reset: both players' machines stay unloaded, and the RESTORE NOW hold is gone (the CHUNKS tab). Machines they placed stay listed under their names and come back when each joins B. A machine that was a player's only through a claim BSP-Region Guard gave up in the reset moves to "no owner", stays unloaded, and does not come back when they join; an admin can RESTORE it from the CHUNKS tab. A claim-only machine that was still loaded at the reset (its owner online) is unloaded a second later with no owner too (B's log: "Chunk unloading: 1 loaded ticket(s) held only through a claim given up in the season reset have no owner now (unloaded)").
+3. Each player logs in again: no rules popup. Their staff panel notes and tags, bans, staff talks, Action Log lines, totem steals and last seen are all still there. The always-loaded list is unchanged.
+4. An ordinary season end (`End season`, or `Full reset` in BSP-Core's admin panel) changes nothing here, and with a BSP-Core older than the season reset nothing changes either.
+
+## 2026-11-24: audit of the season reset (0.25.1)
+
+Two independent reviews (correctness; network and edge cases). Fixed:
+- The owner checks a reset leaves waiting are kept in the world (`ChunkData` `rejudges`), and queued again a second after the next start. Before, a server stopped within a second of hearing the reset lost them. This covers the player reset too.
+- Loaded tickets charged to a player only through a claim at the season reset are checked a second later as well, and unloaded with no owner when the claim is gone (`ChunkService.checkClaims`).
+- The record of season resets already applied is cleared at each server start, and a reset whose clearing failed is not marked as applied.
+- The chunk test sets up inside its `try`, covers a player with only a hold, a loaded claim-only machine, a loaded machine with no owner, and a restart before the checks, and finishes the checks of the test world's leftover entries itself.
+
+GameTests **359/359**, twice in a row (`SeasonResetGameTests`: 2). Untested with a BSP-Core jar that has the season reset, and on the network.

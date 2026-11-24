@@ -879,6 +879,88 @@ public final class BspCore {
         }
     }
 
+    // ------------------------------------------------------------------ season reset (BSP-Core's /bsp season reset, SR15)
+
+    /** BSP-Core's season end, read by name; only its {@code isSeasonReset()} ones are a season reset (older jars lack the getter). */
+    public static final String SEASON_ENDED_EVENT = "com.mrgregles.bsp_core.api.event.SeasonEvent$Ended";
+
+    /** What a season reset says: the season that ended, whether it was typed here, by whom. */
+    public interface SeasonResetListener {
+        void reset(net.minecraft.server.MinecraftServer server, int endedNumber, boolean origin, String by);
+    }
+
+    private static boolean seasonResetHooked;
+
+    /**
+     * Calls {@code listener} for every BSP-Core season reset that reaches this server; once (at server start), and nothing
+     * without BSP-Core. True when listening (with a BSP-Core older than the season reset the listener is never called).
+     */
+    public static boolean onSeasonReset(SeasonResetListener listener) {
+        if (seasonResetHooked) {
+            return true;
+        }
+        if (!isLoaded()) {
+            return false;
+        }
+        seasonResetHooked = hookSeasonReset(SEASON_ENDED_EVENT, listener) != null;
+        return seasonResetHooked;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static java.lang.reflect.Method getter(Class<?> type, String name) {
+        try {
+            return type.getMethod(name);
+        } catch (NoSuchMethodException | LinkageError | SecurityException e) {
+            return null;
+        }
+    }
+
+    private static boolean flag(@org.jetbrains.annotations.Nullable java.lang.reflect.Method m, Object e) throws ReflectiveOperationException {
+        return m != null && Boolean.TRUE.equals(m.invoke(e)); // a getter an older BSP-Core lacks reads as false
+    }
+
+    /**
+     * Listens for the season end class of that name: {@code getServer} and {@code getEndedNumber} are needed;
+     * {@code isSeasonReset} and {@code isOrigin} are read when there (missing: false, so an older BSP-Core's season end is
+     * never a season reset), {@code getBy} too (missing: empty). The listener hears season resets only. Returns the
+     * registered listener (for {@code EVENT_BUS.unregister}), or null, with nothing registered, when the class or a needed
+     * getter is missing. Tests call it with their own stand-in class.
+     */
+    @SuppressWarnings("unchecked")
+    @org.jetbrains.annotations.Nullable
+    public static Object hookSeasonReset(String className, SeasonResetListener listener) {
+        try {
+            Class<?> type = Class.forName(className);
+            if (!net.minecraftforge.eventbus.api.Event.class.isAssignableFrom(type)) {
+                return null;
+            }
+            java.lang.reflect.Method server = type.getMethod("getServer"), number = type.getMethod("getEndedNumber");
+            java.lang.reflect.Method seasonReset = getter(type, "isSeasonReset"), origin = getter(type, "isOrigin"), by = getter(type, "getBy");
+            java.util.function.Consumer<net.minecraftforge.eventbus.api.Event> handler = e -> {
+                if (!type.isInstance(e)) {
+                    return;
+                }
+                try {
+                    if (!flag(seasonReset, e)) {
+                        return; // an ordinary season end, or a BSP-Core older than the season reset
+                    }
+                    Object b = by == null ? null : by.invoke(e);
+                    listener.reset((net.minecraft.server.MinecraftServer) server.invoke(e), ((Number) number.invoke(e)).intValue(),
+                            flag(origin, e), b == null ? "" : b.toString());
+                } catch (ReflectiveOperationException | LinkageError | RuntimeException x) {
+                    // nothing thrown here may reach BSP-Core's season reset
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: a season reset was not applied: {}", x.toString());
+                }
+            };
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                    (Class<net.minecraftforge.eventbus.api.Event>) type, handler);
+            return handler;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            BSPServerUtilities.LOGGER.debug("BSP-Core season end event not reachable ({}): {}", className, e.toString());
+            return null;
+        }
+    }
+
     private static boolean stealsHooked;
 
     /**

@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-11-24
+
+BSP-Core's season reset. The network protocol is still 14: the servers need the new jar, players need nothing new.
+
+### Added
+- BSP-Core's season reset (`/bsp season reset`, in a BSP-Core newer than 1.24.1) reaches this mod on every server, which needs this jar on the servers. Chunk unloading forgets every player as the player reset forgets one: every admin's RESTORE NOW hold is forgotten, unloaded machines stay unloaded, and a second later each one's owner is found again. A machine that was a player's only through a claim given up in the reset is unloaded with no owner, listed in the CHUNKS tab, as if an admin had unloaded it, whether it was loaded or unloaded at the reset. A server stopped right after the reset does these checks a second after it starts again. Kept: the rules agreements (nobody is asked to agree again), the first-join records, bans, staff panel notes and tags, staff talks, the Action Log, totem steals, last seen, who placed each machine and the always-loaded list. With an older BSP-Core, a season's end changes nothing here.
+
 ## [0.25.0] - 2026-11-24
 
 The LAG tab (SU-149 to SU-153). The network protocol is 14: players need the new modpack, and every server the new jar, at the same time.
