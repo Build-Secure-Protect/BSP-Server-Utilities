@@ -10,7 +10,8 @@
     "ExperienceOrbAccess",
     "PlayerListLoginMixin",
     "ItemEntityHurtMixin",
-    "EntityBelowWorldMixin"
+    "EntityBelowWorldMixin",
+    "ChunkMapAccess"
   ],
   "server": [],
   "client": [

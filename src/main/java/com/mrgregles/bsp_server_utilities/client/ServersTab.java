@@ -23,7 +23,7 @@ import java.util.Locale;
  * right box, since the guide's own keys take the footer.
  */
 final class ServersTab {
-    private static final int LIST_X = 8, TOP = 22, LIST_W = 170, BOX_H = 158, PANE_X = 184, PANE_W = 152, ROW = 13, HEAD = 12;
+    private static final int LIST_X = 8, TOP = 22, GAP = 6, ROW = 13, HEAD = 12;
     private static final int REFRESH_TICKS = 100;
     private static final long SURE_MS = 3000;
     private static final float TINY = 0.6f, SMALL = 0.7f;
@@ -39,6 +39,28 @@ final class ServersTab {
 
     ServersTab(AdminScreen host) {
         this.host = host;
+    }
+
+    // ------------------------------------------------------------------ layout (from the page size; 344 x 210 gave 170, 152 and 158)
+
+    /** The list's width: half of any width past the old fixed panel's 344, and all of the shortfall on a narrower page. */
+    private int listW() {
+        int extra = host.pageW() - 344;
+        return Math.max(140, 170 + (extra > 0 ? extra / 2 : extra)); // the name keeps room beside the chat tag on a narrow page (review of SU-154)
+    }
+
+    private int paneX() {
+        return LIST_X + listW() + GAP;
+    }
+
+    /** The right box's width: the rest of the page (152 on the old panel). */
+    private int paneW() {
+        return host.pageW() - paneX() - 8;
+    }
+
+    /** Both boxes' height: down to 30 above the page's bottom, where the footer is. */
+    private int boxH() {
+        return host.pageH() - TOP - 30;
     }
 
     void open() {
@@ -71,8 +93,8 @@ final class ServersTab {
         return true;
     }
 
-    private static int visible() {
-        return (BOX_H - HEAD - 2) / ROW;
+    private int visible() {
+        return Math.max(1, (boxH() - HEAD - 2) / ROW);
     }
 
     @Nullable
@@ -108,26 +130,29 @@ final class ServersTab {
 
     private void drawList(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int lx = x + LIST_X, ly = y + TOP;
-        Ui.inset(g, lx, ly, LIST_W, BOX_H);
-        Ui.text(g, font, Tr.t("servers.server").toUpperCase(Locale.ROOT), lx + 5, ly + 4, Ui.MUTED, TINY);
-        Ui.text(g, font, Tr.t("servers.chat").toUpperCase(Locale.ROOT), lx + 72, ly + 4, Ui.MUTED, TINY);
+        int lx = x + LIST_X, ly = y + TOP, lw = listW();
+        // the server's name takes the extra width; the chat tag and the state pill keep theirs
+        int nameW = lw - 108, cTag = lx + lw - 98;
+        Ui.inset(g, lx, ly, lw, boxH());
+        Ui.text(g, font, Ui.fit(font, Tr.t("servers.server").toUpperCase(Locale.ROOT), nameW + 2, TINY), lx + 5, ly + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, Tr.t("servers.chat").toUpperCase(Locale.ROOT), cTag, ly + 4, Ui.MUTED, TINY);
         String st = Tr.t("servers.state").toUpperCase(Locale.ROOT);
-        Ui.text(g, font, st, lx + LIST_W - 5 - Ui.width(font, st, TINY), ly + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, st, lx + lw - 5 - Ui.width(font, st, TINY), ly + 4, Ui.MUTED, TINY);
         if (data == null) {
-            Ui.text(g, font, Tr.t("servers.loading"), lx + 5, ly + HEAD + 4, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("servers.loading"), lw - 10, TINY), lx + 5, ly + HEAD + 4, Ui.MUTED, TINY);
             return;
         }
         List<AdminServersPacket.Row> rows = data.rows();
+        scroll = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - visible()))); // a bigger window, or fewer servers (audit of SU-154)
         int ry = ly + HEAD;
         for (int i = scroll; i < Math.min(rows.size(), scroll + visible()); i++) {
             AdminServersPacket.Row r = rows.get(i);
             boolean sel = r.name().equals(picked);
             if (i > scroll) {
-                g.fill(lx + 1, ry, lx + LIST_W - 1, ry + 1, Ui.ROW_LINE);
+                g.fill(lx + 1, ry, lx + lw - 1, ry + 1, Ui.ROW_LINE);
             }
             if (sel) {
-                g.fill(lx + 1, ry, lx + LIST_W - 1, ry + ROW, 0xFF1B2230);
+                g.fill(lx + 1, ry, lx + lw - 1, ry + ROW, 0xFF1B2230);
                 g.fill(lx + 1, ry, lx + 3, ry + ROW, Ui.VIOLET);
             }
             String mark = switch (r.mark()) {
@@ -137,15 +162,15 @@ final class ServersTab {
                 case NONE -> "";
             };
             int mw = mark.isEmpty() ? 0 : Ui.width(font, mark, 0.5f) + 2;
-            String name = Ui.fit(font, r.name(), 62 - mw, SMALL);
+            String name = Ui.fit(font, r.name(), nameW - mw, SMALL);
             Ui.text(g, font, name, lx + 5, ry + 3, Ui.TEXT, SMALL);
             if (!mark.isEmpty()) {
                 Ui.text(g, font, mark, lx + 5 + Ui.width(font, name, SMALL) + 2, ry + 4, Ui.MUTED, 0.5f);
             }
-            drawTag(g, r, lx + 72, ry + 2, 7, 64);
-            pill(g, r, lx + LIST_W - 5, ry + 3);
+            drawTag(g, r, cTag, ry + 2, 7, 64);
+            pill(g, r, lx + lw - 5, ry + 3);
             String name0 = r.name();
-            hits.add(new Ui.Hit(lx, ry, LIST_W, ROW, () -> picked = name0));
+            hits.add(new Ui.Hit(lx, ry, lw, ROW, () -> picked = name0));
             ry += ROW;
         }
     }
@@ -207,8 +232,8 @@ final class ServersTab {
 
     private void drawPane(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + PANE_X, py = y + TOP, ix = px + 5, iw = PANE_W - 10;
-        Ui.inset(g, px, py, PANE_W, BOX_H);
+        int pw = paneW(), bh = boxH(), px = x + paneX(), py = y + TOP, ix = px + 5, iw = pw - 10;
+        Ui.inset(g, px, py, pw, bh);
         AdminServersPacket.Row r = picked == null ? null : row(picked);
         if (r == null) {
             return;
@@ -219,7 +244,7 @@ final class ServersTab {
             case NONE -> "";
         };
         String head = where.isEmpty() ? r.name() : r.name() + " · " + where;
-        Ui.text(g, font, Component.literal(Ui.fit(font, head.toUpperCase(Locale.ROOT), iw, TINY)).withStyle(ChatFormatting.BOLD), ix, py + 5, Ui.VIOLET, TINY);
+        Ui.text(g, font, Component.literal(Ui.fitBold(font, head.toUpperCase(Locale.ROOT), iw, TINY)).withStyle(ChatFormatting.BOLD), ix, py + 5, Ui.VIOLET, TINY);
         int ty = py + 15;
         // the image in use, or the folder's file when it differs (D202)
         String id = r.inUse() ? r.id() : r.folderId();
@@ -246,30 +271,32 @@ final class ServersTab {
         }
         ty += 3;
         if (!id.isEmpty()) {
-            Ui.text(g, font, Tr.t("servers.in_chat").toUpperCase(Locale.ROOT), ix, ty, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("servers.in_chat").toUpperCase(Locale.ROOT), iw, TINY), ix, ty, Ui.MUTED, TINY);
             ty += 8;
             int w1 = image(g, id, ix, ty, 9, 96);
             image(g, id, ix + w1 + 6, ty - 4, 18, iw - w1 - 6);
             ty += 18;
         }
-        Ui.text(g, font, Tr.t("servers.as_staff").toUpperCase(Locale.ROOT), ix, ty, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("servers.as_staff").toUpperCase(Locale.ROOT), iw, TINY), ix, ty, Ui.MUTED, TINY);
         ty += 8;
         // the sample line on chat's dark backing
         g.fill(ix, ty - 1, ix + iw, ty + 10, 0x80000000);
         int sx = ix + 2;
         int drawn = id.isEmpty() ? 0 : image(g, id, sx, ty, 9, 96);
         if (drawn == 0) {
-            String text = "[" + r.name() + "]";
+            String text = Ui.fit(font, "[" + r.name() + "]", iw - 4, 1f);
             Ui.text(g, font, text, sx, ty + 1, GREY_TEXT, 1f);
             drawn = font.width(text);
         }
-        Ui.text(g, font, Ui.fit(font, Tr.t("servers.sample"), iw - drawn - 8, 1f), sx + drawn + 4, ty + 1, 0xFFFFFFFF, 1f);
+        if (iw - drawn - 8 > 0) {
+            Ui.text(g, font, Ui.fit(font, Tr.t("servers.sample"), iw - drawn - 8, 1f), sx + drawn + 4, ty + 1, 0xFFFFFFFF, 1f);
+        }
         ty += 14;
         if (host.inGuide()) {
-            drawGuideKey(g, ix, py + BOX_H - 30, iw, mx, my, hits);
+            drawGuideKey(g, ix, py + bh - 30, iw, mx, my, hits);
         } else {
             for (String l : Ui.wrap(font, Tr.t("servers.hover_note", r.name()), iw, TINY)) {
-                if (ty > py + BOX_H - 9) {
+                if (ty > py + bh - 9) {
                     break;
                 }
                 Ui.text(g, font, l, ix, ty, Ui.MUTED, TINY);
@@ -328,10 +355,10 @@ final class ServersTab {
 
     private void drawFooter(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
-        int kw = refreshKey(g, x + AdminScreen.W - 8, fy, mx, my, hits);
+        int fy = y + host.pageH() - 8 - 14;
+        int kw = refreshKey(g, x + host.pageW() - 8, fy, mx, my, hits);
         String guideKey = Tr.t("admin.setup.guide_key");
-        int gw = Ui.width(font, guideKey, TINY) + 16, gx = x + AdminScreen.W - 8 - kw - 4 - gw;
+        int gw = Ui.widthBold(font, guideKey, TINY) + 16, gx = x + host.pageW() - 8 - kw - 4 - gw;
         Ui.frame(g, gx, fy, gw, 14, Ui.DIM);
         Ui.text(g, font, Component.literal(guideKey).withStyle(ChatFormatting.BOLD), gx + 8, fy + 5, Ui.MUTED, TINY);
         hits.add(new Ui.Hit(gx, fy, gw, 14, () -> ServerUtilsNetwork.CHANNEL.sendToServer(
@@ -350,8 +377,13 @@ final class ServersTab {
             Ui.text(g, font, l, x, ty, statusColour(), TINY);
             ty += 7;
         }
-        String label = Tr.t("servers.refresh");
-        refreshKey(g, x + Ui.width(font, label, TINY) + 16, y + 15, mx, my, hits);
+        refreshKey(g, x + refreshW(), y + 15, mx, my, hits);
+    }
+
+    /** The width of the REFRESH key, room for REFRESH or SURE? either way. */
+    private int refreshW() {
+        Font font = host.font();
+        return Math.max(Ui.widthBold(font, Tr.t("servers.refresh"), TINY), Ui.widthBold(font, Tr.t("rules.sure"), TINY)) + 16;
     }
 
     /** REFRESH, or SURE? while a plan waits; drawn right-aligned at {@code right}. Returns its width. */
@@ -359,7 +391,7 @@ final class ServersTab {
         Font font = host.font();
         boolean sure = System.currentTimeMillis() < sureUntil;
         String label = Tr.t(sure ? "rules.sure" : "servers.refresh");
-        int w = Math.max(Ui.width(font, Tr.t("servers.refresh"), TINY), Ui.width(font, Tr.t("rules.sure"), TINY)) + 16, x = right - w;
+        int w = refreshW(), x = right - w;
         boolean hover = mx >= x && mx < right && my >= y && my < y + 14;
         if (sure) {
             g.fill(x, y, right, y + 14, 0xFF3A2A2A);
@@ -367,7 +399,7 @@ final class ServersTab {
         } else {
             g.fill(x, y, right, y + 14, hover ? 0xFFC9A8FF : Ui.VIOLET);
         }
-        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), x + (w - Ui.width(font, label, TINY)) / 2, y + 5, sure ? 0xFFFF8F86 : Ui.INK, TINY);
+        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), x + (w - Ui.widthBold(font, label, TINY)) / 2, y + 5, sure ? 0xFFFF8F86 : Ui.INK, TINY);
         hits.add(new Ui.Hit(x, y, w, 14, this::refresh));
         return w;
     }

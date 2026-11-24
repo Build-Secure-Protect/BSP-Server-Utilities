@@ -26,9 +26,10 @@ The mod is in development and has not yet been tried on a live server.
 
 - `/rules`: the rules, read only (everyone).
 - `/actionlog`: the newest 100 log entries, coordinates hidden (everyone).
-- `/serverutils` or `/su`: the admin panel with the RULES, STAFF and LOG tabs (operators and BSP-Core admins); `/su status`, `/su rules ...`.
+- `/serverutils` or `/su`: the staff screen, almost full screen, with its tabs in a list down the left (operators and BSP-Core admins); `/su status`, `/su rules ...`.
 - `/su rooms`: your Compact Machines rooms, with GIVE BACK (everyone, on servers running Compact Machines 6.0.3); `/su rooms forget <server>`: drop a renamed or retired server's rooms from the shared list (operators, BSP-Core admins).
 - `/su away`: show as away on the staff panels (staff).
+- `/su chunks`: this server's loaded chunks by dimension, what loads them, the entities and block entities in them, mods' tickets, and the five busiest chunks, each a line that teleports there; `/su chunks tp <dimension> <x> <z>` goes to a loaded chunk (operators, BSP-Core admins; the readout also the console).
 - `/afk`: mark yourself AFK until your next action (everyone).
 - `/su clearitems here | all | <server>`: clear dropped items after a 60-second warning (operators, BSP-Core admins).
 - `/su setup`: the setup guide, a page per feature with NEXT, SETUP LATER and TURN OFF FEATURE (operators, BSP-Core admins; offered at their join until done or ignored).

@@ -30,7 +30,8 @@ import java.util.Locale;
  * and answers. UNDO puts the boxes back to what is saved; CLEAR, then SURE? within three seconds, empties all three.
  */
 final class SupportTab {
-    private static final int LX = 8, LW = 166, RX = 182, RW = 154, TOP = 22, KEY_H = 14;
+    /** The settings column keeps its width on every page (D757); the preview beside it is at most {@link #RW_MAX} wide. */
+    private static final int LX = 8, LW = 166, RX = 182, RW_MAX = 154, TOP = 22, KEY_H = 14;
     private static final int REFRESH_TICKS = 100;
     private static final long SURE_MS = 3000, NOTE_MS = 3000;
     private static final float TINY = 0.6f, CHAT = 0.75f;
@@ -57,6 +58,11 @@ final class SupportTab {
 
     SupportTab(AdminScreen host) {
         this.host = host;
+    }
+
+    /** The preview's width: its own 154, less on a page narrower than the old fixed panel's 344 (140 at 330). */
+    private int rw() {
+        return Math.min(RW_MAX, host.pageW() - RX - 8);
     }
 
     void open() {
@@ -251,30 +257,32 @@ final class SupportTab {
 
     private void drawPreview(GuiGraphics g, int x, int y) {
         Font font = host.font();
-        int px = x + RX;
-        Ui.text(g, font, Tr.t("support.tab.preview").toUpperCase(Locale.ROOT), px, y + 24, Ui.MUTED, TINY);
+        int px = x + RX, rw = rw();
+        Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.preview").toUpperCase(Locale.ROOT), rw, TINY), px, y + 24, Ui.MUTED, TINY);
         SupportSettings t = typed().sanitised();
         // the key, as the inventory shows it
-        Ui.inset(g, px, y + 31, RW, 30);
-        Ui.text(g, font, Tr.t("support.tab.in_inventory"), px + 4, y + 35, Ui.MUTED, TINY);
+        Ui.inset(g, px, y + 31, rw, 30);
+        Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.in_inventory"), rw - 8, TINY), px + 4, y + 35, Ui.MUTED, TINY);
         if (t.hasLink()) {
-            SupportButton.drawPlainKey(g, px + 4, y + 43, 40, Tr.t("support.tab.team"));
-            SupportButton.drawPlainKey(g, px + 46, y + 43, 40, Tr.t("support.tab.kits"));
-            SupportButton.drawKey(g, px + 88, y + 43, false);
+            // TEAM and KITS share what the support key leaves (40 each in the full 154)
+            int kw = Math.min(40, (rw - 12 - SupportButton.W) / 2);
+            SupportButton.drawPlainKey(g, px + 4, y + 43, kw, Tr.t("support.tab.team"));
+            SupportButton.drawPlainKey(g, px + 6 + kw, y + 43, kw, Tr.t("support.tab.kits"));
+            SupportButton.drawKey(g, px + 8 + 2 * kw, y + 43, false);
         } else {
-            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.no_key"), RW - 8, TINY), px + 4, y + 47, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.no_key"), rw - 8, TINY), px + 4, y + 47, Ui.MUTED, TINY);
         }
         // the chat line, as players read it
         int cy = y + 65, ch = 74;
-        Ui.inset(g, px, cy, RW, ch);
-        Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.in_chat"), RW - 8, TINY), px + 4, cy + 4, Ui.MUTED, TINY);
+        Ui.inset(g, px, cy, rw, ch);
+        Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.in_chat"), rw - 8, TINY), px + 4, cy + 4, Ui.MUTED, TINY);
         Component line = SupportChat.line(t);
         if (line == null) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.no_chat"), RW - 8, TINY), px + 4, cy + 14, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.no_chat"), rw - 8, TINY), px + 4, cy + 14, Ui.MUTED, TINY);
         } else {
-            List<FormattedCharSequence> lines = font.split(line, (int) ((RW - 12) / CHAT));
+            List<FormattedCharSequence> lines = font.split(line, (int) ((rw - 12) / CHAT));
             int shown = Math.min(lines.size(), 7);
-            g.fill(px + 3, cy + 12, px + RW - 3, cy + 14 + shown * 8, 0x80000000);
+            g.fill(px + 3, cy + 12, px + rw - 3, cy + 14 + shown * 8, 0x80000000);
             g.pose().pushPose();
             g.pose().translate(px + 5, cy + 14, 0);
             g.pose().scale(CHAT, CHAT, 1);
@@ -285,21 +293,21 @@ final class SupportTab {
         }
         int ly = cy + ch + 4;
         if (dirty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.unsaved"), RW, TINY), px, ly, AMBER, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("support.tab.unsaved"), rw, TINY), px, ly, AMBER, TINY);
             ly += 8;
         }
         String last = saved.by().isEmpty() ? Tr.t("support.tab.never")
                 : Tr.t("support.tab.last", saved.by(), WHEN.format(Instant.ofEpochMilli(saved.atMs()).atZone(ZoneId.systemDefault())));
-        Ui.text(g, font, Ui.fit(font, last, RW, TINY), px, ly, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, last, rw, TINY), px, ly, Ui.MUTED, TINY);
     }
 
     private void drawFooter(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - KEY_H;
+        int fy = y + host.pageH() - 8 - KEY_H;
         boolean sure = System.currentTimeMillis() < sureUntil;
         String save = Tr.t("support.tab.save"), undo = Tr.t("support.tab.undo"), clear = Tr.t(sure ? "support.tab.sure" : "support.tab.clear");
-        int ws = Ui.width(font, save, TINY) + 16, wu = Ui.width(font, undo, TINY) + 16, wc = Ui.width(font, clear, TINY) + 16;
-        int kx = x + AdminScreen.W - 8 - ws;
+        int ws = Ui.widthBold(font, save, TINY) + 16, wu = Ui.widthBold(font, undo, TINY) + 16, wc = Ui.widthBold(font, clear, TINY) + 16;
+        int kx = x + host.pageW() - 8 - ws;
         boolean canSave = canSave(), canUndo = dirty();
         boolean anything = !saved.link().isEmpty() || !saved.sentence().isEmpty() || !saved.chatLink().isEmpty();
         // SAVE

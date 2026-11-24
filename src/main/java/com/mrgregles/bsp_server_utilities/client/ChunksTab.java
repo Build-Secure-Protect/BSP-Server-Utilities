@@ -22,11 +22,15 @@ import java.util.UUID;
  * the players always loaded (+ add a player); on the right every player whose machines hold chunks on this server, with
  * where they are and how many chunks are loaded (green) and unloaded (red), and below them machines with no owner found
  * (UNLOAD / RESTORE). A picked player shows their machines with RESTORE NOW and UNLOAD NOW (SURE?). Changes go to the
- * server at once; the lists are asked for again every few seconds while the tab is open.
+ * server at once; the lists are asked for again every few seconds while the tab is open. The settings keep their 150 wide
+ * box at their content's height (pulled together a little on the shortest pages); the lists take the rest of the page,
+ * more rows as it gets taller and the extra width to the names (D756, D757).
  */
 final class ChunksTab {
-    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, BOX_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
-    private static final int REFRESH_TICKS = 100;
+    /** LEFT_H: the settings' content height; RIGHT_W: the list's width on the old 344 wide page, the names' base. */
+    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, LEFT_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
+    /** ADD_Y: the add-a-player line, the last settings line, pulled up in full on a short page. */
+    private static final int REFRESH_TICKS = 100, ADD_Y = 137, ORPHAN_ROWS = 5, PLAYER_ROWS = 8;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     private static final int GREEN = 0xFF8FE04A, AMBER = 0xFFF2B544, RED = 0xFFFF6B5C, GREY = 0xFF6B7280;
 
@@ -74,10 +78,52 @@ final class ChunksTab {
         }
     }
 
+    // ------------------------------------------------------------------ layout, from the page's size
+
+    /** The list's height, all the page down to the footer (158 on the old 210 high page). */
+    private int boxH() {
+        return host.pageH() - TOP - 30;
+    }
+
+    /** The list's width, all the page beside the settings (170 on the old 344 wide page). */
+    private int rightW() {
+        return host.pageW() - RIGHT_X - 8;
+    }
+
+    /** The settings box: as tall as its content, never past the list's bottom. */
+    private int leftH() {
+        return Math.min(boxH(), LEFT_H);
+    }
+
+    /** A settings line's offset from the box's top, pulled up in proportion when the box is shorter than its content. */
+    private int at(int base) {
+        return base - (LEFT_H - leftH()) * base / ADD_Y;
+    }
+
+    /** What the names' column gains on a wider list, or gives up (half the loss, the rest from WHERE) on a narrower one. */
+    private int grow() {
+        int extra = rightW() - RIGHT_W;
+        return extra >= 0 ? extra : extra / 2;
+    }
+
+    /**
+     * Rows for the machines with no owner: 5 on the old page, then half of every row more or fewer the list's height
+     * makes (all of them 13 rows on the old page: 8 players and 5 machines).
+     */
+    private int orphanRows() {
+        int total = (boxH() - 30) / ROW; // the last row's key stays inside the box (audit of SU-154)
+        return Math.max(1, ORPHAN_ROWS + (total - PLAYER_ROWS - ORPHAN_ROWS) / 2);
+    }
+
+    /** Rows for the players above them. */
+    private int playerRows() {
+        return Math.max(1, (boxH() - 28) / ROW - orphanRows());
+    }
+
     void addWidgets(int x, int y) {
         nameBox = null;
         if (adding) {
-            nameBox = new EditBox(host.font(), x + LEFT_X + 6, y + TOP + 138, 92, 12, Component.literal(Tr.t("chunks.player_name")));
+            nameBox = new EditBox(host.font(), x + LEFT_X + 6, y + TOP + at(ADD_Y) + 1, 92, 12, Component.literal(Tr.t("chunks.player_name")));
             nameBox.setMaxLength(16);
             host.add(nameBox);
         }
@@ -93,9 +139,9 @@ final class ChunksTab {
             drawEveryone(g, x, y, mx, my, hits);
         }
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
+        int fy = y + host.pageH() - 8 - 14;
         String key = Tr.t(picked != null ? "chunks.players" : "chunks.refresh");
-        int kw = Ui.width(font, key, TINY) + 16, kx = x + AdminScreen.W - 8 - kw;
+        int kw = Ui.widthBold(font, key, TINY) + 16, kx = x + host.pageW() - 8 - kw;
         Ui.text(g, font, Ui.fit(font, Tr.t("chunks.footer"), kx - x - 16, TINY), x + 8, fy + 5, Ui.MUTED, TINY);
         Ui.frame(g, kx, fy, kw, 14, Ui.DIM);
         Ui.text(g, font, Component.literal(key).withStyle(ChatFormatting.BOLD), kx + 8, fy + 5, Ui.MUTED, TINY);
@@ -111,15 +157,16 @@ final class ChunksTab {
     private void drawSettings(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         int lx = x + LEFT_X, ly = y + TOP, ix = lx + 6, iw = LEFT_W - 12;
-        Ui.inset(g, lx, ly, LEFT_W, BOX_H);
-        Ui.text(g, font, Component.literal(Tr.t("chunks.unloading")).withStyle(ChatFormatting.BOLD), ix, ly + 5, Ui.VIOLET, TINY);
+        Ui.inset(g, lx, ly, LEFT_W, leftH());
+        Ui.text(g, font, Component.literal(Tr.t("chunks.unloading")).withStyle(ChatFormatting.BOLD), ix, ly + at(5), Ui.VIOLET, TINY);
         boolean on = settings.enabled();
-        g.fill(ix, ly + 17, ix + 14, ly + 23, on ? 0xFF3D2F5C : Ui.DIM);
-        g.fill(on ? ix + 8 : ix + 1, ly + 18, on ? ix + 13 : ix + 6, ly + 22, on ? Ui.VIOLET : Ui.MUTED);
-        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.enabled"), iw - 20, SMALL), ix + 19, ly + 17, on ? Ui.TEXT : Ui.MUTED, SMALL);
-        hits.add(new Ui.Hit(ix, ly + 15, iw, 10, () -> set(with(!settings.enabled(), settings.minutes(), settings.exemptMods(), settings.alwaysLoaded()))));
+        int ty = ly + at(15);
+        g.fill(ix, ty + 2, ix + 14, ty + 8, on ? 0xFF3D2F5C : Ui.DIM);
+        g.fill(on ? ix + 8 : ix + 1, ty + 3, on ? ix + 13 : ix + 6, ty + 7, on ? Ui.VIOLET : Ui.MUTED);
+        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.enabled"), iw - 20, SMALL), ix + 19, ty + 2, on ? Ui.TEXT : Ui.MUTED, SMALL);
+        hits.add(new Ui.Hit(ix, ty, iw, 10, () -> set(with(!settings.enabled(), settings.minutes(), settings.exemptMods(), settings.alwaysLoaded()))));
         // AFTER − n + min away
-        int sy = ly + 29;
+        int sy = ly + at(29);
         Ui.text(g, font, Tr.t("chunks.after").toUpperCase(Locale.ROOT), ix, sy + 3, Ui.MUTED, TINY);
         String unit = Tr.t("chunks.min_away");
         int uw = Ui.width(font, unit, TINY), sx = ix + iw - uw - 4 - 50;
@@ -131,8 +178,8 @@ final class ChunksTab {
         key(g, sx + 38, sy, "+", settings.minutes() < ChunkSettings.MAX_MINUTES, mx, my, hits, () -> set(withMinutes(settings.minutes() + 1)));
         Ui.text(g, font, unit, ix + iw - uw, sy + 3, Ui.MUTED, TINY);
         // mods never unloaded
-        Ui.text(g, font, Tr.t("chunks.never").toUpperCase(Locale.ROOT), ix, ly + 46, Ui.MUTED, TINY);
-        int cx = ix, cy = ly + 54;
+        Ui.text(g, font, Tr.t("chunks.never").toUpperCase(Locale.ROOT), ix, ly + at(46), Ui.MUTED, TINY);
+        int cx = ix, cy = ly + at(54), lastRow = cy + 2 * 13;
         cx = chip(g, cx, cy, ix, iw, Tr.t("chunks.bsp_core_always"), false, true, hits, null);
         List<String> mods = data == null ? List.of() : data.mods();
         for (String mod : mods) {
@@ -140,7 +187,7 @@ final class ChunksTab {
                 cx = ix;
                 cy += 13;
             }
-            if (cy > ly + 84) {
+            if (cy > lastRow) {
                 break;
             }
             boolean exempt = settings.exemptMods().contains(mod);
@@ -153,16 +200,17 @@ final class ChunksTab {
             });
         }
         // always loaded
-        Ui.text(g, font, Tr.t("chunks.always").toUpperCase(Locale.ROOT), ix, ly + 100, Ui.MUTED, TINY);
+        Ui.text(g, font, Tr.t("chunks.always").toUpperCase(Locale.ROOT), ix, ly + at(100), Ui.MUTED, TINY);
         cx = ix;
-        cy = ly + 108;
+        cy = ly + at(108);
+        lastRow = cy + 13;
         for (ChunkSettings.Player p : settings.alwaysLoaded()) {
             String label = p.name() + " ×";
             if (cx + Math.min(60, Ui.width(font, label, TINY) + 8) > ix + iw) {
                 cx = ix;
                 cy += 13;
             }
-            if (cy > ly + 121) {
+            if (cy > lastRow) {
                 break;
             }
             cx = chip(g, cx, cy, ix, iw, label, true, false, hits, () -> {
@@ -171,19 +219,20 @@ final class ChunksTab {
                 set(with(settings.enabled(), settings.minutes(), settings.exemptMods(), next));
             });
         }
+        int ay = ly + at(ADD_Y);
         if (!adding) {
             String add = Tr.t("chunks.add_player");
-            Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), ix, ly + 140, Ui.VIOLET, TINY);
-            hits.add(new Ui.Hit(ix, ly + 137, Ui.width(font, add, TINY) + 4, 10, () -> {
+            Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), ix, ay + 3, Ui.VIOLET, TINY);
+            hits.add(new Ui.Hit(ix, ay, Ui.widthBold(font, add, TINY) + 4, 10, () -> {
                 adding = true;
                 host.rebuildTab();
             }));
         } else {
             int kx = ix + 96;
-            g.fill(kx, ly + 138, kx + 40, ly + 150, Ui.VIOLET);
+            g.fill(kx, ay + 1, kx + 40, ay + 13, Ui.VIOLET);
             String a = Tr.t("chunks.add");
-            Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), kx + (40 - Ui.width(font, a, TINY)) / 2, ly + 142, Ui.INK, TINY);
-            hits.add(new Ui.Hit(kx, ly + 138, 40, 12, () -> {
+            Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), kx + (40 - Ui.widthBold(font, a, TINY)) / 2, ay + 5, Ui.INK, TINY);
+            hits.add(new Ui.Hit(kx, ay + 1, 40, 12, () -> {
                 if (nameBox != null && !nameBox.getValue().isBlank()) {
                     send(AdminChunksEditPacket.of(AdminChunksEditPacket.Action.ADD_ALWAYS, nameBox.getValue().strip()));
                 }
@@ -247,45 +296,46 @@ final class ChunksTab {
 
     private void drawEveryone(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
-        Ui.text(g, font, Tr.t("chunks.col_player").toUpperCase(Locale.ROOT), px + 5, py + 4, Ui.MUTED, TINY);
-        Ui.text(g, font, Tr.t("chunks.col_where").toUpperCase(Locale.ROOT), px + 58, py + 4, Ui.MUTED, TINY);
-        Ui.text(g, font, Tr.t("chunks.col_loaded"), px + RIGHT_W - 34, py + 4, GREEN, TINY);
-        Ui.text(g, font, Tr.t("chunks.col_unloaded"), px + RIGHT_W - 16, py + 4, RED, TINY);
+        int px = x + RIGHT_X, py = y + TOP, rw = rightW(), wx = 58 + grow();
+        Ui.inset(g, px, py, rw, boxH());
+        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.col_player").toUpperCase(Locale.ROOT), wx - 9, TINY), px + 5, py + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.col_where").toUpperCase(Locale.ROOT), rw - 36 - wx, TINY), px + wx, py + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.col_loaded"), 16, TINY), px + rw - 34, py + 4, GREEN, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("chunks.col_unloaded"), 14, TINY), px + rw - 16, py + 4, RED, TINY);
         List<AdminChunksPacket.PlayerRow> players = data == null ? List.of() : data.players();
         if (players.isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "chunks.waiting" : "chunks.none"), RIGHT_W - 10, TINY), px + 5, py + 16, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "chunks.waiting" : "chunks.none"), rw - 10, TINY), px + 5, py + 16, Ui.MUTED, TINY);
         }
-        int top = py + 13, visible = 8;
+        int top = py + 13, visible = playerRows();
         scroll = Math.max(0, Math.min(scroll, Math.max(0, players.size() - visible)));
         for (int i = 0; i < visible && scroll + i < players.size(); i++) {
             AdminChunksPacket.PlayerRow p = players.get(scroll + i);
             int ry = top + i * ROW;
-            if (mx >= px && mx < px + RIGHT_W && my >= ry && my < ry + ROW) {
-                g.fill(px + 1, ry, px + RIGHT_W - 1, ry + ROW, 0x22B58CFF);
+            if (mx >= px && mx < px + rw && my >= ry && my < ry + ROW) {
+                g.fill(px + 1, ry, px + rw - 1, ry + ROW, 0x22B58CFF);
             }
-            Ui.text(g, font, Component.literal(Ui.fit(font, p.name(), 50, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 1, Ui.TEXT, SMALL);
-            Ui.text(g, font, Ui.fit(font, where(p), RIGHT_W - 58 - 40, TINY), px + 58, ry + 2, whereColour(p), TINY);
-            Ui.text(g, font, p.loaded() > 0 ? Integer.toString(p.loaded()) : "–", px + RIGHT_W - 32, ry + 2, GREEN, TINY);
-            Ui.text(g, font, p.unloaded() > 0 ? Integer.toString(p.unloaded()) : "–", px + RIGHT_W - 14, ry + 2, RED, TINY);
+            Ui.text(g, font, Component.literal(Ui.fitBold(font, p.name(), wx - 8, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 1, Ui.TEXT, SMALL);
+            Ui.text(g, font, Ui.fit(font, where(p), rw - wx - 40, TINY), px + wx, ry + 2, whereColour(p), TINY);
+            Ui.text(g, font, Ui.fit(font, p.loaded() > 0 ? Integer.toString(p.loaded()) : "–", 16, TINY), px + rw - 32, ry + 2, GREEN, TINY);
+            Ui.text(g, font, Ui.fit(font, p.unloaded() > 0 ? Integer.toString(p.unloaded()) : "–", 12, TINY), px + rw - 14, ry + 2, RED, TINY);
             UUID id = p.id();
-            hits.add(new Ui.Hit(px, ry, RIGHT_W, ROW, () -> pick(id)));
+            hits.add(new Ui.Hit(px, ry, rw, ROW, () -> pick(id)));
         }
         // machines with no owner found
         List<AdminChunksPacket.MachineRow> orphans = machinesOf(AdminChunksPacket.NOBODY);
-        int oy = py + 98;
-        g.fill(px + 1, oy - 2, px + RIGHT_W - 1, oy - 1, Ui.ROW_LINE);
-        Ui.text(g, font, Component.literal(Tr.t("chunks.no_owner", orphans.size())).withStyle(ChatFormatting.BOLD), px + 5, oy + 2, Ui.GOLD, TINY);
-        for (int i = 0; i < Math.min(5, orphans.size()); i++) {
+        int oy = top + visible * ROW + 5;
+        g.fill(px + 1, oy - 2, px + rw - 1, oy - 1, Ui.ROW_LINE);
+        String none = Ui.fitBold(font, Tr.t("chunks.no_owner", orphans.size()), rw - 10, TINY);
+        Ui.text(g, font, Component.literal(none).withStyle(ChatFormatting.BOLD), px + 5, oy + 2, Ui.GOLD, TINY);
+        for (int i = 0; i < Math.min(orphanRows(), orphans.size()); i++) {
             AdminChunksPacket.MachineRow m = orphans.get(i);
             int ry = oy + 12 + i * ROW;
             boolean unloaded = m.unloaded() > 0;
-            Ui.text(g, font, Ui.fit(font, m.modId() + " · " + m.where(), RIGHT_W - 52, TINY), px + 5, ry + 2, unloaded ? RED : Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, m.modId() + " · " + m.where(), rw - 52, TINY), px + 5, ry + 2, unloaded ? RED : Ui.MUTED, TINY);
             String label = Tr.t(unloaded ? "chunks.restore" : "chunks.unload");
-            int kw = 40, kx = px + RIGHT_W - 4 - kw;
+            int kw = 40, kx = px + rw - 4 - kw;
             g.fill(kx, ry, kx + kw, ry + 9, Ui.DIM);
-            Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), kx + (kw - Ui.width(font, label, TINY)) / 2, ry + 2, Ui.TEXT, TINY);
+            Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), kx + (kw - Ui.widthBold(font, label, TINY)) / 2, ry + 2, Ui.TEXT, TINY);
             String key = m.key();
             hits.add(new Ui.Hit(kx, ry, kw, 9, () -> send(AdminChunksEditPacket.of(unloaded ? AdminChunksEditPacket.Action.RESTORE_MACHINE : AdminChunksEditPacket.Action.UNLOAD_MACHINE, key))));
         }
@@ -305,41 +355,41 @@ final class ChunksTab {
 
     private void drawPlayer(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
+        int px = x + RIGHT_X, py = y + TOP, rw = rightW(), bh = boxH(), grow = grow();
+        Ui.inset(g, px, py, rw, bh);
         AdminChunksPacket.PlayerRow p = data == null ? null : data.players().stream().filter(r -> r.id().equals(picked)).findFirst().orElse(null);
         if (p == null) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("chunks.waiting"), RIGHT_W - 10, TINY), px + 5, py + 6, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("chunks.waiting"), rw - 10, TINY), px + 5, py + 6, Ui.MUTED, TINY);
             return;
         }
-        Ui.text(g, font, Component.literal(Ui.fit(font, p.name(), 70, 1f)).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.TEXT, 1f);
-        String w = Ui.fit(font, where(p), RIGHT_W - 84, TINY);
-        Ui.text(g, font, w, px + RIGHT_W - 5 - Ui.width(font, w, TINY), py + 6, whereColour(p), TINY);
+        Ui.text(g, font, Component.literal(Ui.fitBold(font, p.name(), 70 + grow, 1f)).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.TEXT, 1f);
+        String w = Ui.fit(font, where(p), rw - 84 - grow, TINY);
+        Ui.text(g, font, w, px + rw - 5 - Ui.width(font, w, TINY), py + 6, whereColour(p), TINY);
         List<AdminChunksPacket.MachineRow> machines = machinesOf(p.id());
-        int top = py + 18, visible = 10;
+        int top = py + 18, visible = Math.max(1, (bh - 58) / ROW);
         scroll = Math.max(0, Math.min(scroll, Math.max(0, machines.size() - visible)));
         for (int i = 0; i < visible && scroll + i < machines.size(); i++) {
             AdminChunksPacket.MachineRow m = machines.get(scroll + i);
             int ry = top + i * ROW;
-            Ui.text(g, font, Component.literal(Ui.fit(font, m.modId(), 46, TINY)).withStyle(ChatFormatting.BOLD), px + 5, ry + 2, Ui.TEXT, TINY);
-            Ui.text(g, font, Ui.fit(font, m.where(), RIGHT_W - 54 - 30, TINY), px + 54, ry + 2, Ui.MUTED, TINY);
+            Ui.text(g, font, Component.literal(Ui.fitBold(font, m.modId(), 46, TINY)).withStyle(ChatFormatting.BOLD), px + 5, ry + 2, Ui.TEXT, TINY);
+            Ui.text(g, font, Ui.fit(font, m.where(), rw - 54 - 30, TINY), px + 54, ry + 2, Ui.MUTED, TINY);
             String n = m.unloaded() > 0 ? Integer.toString(m.unloaded()) : Integer.toString(m.loaded());
-            Ui.text(g, font, n, px + RIGHT_W - 12, ry + 2, m.unloaded() > 0 ? RED : GREEN, TINY);
+            Ui.text(g, font, Ui.fit(font, n, 11, TINY), px + rw - 12, ry + 2, m.unloaded() > 0 ? RED : GREEN, TINY);
         }
         // RESTORE NOW, UNLOAD NOW (SURE?)
-        int ky = py + BOX_H - 17;
+        int ky = py + bh - 17;
         String r = Tr.t("chunks.restore_now");
-        int rw = Ui.width(font, r, TINY) + 12;
-        g.fill(px + 5, ky, px + 5 + rw, ky + 13, Ui.DIM);
+        int restoreW = Ui.widthBold(font, r, TINY) + 12;
+        g.fill(px + 5, ky, px + 5 + restoreW, ky + 13, Ui.DIM);
         Ui.text(g, font, Component.literal(r).withStyle(ChatFormatting.BOLD), px + 11, ky + 4, Ui.TEXT, TINY);
         UUID id = p.id();
-        hits.add(new Ui.Hit(px + 5, ky, rw, 13, () -> send(AdminChunksEditPacket.of(AdminChunksEditPacket.Action.RESTORE_PLAYER, id.toString()))));
+        hits.add(new Ui.Hit(px + 5, ky, restoreW, 13, () -> send(AdminChunksEditPacket.of(AdminChunksEditPacket.Action.RESTORE_PLAYER, id.toString()))));
         boolean sure = System.currentTimeMillis() < unloadSureUntil;
         String u = Tr.t(sure ? "rules.sure" : "chunks.unload_now");
-        int uw = Ui.width(font, Tr.t("chunks.unload_now"), TINY) + 12, ux = px + 9 + rw;
+        int uw = Math.max(Ui.widthBold(font, Tr.t("chunks.unload_now"), TINY), Ui.widthBold(font, u, TINY)) + 12, ux = px + 9 + restoreW;
         g.fill(ux, ky, ux + uw, ky + 13, sure ? 0xFFD63B2F : 0xFF3A2A2A);
         Ui.frame(g, ux, ky, uw, 13, 0xFFD63B2F);
-        Ui.text(g, font, Component.literal(u).withStyle(ChatFormatting.BOLD), ux + (uw - Ui.width(font, u, TINY)) / 2, ky + 4, sure ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
+        Ui.text(g, font, Component.literal(u).withStyle(ChatFormatting.BOLD), ux + (uw - Ui.widthBold(font, u, TINY)) / 2, ky + 4, sure ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
         hits.add(new Ui.Hit(ux, ky, uw, 13, () -> {
             long now = System.currentTimeMillis();
             if (now >= unloadSureUntil) {

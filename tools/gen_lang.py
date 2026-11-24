@@ -1399,6 +1399,60 @@ KEYS["key.bsp_server_utilities.tutorial_cancel"] = "Tutorial path or area: cance
 
 KEYS["gui.bsp_server_utilities.admin.setup.about.tutorial"] = "Tutorials: guide players around the network with popups, forks and gold paths."
 
+# /su chunks: this server's loaded chunks (SU-147)
+CHUNKS_CMD = {
+    "header": "Loaded chunks on %s: %s, %s of them ticking; %s entities (players not counted), %s block entities.",
+    "dimension": "%s: %s chunks (%s ticking), %s entities, %s block entities.",
+    "why": "  Loaded by: %s.",
+    "why.player": "%s near players",
+    "why.ticket": "%s by mods' tickets",
+    "why.forced": "%s by /forceload",
+    "why.spawn": "%s in the spawn area",
+    "why.other": "%s other",
+    "mods": "Mods' tickets (chunks): %s.",
+    "mods_none": "Mods' tickets: none.",
+    "busiest": "Busiest chunks (click one to go there):",
+    "busiest_none": "No entities or block entities in any loaded chunk.",
+    "row": "%s. %s chunk %s, %s (block %s, %s): %s entities%s, %s block entities; %s.",
+    "most": " (%s of them %s)",
+    "row_hover": "Go to a safe place in this chunk, as near its middle as there is one",
+    "reason.player": "near %s",
+    "reason.ticket": "held by %s's ticket",
+    "reason.forced": "/forceload",
+    "reason.spawn": "spawn area",
+    "reason.other": "other",
+    "note": "Why a chunk is loaded is worked out from distance: a ticket also loads the chunks beside it.",
+    "tp_done": "Went to %s chunk %s, %s: %s %s %s.",
+    "tp_no_spot": "No safe place to stand in %s chunk %s, %s.",
+    "tp_not_loaded": "%s chunk %s, %s is not loaded. Only a loaded chunk can be visited, so none is loaded or generated for this.",
+    "tp_border": "%s chunk %s, %s is outside the world border.",
+    "tp_stopped": "The move to %s chunk %s, %s was stopped by the server or another mod.",
+}
+KEYS.update({"message.bsp_server_utilities.chunks." + k: v for k, v in CHUNKS_CMD.items()})
+KEYS["gui.bsp_server_utilities.panel.log.kind.chunk_tp"] = "Chunk teleports"
+
+# the staff screen almost full screen (SU-154, D754 to D757): the tab list's groups, each page's line, the title bar
+STAFF_SCREEN = {
+    "admin.group.players": "Players",
+    "admin.group.staff": "Staff",
+    "admin.group.world": "World",
+    "admin.group.network": "Network",
+    "admin.here": "%s · %s online",
+    "admin.page.rules": "What new players read and agree to, for the network",
+    "admin.page.staff": "The LuckPerms groups shown as staff, and who is on",
+    "admin.page.log": "What staff did, on every server",
+    "admin.page.afk": "Idle players, presence checks and macros",
+    "admin.page.chunks": "Machines' chunks unload while their owner is away",
+    "admin.page.drops": "How long dropped items and orbs last",
+    "admin.page.clients": "Mods and packs refused at login, and what each player runs",
+    "admin.page.servers": "Each server's picture in front of chat",
+    "admin.page.rooms": "Compact Machines rooms and how many each player may own",
+    "admin.page.mobs": "Mobs, items and arrows each chunk may hold",
+    "admin.page.support": "The Support BSP page, message and chat link",
+    "admin.page.tutorial": "Guided tours of the network for players",
+}
+KEYS.update({"gui.bsp_server_utilities." + k: v for k, v in STAFF_SCREEN.items()})
+
 
 def main():
     LANG.parent.mkdir(parents=True, exist_ok=True)

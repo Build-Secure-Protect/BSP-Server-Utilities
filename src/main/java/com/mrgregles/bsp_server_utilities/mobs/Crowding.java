@@ -314,6 +314,13 @@ public final class Crowding {
         return rows.size() > SHOWN ? List.copyOf(rows.subList(0, SHOWN)) : rows;
     }
 
+    /** How many of this server's chunks are over the items or the arrows number at the last check (every one, not only those shown). */
+    public static int localOverCount() {
+        java.util.Set<String> over = new java.util.HashSet<>(ITEMS_OVER.keySet());
+        over.addAll(ARROWS_OVER.keySet());
+        return over.size();
+    }
+
     /** Sent with the mob list when the MOBS tab asks. */
     static void publish(MinecraftServer server) {
         Storage s = Storage.active();

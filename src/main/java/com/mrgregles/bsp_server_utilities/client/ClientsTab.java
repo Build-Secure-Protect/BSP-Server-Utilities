@@ -35,9 +35,17 @@ import java.util.UUID;
  *   and EXPORT, the refusal message (sent a second after typing stops); on the right the block list, the names allowed
  *   anyway and the exempt players, each with + add and ×.</li>
  * </ul>
+ *
+ * <p>Both pages fill the page they are given: the boxes reach down to the footer and their lists show more lines as the
+ * page gets taller. On PLAYERS the extra width goes a third to the player list and the rest to the picked player; on
+ * RULES the settings column keeps its width and the lists take the rest.
  */
 final class ClientsTab {
-    private static final int TOP = 22, BOX_Y = 36, BOX_H = 144, LEFT_W = 118, RIGHT_X = 130, RIGHT_W = 206, RULES_LEFT_W = 160, RULES_RIGHT_X = 172, RULES_RIGHT_W = 164;
+    private static final int TOP = 22, BOX_Y = 36, RULES_LEFT_W = 160, RULES_RIGHT_X = 172;
+    /** The fixed panel's page width, and the widths there that the page's extra width is added to. */
+    private static final int OLD_W = 344, LEFT_W = 118, RIGHT_W = 206, RULES_RIGHT_W = 164;
+    /** The kick reason box's width, and the rules lists' add box's width: fixed, as every text box (D757). */
+    private static final int REASON_W = RIGHT_W - 44, ADD_W = RULES_RIGHT_W - 10;
     private static final int ROW = 10, REFRESH_TICKS = 100, SAVE_DELAY_TICKS = 20;
     private static final long SURE_MS = 3000;
     private static final float TINY = 0.6f, SMALL = 0.7f;
@@ -161,7 +169,7 @@ final class ClientsTab {
         Font font = host.font();
         if (page == Page.PLAYERS) {
             if (data != null && data.detail() != null) {
-                reasonBox = new EditBox(font, x + RIGHT_X + 5, y + BOX_Y + BOX_H - 16, RIGHT_W - 44, 12, Component.literal(Tr.t("clients.reason")));
+                reasonBox = new EditBox(font, x + rightX() + 5, y + BOX_Y + boxH() - 16, reasonW(), 12, Component.literal(Tr.t("clients.reason")));
                 reasonBox.setMaxLength(160);
                 reasonBox.setHint(Component.literal(Tr.t("clients.reason")).withStyle(ChatFormatting.DARK_GRAY));
                 reasonBox.setValue(reason);
@@ -170,7 +178,7 @@ final class ClientsTab {
             }
             return;
         }
-        messageBox = new MultiLineEditBox(font, x + 8 + 6, y + BOX_Y + 96, RULES_LEFT_W - 12, 42, Component.empty(), Component.literal(Tr.t("clients.message")));
+        messageBox = new MultiLineEditBox(font, x + 8 + 6, y + BOX_Y + 96, RULES_LEFT_W - 12, messageH(), Component.empty(), Component.literal(Tr.t("clients.message")));
         messageBox.setCharacterLimit(CheckRules.MAX_MESSAGE);
         messageBox.setValue(message);
         messageBox.setValueListener(s -> {
@@ -182,7 +190,7 @@ final class ClientsTab {
         });
         host.add(messageBox);
         if (adding != null) {
-            addBox = new EditBox(font, x + RULES_RIGHT_X + 5, y + BOX_Y + 14, RULES_RIGHT_W - 10, 12, Component.literal(Tr.t("clients.add_hint")));
+            addBox = new EditBox(font, x + RULES_RIGHT_X + 5, y + BOX_Y + 14, Math.min(ADD_W, rulesRightW() - 10), 12, Component.literal(Tr.t("clients.add_hint")));
             addBox.setMaxLength(adding == Adding.EXEMPT ? 80 : CheckRules.MAX_VALUE);
             String hint = adding == Adding.EXEMPT ? Tr.t("clients.add_exempt_hint") : Tr.t("clients.add_hint");
             addBox.setHint(Component.literal(hint).withStyle(ChatFormatting.DARK_GRAY));
@@ -207,6 +215,43 @@ final class ClientsTab {
         return key.equals(sureKey) && System.currentTimeMillis() < sureUntil;
     }
 
+    // ------------------------------------------------------------------ layout
+
+    /** Both boxes' height: down to 30 above the page's bottom (144 on the fixed panel's 210). */
+    private int boxH() {
+        return host.pageH() - BOX_Y - 30;
+    }
+
+    /** The player list's width on PLAYERS: a third of the width past the fixed panel's (118 there). */
+    private int leftW() {
+        return LEFT_W + (host.pageW() - OLD_W) / 3;
+    }
+
+    /** Where the picked player's box starts on PLAYERS. */
+    private int rightX() {
+        return 8 + leftW() + 4;
+    }
+
+    /** The picked player's box: the rest of the page (206 on the fixed panel). */
+    private int rightW() {
+        return host.pageW() - rightX() - 8;
+    }
+
+    /** The rules lists' width: the rest of the page beside the settings column (164 on the fixed panel). */
+    private int rulesRightW() {
+        return host.pageW() - RULES_RIGHT_X - 8;
+    }
+
+    /** The kick reason box's width: fixed, narrower only when the box has no room. */
+    private int reasonW() {
+        return Math.min(REASON_W, rightW() - 44);
+    }
+
+    /** The refusal message box's height: 42 at the old size, taller on a taller page, less on a page too short for it. */
+    private int messageH() {
+        return Math.max(24, Math.min(150, boxH() - 102));
+    }
+
     // ------------------------------------------------------------------ drawing
 
     void render(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
@@ -214,10 +259,10 @@ final class ClientsTab {
         int n = data == null ? 0 : data.rows().size();
         int cx = x + 8;
         cx += chip(g, cx, y + TOP, Tr.t("clients.players", n), page == Page.PLAYERS, hits, () -> showPage(Page.PLAYERS)) + 3;
-        chip(g, cx, y + TOP, Tr.t("clients.rules"), page == Page.RULES, hits, () -> showPage(Page.RULES));
+        cx += chip(g, cx, y + TOP, Tr.t("clients.rules"), page == Page.RULES, hits, () -> showPage(Page.RULES));
         String which = data == null ? "" : data.useOwn() ? Tr.t("clients.own_rules_short", data.here()) : Tr.t("clients.network_rules");
-        String w = Ui.fit(font, which, 160, TINY);
-        Ui.text(g, font, w, x + AdminScreen.W - 8 - Ui.width(font, w, TINY), y + TOP + 3, data != null && data.useOwn() ? Ui.VIOLET : Ui.MUTED, TINY);
+        String w = Ui.fit(font, which, Math.min(160, x + host.pageW() - 8 - cx - 6), TINY);
+        Ui.text(g, font, w, x + host.pageW() - 8 - Ui.width(font, w, TINY), y + TOP + 3, data != null && data.useOwn() ? Ui.VIOLET : Ui.MUTED, TINY);
         if (page == Page.PLAYERS) {
             drawPlayers(g, x, y, mx, my, hits);
             drawDetail(g, x, y, mx, my, hits);
@@ -238,8 +283,13 @@ final class ClientsTab {
     }
 
     private int chip(GuiGraphics g, int x, int y, String label, boolean on, List<Ui.Hit> hits, Runnable action) {
+        return chip(g, x, y, label, on, hits, action, 98);
+    }
+
+    /** A chip no wider than {@code maxW}. */
+    private int chip(GuiGraphics g, int x, int y, String label, boolean on, List<Ui.Hit> hits, Runnable action, int maxW) {
         Font font = host.font();
-        String s = Ui.fit(font, label, 90, TINY);
+        String s = Ui.fit(font, label, Math.min(90, maxW - 8), TINY);
         int w = Ui.width(font, s, TINY) + 8;
         g.fill(x, y, x + w, y + 11, Ui.SLOT);
         Ui.frame(g, x, y, w, 11, on ? Ui.VIOLET : Ui.DIM);
@@ -250,9 +300,9 @@ final class ClientsTab {
 
     private void drawFooter(GuiGraphics g, int x, int y, List<Ui.Hit> hits) {
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
+        int fy = y + host.pageH() - 8 - 14;
         String key = Tr.t("drops.refresh");
-        int kw = Ui.width(font, key, TINY) + 16, kx = x + AdminScreen.W - 8 - kw;
+        int kw = Ui.widthBold(font, key, TINY) + 16, kx = x + host.pageW() - 8 - kw;
         String foot;
         if (System.currentTimeMillis() < noteUntil) {
             foot = note;
@@ -302,36 +352,29 @@ final class ClientsTab {
 
     private void drawPlayers(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int lx = x + 8, ly = y + BOX_Y;
-        Ui.inset(g, lx, ly, LEFT_W, BOX_H);
+        int lx = x + 8, ly = y + BOX_Y, lw = leftW(), extra = lw - LEFT_W;
+        Ui.inset(g, lx, ly, lw, boxH());
         List<Line> lines = lines();
-        int visible = (BOX_H - 4) / ROW;
+        int visible = (boxH() - 4) / ROW;
         listScroll = Math.max(0, Math.min(listScroll, Math.max(0, lines.size() - visible)));
         AdminClientsPacket.PlayerRow hovered = null;
         for (int i = 0; i < visible && listScroll + i < lines.size(); i++) {
             Line l = lines.get(listScroll + i);
             int ry = ly + 2 + i * ROW;
-            if (l.player() != null && mx >= lx && mx < lx + LEFT_W && my >= ry && my < ry + ROW) {
+            if (l.player() != null && mx >= lx && mx < lx + lw && my >= ry && my < ry + ROW) {
                 hovered = l.player();
             }
             if (l.header() != null) {
-                Ui.text(g, font, l.header().toUpperCase(Locale.ROOT), lx + 5, ry + 3, Ui.MUTED, TINY);
+                Ui.text(g, font, Ui.fit(font, l.header().toUpperCase(Locale.ROOT), lw - 10, TINY), lx + 5, ry + 3, Ui.MUTED, TINY);
             } else if (l.player() != null) {
                 AdminClientsPacket.PlayerRow r = l.player();
                 boolean sel = r.id().equals(picked);
                 if (sel) {
-                    g.fill(lx + 1, ry, lx + LEFT_W - 1, ry + ROW, 0xFF1B2230);
+                    g.fill(lx + 1, ry, lx + lw - 1, ry + ROW, 0xFF1B2230);
                     g.fill(lx + 1, ry, lx + 3, ry + ROW, Ui.VIOLET);
-                } else if (mx >= lx && mx < lx + LEFT_W && my >= ry && my < ry + ROW) {
-                    g.fill(lx + 1, ry, lx + LEFT_W - 1, ry + ROW, 0x22B58CFF);
+                } else if (mx >= lx && mx < lx + lw && my >= ry && my < ry + ROW) {
+                    g.fill(lx + 1, ry, lx + lw - 1, ry + ROW, 0x22B58CFF);
                 }
-                String name = Ui.fit(font, r.name(), 50, SMALL);
-                Ui.text(g, font, Component.literal(name).withStyle(r.flags() > 0 ? ChatFormatting.BOLD : ChatFormatting.RESET), lx + 6, ry + 2, Ui.TEXT, SMALL);
-                int sx = lx + 8 + Ui.width(font, name, SMALL);
-                String srv = Ui.fit(font, r.server(), 30, TINY);
-                int sw = Ui.width(font, srv, TINY) + 4;
-                g.fill(sx, ry + 1, sx + sw, ry + 9, CHIP);
-                Ui.text(g, font, srv, sx + 2, ry + 3, Ui.MUTED, TINY);
                 String mark;
                 int colour;
                 if (r.exempt()) {
@@ -347,20 +390,35 @@ final class ClientsTab {
                     mark = "✓";
                     colour = GREEN;
                 }
-                Ui.text(g, font, Component.literal(mark).withStyle(ChatFormatting.BOLD), lx + LEFT_W - 5 - Ui.width(font, mark, TINY), ry + 3, colour, TINY);
+                mark = Ui.fitBold(font, mark, 40, TINY);
+                int markX = lx + lw - 5 - Ui.widthBold(font, mark, TINY);
+                String srv = Ui.fit(font, r.server(), 30, TINY);
+                int sw = Ui.width(font, srv, TINY) + 4;
+                // the name takes the list's extra width, never more than leaves room for the server chip and the mark
+                int nameRoom = Math.min(50 + extra, markX - 4 - sw - 2 - (lx + 6));
+                boolean bold = r.flags() > 0;
+                String name = bold ? Ui.fitBold(font, r.name(), nameRoom, SMALL) : Ui.fit(font, r.name(), nameRoom, SMALL);
+                Ui.text(g, font, Component.literal(name).withStyle(bold ? ChatFormatting.BOLD : ChatFormatting.RESET), lx + 6, ry + 2, Ui.TEXT, SMALL);
+                int sx = lx + 8 + (bold ? Ui.widthBold(font, name, SMALL) : Ui.width(font, name, SMALL));
+                g.fill(sx, ry + 1, sx + sw, ry + 9, CHIP);
+                Ui.text(g, font, srv, sx + 2, ry + 3, Ui.MUTED, TINY);
+                Ui.text(g, font, Component.literal(mark).withStyle(ChatFormatting.BOLD), markX, ry + 3, colour, TINY);
                 UUID id = r.id();
-                hits.add(new Ui.Hit(lx, ry, LEFT_W, ROW, () -> pick(id)));
+                hits.add(new Ui.Hit(lx, ry, lw, ROW, () -> pick(id)));
             } else if (l.refused() != null) {
                 AdminClientsPacket.Refused r = l.refused();
-                String name = Ui.fit(font, r.name(), 44, SMALL);
+                String name = Ui.fit(font, r.name(), 44 + extra / 2, SMALL);
                 Ui.text(g, font, name, lx + 6, ry + 2, Ui.BAD, SMALL);
-                Ui.text(g, font, clock(r.atMs()), lx + 8 + Ui.width(font, name, SMALL), ry + 3, Ui.MUTED, TINY);
-                String why = Ui.fit(font, r.reason(), 40, TINY);
-                Ui.text(g, font, why, lx + LEFT_W - 5 - Ui.width(font, why, TINY), ry + 3, Ui.BAD, TINY);
+                String at = clock(r.atMs());
+                int atX = lx + 8 + Ui.width(font, name, SMALL);
+                Ui.text(g, font, at, atX, ry + 3, Ui.MUTED, TINY);
+                String why = Ui.fit(font, r.reason(), Math.min(40 + extra - extra / 2, lx + lw - 5 - (atX + Ui.width(font, at, TINY) + 4)), TINY);
+                Ui.text(g, font, why, lx + lw - 5 - Ui.width(font, why, TINY), ry + 3, Ui.BAD, TINY);
             }
         }
-        if (data != null && data.rows().isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("clients.nobody"), LEFT_W - 10, TINY), lx + 5, ly + 2 + ROW + 3, Ui.MUTED, TINY);
+        if (data != null && data.rows().isEmpty() && listScroll <= 1 && visible > 1 - listScroll) {
+            // the line under the first heading, scrolled with the list (audit of SU-154)
+            Ui.text(g, font, Ui.fit(font, Tr.t("clients.nobody"), lw - 10, TINY), lx + 5, ly + 2 + (1 - listScroll) * ROW + 3, Ui.MUTED, TINY);
         }
         if (hovered != null) {
             ClientNotes.hover(g, font, hovered.id(), hovered.name(), mx, my); // the staff web panel's notes (D321)
@@ -434,24 +492,27 @@ final class ClientsTab {
 
     private void drawDetail(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + BOX_Y;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
+        int px = x + rightX(), py = y + BOX_Y, pw = rightW(), bh = boxH(), extra = pw - RIGHT_W;
+        Ui.inset(g, px, py, pw, bh);
         AdminClientsPacket.Detail d = data == null ? null : data.detail();
         if (d == null) {
-            for (String line : Ui.wrap(font, Tr.t("clients.pick"), RIGHT_W - 10, TINY)) {
+            for (String line : Ui.wrap(font, Tr.t("clients.pick"), pw - 10, TINY)) {
                 Ui.text(g, font, line, px + 5, py + 6, Ui.MUTED, TINY);
                 py += 7;
             }
             return;
         }
-        String name = Ui.fit(font, d.name(), 70, SMALL);
-        Ui.text(g, font, Component.literal(name).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.TEXT, SMALL);
-        int sx = px + 8 + Ui.width(font, name, SMALL);
+        String at = Ui.fit(font, Tr.t("clients.checked", clock(d.atMs())), 60, TINY);
+        int atX = px + pw - 5 - Ui.width(font, at, TINY);
         String srv = Ui.fit(font, d.server(), 50, TINY);
-        g.fill(sx, py + 3, sx + Ui.width(font, srv, TINY) + 4, py + 11, CHIP);
+        int srvW = Ui.width(font, srv, TINY) + 4;
+        // the name takes the box's extra width, never more than leaves room for the server chip and the time
+        String name = Ui.fitBold(font, d.name(), Math.min(70 + extra, atX - 4 - srvW - 3 - (px + 5)), SMALL);
+        Ui.text(g, font, Component.literal(name).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.TEXT, SMALL);
+        int sx = px + 8 + Ui.widthBold(font, name, SMALL);
+        g.fill(sx, py + 3, sx + srvW, py + 11, CHIP);
         Ui.text(g, font, srv, sx + 2, py + 5, Ui.MUTED, TINY);
-        String at = Tr.t("clients.checked", clock(d.atMs()));
-        Ui.text(g, font, at, px + RIGHT_W - 5 - Ui.width(font, at, TINY), py + 5, Ui.MUTED, TINY);
+        Ui.text(g, font, at, atX, py + 5, Ui.MUTED, TINY);
         // the flags
         Verdict v = d.verdict();
         ClientReport r = d.report();
@@ -493,9 +554,9 @@ final class ClientsTab {
         }
         int fx = px + 5, fy = py + 15;
         for (Object[] f : flags) {
-            String s = Ui.fit(font, (String) f[0], 120, TINY);
+            String s = Ui.fit(font, (String) f[0], Math.min(120, pw - 16), TINY);
             int fw = Ui.width(font, s, TINY) + 6;
-            if (fx + fw > px + RIGHT_W - 5) {
+            if (fx + fw > px + pw - 5) {
                 fx = px + 5;
                 fy += 10;
             }
@@ -515,34 +576,36 @@ final class ClientsTab {
         chip(g, cx, cy, Tr.t("clients.packs", r.packs().size()), showPacks, hits, () -> {
             showPacks = true;
             detailScroll = 0;
-        });
+        }, px + pw - 5 - cx);
         List<Item> items = items(d);
-        int top = py + 51, visible = 7;
+        // the lines between the MODS / PACKS chips and KICK (7 on the fixed panel)
+        int top = py + 51, visible = Math.max(1, (bh - 69) / ROW);
         detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, items.size() - visible)));
         if (items.isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t(showPacks ? "clients.no_packs" : "clients.no_mods"), RIGHT_W - 10, TINY), px + 5, top + 3, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t(showPacks ? "clients.no_packs" : "clients.no_mods"), pw - 10, TINY), px + 5, top + 3, Ui.MUTED, TINY);
         }
         for (int i = 0; i < visible && detailScroll + i < items.size(); i++) {
             Item it = items.get(detailScroll + i);
             int ry = top + i * ROW;
             if (i > 0) {
-                g.fill(px + 3, ry, px + RIGHT_W - 3, ry + 1, Ui.ROW_LINE);
+                g.fill(px + 3, ry, px + pw - 3, ry + 1, Ui.ROW_LINE);
             }
-            Ui.text(g, font, Component.literal(Ui.fit(font, it.name(), 72, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 2, it.unusual() ? it.colour() : Ui.TEXT, SMALL);
-            Ui.text(g, font, Ui.fit(font, it.detail(), 40, TINY), px + 82, ry + 3, Ui.MUTED, TINY);
-            Ui.text(g, font, Ui.fit(font, it.status(), 42, TINY), px + 126, ry + 3, it.unusual() ? it.colour() : Ui.MUTED, TINY);
+            // the name column takes the extra width; the version and the status keep theirs
+            Ui.text(g, font, Component.literal(Ui.fitBold(font, it.name(), 72 + extra, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 2, it.unusual() ? it.colour() : Ui.TEXT, SMALL);
+            Ui.text(g, font, Ui.fit(font, it.detail(), 40, TINY), px + 82 + extra, ry + 3, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, it.status(), 42, TINY), px + 126 + extra, ry + 3, it.unusual() ? it.colour() : Ui.MUTED, TINY);
             if (it.block() != null) {
                 String key = "block:" + it.name();
                 boolean sureNow = isSure(key);
-                int bx = px + RIGHT_W - 5 - 28;
+                int bx = px + pw - 5 - 28;
                 if (sureNow) {
                     g.fill(bx, ry + 1, bx + 28, ry + 9, 0xFFD63B2F);
                 } else {
                     g.fill(bx, ry + 1, bx + 28, ry + 9, Ui.SLOT);
                     Ui.frame(g, bx, ry + 1, 28, 8, Ui.DIM);
                 }
-                String label = Tr.t(sureNow ? "rules.sure" : "clients.block");
-                Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), bx + (28 - Ui.width(font, label, TINY)) / 2, ry + 3, sureNow ? 0xFFFFFFFF : Ui.MUTED, TINY);
+                String label = Ui.fitBold(font, Tr.t(sureNow ? "rules.sure" : "clients.block"), 26, TINY);
+                Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), bx + (28 - Ui.widthBold(font, label, TINY)) / 2, ry + 3, sureNow ? 0xFFFFFFFF : Ui.MUTED, TINY);
                 AdminClientsEditPacket p = it.block();
                 hits.add(new Ui.Hit(bx, ry + 1, 28, 8, () -> {
                     if (sure(key)) {
@@ -552,7 +615,8 @@ final class ClientsTab {
             }
         }
         // KICK
-        int ky = py + BOX_H - 16, kx = px + RIGHT_W - 5 - 32;
+        // KICK follows the reason box, which keeps its width (D757)
+        int ky = py + bh - 16, kx = px + 5 + reasonW() + 2;
         boolean sureNow = isSure("kick");
         if (sureNow) {
             g.fill(kx, ky, kx + 32, ky + 12, 0xFFD63B2F);
@@ -560,8 +624,8 @@ final class ClientsTab {
             g.fill(kx, ky, kx + 32, ky + 12, 0xFF3A2A2A);
             Ui.frame(g, kx, ky, 32, 12, 0xFFD63B2F);
         }
-        String k = Tr.t(sureNow ? "rules.sure" : "clients.kick");
-        Ui.text(g, font, Component.literal(k).withStyle(ChatFormatting.BOLD), kx + (32 - Ui.width(font, k, TINY)) / 2, ky + 4, sureNow ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
+        String k = Ui.fitBold(font, Tr.t(sureNow ? "rules.sure" : "clients.kick"), 30, TINY);
+        Ui.text(g, font, Component.literal(k).withStyle(ChatFormatting.BOLD), kx + (32 - Ui.widthBold(font, k, TINY)) / 2, ky + 4, sureNow ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
         UUID id = d.id();
         hits.add(new Ui.Hit(kx, ky, 32, 12, () -> {
             if (sure("kick")) {
@@ -579,12 +643,12 @@ final class ClientsTab {
     private void drawRulesLeft(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         int lx = x + 8, ly = y + BOX_Y, ix = lx + 6, iw = RULES_LEFT_W - 12;
-        Ui.inset(g, lx, ly, RULES_LEFT_W, BOX_H);
+        Ui.inset(g, lx, ly, RULES_LEFT_W, boxH());
         boolean own = data != null && data.useOwn();
-        Ui.text(g, font, Tr.t("clients.follows").toUpperCase(Locale.ROOT), ix, ly + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("clients.follows").toUpperCase(Locale.ROOT), iw, TINY), ix, ly + 4, Ui.MUTED, TINY);
         int cx = ix;
-        cx += chip(g, cx, ly + 11, Tr.t("clients.network_rules"), !own, hits, () -> useOwn(false)) + 3;
-        chip(g, cx, ly + 11, Tr.t("clients.own_rules"), own, hits, () -> useOwn(true));
+        cx += chip(g, cx, ly + 11, Tr.t("clients.network_rules"), !own, hits, () -> useOwn(false), (iw - 3) / 2) + 3;
+        chip(g, cx, ly + 11, Tr.t("clients.own_rules"), own, hits, () -> useOwn(true), ix + iw - cx);
         int ty = ly + 25;
         if (own && data != null) {
             for (String line : Ui.wrap(font, Tr.t("clients.own_hint", data.here()), iw, TINY)) {
@@ -595,7 +659,7 @@ final class ClientsTab {
                 ty += 6;
             }
         }
-        Ui.text(g, font, Tr.t("clients.setup").toUpperCase(Locale.ROOT), ix, ly + 41, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("clients.setup").toUpperCase(Locale.ROOT), iw, TINY), ix, ly + 41, Ui.MUTED, TINY);
         AdminClientsPacket.Setup s = data == null ? null : data.setup();
         if (s == null) {
             Ui.text(g, font, Ui.fit(font, Tr.t("clients.setup_none"), iw, SMALL), ix, ly + 49, Ui.TEXT, SMALL);
@@ -605,22 +669,24 @@ final class ClientsTab {
             Ui.text(g, font, Ui.fit(font, sum, iw, TINY), ix, ly + 57, Ui.MUTED, TINY);
         }
         boolean sureNow = isSure("trust");
-        String trust = Tr.t(sureNow ? "rules.sure" : "clients.trust");
-        int tw = Ui.width(font, Tr.t("clients.trust"), TINY) + 12;
+        // TRUST MY SETUP and EXPORT share the column: TRUST takes up to two thirds of it
+        int tw = Math.min(Ui.widthBold(font, Tr.t("clients.trust"), TINY) + 12, iw * 2 / 3);
+        String trust = Ui.fitBold(font, Tr.t(sureNow ? "rules.sure" : "clients.trust"), tw - 4, TINY);
         g.fill(ix, ly + 66, ix + tw, ly + 78, sureNow ? 0xFFD63B2F : Ui.VIOLET);
-        Ui.text(g, font, Component.literal(trust).withStyle(ChatFormatting.BOLD), ix + (tw - Ui.width(font, trust, TINY)) / 2, ly + 70, sureNow ? 0xFFFFFFFF : Ui.INK, TINY);
+        Ui.text(g, font, Component.literal(trust).withStyle(ChatFormatting.BOLD), ix + (tw - Ui.widthBold(font, trust, TINY)) / 2, ly + 70, sureNow ? 0xFFFFFFFF : Ui.INK, TINY);
         hits.add(new Ui.Hit(ix, ly + 66, tw, 12, () -> {
             if (sure("trust")) {
                 send(AdminClientsEditPacket.of(AdminClientsEditPacket.Action.TRUST));
             }
         }));
-        String exp = Tr.t("clients.export");
-        int ew = Ui.width(font, exp, TINY) + 12, ex = ix + tw + 4;
+        int ex = ix + tw + 4;
+        String exp = Ui.fitBold(font, Tr.t("clients.export"), ix + iw - ex - 12, TINY);
+        int ew = Ui.widthBold(font, exp, TINY) + 12;
         Ui.frame(g, ex, ly + 66, ew, 12, Ui.DIM);
         Ui.text(g, font, Component.literal(exp).withStyle(ChatFormatting.BOLD), ex + 6, ly + 70, Ui.MUTED, TINY);
         hits.add(new Ui.Hit(ex, ly + 66, ew, 12, () -> send(AdminClientsEditPacket.of(AdminClientsEditPacket.Action.EXPORT))));
-        Ui.text(g, font, Tr.t("clients.message").toUpperCase(Locale.ROOT), ix, ly + 87, Ui.MUTED, TINY);
         String count = Tr.t("rules.count", message.length(), CheckRules.MAX_MESSAGE);
+        Ui.text(g, font, Ui.fit(font, Tr.t("clients.message").toUpperCase(Locale.ROOT), iw - Ui.width(font, count, TINY) - 4, TINY), ix, ly + 87, Ui.MUTED, TINY);
         Ui.text(g, font, count, ix + iw - Ui.width(font, count, TINY), ly + 87, message.length() >= CheckRules.MAX_MESSAGE ? Ui.GOLD : Ui.MUTED, TINY);
     }
 
@@ -678,25 +744,25 @@ final class ClientsTab {
 
     private void drawLists(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RULES_RIGHT_X, py = y + BOX_Y;
-        Ui.inset(g, px, py, RULES_RIGHT_W, BOX_H);
+        int px = x + RULES_RIGHT_X, py = y + BOX_Y, pw = rulesRightW(), extra = pw - RULES_RIGHT_W;
+        Ui.inset(g, px, py, pw, boxH());
         if (adding != null) {
             drawAdding(g, px, py, hits);
             return;
         }
         List<ListLine> lines = listLines();
-        int visible = (BOX_H - 4) / ROW;
+        int visible = (boxH() - 4) / ROW;
         rulesScroll = Math.max(0, Math.min(rulesScroll, Math.max(0, lines.size() - visible)));
         for (int i = 0; i < visible && rulesScroll + i < lines.size(); i++) {
             ListLine l = lines.get(rulesScroll + i);
             int ry = py + 2 + i * ROW;
             if (l.section() != null) {
-                Ui.text(g, font, Component.literal(l.text()).withStyle(ChatFormatting.BOLD), px + 5, ry + 3, Ui.VIOLET, TINY);
-                String add = Tr.t("clients.add");
-                int aw = Ui.width(font, add, TINY);
-                Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), px + RULES_RIGHT_W - 5 - aw, ry + 3, Ui.VIOLET, TINY);
+                String add = Ui.fitBold(font, Tr.t("clients.add"), 40, TINY);
+                int aw = Ui.widthBold(font, add, TINY);
+                Ui.text(g, font, Component.literal(Ui.fitBold(font, l.text(), pw - 10 - aw - 4, TINY)).withStyle(ChatFormatting.BOLD), px + 5, ry + 3, Ui.VIOLET, TINY);
+                Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), px + pw - 5 - aw, ry + 3, Ui.VIOLET, TINY);
                 Adding which = l.section();
-                hits.add(new Ui.Hit(px + RULES_RIGHT_W - 7 - aw, ry, aw + 4, ROW, () -> {
+                hits.add(new Ui.Hit(px + pw - 7 - aw, ry, aw + 4, ROW, () -> {
                     adding = which;
                     addText = "";
                     addKind = CheckRules.Kind.WORD;
@@ -706,18 +772,23 @@ final class ClientsTab {
             }
             int tx = px + 7;
             if (!l.kind().isEmpty()) {
-                Ui.text(g, font, l.kind(), tx, ry + 3, Ui.MUTED, TINY);
+                Ui.text(g, font, Ui.fit(font, l.kind(), 20, TINY), tx, ry + 3, Ui.MUTED, TINY);
                 tx += 22;
             }
-            Ui.text(g, font, Component.literal(Ui.fit(font, l.text(), 80, SMALL)).withStyle(l.remove() != null ? ChatFormatting.BOLD : ChatFormatting.RESET), tx, ry + 2,
-                    l.remove() != null ? Ui.TEXT : Ui.MUTED, SMALL);
+            // the entry takes the list's extra width; the exempt note keeps its 50 and moves right with it
+            int textW = Math.min(80 + extra, px + pw - 14 - tx);
+            boolean bold = l.remove() != null;
+            String text = bold ? Ui.fitBold(font, l.text(), textW, SMALL) : Ui.fit(font, l.text(), textW, SMALL);
+            Ui.text(g, font, Component.literal(text).withStyle(bold ? ChatFormatting.BOLD : ChatFormatting.RESET), tx, ry + 2,
+                    bold ? Ui.TEXT : Ui.MUTED, SMALL);
             if (!l.note().isEmpty()) {
-                Ui.text(g, font, Ui.fit(font, l.note(), 50, TINY), px + 100, ry + 3, Ui.MUTED, TINY);
+                int nx = Math.max(px + 100 + extra, tx + (bold ? Ui.widthBold(font, text, SMALL) : Ui.width(font, text, SMALL)) + 4);
+                Ui.text(g, font, Ui.fit(font, l.note(), Math.min(50, px + pw - 14 - nx), TINY), nx, ry + 3, Ui.MUTED, TINY);
             }
             if (l.remove() != null) {
-                Ui.text(g, font, "×", px + RULES_RIGHT_W - 10, ry + 1, Ui.BAD, SMALL);
+                Ui.text(g, font, "×", px + pw - 10, ry + 1, Ui.BAD, SMALL);
                 Runnable rm = l.remove();
-                hits.add(new Ui.Hit(px + RULES_RIGHT_W - 13, ry, 10, ROW, rm));
+                hits.add(new Ui.Hit(px + pw - 13, ry, 10, ROW, rm));
             }
         }
     }
@@ -732,19 +803,20 @@ final class ClientsTab {
         } else {
             title = Tr.t("clients.add_exempt");
         }
-        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.VIOLET, TINY);
-        String back = Tr.t("drops.back");
+        int pw = rulesRightW(), bh = boxH();
+        String back = Ui.fit(font, Tr.t("drops.back"), 40, TINY);
         int bw = Ui.width(font, back, TINY);
-        Ui.text(g, font, back, px + RULES_RIGHT_W - 5 - bw, py + 4, Ui.MUTED, TINY);
-        hits.add(new Ui.Hit(px + RULES_RIGHT_W - 7 - bw, py + 1, bw + 4, 10, () -> {
+        Ui.text(g, font, Component.literal(Ui.fitBold(font, title, pw - 10 - bw - 4, TINY)).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.VIOLET, TINY);
+        Ui.text(g, font, back, px + pw - 5 - bw, py + 4, Ui.MUTED, TINY);
+        hits.add(new Ui.Hit(px + pw - 7 - bw, py + 1, bw + 4, 10, () -> {
             adding = null;
             host.rebuildTab();
         }));
         int y2 = py + 30;
         if (adding == Adding.BLOCK) {
             int cx = px + 5;
-            cx += chip(g, cx, y2, Tr.t("clients.kind.word_long"), addKind == CheckRules.Kind.WORD, hits, () -> addKind = CheckRules.Kind.WORD) + 3;
-            chip(g, cx, y2, Tr.t("clients.kind.mod_long"), addKind == CheckRules.Kind.MOD, hits, () -> addKind = CheckRules.Kind.MOD);
+            cx += chip(g, cx, y2, Tr.t("clients.kind.word_long"), addKind == CheckRules.Kind.WORD, hits, () -> addKind = CheckRules.Kind.WORD, (pw - 13) / 2) + 3;
+            chip(g, cx, y2, Tr.t("clients.kind.mod_long"), addKind == CheckRules.Kind.MOD, hits, () -> addKind = CheckRules.Kind.MOD, px + pw - 5 - cx);
             y2 += 14;
         }
         String hint;
@@ -755,14 +827,17 @@ final class ClientsTab {
         } else {
             hint = Tr.t("clients.exempt_hint");
         }
-        for (String line : Ui.wrap(font, hint, RULES_RIGHT_W - 10, TINY)) {
+        int ax = px + pw - 5 - 26, ay = py + bh - 16;
+        for (String line : Ui.wrap(font, hint, pw - 10, TINY)) {
+            if (y2 + 6 > ay - 2) {
+                break;
+            }
             Ui.text(g, font, line, px + 5, y2, Ui.MUTED, TINY);
             y2 += 7;
         }
-        int ax = px + RULES_RIGHT_W - 5 - 26, ay = py + BOX_H - 16;
         g.fill(ax, ay, ax + 26, ay + 11, Ui.VIOLET);
-        String a = Tr.t("drops.add");
-        Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), ax + (26 - Ui.width(font, a, TINY)) / 2, ay + 3, Ui.INK, TINY);
+        String a = Ui.fitBold(font, Tr.t("drops.add"), 24, TINY);
+        Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), ax + (26 - Ui.widthBold(font, a, TINY)) / 2, ay + 3, Ui.INK, TINY);
         hits.add(new Ui.Hit(ax, ay, 26, 11, this::addEntry));
     }
 
@@ -798,7 +873,7 @@ final class ClientsTab {
         int step = (int) Math.signum(delta);
         if (page == Page.RULES) {
             rulesScroll -= step;
-        } else if (mx >= host.width / 2.0 - AdminScreen.W / 2.0 + RIGHT_X) {
+        } else if (mx >= host.left() + rightX()) {
             detailScroll -= step;
         } else {
             listScroll -= step;

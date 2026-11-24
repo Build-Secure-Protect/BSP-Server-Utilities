@@ -21,14 +21,15 @@ import java.util.Locale;
  * on the left WHAT IS LOGGED, a search box and a switch per command (private messages listed as never logged, with no
  * switch); on the right the newest entries in full text (how long ago, who in their role's colour, what, the server;
  * hover a cut line for all of it). The footer has the server and kind filters. A switch goes to the server at once and
- * its change shows as an entry; the entries follow the log while the tab is open.
+ * its change shows as an entry; the entries follow the log while the tab is open. The switch column keeps its width; the
+ * entries take the rest of the page, and both lists show more lines as the page gets taller.
  */
 final class LogTab {
-    private static final int LIST_X = 8, LIST_Y = 22, LIST_W = 110, LIST_H = 158, PANE_X = 126, PANE_W = 210, ROW = 10;
-    private static final int SW_TOP = 29, KEY_W = 66;
+    private static final int LIST_X = 8, LIST_Y = 22, LIST_W = 110, PANE_X = 126, ROW = 10;
+    private static final int SW_TOP = 29, KEY_W = 66, MENU_ROW = 11;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     /** The kinds in {@code LogEntry.KINDS} order, with their labels. */
-    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch", "panel.log.kind.check", "panel.log.kind.afk", "panel.log.kind.room", "panel.log.kind.mob", "panel.log.kind.drops", "panel.log.kind.bank", "panel.log.kind.bounty", "panel.log.kind.tutorial"};
+    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch", "panel.log.kind.check", "panel.log.kind.afk", "panel.log.kind.room", "panel.log.kind.mob", "panel.log.kind.drops", "panel.log.kind.bank", "panel.log.kind.bounty", "panel.log.kind.tutorial", "panel.log.kind.chunk_tp"};
 
     private enum Menu { NONE, SERVERS, KINDS }
 
@@ -36,9 +37,19 @@ final class LogTab {
     @Nullable
     private AdminLogPacket data;
     private String server = "", kind = "", query = "";
-    private int switchScroll, entryScroll;
+    private int switchScroll, entryScroll, menuScroll;
     private long seenLog;
     private Menu menu = Menu.NONE;
+
+    /** Whether the server or kind menu is open (the screen's arrow keys leave the tab alone then). */
+    boolean menuOpen() {
+        return menu != Menu.NONE;
+    }
+
+    /** Closes an open menu, as when the tab is left. */
+    void closeMenu() {
+        menu = Menu.NONE;
+    }
     @Nullable
     private EditBox searchBox;
 
@@ -112,6 +123,22 @@ final class LogTab {
         send(AdminLogEditPacket.refresh(server, kind));
     }
 
+    /** Both lists' height: down to 30 above the page's bottom (158 on the fixed panel's 210). */
+    private int listH() {
+        return host.pageH() - LIST_Y - 30;
+    }
+
+    /** The entries' width: the rest of the page beside the switches (210 on the fixed panel's 344). */
+    private int paneW() {
+        return host.pageW() - PANE_X - 8;
+    }
+
+    /** How many choices an open filter shows at once: as many as fit between the page's top and its key. */
+    private int menuRows() {
+        int fy = host.pageH() - 8 - 14;
+        return Math.max(1, (fy - 2 - 2 - 1) / MENU_ROW);
+    }
+
     // ------------------------------------------------------------------ drawing
 
     @Nullable
@@ -138,10 +165,10 @@ final class LogTab {
     private void drawSwitches(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         int lx = x + LIST_X, ly = y + LIST_Y;
-        Ui.inset(g, lx, ly, LIST_W, LIST_H);
-        Ui.text(g, font, Component.literal(Tr.t("log.what")).withStyle(ChatFormatting.BOLD), lx + 5, ly + 4, Ui.VIOLET, TINY);
+        Ui.inset(g, lx, ly, LIST_W, listH());
+        Ui.text(g, font, Component.literal(Ui.fitBold(font, Tr.t("log.what"), LIST_W - 10, TINY)).withStyle(ChatFormatting.BOLD), lx + 5, ly + 4, Ui.VIOLET, TINY);
         List<AdminLogPacket.Switch> shown = shownSwitches();
-        int top = ly + SW_TOP, rows = (LIST_H - SW_TOP - 2) / ROW;
+        int top = ly + SW_TOP, rows = (listH() - SW_TOP - 2) / ROW;
         if (data != null && shown.isEmpty()) {
             Ui.text(g, font, Ui.fit(font, Tr.t("log.no_match"), LIST_W - 10, TINY), lx + 5, top + 3, Ui.MUTED, TINY);
         }
@@ -153,7 +180,7 @@ final class LogTab {
             if (hover) {
                 g.fill(lx + 1, ry, lx + LIST_W - 1, ry + ROW, 0x22B58CFF);
             }
-            String right = s.privateMessage() ? Tr.t("log.never") : "";
+            String right = s.privateMessage() ? Ui.fit(font, Tr.t("log.never"), LIST_W / 2, TINY) : "";
             int rightW = s.privateMessage() ? Ui.width(font, right, TINY) : 16;
             Ui.text(g, font, Ui.fit(font, "/" + s.root(), LIST_W - 14 - rightW, SMALL), lx + 5, ry + 2, s.privateMessage() || !s.on() ? Ui.MUTED : Ui.TEXT, SMALL);
             if (s.privateMessage()) {
@@ -172,32 +199,32 @@ final class LogTab {
     private String drawEntries(GuiGraphics g, int x, int y, int mx, int my) {
         Font font = host.font();
         int px = x + PANE_X, py = y + LIST_Y;
-        Ui.inset(g, px, py, PANE_W, LIST_H);
+        Ui.inset(g, px, py, paneW(), listH());
         List<LogViewPacket.Row> rows = data == null ? List.of() : data.entries();
         if (rows.isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "log.waiting" : "log.none"), PANE_W - 10, TINY), px + 5, py + 6, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "log.waiting" : "log.none"), paneW() - 10, TINY), px + 5, py + 6, Ui.MUTED, TINY);
             return null;
         }
-        int visible = (LIST_H - 4) / ROW;
+        int visible = (listH() - 4) / ROW;
         entryScroll = Math.max(0, Math.min(entryScroll, Math.max(0, rows.size() - visible)));
         int srvW = 0;
         for (LogViewPacket.Row r : rows) {
             srvW = Math.max(srvW, Ui.width(font, r.server(), TINY));
         }
         srvW = Math.min(srvW, 46) + 6;
-        int agoX = px + 4, whoX = px + 28, whatX = px + 76, whatW = PANE_W - (whatX - px) - srvW - 8;
+        int agoX = px + 4, whoX = px + 28, whatX = px + 76, whatW = paneW() - (whatX - px) - srvW - 8;
         String tip = null;
         for (int i = 0; i < visible && entryScroll + i < rows.size(); i++) {
             LogViewPacket.Row r = rows.get(entryScroll + i);
             int ry = py + 3 + i * ROW;
             Ui.text(g, font, StaffFace.ago(ClientLog.agoMs(r)), agoX, ry + 2, Ui.MUTED, TINY);
-            Ui.text(g, font, Component.literal(Ui.fit(font, r.actor(), whatX - whoX - 4, SMALL)).withStyle(ChatFormatting.BOLD), whoX, ry + 1, 0xFF000000 | r.colour(), SMALL);
+            Ui.text(g, font, Component.literal(Ui.fitBold(font, r.actor(), whatX - whoX - 4, SMALL)).withStyle(ChatFormatting.BOLD), whoX, ry + 1, 0xFF000000 | r.colour(), SMALL);
             String what = Ui.fit(font, r.text(), whatW, SMALL);
             Ui.text(g, font, what, whatX, ry + 1, Ui.TEXT, SMALL);
-            int sx = px + PANE_W - 4 - srvW;
+            int sx = px + paneW() - 4 - srvW;
             g.fill(sx, ry, sx + srvW, ry + 8, 0xFF1B2230);
             Ui.text(g, font, Ui.fit(font, r.server(), srvW - 4, TINY), sx + 3, ry + 2, Ui.MUTED, TINY);
-            if (!what.equals(r.text()) && mx >= px && mx < px + PANE_W && my >= ry && my < ry + ROW) {
+            if (!what.equals(r.text()) && mx >= px && mx < px + paneW() && my >= ry && my < ry + ROW) {
                 tip = r.text();
             }
         }
@@ -206,14 +233,19 @@ final class LogTab {
 
     private void drawFooter(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
-        int kindX = x + AdminScreen.W - 8 - KEY_W, serverX = kindX - 4 - KEY_W;
+        int fy = y + host.pageH() - 8 - 14;
+        int kindX = x + host.pageW() - 8 - KEY_W, serverX = kindX - 4 - KEY_W;
         String footer = Tr.t("log.footer", ClientLog.keepDays());
         Ui.text(g, font, Ui.fit(font, footer, serverX - x - 12, TINY), x + 8, fy + 5, Ui.MUTED, TINY);
         dropKey(g, serverX, fy, server.isEmpty() ? Tr.t("log.server_all") : server, menu == Menu.SERVERS, mx, my, hits,
-                () -> menu = menu == Menu.SERVERS ? Menu.NONE : Menu.SERVERS);
+                () -> openMenu(Menu.SERVERS));
         dropKey(g, kindX, fy, kind.isEmpty() ? Tr.t("log.kind_all") : Tr.t(kindKey(kind)), menu == Menu.KINDS, mx, my, hits,
-                () -> menu = menu == Menu.KINDS ? Menu.NONE : Menu.KINDS);
+                () -> openMenu(Menu.KINDS));
+    }
+
+    private void openMenu(Menu m) {
+        menu = menu == m ? Menu.NONE : m;
+        menuScroll = 0;
     }
 
     private static String kindKey(String k) {
@@ -227,13 +259,16 @@ final class LogTab {
             g.fill(kx, fy, kx + KEY_W, fy + 14, 0x222A2F3A);
         }
         Ui.frame(g, kx, fy, KEY_W, 14, open ? Ui.VIOLET : Ui.DIM);
-        String s = Ui.fit(font, label.toUpperCase(Locale.ROOT), KEY_W - 14, TINY);
+        String s = Ui.fitBold(font, label.toUpperCase(Locale.ROOT), KEY_W - 14, TINY);
         Ui.text(g, font, Component.literal(s).withStyle(ChatFormatting.BOLD), kx + 5, fy + 5, open ? Ui.VIOLET : Ui.MUTED, TINY);
         Ui.text(g, font, "▾", kx + KEY_W - 9, fy + 4, open ? Ui.VIOLET : Ui.MUTED, SMALL);
         hits.add(new Ui.Hit(kx, fy, KEY_W, 14, action));
     }
 
-    /** The open filter's choices, upwards from its key; a click anywhere else closes it. */
+    /**
+     * The open filter's choices, upwards from its key; a click anywhere else closes it. On a page too short for them all
+     * it shows as many as fit, and the wheel moves through the rest.
+     */
     private void drawMenu(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         List<String> values = new ArrayList<>(), labels = new ArrayList<>();
@@ -241,7 +276,7 @@ final class LogTab {
         if (menu == Menu.SERVERS) {
             labels.add(Tr.t("log.server_all"));
             List<String> servers = data == null ? List.of() : data.servers();
-            for (String s : servers.subList(0, Math.min(12, servers.size()))) {
+            for (String s : servers.subList(0, Math.min(Math.max(12, menuRows() - 4), servers.size()))) {
                 values.add(s);
                 labels.add(s);
             }
@@ -252,24 +287,26 @@ final class LogTab {
                 labels.add(Tr.t(KIND_KEYS[i]));
             }
         }
-        int fy = y + AdminScreen.H - 8 - 14, kindX = x + AdminScreen.W - 8 - KEY_W;
-        int mxLeft = menu == Menu.KINDS ? kindX : kindX - 4 - KEY_W, h = values.size() * 11 + 2, top = fy - 2 - h;
+        int fy = y + host.pageH() - 8 - 14, kindX = x + host.pageW() - 8 - KEY_W;
+        int rows = Math.min(values.size(), menuRows());
+        menuScroll = Math.max(0, Math.min(menuScroll, values.size() - rows));
+        int mxLeft = menu == Menu.KINDS ? kindX : kindX - 4 - KEY_W, h = rows * MENU_ROW + 2, top = fy - 2 - h;
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
         g.fill(mxLeft - 1, top - 1, mxLeft + KEY_W + 1, top + h + 1, Ui.VIOLET);
         g.fill(mxLeft, top, mxLeft + KEY_W, top + h, Ui.PANEL);
         List<Ui.Hit> options = new ArrayList<>();
         String current = menu == Menu.SERVERS ? server : kind;
-        for (int i = 0; i < values.size(); i++) {
-            int oy = top + 1 + i * 11;
-            String v = values.get(i);
+        for (int i = 0; i < rows; i++) {
+            int oy = top + 1 + i * MENU_ROW;
+            String v = values.get(menuScroll + i);
             boolean on = v.equals(current);
-            if (on || mx >= mxLeft && mx < mxLeft + KEY_W && my >= oy && my < oy + 11) {
-                g.fill(mxLeft + 1, oy, mxLeft + KEY_W - 1, oy + 11, on ? 0xFF1B2230 : 0x22B58CFF);
+            if (on || mx >= mxLeft && mx < mxLeft + KEY_W && my >= oy && my < oy + MENU_ROW) {
+                g.fill(mxLeft + 1, oy, mxLeft + KEY_W - 1, oy + MENU_ROW, on ? 0xFF1B2230 : 0x22B58CFF);
             }
-            Ui.text(g, font, Ui.fit(font, labels.get(i), KEY_W - 8, TINY), mxLeft + 4, oy + 3, on ? Ui.VIOLET : Ui.TEXT, TINY);
+            Ui.text(g, font, Ui.fit(font, labels.get(menuScroll + i), KEY_W - 8, TINY), mxLeft + 4, oy + 3, on ? Ui.VIOLET : Ui.TEXT, TINY);
             Menu m = menu;
-            options.add(new Ui.Hit(mxLeft, oy, KEY_W, 11, () -> {
+            options.add(new Ui.Hit(mxLeft, oy, KEY_W, MENU_ROW, () -> {
                 if (m == Menu.SERVERS) {
                     filter(v, kind);
                 } else {
@@ -283,7 +320,9 @@ final class LogTab {
     }
 
     boolean scroll(double mx, double delta) {
-        if (mx < host.width / 2.0 - AdminScreen.W / 2.0 + PANE_X) {
+        if (menu != Menu.NONE) {
+            menuScroll -= (int) Math.signum(delta);
+        } else if (mx < host.left() + PANE_X) {
             switchScroll -= (int) Math.signum(delta) * 2;
         } else {
             entryScroll -= (int) Math.signum(delta) * 2;

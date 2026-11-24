@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "12"; // 12: tutorials (SU-138 to SU-144); 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "13"; // 13: the staff screen's counts (SU-154); 12: tutorials (SU-138 to SU-144); 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -238,6 +238,12 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(TalkActionPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(TalkActionPacket::encode).decoder(TalkActionPacket::decode)
                 .consumerMainThread(TalkActionPacket::handle).add();
+        CHANNEL.messageBuilder(AdminCountsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(AdminCountsPacket::encode).decoder(AdminCountsPacket::decode)
+                .consumerMainThread(AdminCountsPacket::handle).add();
+        CHANNEL.messageBuilder(AdminCountsAskPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AdminCountsAskPacket::encode).decoder(AdminCountsAskPacket::decode)
+                .consumerMainThread(AdminCountsAskPacket::handle).add();
     }
 
     /** Client to server. */

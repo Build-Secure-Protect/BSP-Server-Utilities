@@ -25,10 +25,14 @@ import java.util.Locale;
  * that mod-timed items are never removed) and CLEAR ITEMS NOW (this server, all servers or one by name; CLEAR ITEMS with
  * SURE?); on the right the exceptions (an item with its time or never, × to remove), or, after + ADD AN ITEM, a search
  * over every item with the picked item's time (− / + from 1 to 120, NEVER) and ADD. Changes go to the server at once.
+ * The settings keep their 150 wide box at their content's height (pulled together a little on the shortest pages); the
+ * list takes the rest of the page, more rows as it gets taller and the extra width to the item text (D756, D757).
  */
 final class DropsTab {
-    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, BOX_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
-    private static final int REFRESH_TICKS = 100, RESULTS = 8;
+    /** LEFT_H: the settings' content height; RIGHT_W: the list's width on the old 344 wide page, the item text's base. */
+    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, LEFT_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
+    /** CLEAR_Y: the CLEAR ITEMS key, the last settings line, pulled up in full on a short page. */
+    private static final int REFRESH_TICKS = 100, CLEAR_Y = LEFT_H - 18;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     private static final int RED = 0xFFFF6B5C;
 
@@ -80,10 +84,37 @@ final class DropsTab {
         }
     }
 
+    // ------------------------------------------------------------------ layout, from the page's size
+
+    /** The list's height, all the page down to the footer (158 on the old 210 high page). */
+    private int boxH() {
+        return host.pageH() - TOP - 30;
+    }
+
+    /** The list's width, all the page beside the settings (170 on the old 344 wide page). */
+    private int rightW() {
+        return host.pageW() - RIGHT_X - 8;
+    }
+
+    /** The settings box: as tall as its content, never past the list's bottom. */
+    private int leftH() {
+        return Math.min(boxH(), LEFT_H);
+    }
+
+    /** A settings line's offset from the box's top, pulled up in proportion when the box is shorter than its content. */
+    private int at(int base) {
+        return base - (LEFT_H - leftH()) * base / CLEAR_Y;
+    }
+
+    /** Search results shown: 8 on the old page, more on a taller one, fewer on a shorter one. */
+    private int resultRows() {
+        return Math.max(1, (boxH() - 78) / ROW);
+    }
+
     void addWidgets(int x, int y) {
         searchBox = null;
         if (searching) {
-            searchBox = new EditBox(host.font(), x + RIGHT_X + 5, y + TOP + 14, RIGHT_W - 10, 12, Component.literal(Tr.t("drops.search")));
+            searchBox = new EditBox(host.font(), x + RIGHT_X + 5, y + TOP + 14, rightW() - 10, 12, Component.literal(Tr.t("drops.search")));
             searchBox.setMaxLength(48);
             searchBox.setHint(Component.literal(Tr.t("drops.search")).withStyle(ChatFormatting.DARK_GRAY));
             searchBox.setValue(query);
@@ -105,9 +136,9 @@ final class DropsTab {
             drawExceptions(g, x, y, mx, my, hits);
         }
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
+        int fy = y + host.pageH() - 8 - 14;
         String key = Tr.t("drops.refresh");
-        int kw = Ui.width(font, key, TINY) + 16, kx = x + AdminScreen.W - 8 - kw;
+        int kw = Ui.widthBold(font, key, TINY) + 16, kx = x + host.pageW() - 8 - kw;
         String foot = data == null ? "" : Tr.t("drops.footer", data.items(), data.orbs());
         Ui.text(g, font, Ui.fit(font, foot, kx - x - 16, TINY), x + 8, fy + 5, Ui.MUTED, TINY);
         Ui.frame(g, kx, fy, kw, 14, Ui.DIM);
@@ -118,33 +149,33 @@ final class DropsTab {
     private void drawSettings(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         int lx = x + LEFT_X, ly = y + TOP, ix = lx + 6, iw = LEFT_W - 12;
-        Ui.inset(g, lx, ly, LEFT_W, BOX_H);
-        Ui.text(g, font, Component.literal(Tr.t("drops.despawn")).withStyle(ChatFormatting.BOLD), ix, ly + 5, Ui.VIOLET, TINY);
-        toggle(g, ix, ly + 14, iw, Tr.t("drops.enabled"), settings.enabled(), hits,
+        Ui.inset(g, lx, ly, LEFT_W, leftH());
+        Ui.text(g, font, Component.literal(Tr.t("drops.despawn")).withStyle(ChatFormatting.BOLD), ix, ly + at(5), Ui.VIOLET, TINY);
+        toggle(g, ix, ly + at(14), iw, Tr.t("drops.enabled"), settings.enabled(), hits,
                 () -> set(with(!settings.enabled(), settings.itemMinutes(), settings.deathMinutes(), settings.orbsFollow(), settings.exceptions())));
-        stepper(g, ix, ly + 27, iw, Tr.t("drops.items"), settings.itemMinutes(), mx, my, hits, DespawnSettings.MIN_MINUTES, DespawnSettings.MAX_MINUTES,
+        stepper(g, ix, ly + at(27), iw, Tr.t("drops.items"), settings.itemMinutes(), mx, my, hits, DespawnSettings.MIN_MINUTES, DespawnSettings.MAX_MINUTES,
                 m -> set(with(settings.enabled(), m, settings.deathMinutes(), settings.orbsFollow(), settings.exceptions())));
-        stepper(g, ix, ly + 41, iw, Tr.t("drops.death"), settings.deathMinutes(), mx, my, hits, DespawnSettings.MIN_MINUTES, DespawnSettings.MAX_MINUTES,
+        stepper(g, ix, ly + at(41), iw, Tr.t("drops.death"), settings.deathMinutes(), mx, my, hits, DespawnSettings.MIN_MINUTES, DespawnSettings.MAX_MINUTES,
                 m -> set(with(settings.enabled(), settings.itemMinutes(), m, settings.orbsFollow(), settings.exceptions())));
-        toggle(g, ix, ly + 55, iw, Tr.t("drops.orbs"), settings.orbsFollow(), hits,
+        toggle(g, ix, ly + at(55), iw, Tr.t("drops.orbs"), settings.orbsFollow(), hits,
                 () -> set(with(settings.enabled(), settings.itemMinutes(), settings.deathMinutes(), !settings.orbsFollow(), settings.exceptions())));
-        int ny = ly + 68;
+        int ny = ly + at(68), noteEnd = ny + 12;
         for (String line : Ui.wrap(font, Tr.t("drops.never_note"), iw, TINY)) {
-            if (ny > ly + 80) {
+            if (ny > noteEnd) {
                 break;
             }
             Ui.text(g, font, line, ix, ny, Ui.MUTED, TINY);
             ny += 6;
         }
         // clear items now
-        Ui.text(g, font, Component.literal(Tr.t("drops.clear_now")).withStyle(ChatFormatting.BOLD), ix, ly + 88, Ui.VIOLET, TINY);
+        Ui.text(g, font, Component.literal(Tr.t("drops.clear_now")).withStyle(ChatFormatting.BOLD), ix, ly + at(88), Ui.VIOLET, TINY);
         List<String[]> chips = new ArrayList<>();
         chips.add(new String[]{"here", Tr.t("drops.this_server")});
         chips.add(new String[]{"all", Tr.t("drops.all_servers")});
         if (data != null) {
             data.servers().forEach(s -> chips.add(new String[]{s, s}));
         }
-        int cx = ix, cy = ly + 97;
+        int cx = ix, cy = ly + at(97), ky = ly + at(CLEAR_Y);
         for (String[] c : chips) {
             String label = Ui.fit(font, c[1], 56, TINY);
             int cw = Ui.width(font, label, TINY) + 8;
@@ -152,7 +183,7 @@ final class DropsTab {
                 cx = ix;
                 cy += 13;
             }
-            if (cy > ly + 123) {
+            if (cy + 11 >= ky) {
                 break;
             }
             boolean on = clearTarget.equals(c[0]);
@@ -176,10 +207,10 @@ final class DropsTab {
         } else {
             label = Tr.t("drops.clear");
         }
-        int ky = ly + BOX_H - 18;
         g.fill(ix, ky, ix + iw, ky + 13, sure ? 0xFFD63B2F : 0xFF3A2A2A);
         Ui.frame(g, ix, ky, iw, 13, 0xFFD63B2F);
-        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), ix + (iw - Ui.width(font, label, TINY)) / 2, ky + 4, sure ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
+        label = Ui.fitBold(font, label, iw - 6, TINY);
+        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), ix + (iw - Ui.widthBold(font, label, TINY)) / 2, ky + 4, sure ? 0xFFFFFFFF : 0xFFFF8F86, TINY);
         hits.add(new Ui.Hit(ix, ky, iw, 13, () -> {
             long now = System.currentTimeMillis();
             if (now >= clearSureUntil) {
@@ -231,13 +262,14 @@ final class DropsTab {
 
     private void drawExceptions(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
-        Ui.text(g, font, Component.literal(Tr.t("drops.exceptions", settings.exceptions().size())).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
+        int px = x + RIGHT_X, py = y + TOP, rw = rightW(), extra = rw - RIGHT_W, nameGrow = extra / 2, idGrow = extra - nameGrow;
+        Ui.inset(g, px, py, rw, boxH());
         String add = Tr.t("drops.add_item");
-        int aw = Ui.width(font, add, TINY);
-        Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), px + RIGHT_W - 5 - aw, py + 5, Ui.VIOLET, TINY);
-        hits.add(new Ui.Hit(px + RIGHT_W - 7 - aw, py + 2, aw + 4, 10, () -> {
+        int aw = Ui.widthBold(font, add, TINY);
+        String head = Ui.fitBold(font, Tr.t("drops.exceptions", settings.exceptions().size()), rw - 14 - aw, TINY);
+        Ui.text(g, font, Component.literal(head).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
+        Ui.text(g, font, Component.literal(add).withStyle(ChatFormatting.BOLD), px + rw - 5 - aw, py + 5, Ui.VIOLET, TINY);
+        hits.add(new Ui.Hit(px + rw - 7 - aw, py + 2, aw + 4, 10, () -> {
             searching = true;
             picked = null;
             query = "";
@@ -246,20 +278,20 @@ final class DropsTab {
         }));
         List<DespawnSettings.ItemTime> ex = settings.exceptions();
         if (ex.isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("drops.no_exceptions"), RIGHT_W - 10, TINY), px + 5, py + 18, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("drops.no_exceptions"), rw - 10, TINY), px + 5, py + 18, Ui.MUTED, TINY);
         }
-        int top = py + 15, visible = (BOX_H - 17) / ROW;
+        int top = py + 15, visible = Math.max(1, (boxH() - 17) / ROW);
         scroll = Math.max(0, Math.min(scroll, Math.max(0, ex.size() - visible)));
         for (int i = 0; i < visible && scroll + i < ex.size(); i++) {
             DespawnSettings.ItemTime e = ex.get(scroll + i);
             int ry = top + i * ROW;
-            Ui.text(g, font, Component.literal(Ui.fit(font, itemName(e.itemId()), 62, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 1, Ui.TEXT, SMALL);
-            Ui.text(g, font, Ui.fit(font, e.itemId(), 60, TINY), px + 70, ry + 2, Ui.MUTED, TINY);
+            Ui.text(g, font, Component.literal(Ui.fitBold(font, itemName(e.itemId()), 62 + nameGrow, SMALL)).withStyle(ChatFormatting.BOLD), px + 5, ry + 1, Ui.TEXT, SMALL);
+            Ui.text(g, font, Ui.fit(font, e.itemId(), 60 + idGrow, TINY), px + 70 + nameGrow, ry + 2, Ui.MUTED, TINY);
             boolean never = e.minutes() == DespawnSettings.NEVER;
             String t = never ? Tr.t("drops.never") : Tr.t("drops.minutes", e.minutes());
-            Ui.text(g, font, Component.literal(t).withStyle(ChatFormatting.BOLD), px + RIGHT_W - 34, ry + 2, never ? Ui.GOLD : Ui.TEXT, TINY);
-            Ui.text(g, font, "×", px + RIGHT_W - 10, ry + 1, RED, SMALL);
-            hits.add(new Ui.Hit(px + RIGHT_W - 13, ry, 10, ROW, () -> {
+            Ui.text(g, font, Component.literal(t).withStyle(ChatFormatting.BOLD), px + rw - 13 - Ui.widthBold(font, t, TINY), ry + 2, never ? Ui.GOLD : Ui.TEXT, TINY); // clear of the × (audit of SU-154)
+            Ui.text(g, font, "×", px + rw - 10, ry + 1, RED, SMALL);
+            hits.add(new Ui.Hit(px + rw - 13, ry, 10, ROW, () -> {
                 List<DespawnSettings.ItemTime> next = new ArrayList<>(settings.exceptions());
                 next.removeIf(o -> o.itemId().equals(e.itemId()));
                 set(with(settings.enabled(), settings.itemMinutes(), settings.deathMinutes(), settings.orbsFollow(), next));
@@ -298,34 +330,35 @@ final class DropsTab {
 
     private void drawSearch(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
-        Ui.text(g, font, Component.literal(Tr.t("drops.add_title")).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.VIOLET, TINY);
+        int px = x + RIGHT_X, py = y + TOP, rw = rightW(), bh = boxH(), extra = rw - RIGHT_W;
+        Ui.inset(g, px, py, rw, bh);
         String back = Tr.t("drops.back");
         int bw = Ui.width(font, back, TINY);
-        Ui.text(g, font, back, px + RIGHT_W - 5 - bw, py + 4, Ui.MUTED, TINY);
-        hits.add(new Ui.Hit(px + RIGHT_W - 7 - bw, py + 1, bw + 4, 10, () -> {
+        String title = Ui.fitBold(font, Tr.t("drops.add_title"), rw - 14 - bw, TINY);
+        Ui.text(g, font, Component.literal(title).withStyle(ChatFormatting.BOLD), px + 5, py + 4, Ui.VIOLET, TINY);
+        Ui.text(g, font, back, px + rw - 5 - bw, py + 4, Ui.MUTED, TINY);
+        hits.add(new Ui.Hit(px + rw - 7 - bw, py + 1, bw + 4, 10, () -> {
             searching = false;
             host.rebuildTab();
         }));
         List<Item> found = results();
-        int top = py + 30;
-        scroll = Math.max(0, Math.min(scroll, Math.max(0, found.size() - RESULTS)));
-        for (int i = 0; i < RESULTS && scroll + i < found.size(); i++) {
+        int top = py + 30, shown = resultRows(), nameGrow = extra / 2;
+        scroll = Math.max(0, Math.min(scroll, Math.max(0, found.size() - shown)));
+        for (int i = 0; i < shown && scroll + i < found.size(); i++) {
             Item item = found.get(scroll + i);
             int ry = top + i * ROW;
             boolean on = item == picked;
             if (on) {
-                g.fill(px + 1, ry, px + RIGHT_W - 1, ry + ROW, 0xFF1B2230);
+                g.fill(px + 1, ry, px + rw - 1, ry + ROW, 0xFF1B2230);
                 g.fill(px + 1, ry, px + 3, ry + ROW, Ui.VIOLET);
-            } else if (mx >= px && mx < px + RIGHT_W && my >= ry && my < ry + ROW) {
-                g.fill(px + 1, ry, px + RIGHT_W - 1, ry + ROW, 0x22B58CFF);
+            } else if (mx >= px && mx < px + rw && my >= ry && my < ry + ROW) {
+                g.fill(px + 1, ry, px + rw - 1, ry + ROW, 0x22B58CFF);
             }
-            Ui.text(g, font, Ui.fit(font, item.getDescription().getString(), 70, SMALL), px + 6, ry + 1, on ? Ui.TEXT : Ui.MUTED, SMALL);
+            Ui.text(g, font, Ui.fit(font, item.getDescription().getString(), 70 + nameGrow, SMALL), px + 6, ry + 1, on ? Ui.TEXT : Ui.MUTED, SMALL);
             String id = BuiltInRegistries.ITEM.getKey(item).toString();
-            String ids = Ui.fit(font, id, RIGHT_W - 84, TINY);
-            Ui.text(g, font, ids, px + RIGHT_W - 5 - Ui.width(font, ids, TINY), ry + 2, Ui.MUTED, TINY);
-            hits.add(new Ui.Hit(px, ry, RIGHT_W, ROW, () -> {
+            String ids = Ui.fit(font, id, rw - 84 - nameGrow, TINY);
+            Ui.text(g, font, ids, px + rw - 5 - Ui.width(font, ids, TINY), ry + 2, Ui.MUTED, TINY);
+            hits.add(new Ui.Hit(px, ry, rw, ROW, () -> {
                 picked = item;
                 DespawnSettings.ItemTime had = settings.exception(id);
                 pickedNever = had != null && had.minutes() == DespawnSettings.NEVER;
@@ -336,10 +369,11 @@ final class DropsTab {
             return;
         }
         // the picked item's time, NEVER, ADD
-        int ky = py + BOX_H - 16, kx = px + 5;
-        String lasts = Ui.fit(font, Tr.t("drops.lasts", picked.getDescription().getString()), 54, TINY);
+        int ky = py + bh - 16, kx = px + 5, lastsW = 54 + extra;
+        String lasts = Ui.fit(font, Tr.t("drops.lasts", picked.getDescription().getString()), lastsW, TINY);
         Ui.text(g, font, lasts, kx, ky + 3, Ui.MUTED, TINY);
-        int sx = kx + 56;
+        // the steps follow the words: where they were on the old page, nearer on a narrower one, never far off on a wider one
+        int sx = kx + 2 + (extra > 0 ? Math.max(54, Ui.width(font, lasts, TINY)) : lastsW);
         key(g, sx, ky, "−", !pickedNever && pickedMinutes > 1, mx, my, hits, () -> pickedMinutes--);
         g.fill(sx + 12, ky, sx + 34, ky + 11, Ui.SLOT);
         String v = pickedNever ? "–" : Integer.toString(pickedMinutes);
@@ -352,10 +386,10 @@ final class DropsTab {
         Ui.frame(g, nx, ky, nw, 11, pickedNever ? Ui.VIOLET : Ui.DIM);
         Ui.text(g, font, never, nx + 4, ky + 3, pickedNever ? Ui.VIOLET : Ui.TEXT, TINY);
         hits.add(new Ui.Hit(nx, ky, nw, 11, () -> pickedNever = !pickedNever));
-        int ax = px + RIGHT_W - 5 - 26;
+        int ax = px + rw - 5 - 26;
         g.fill(ax, ky, ax + 26, ky + 11, Ui.VIOLET);
         String a = Tr.t("drops.add");
-        Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), ax + (26 - Ui.width(font, a, TINY)) / 2, ky + 3, Ui.INK, TINY);
+        Ui.text(g, font, Component.literal(a).withStyle(ChatFormatting.BOLD), ax + (26 - Ui.widthBold(font, a, TINY)) / 2, ky + 3, Ui.INK, TINY);
         Item item = picked;
         hits.add(new Ui.Hit(ax, ky, 26, 11, () -> {
             String id = BuiltInRegistries.ITEM.getKey(item).toString();

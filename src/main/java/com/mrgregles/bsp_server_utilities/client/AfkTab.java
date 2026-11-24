@@ -21,11 +21,15 @@ import java.util.Locale;
  * what counts); on the right everyone AFK now on any server with how long and where, "macro?" (hovered, what was seen),
  * the time left of a check under way, a red countdown to a check, and staff away by {@code /su away}. A switch or a step
  * goes to the server at once, the message a second after typing stops; the list is asked for again every few seconds
- * while the tab is open.
+ * while the tab is open. The settings keep their 150 wide box at their content's height (pulled together a little on the
+ * shortest pages); the list takes the rest of the page, more rows as it gets taller and the extra width to the names
+ * (D756, D757).
  */
 final class AfkTab {
-    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, BOX_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
-    private static final int REFRESH_TICKS = 100, TYPE_TICKS = 20, MESSAGE_Y = 94;
+    /** LEFT_H: the settings' content height; RIGHT_W: the list's width on the old 344 wide page, the names' base. */
+    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 150, LEFT_H = 158, RIGHT_X = 166, RIGHT_W = 170, ROW = 10;
+    /** SQUEEZE_REF: the last settings line pulled up in full on a short page (the macros text). */
+    private static final int REFRESH_TICKS = 100, TYPE_TICKS = 20, MESSAGE_Y = 94, SQUEEZE_REF = 134;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     private static final int AMBER = 0xFFF2B544, RED = 0xFFFF6B5C, PILL = 0xFF2A2414;
 
@@ -86,8 +90,36 @@ final class AfkTab {
         }
     }
 
+    // ------------------------------------------------------------------ layout, from the page's size
+
+    /** The list's height, all the page down to the footer (158 on the old 210 high page). */
+    private int boxH() {
+        return host.pageH() - TOP - 30;
+    }
+
+    /** The list's width, all the page beside the settings (170 on the old 344 wide page). */
+    private int rightW() {
+        return host.pageW() - RIGHT_X - 8;
+    }
+
+    /** The settings box: as tall as its content, never past the list's bottom. */
+    private int leftH() {
+        return Math.min(boxH(), LEFT_H);
+    }
+
+    /** A settings line's offset from the box's top, pulled up in proportion when the box is shorter than its content. */
+    private int at(int base) {
+        return base - (LEFT_H - leftH()) * base / SQUEEZE_REF;
+    }
+
+    /** What the names' column gains on a wider list, or gives up (half the loss, the rest from the times) on a narrower one. */
+    private int grow() {
+        int extra = rightW() - RIGHT_W;
+        return extra >= 0 ? extra : extra / 2;
+    }
+
     void addWidgets(int x, int y) {
-        messageBox = new EditBox(host.font(), x + LEFT_X + 4, y + TOP + MESSAGE_Y, LEFT_W - 8, 12, Component.literal(Tr.t("afk.message")));
+        messageBox = new EditBox(host.font(), x + LEFT_X + 4, y + TOP + at(MESSAGE_Y), LEFT_W - 8, 12, Component.literal(Tr.t("afk.message")));
         messageBox.setMaxLength(AfkSettings.MAX_MESSAGE);
         messageBox.setValue(settings.message());
         messageBox.setResponder(s -> {
@@ -105,9 +137,9 @@ final class AfkTab {
         drawSettings(g, x, y, mx, my, hits);
         String tip = drawList(g, x, y, mx, my);
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
+        int fy = y + host.pageH() - 8 - 14;
         String key = Tr.t("afk.refresh");
-        int kw = Ui.width(font, key, TINY) + 16, kx = x + AdminScreen.W - 8 - kw;
+        int kw = Ui.widthBold(font, key, TINY) + 16, kx = x + host.pageW() - 8 - kw;
         List<String> footer = Ui.wrap(font, Tr.t("afk.footer"), kx - x - 16, TINY);
         for (int i = 0; i < Math.min(2, footer.size()); i++) {
             Ui.text(g, font, footer.get(i), x + 8, fy + (footer.size() == 1 ? 5 : 2 + i * 6), Ui.MUTED, TINY);
@@ -123,27 +155,30 @@ final class AfkTab {
     private void drawSettings(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
         int lx = x + LEFT_X, ly = y + TOP, ix = lx + 6, iw = LEFT_W - 12;
-        Ui.inset(g, lx, ly, LEFT_W, BOX_H);
-        Ui.text(g, font, Component.literal(Tr.t("afk.detection")).withStyle(ChatFormatting.BOLD), ix, ly + 5, Ui.VIOLET, TINY);
-        toggle(g, ix, ly + 15, iw, Tr.t("afk.mark"), settings.enabled(), hits, () -> set(settings.withEnabled(!settings.enabled())));
-        stepper(g, ix, ly + 29, iw, Tr.t("afk.after"), settings.afkMinutes(), Tr.t("afk.min"), mx, my, hits,
+        Ui.inset(g, lx, ly, LEFT_W, leftH());
+        Ui.text(g, font, Component.literal(Tr.t("afk.detection")).withStyle(ChatFormatting.BOLD), ix, ly + at(5), Ui.VIOLET, TINY);
+        toggle(g, ix, ly + at(15), iw, Tr.t("afk.mark"), settings.enabled(), hits, () -> set(settings.withEnabled(!settings.enabled())));
+        stepper(g, ix, ly + at(29), iw, Tr.t("afk.after"), settings.afkMinutes(), Tr.t("afk.min"), mx, my, hits,
                 () -> set(settings.withAfkMinutes(settings.afkMinutes() - 1)), () -> set(settings.withAfkMinutes(settings.afkMinutes() + 1)),
                 settings.afkMinutes() > AfkSettings.MIN_AFK, settings.afkMinutes() < AfkSettings.MAX_AFK);
 
-        Ui.text(g, font, Component.literal(Tr.t("afk.kicking")).withStyle(ChatFormatting.BOLD), ix, ly + 45, Ui.VIOLET, TINY);
-        toggle(g, ix, ly + 55, iw, Tr.t("afk.kick"), settings.kick(), hits, () -> set(settings.withKick(!settings.kick())));
-        stepper(g, ix, ly + 69, iw, Tr.t("afk.kick_after"), settings.kickMinutes(), Tr.t("afk.min_afk"), mx, my, hits,
+        Ui.text(g, font, Component.literal(Tr.t("afk.kicking")).withStyle(ChatFormatting.BOLD), ix, ly + at(45), Ui.VIOLET, TINY);
+        toggle(g, ix, ly + at(55), iw, Tr.t("afk.kick"), settings.kick(), hits, () -> set(settings.withKick(!settings.kick())));
+        stepper(g, ix, ly + at(69), iw, Tr.t("afk.kick_after"), settings.kickMinutes(), Tr.t("afk.min_afk"), mx, my, hits,
                 () -> set(settings.withKickMinutes(settings.kickMinutes() - 5)), () -> set(settings.withKickMinutes(settings.kickMinutes() + 5)),
                 settings.kickMinutes() > AfkSettings.MIN_KICK, settings.kickMinutes() < AfkSettings.MAX_KICK);
-        Ui.text(g, font, Tr.t("afk.message").toUpperCase(Locale.ROOT), ix, ly + 86, Ui.MUTED, TINY);
+        Ui.text(g, font, Tr.t("afk.message").toUpperCase(Locale.ROOT), ix, ly + at(86), Ui.MUTED, TINY);
         String count = Tr.t("afk.count", settings.message().length(), AfkSettings.MAX_MESSAGE);
-        Ui.text(g, font, count, ix + iw - Ui.width(font, count, TINY), ly + 86, settings.message().length() >= AfkSettings.MAX_MESSAGE ? Ui.GOLD : Ui.MUTED, TINY);
+        Ui.text(g, font, count, ix + iw - Ui.width(font, count, TINY), ly + at(86), settings.message().length() >= AfkSettings.MAX_MESSAGE ? Ui.GOLD : Ui.MUTED, TINY);
 
-        Ui.text(g, font, Component.literal(Tr.t("afk.macros")).withStyle(ChatFormatting.BOLD), ix, ly + 112, Ui.VIOLET, TINY);
-        toggle(g, ix, ly + 121, iw, Tr.t("afk.macros_switch"), settings.macros(), hits, () -> set(settings.withMacros(!settings.macros())));
-        int ty = ly + 134;
+        Ui.text(g, font, Component.literal(Tr.t("afk.macros")).withStyle(ChatFormatting.BOLD), ix, ly + at(112), Ui.VIOLET, TINY);
+        toggle(g, ix, ly + at(121), iw, Tr.t("afk.macros_switch"), settings.macros(), hits, () -> set(settings.withMacros(!settings.macros())));
+        int ty = ly + at(134);
         List<String> what = Ui.wrap(font, Tr.t("afk.macros_text"), iw, TINY);
         for (String line : what.subList(0, Math.min(4, what.size()))) {
+            if (ty + 6 > ly + leftH()) {
+                break;
+            }
             Ui.text(g, font, line, ix, ty, Ui.MUTED, TINY);
             ty += 6;
         }
@@ -191,18 +226,20 @@ final class AfkTab {
     @Nullable
     private String drawList(GuiGraphics g, int x, int y, int mx, int my) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
+        int px = x + RIGHT_X, py = y + TOP, rw = rightW(), grow = grow();
+        Ui.inset(g, px, py, rw, boxH());
         List<AdminAfkPacket.Row> rows = data == null ? List.of() : data.rows();
         long afkCount = rows.stream().filter(r -> !r.typedAway()).count();
-        Ui.text(g, font, Component.literal(Tr.t("afk.now", afkCount)).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
         String all = Tr.t("afk.all_servers");
-        Ui.text(g, font, all, px + RIGHT_W - 5 - Ui.width(font, all, TINY), py + 5, Ui.MUTED, TINY);
+        int allW = Ui.width(font, all, TINY);
+        String now = Ui.fitBold(font, Tr.t("afk.now", afkCount), rw - 14 - allW, TINY);
+        Ui.text(g, font, Component.literal(now).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
+        Ui.text(g, font, all, px + rw - 5 - allW, py + 5, Ui.MUTED, TINY);
         if (rows.isEmpty()) {
-            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "afk.waiting" : "afk.nobody"), RIGHT_W - 10, TINY), px + 5, py + 18, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t(data == null ? "afk.waiting" : "afk.nobody"), rw - 10, TINY), px + 5, py + 18, Ui.MUTED, TINY);
             return null;
         }
-        int top = py + 15, visible = (BOX_H - 17) / ROW;
+        int top = py + 15, visible = Math.max(1, (boxH() - 17) / ROW);
         scroll = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - visible)));
         long since = System.currentTimeMillis() - receivedAt;
         int srvW = 0;
@@ -217,9 +254,9 @@ final class AfkTab {
             AdminAfkPacket.Row r = rows.get(scroll + i);
             int ry = top + i * ROW;
             g.fill(px + 5, ry + 2, px + 9, ry + 6, AMBER);
-            String name = Ui.fit(font, r.name(), r.macro() ? 34 : 48, SMALL);
+            String name = Ui.fitBold(font, r.name(), (r.macro() ? 34 : 48) + grow, SMALL);
             Ui.text(g, font, Component.literal(name).withStyle(ChatFormatting.BOLD), px + 13, ry + 1, 0xFF000000 | r.colour(), SMALL);
-            int cursor = px + 13 + Ui.width(font, name, SMALL) + 3;
+            int cursor = px + 13 + Ui.widthBold(font, name, SMALL) + 3;
             if (r.macro()) {
                 g.fill(cursor, ry, cursor + pillW, ry + 8, PILL);
                 Ui.text(g, font, pill, cursor + 3, ry + 2, Ui.GOLD, TINY);
@@ -232,7 +269,7 @@ final class AfkTab {
                 }
                 cursor += pillW + 3;
             }
-            int wx = Math.max(px + 66, cursor), room = RIGHT_W - (wx - px) - srvW - 8;
+            int wx = Math.max(px + 66 + grow, cursor), room = rw - (wx - px) - srvW - 8;
             String when;
             String warn = "";
             int warnColour = RED;
@@ -255,11 +292,11 @@ final class AfkTab {
                 }
             }
             Ui.text(g, font, Ui.fit(font, when, room, TINY), wx, ry + 2, Ui.MUTED, TINY);
-            if (!warn.isEmpty()) {
-                int ww = Ui.width(font, when, TINY) + 4;
+            int ww = Ui.width(font, when, TINY) + 4;
+            if (!warn.isEmpty() && ww < room) {
                 Ui.text(g, font, Ui.fit(font, warn, Math.max(0, room - ww), TINY), wx + ww, ry + 2, warnColour, TINY);
             }
-            int sx = px + RIGHT_W - 4 - srvW;
+            int sx = px + rw - 4 - srvW;
             g.fill(sx, ry, sx + srvW, ry + 8, 0xFF1B2230);
             Ui.text(g, font, Ui.fit(font, r.server(), srvW - 4, TINY), sx + 3, ry + 2, Ui.MUTED, TINY);
         }

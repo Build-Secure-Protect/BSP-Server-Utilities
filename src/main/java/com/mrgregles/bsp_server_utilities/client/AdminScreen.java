@@ -20,17 +20,27 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}), SUPPORT ({@link SupportTab}) and TUTORIAL ({@link TutorialTab}) tabs.
+ * The admin panel ({@code /su}, owner decisions D6, D34 to D39), almost full screen with a list of tabs down the left
+ * (D754 to D757, {@code tools/preview/staff_fullscreen_refined.html}): the RULES page ({@code tools/preview/rules_refined.html}),
+ * STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}), SUPPORT ({@link SupportTab}) and TUTORIAL ({@link TutorialTab}).
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
  * and when another row is picked or the panel closes; the server answers with a fresh view.
  */
 public class AdminScreen extends Screen {
-    static final int W = 344, H = 210;
-    private static final int PAD = 8, LIST_X = 8, LIST_Y = 22, LIST_W = 110, LIST_H = 158, ROW_H = 12;
-    private static final int PANE_X = 126, PANE_W = 210, KEY_H = 13, FOOTER_H = 14;
+    /**
+     * The screen fills the window less {@link #MARGIN} on each side and is never smaller than the panel it once was, unless
+     * the window is (D756). The tab list runs down the left ({@link #SIDE_W}) under the title bar ({@link #TITLE_H}); each
+     * tab draws in the page beside it: {@link #left()}, {@link #top()}, {@link #pageW()}, {@link #pageH()} (D754).
+     */
+    static final int MIN_W = 344, MIN_H = 210, MARGIN = 8, SIDE_W = 74, TITLE_H = 18;
+    /** Below this panel height the tab list packs tighter so every tab fits. */
+    private static final int COMPACT_BELOW = 254;
+    private static final int PAD = 8, LIST_X = 8, LIST_Y = 22, LIST_W = 110, ROW_H = 12;
+    private static final int PANE_X = 126, PANE_MAX = 300, KEY_H = 13, FOOTER_H = 14;
+    /** How often the tab list's counts are asked for while the screen is open. */
+    private static final int COUNTS_TICKS = 200;
     private static final float SMALL = 0.7f, TINY = 0.6f, TAB_SCALE = 0.55f;
     private static final int SAVE_DELAY_TICKS = 20;
     private static final long SURE_MS = 3000;
@@ -55,7 +65,18 @@ public class AdminScreen extends Screen {
     private String note = "";
     private long noteUntil;
     private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10, TUTORIAL = 11;
+    /** The tab list's groups (D755), each a heading key and its tabs in order. */
+    private static final String[] GROUP_KEYS = {"admin.group.players", "admin.group.staff", "admin.group.world", "admin.group.network"};
+    private static final int[][] GROUPS = {{RULES, CLIENTS, AFK}, {STAFF, LOG}, {CHUNKS, MOBS, DROPS, ROOMS}, {SERVERS, SUPPORT, TUTORIAL}};
+    /** Each tab's name and its page line, written out in full so the language check sees every key. */
+    private static final String[] TAB_KEYS = {"admin.tab.rules", "admin.tab.staff", "admin.tab.log", "admin.tab.afk", "admin.tab.chunks", "admin.tab.drops", "admin.tab.clients", "admin.tab.servers", "admin.tab.rooms", "admin.tab.mobs", "admin.tab.support", "admin.tab.tutorial"};
+    private static final String[] PAGE_KEYS = {"admin.page.rules", "admin.page.staff", "admin.page.log", "admin.page.afk", "admin.page.chunks", "admin.page.drops", "admin.page.clients", "admin.page.servers", "admin.page.rooms", "admin.page.mobs", "admin.page.support", "admin.page.tutorial"};
     private int tab = RULES;
+    @Nullable
+    private com.mrgregles.bsp_server_utilities.network.AdminCountsPacket counts;
+    private int countsIn;
+    /** When the arrow keys last moved the tab list: held keys repeat, and each tab asks the server for its data. */
+    private long arrowAt;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
     private final AfkTab afk = new AfkTab(this);
@@ -82,14 +103,50 @@ public class AdminScreen extends Screen {
         return false;
     }
 
-    int left() {
-        return (width - W) / 2;
+    int panelW() {
+        return Math.max(width - 2 * MARGIN, Math.min(width, MIN_W));
     }
 
-    /** The top of the tabs' drawing; in the guide the panel is taller and the body sits under the guide strip. */
+    int panelH() {
+        return Math.max(height - 2 * MARGIN, Math.min(height, MIN_H));
+    }
+
+    int panelLeft() {
+        return (width - panelW()) / 2;
+    }
+
+    int panelTop() {
+        return (height - panelH()) / 2;
+    }
+
+    /** The height the setup guide's strip takes under the title bar. */
+    private int guideOff() {
+        return guide != null ? SetupGuide.OFFSET : 0;
+    }
+
+    /** The page's left edge: tabs draw from here, 8 in from it. */
+    int left() {
+        return panelLeft() + SIDE_W;
+    }
+
+    /** The page's top: a tab's heading line takes the first 22, its body starts below that. */
     int top() {
-        int off = guide != null ? SetupGuide.OFFSET : 0;
-        return (height - H - off) / 2 + off;
+        return panelTop() + TITLE_H + guideOff();
+    }
+
+    /** The page's width, what each tab lays out in (the fixed panel's 344 once). */
+    int pageW() {
+        return panelW() - SIDE_W;
+    }
+
+    /** The page's height, down to the panel's bottom edge (the fixed panel's 210 once). */
+    int pageH() {
+        return panelH() - TITLE_H - guideOff();
+    }
+
+    /** The tab list's open-tab counts arrived: refused today, and chunks over a limit. */
+    void acceptCounts(com.mrgregles.bsp_server_utilities.network.AdminCountsPacket p) {
+        counts = p;
     }
 
     // ------------------------------------------------------------------ data
@@ -221,6 +278,9 @@ public class AdminScreen extends Screen {
         rebuild();
         send(AdminRulesPacket.of(AdminRulesPacket.Action.REFRESH)); // fresh on opening, and when back from PREVIEW
         openTab();
+        if (counts == null) {
+            askCounts(); // a resize runs init again: the timer asks after that (review of SU-154)
+        }
     }
 
     Font font() {
@@ -371,6 +431,7 @@ public class AdminScreen extends Screen {
         if (tab == next) {
             return;
         }
+        log.closeMenu();
         if (tab == TUTORIAL) {
             tutorial.close();
         }
@@ -384,6 +445,13 @@ public class AdminScreen extends Screen {
     }
 
     private void rebuild() {
+        buildWidgets();
+        if (getFocused() != null && !children().contains(getFocused())) {
+            setFocused(null); // a box taken away keeps the focus otherwise, and swallows keys (review of SU-154)
+        }
+    }
+
+    private void buildWidgets() {
         clearWidgets();
         titleBox = headingBox = null;
         textBox = introBox = leaveBox = null;
@@ -430,10 +498,10 @@ public class AdminScreen extends Screen {
             support.addWidgets(left(), top());
             return;
         }
-        int x = left() + PANE_X, y = top();
+        int x = left() + PANE_X, y = top(), paneW = paneW(), room = textRoom();
         loading = true;
         if (selected == POPUP) {
-            headingBox = new EditBox(font, x + 1, y + 30, PANE_W - 2, 12, Component.literal(Tr.t("rules.heading")));
+            headingBox = new EditBox(font, x + 1, y + 30, paneW - 2, 12, Component.literal(Tr.t("rules.heading")));
             headingBox.setMaxLength(RuleSet.MAX_HEADING);
             headingBox.setValue(fHeading);
             headingBox.setResponder(s -> {
@@ -441,10 +509,11 @@ public class AdminScreen extends Screen {
                 changed();
             });
             addRenderableWidget(headingBox);
-            introBox = multi(x, y + 54, 48, RuleSet.MAX_INTRO, fIntro, Tr.t("rules.intro"), s -> fIntro = s);
-            leaveBox = multi(x, y + 113, 47, RuleSet.MAX_LEAVE, fLeave, Tr.t("rules.leave_message"), s -> fLeave = s);
+            int introH = introH();
+            introBox = multi(x, y + 54, introH, RuleSet.MAX_INTRO, fIntro, Tr.t("rules.intro"), s -> fIntro = s);
+            leaveBox = multi(x, y + 54 + introH + 11, room - introH - 11, RuleSet.MAX_LEAVE, fLeave, Tr.t("rules.leave_message"), s -> fLeave = s);
         } else {
-            titleBox = new EditBox(font, x + 1, y + 30, PANE_W - 2, 12, Component.literal(Tr.t("rules.title")));
+            titleBox = new EditBox(font, x + 1, y + 30, paneW - 2, 12, Component.literal(Tr.t("rules.title")));
             titleBox.setMaxLength(RuleSet.MAX_TITLE);
             titleBox.setValue(fTitle);
             titleBox.setResponder(s -> {
@@ -452,13 +521,33 @@ public class AdminScreen extends Screen {
                 changed();
             });
             addRenderableWidget(titleBox);
-            textBox = multi(x, y + 54, 106, RuleSet.MAX_TEXT, fText, Tr.t("rules.text"), s -> fText = s);
+            textBox = multi(x, y + 54, room, RuleSet.MAX_TEXT, fText, Tr.t("rules.text"), s -> fText = s);
         }
         loading = false;
     }
 
+    /** The RULES page's right side: as wide as the page allows, up to {@link #PANE_MAX} (D757). */
+    private int paneW() {
+        return Math.min(PANE_MAX, pageW() - PANE_X - PAD);
+    }
+
+    /** The rules list's height: down to the footer. */
+    private int listH() {
+        return pageH() - LIST_Y - 30;
+    }
+
+    /** The height under the first box for the text boxes: down to UP, DOWN and DELETE (106 on the fixed panel). */
+    private int textRoom() {
+        return pageH() - 104;
+    }
+
+    /** The popup's intro box: half the room, the leave message the rest. */
+    private int introH() {
+        return (textRoom() - 11) / 2;
+    }
+
     private MultiLineEditBox multi(int x, int y, int h, int limit, String value, String label, java.util.function.Consumer<String> into) {
-        MultiLineEditBox box = new MultiLineEditBox(font, x, y, PANE_W, h, Component.empty(), Component.literal(label));
+        MultiLineEditBox box = new MultiLineEditBox(font, x, y, paneW(), h, Component.empty(), Component.literal(label));
         box.setCharacterLimit(limit);
         box.setValue(value);
         box.setValueListener(s -> {
@@ -469,8 +558,16 @@ public class AdminScreen extends Screen {
         return box;
     }
 
+    private void askCounts() {
+        countsIn = COUNTS_TICKS;
+        ServerUtilsNetwork.CHANNEL.sendToServer(new com.mrgregles.bsp_server_utilities.network.AdminCountsAskPacket());
+    }
+
     @Override
     public void tick() {
+        if (--countsIn <= 0) {
+            askCounts();
+        }
         if (guide != null) {
             guide.tick();
         }
@@ -539,47 +636,158 @@ public class AdminScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float partial) {
         renderBackground(g);
         hits.clear();
+        int px = panelLeft(), py = panelTop(), pw = panelW(), ph = panelH();
+        g.fill(px, py, px + pw, py + ph, Ui.PANEL);
+        Ui.frame(g, px, py, pw, ph, Ui.VIOLET);
+        drawTitleBar(g, px, py, pw, mx, my);
+        if (guide != null) {
+            guide.renderStrip(g, px + 1, py + TITLE_H, pw - 2);
+        }
+        drawSide(g, px, py + TITLE_H + guideOff(), py + ph, mx, my);
         int x = left(), y = top();
-        int off = guide != null ? SetupGuide.OFFSET : 0;
-        int frameTop = y - off;
-        g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
-        Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
-        String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
-                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs"), Tr.t("admin.tab.support"), Tr.t("admin.tab.tutorial")};
-        int tx = x + W - PAD;
-        for (int i = tabs.length - 1; i >= 0; i--) {
-            // twelve keys beside the title (D191; ROOMS, SU-59; MOBS, D478; SUPPORT, D605; TUTORIAL, D719): labels at 0.55
-            // measured bold, 2 of padding and 1 between, so the row leaves the title its room (audit of SU-146)
-            int labelW = Ui.widthBold(font, tabs[i], TAB_SCALE);
-            int tabW = labelW + 2;
-            tx -= tabW;
-            boolean on = i == litTab();
-            g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
-            Ui.text(g, font, Component.literal(tabs[i]).withStyle(ChatFormatting.BOLD), tx + (tabW - labelW) / 2, frameTop + 9, on ? Ui.INK : Ui.MUTED, TAB_SCALE);
-            int which = i;
-            if (guide == null) {
-                hits.add(new Ui.Hit(tx, y + 5, tabW, 13, () -> showTab(which))); // in the guide the row only shows where you are (D161)
-            }
-            tx -= 1;
-        }
-        // the title in the room the tabs leave, measured bold as drawn; smaller when the tabs need the room, and the short
-        // title when the full one would be too small to read (eleven tabs, SU-93 audit); never drawn when even the short
-        // title does not fit, so the scale is never below zero (audit of SU-146)
-        int room = tx - x - PAD - 2;
-        Component title = Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD);
-        float titleScale = Math.min(1f, room / (float) Math.max(1, font.width(title)));
-        if (titleScale < 0.55f) {
-            title = Component.literal(Tr.t("admin.title_short")).withStyle(ChatFormatting.BOLD);
-            titleScale = room >= font.width(title) ? 1f : 0f;
-        }
-        if (titleScale > 0f) {
-            Ui.text(g, font, title, x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
-        }
+        drawPageHead(g, x, y);
         if (guide != null) {
             renderGuide(g, x, y, mx, my, partial);
             return;
         }
         renderTab(g, x, y, mx, my, partial);
+    }
+
+    /** The title, this server and how many are on it (from the counts), and the close key. */
+    private void drawTitleBar(GuiGraphics g, int px, int py, int pw, int mx, int my) {
+        g.fill(px + 1, py + TITLE_H - 1, px + pw - 1, py + TITLE_H, Ui.DIM);
+        int cx = px + pw - 15;
+        boolean hover = mx >= cx && mx < cx + 12 && my >= py + 3 && my < py + 15;
+        if (hover) {
+            g.fill(cx, py + 3, cx + 12, py + 15, 0x22B58CFF);
+        }
+        Ui.text(g, font, Component.literal("×").withStyle(ChatFormatting.BOLD), cx + 3, py + 5, hover ? Ui.VIOLET : Ui.MUTED, 1f);
+        hits.add(new Ui.Hit(cx, py + 3, 12, 12, this::onClose));
+        int room = cx - 6 - (px + PAD);
+        Component title = Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD);
+        if (font.width(title) > room) {
+            title = Component.literal(Tr.t("admin.title_short")).withStyle(ChatFormatting.BOLD);
+        }
+        Ui.text(g, font, title, px + PAD, py + 5, Ui.VIOLET, 1f);
+        int after = px + PAD + font.width(title) + 8;
+        if (counts != null && !counts.here().isEmpty() && cx - 6 > after) {
+            String where = Tr.t("admin.here", counts.here(), counts.online());
+            Ui.text(g, font, Ui.fit(font, where, cx - 6 - after, TINY), after, py + 7, Ui.MUTED, TINY);
+        }
+    }
+
+    /** The tab list (D754, D755): group headings, the open tab in violet, gold counts; in the guide, where it is only. */
+    private void drawSide(GuiGraphics g, int px, int sy, int bottom, int mx, int my) {
+        g.fill(px + 1, sy, px + SIDE_W, bottom - 1, Ui.SLOT);
+        g.fill(px + SIDE_W - 1, sy, px + SIDE_W, bottom - 1, Ui.DIM);
+        boolean compact = panelH() < COMPACT_BELOW;
+        int itemH = compact ? 11 : 12, headH = compact ? 9 : 12, y = sy + 3, lit = litTab();
+        for (int gi = 0; gi < GROUPS.length; gi++) {
+            String head = Ui.fitBold(font, Tr.t(GROUP_KEYS[gi]).toUpperCase(Locale.ROOT), SIDE_W - 12, TINY);
+            Ui.text(g, font, Component.literal(head).withStyle(ChatFormatting.BOLD), px + 7, y + headH - 7, 0xFF6B7180, TINY);
+            y += headH;
+            for (int t : GROUPS[gi]) {
+                boolean on = t == lit, done = guide != null && t != lit && guide.done(featureOf(t));
+                boolean hover = guide == null && !on && mx >= px + 1 && mx < px + SIDE_W - 1 && my >= y && my < y + itemH;
+                if (on) {
+                    g.fill(px + 1, y, px + SIDE_W - 1, y + itemH, 0xFF1A1530);
+                    g.fill(px + 1, y, px + 3, y + itemH, Ui.VIOLET);
+                } else if (hover) {
+                    g.fill(px + 1, y, px + SIDE_W - 1, y + itemH, 0x22B58CFF);
+                }
+                int colour = on ? Ui.VIOLET : done ? Ui.TEAL : guide != null ? 0xFF6B7180 : Ui.MUTED;
+                int dy = y + (itemH - 4) / 2;
+                g.fill(px + 7, dy, px + 11, dy + 4, on ? Ui.VIOLET : done ? Ui.TEAL : 0xFF3A4150);
+                String count = guide == null ? count(t) : "";
+                int cw = count.isEmpty() ? 0 : Ui.width(font, count, TINY) + 3;
+                String label = Ui.fitBold(font, Tr.t(TAB_KEYS[t]), SIDE_W - 22 - cw, SMALL);
+                Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), px + 15, y + (itemH - 6) / 2, colour, SMALL);
+                if (!count.isEmpty()) {
+                    Ui.text(g, font, count, px + SIDE_W - 5 - Ui.width(font, count, TINY), y + (itemH - 4) / 2, Ui.GOLD, TINY);
+                }
+                int which = t;
+                if (guide == null) {
+                    hits.add(new Ui.Hit(px + 1, y, SIDE_W - 2, itemH, () -> showTab(which))); // in the guide the list only shows where you are (D161)
+                }
+                y += itemH;
+            }
+        }
+    }
+
+    /** A tab's gold count, or empty: refusals today on CLIENTS, chunks over a limit on ENTITIES. */
+    private String count(int t) {
+        if (counts == null) {
+            return "";
+        }
+        int n = t == CLIENTS ? counts.refused() : t == MOBS ? counts.crowded() : 0;
+        return n <= 0 ? "" : n > 99 ? "99+" : Integer.toString(n);
+    }
+
+    /** The page's heading line: the open tab's name and what it is for (the guide's own pages have none). */
+    private void drawPageHead(GuiGraphics g, int x, int y) {
+        int lit = litTab();
+        if (lit < 0) {
+            return;
+        }
+        String name = Tr.t(TAB_KEYS[lit]);
+        Ui.text(g, font, Component.literal(name).withStyle(ChatFormatting.BOLD), x + PAD, y + 7, Ui.TEXT, 0.8f);
+        int nw = Ui.widthBold(font, name, 0.8f) + 6;
+        String about = Ui.fit(font, Tr.t(PAGE_KEYS[lit]), pageW() - 2 * PAD - nw, TINY);
+        Ui.text(g, font, about, x + PAD + nw, y + 9, Ui.MUTED, TINY);
+    }
+
+    /** The guide's feature for a tab, for its done mark; null when the tab has no page of its own. */
+    @Nullable
+    private static com.mrgregles.bsp_server_utilities.setup.Feature featureOf(int t) {
+        return switch (t) {
+            case STAFF -> com.mrgregles.bsp_server_utilities.setup.Feature.STAFF;
+            case RULES -> com.mrgregles.bsp_server_utilities.setup.Feature.RULES;
+            case LOG -> com.mrgregles.bsp_server_utilities.setup.Feature.LOG;
+            case AFK -> com.mrgregles.bsp_server_utilities.setup.Feature.AFK;
+            case CHUNKS -> com.mrgregles.bsp_server_utilities.setup.Feature.CHUNKS;
+            case DROPS -> com.mrgregles.bsp_server_utilities.setup.Feature.DESPAWN;
+            case SERVERS -> com.mrgregles.bsp_server_utilities.setup.Feature.SERVERS;
+            case TUTORIAL -> com.mrgregles.bsp_server_utilities.setup.Feature.TUTORIAL;
+            case CLIENTS -> com.mrgregles.bsp_server_utilities.setup.Feature.CHECK;
+            default -> null;
+        };
+    }
+
+    /** The tabs in the list's order, for the arrow keys. */
+    private static int[] order() {
+        int[] out = new int[TAB_KEYS.length];
+        int i = 0;
+        for (int[] group : GROUPS) {
+            for (int t : group) {
+                out[i++] = t;
+            }
+        }
+        return java.util.Arrays.copyOf(out, i);
+    }
+
+    /** Up and down move through the tab list while no box is being typed in (not in the guide). */
+    @Override
+    public boolean keyPressed(int key, int scan, int modifiers) {
+        boolean typing = getFocused() instanceof EditBox || getFocused() instanceof MultiLineEditBox;
+        boolean menu = tab == LOG && log.menuOpen();
+        if (guide == null && !typing && !menu && modifiers == 0 && (key == org.lwjgl.glfw.GLFW.GLFW_KEY_UP || key == org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN)) {
+            long now = System.currentTimeMillis();
+            if (now - arrowAt < 150) {
+                return true;
+            }
+            arrowAt = now;
+            int[] order = order();
+            int at = 0;
+            for (int i = 0; i < order.length; i++) {
+                if (order[i] == tab) {
+                    at = i;
+                }
+            }
+            int next = Mth.clamp(at + (key == org.lwjgl.glfw.GLFW.GLFW_KEY_UP ? -1 : 1), 0, order.length - 1);
+            showTab(order[next]);
+            return true;
+        }
+        return super.keyPressed(key, scan, modifiers);
     }
 
     /** A guide page: its own body, or the page's tab with the tab's footer hidden; then the strip and the footer keys. */
@@ -589,10 +797,13 @@ public class AdminScreen extends Screen {
             super.render(g, mx, my, partial);
         } else {
             int before = hits.size();
-            Ui.scissor(g, x, y + 20, x + W, y + H - 24);
+            Ui.scissor(g, x, y + 20, x + pageW(), y + pageH() - 24);
             renderTab(g, x, y, mx, my, partial);
             g.disableScissor();
-            int footer = y + H - 24;
+            if (tab == LOG) {
+                log.overlay(g, x, y, mx, my, hits);
+            }
+            int footer = y + pageH() - 24;
             for (int i = hits.size() - 1; i >= before; i--) {
                 if (hits.get(i).y() >= footer) {
                     hits.remove(i); // the tab's own footer keys are under the guide's
@@ -656,7 +867,9 @@ public class AdminScreen extends Screen {
         if (tab == LOG) {
             log.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the search box
-            log.overlay(g, x, y, mx, my, hits);
+            if (guide == null) {
+                log.overlay(g, x, y, mx, my, hits); // in the guide it is drawn after the clip (audit of SU-154)
+            }
             return;
         }
         drawList(g, x, y, mx, my);
@@ -669,8 +882,9 @@ public class AdminScreen extends Screen {
 
     private void drawList(GuiGraphics g, int x, int y, int mx, int my) {
         int lx = x + LIST_X, ly = y + LIST_Y;
-        Ui.inset(g, lx, ly, LIST_W, LIST_H);
-        int rowsH = LIST_H - ROW_H - 4; // the + ADD RULE row stays at the bottom
+        int listH = listH();
+        Ui.inset(g, lx, ly, LIST_W, listH);
+        int rowsH = listH - ROW_H - 4; // the + ADD RULE row stays at the bottom
         List<RuleSet.Rule> rules = view.rules();
         int contentH = (rules.size() + 1) * ROW_H;
         listScroll = Mth.clamp(listScroll, 0, Math.max(0, contentH - rowsH));
@@ -685,7 +899,7 @@ public class AdminScreen extends Screen {
         }
         g.disableScissor();
         // + ADD RULE and the count
-        int ay = ly + LIST_H - ROW_H - 1;
+        int ay = ly + listH - ROW_H - 1;
         boolean full = rules.size() >= RuleSet.MAX_RULES;
         boolean hover = !full && mx >= lx && mx < lx + LIST_W && my >= ay && my < ay + ROW_H;
         if (hover) {
@@ -715,45 +929,45 @@ public class AdminScreen extends Screen {
     }
 
     private void drawPane(GuiGraphics g, int x, int y, int mx, int my) {
-        int px = x + PANE_X;
+        int px = x + PANE_X, paneW = paneW();
         if (selected == POPUP) {
             label(g, px, y + 22, Tr.t("rules.heading"), fHeading.length(), RuleSet.MAX_HEADING);
             label(g, px, y + 46, Tr.t("rules.intro"), fIntro.length(), RuleSet.MAX_INTRO);
-            label(g, px, y + 105, Tr.t("rules.leave_message"), fLeave.length(), RuleSet.MAX_LEAVE);
+            label(g, px, y + 54 + introH() + 3, Tr.t("rules.leave_message"), fLeave.length(), RuleSet.MAX_LEAVE);
         } else {
             label(g, px, y + 22, Tr.t("rules.title"), fTitle.length(), RuleSet.MAX_TITLE);
             label(g, px, y + 46, Tr.t("rules.text"), fText.length(), RuleSet.MAX_TEXT);
-            int ky = y + 164;
+            int ky = y + pageH() - 46;
             int n = view.rules().size();
             key(g, px, ky, 26, Tr.t("rules.up"), KeyStyle.PLAIN, selected > 0, mx, my, () -> move(-1));
             key(g, px + 30, ky, 34, Tr.t("rules.down"), KeyStyle.PLAIN, selected < n - 1, mx, my, () -> move(1));
             boolean sure = System.currentTimeMillis() < deleteSureUntil;
-            key(g, px + PANE_W - 44, ky, 44, Tr.t(sure ? "rules.sure" : "rules.delete"), sure ? KeyStyle.SURE : KeyStyle.WARN, true, mx, my, this::delete);
+            key(g, px + paneW - 44, ky, 44, Tr.t(sure ? "rules.sure" : "rules.delete"), sure ? KeyStyle.SURE : KeyStyle.WARN, true, mx, my, this::delete);
         }
         if (System.currentTimeMillis() < noteUntil) {
-            String s = Ui.fit(font, note, PANE_W, TINY);
-            Ui.text(g, font, s, px + PANE_W - Ui.width(font, s, TINY), y + 180, Ui.MUTED, TINY);
+            String s = Ui.fit(font, note, paneW, TINY);
+            Ui.text(g, font, s, px + paneW - Ui.width(font, s, TINY), y + pageH() - 30, Ui.MUTED, TINY);
         }
     }
 
     private void label(GuiGraphics g, int px, int y, String label, int used, int max) {
         Ui.text(g, font, label.toUpperCase(Locale.ROOT), px, y, Ui.MUTED, TINY);
         String count = Tr.t("rules.count", used, max);
-        Ui.text(g, font, count, px + PANE_W - Ui.width(font, count, TINY), y, used >= max ? Ui.GOLD : Ui.MUTED, TINY);
+        Ui.text(g, font, count, px + paneW() - Ui.width(font, count, TINY), y, used >= max ? Ui.GOLD : Ui.MUTED, TINY);
     }
 
     private void drawFooter(GuiGraphics g, int x, int y, int mx, int my) {
-        int fy = y + H - PAD - FOOTER_H;
+        int fy = y + pageH() - PAD - FOOTER_H, W = pageW();
         String status = view.agreed() < 0 ? Tr.t("rules.version_counting", view.version()) : Tr.t("rules.version_agreed", view.version(), view.agreed());
         boolean sure = System.currentTimeMillis() < askSureUntil;
         String ask = Tr.t(sure ? "rules.sure" : "rules.ask_again");
-        int askW = Ui.width(font, Tr.t("rules.ask_again"), TINY) + 16;
+        int askW = Ui.widthBold(font, Tr.t("rules.ask_again"), TINY) + 16;
         String preview = Tr.t("rules.preview");
-        int previewW = Math.max(46, Ui.width(font, preview, TINY) + 16);
+        int previewW = Math.max(46, Ui.widthBold(font, preview, TINY) + 16);
         key(g, x + W - PAD - askW, fy, askW, ask, sure ? KeyStyle.SURE : KeyStyle.WARN, true, mx, my, this::askAgain, FOOTER_H);
         key(g, x + W - PAD - askW - 4 - previewW, fy, previewW, preview, KeyStyle.GHOST, !view.rules().isEmpty(), mx, my, this::preview, FOOTER_H);
         String setupKey = Tr.t("admin.setup.guide_key");
-        int setupW = Ui.width(font, setupKey, TINY) + 16;
+        int setupW = Ui.widthBold(font, setupKey, TINY) + 16;
         key(g, x + W - PAD - askW - 4 - previewW - 4 - setupW, fy, setupW, setupKey, KeyStyle.GHOST, true, mx, my,
                 () -> ServerUtilsNetwork.CHANNEL.sendToServer(com.mrgregles.bsp_server_utilities.network.SetupEditPacket.of(com.mrgregles.bsp_server_utilities.network.SetupEditPacket.Action.OPEN)), FOOTER_H);
         Ui.text(g, font, Ui.fit(font, status, W - 4 * PAD - askW - previewW - setupW, TINY), x + PAD, fy + 5, Ui.MUTED, TINY);
@@ -793,8 +1007,8 @@ public class AdminScreen extends Screen {
         if (!enabled) {
             text = 0xFF5A6170;
         }
-        String s = Ui.fit(font, label, w - 6, TINY);
-        Ui.text(g, font, Component.literal(s).withStyle(ChatFormatting.BOLD), x + (w - Ui.width(font, s, TINY)) / 2, y + (h - 5) / 2, text, TINY);
+        String s = Ui.fitBold(font, label, w - 6, TINY);
+        Ui.text(g, font, Component.literal(s).withStyle(ChatFormatting.BOLD), x + (w - Ui.widthBold(font, s, TINY)) / 2, y + (h - 5) / 2, text, TINY);
         if (enabled) {
             hits.add(new Ui.Hit(x, y, w, h, action));
         }
@@ -860,8 +1074,11 @@ public class AdminScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (mx < left() || my < top()) {
+            return false; // the tab list and the title bar do not scroll the page (review of SU-154)
+        }
         if (tab == STAFF) {
-            return staff.scroll(delta);
+            return staff.scroll(mx, delta);
         }
         if (tab == LOG) {
             return log.scroll(mx, delta);
@@ -894,7 +1111,7 @@ public class AdminScreen extends Screen {
             return super.mouseScrolled(mx, my, delta); // the sentence box, not the hidden rules list (audit of 0.15.0)
         }
         int lx = left() + LIST_X, ly = top() + LIST_Y;
-        if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + LIST_H) {
+        if (mx >= lx && mx < lx + LIST_W && my >= ly && my < ly + listH()) {
             listScroll -= (int) Math.signum(delta) * ROW_H;
             return true;
         }

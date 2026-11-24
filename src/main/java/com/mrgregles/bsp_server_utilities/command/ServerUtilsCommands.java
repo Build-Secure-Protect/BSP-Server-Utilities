@@ -108,6 +108,8 @@ public final class ServerUtilsCommands {
                         .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
                         .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
                 .then(com.mrgregles.bsp_server_utilities.support.SupportCommands.node())
+                // this server's loaded chunks and a teleport to one (SU-147, D750, D752)
+                .then(com.mrgregles.bsp_server_utilities.chunks.ChunkCommands.node())
                 // the tutorial builder (SU-142, D719)
                 .then(Commands.literal("tutorial").requires(Perms::canEdit)
                         .executes(c -> com.mrgregles.bsp_server_utilities.tutorial.TutorialAdmin.openFor(c.getSource().getPlayerOrException()) ? 1 : 0))

@@ -323,6 +323,30 @@ public final class MobLimits {
         return rows.size() > SHOWN ? List.copyOf(rows.subList(0, SHOWN)) : rows;
     }
 
+    /** How many of this server's chunks hold more mobs than their number, every chunk (not only the fullest shown). */
+    public static int localOverCount(MinecraftServer server) {
+        MobSettings s = settings(server);
+        String here = Storage.currentServerId();
+        int over = 0;
+        for (ServerLevel level : server.getAllLevels()) {
+            Map<Long, Integer> byChunk = new HashMap<>();
+            for (Entity e : level.getAllEntities()) {
+                if (counts(e, s)) {
+                    byChunk.merge(new ChunkPos(e.blockPosition()).toLong(), 1, Integer::sum);
+                }
+            }
+            String dim = dimId(level);
+            for (Map.Entry<Long, Integer> en : byChunk.entrySet()) {
+                ChunkPos c = new ChunkPos(en.getKey());
+                MobSettings.Limit l = s.limitFor(here, dim, c.x, c.z);
+                if (l.on() && en.getValue() > l.limit()) {
+                    over++;
+                }
+            }
+        }
+        return over;
+    }
+
     /** What is in a chunk, most numerous first, {@value #MAX_TYPES} kinds at most (the list). */
     public static List<MobPlan.TypeCount> types(List<Mob> mobs) {
         List<MobPlan.TypeCount> all = allTypes(mobs);

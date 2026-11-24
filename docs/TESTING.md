@@ -2613,3 +2613,96 @@ Two more independent reviews, at the owner's request. GameTests **318/318** (one
   - FINISH PATH keeps the stop as the last point at 500 points, and says so when the link has gone.
 
 **Still to check in game:** every screen at the owner's GUI scale 5, and at 1280 × 720.
+
+## 2026-11-24: `/su chunks`, this server's loaded chunks (SU-147)
+
+GameTests (`ChunkCensusGameTests`, 7): a mod's ticket loads its chunk and the two beside it, all put down to the ticket, with the held chunk and the one beside it ticking and the one two away not; entities (players not counted) and block entities counted per chunk; the busiest list orders by entities, then block entities, leaves out empty chunks and stops at five; a line runs `/su chunks tp`; the safe-place rule (ground below, room for a head, no lava or magma); the teleport lands in the chunk on a safe block and is in the Action Log as `chunk_tp`, once. **Untested in a client and on Mohist.**
+
+In game, as an operator:
+- [ ] `/su chunks` alone: a gold total line, a line per dimension with "Loaded by:" under it, "Mods' tickets", the busiest five in aqua, and a grey note. Numbers look right next to F3's chunk count (F3 counts only what this client sees, so expect fewer).
+- [ ] Hover a busiest line: "Go to a safe place in this chunk, as near its middle as there is one". Click it: you land on solid ground in that chunk, and a chat line says where.
+- [ ] `/su chunks tp minecraft:the_nether <x> <z>` on a chunk that is loaded: you land under the roof, not on the bedrock above it.
+- [ ] Stand in the End's void, far from islands (load one empty chunk), and `/su chunks tp minecraft:the_end <that chunk>`: "No safe place to stand", and you do not move.
+- [ ] `/su chunks tp minecraft:overworld 50000 50000` (not loaded): "is not loaded", you do not move, and no new land is made there (F3 or a map shows nothing).
+- [ ] An ocean chunk from the list: you land on the water's surface, not in a cave under the sea floor.
+- [ ] Action Log tab: the teleports show under "Chunk teleports" and not again under "Commands"; `/su chunks` itself shows under "Commands".
+- [ ] A player who is not an operator or admin: `/su chunks` is not offered.
+- [ ] From the console: `/su chunks` prints the readout (the lines are not clickable there).
+- [ ] On a Mohist backend: `/su chunks` works (it reads the chunk map through a mixin accessor).
+
+## 2026-11-24: audit of `/su chunks`, and its fixes (SU-147)
+
+An independent review read the code: 5 bugs and 7 smaller points. All 5 bugs are fixed, plus 4 of the smaller points; 3 are left (below). GameTests **324/324**.
+
+- A typed `/su chunks tp` could load and generate any chunk, freezing the tick while it was built, even past the world border. It now goes only to a loaded chunk inside the border; the coordinates are limited to ±1,875,000 (GameTested: refused, nothing loaded, nothing logged).
+- The ticking count used the chunk's load level, which counts the whole view distance. It now asks whether the chunk's blocks tick, which follows the simulation distance.
+- The teleport test could pass on an entry left by an earlier run. It now runs once after the chunk loads and counts this run's entries by the player's id: exactly one.
+- A move between worlds stopped by another mod or a plugin was logged and reported as done. It is now checked, and reads "was stopped".
+- Water or lava on top sent the admin down to a cave below. The surface is tried first in every column (dry ground within three blocks of the top), then the top of water, and only then lower down. Portal blocks and cobwebs are not safe.
+- Spectators count as loading chunks only when the `spectatorsGenerateChunks` game rule is on, as in Minecraft.
+- A test ticket left by a timed-out run is released at the start of the next one.
+- Wording: "held by mekanism's ticket"; the hover text no longer promises the exact middle.
+
+Left:
+- On Mohist, Bukkit keeps every world's spawn area loaded, and plugins' chunks and spigot.yml's per-world view distance are not seen, so those chunks read as "other". To check in game.
+- `/execute ... run su chunks tp ...` is logged twice (as a command and as a chunk teleport), as with the other self-logged `/su` commands.
+- No plural forms: "1 entities".
+
+## 2026-11-24: the staff screen almost full screen (SU-154)
+
+Look BB B (D754 to D757), `tools/preview/staff_fullscreen_refined.html`. Protocol **13** (the counts packet). GameTests (`AdminCountsGameTests`, 3): this server, its players and today's refusals as their sources say; a chunk of 5 mobs over a number of 1 counts (under the fullest list's floor of 10); the packet carries them unchanged. The screens themselves need a client: **untested in a client.**
+
+In game, as an operator, at 1280 x 720 (GUI scale 3), 1920 x 1080 at GUI scales 4, 3 and 2, and while resizing the window:
+- [ ] `/su`: the screen fills the window less 8 GUI px on each side; the tab list on the left with PLAYERS, STAFF, WORLD and NETWORK headings; the title bar with this server's name and how many are online, and × (closes).
+- [ ] Every tab opens from the list; the open one is violet with a bar on its left; the line under the page says what the page is for.
+- [ ] Up and down arrows move through the list; while typing in a box they move the cursor instead.
+- [ ] CLIENTS shows a gold number when someone was refused today; ENTITIES when a chunk is over a limit (wait up to 10 s after it happens).
+- [ ] Each tab at each size: no text past a box's edge, no overlap, lists show more rows on bigger windows, settings boxes keep their width.
+- [ ] RULES: the list is taller, the text boxes taller; UP, DOWN and DELETE sit under the text box.
+- [ ] LOG: the kind and server menus stay inside the screen; the wheel scrolls a long menu.
+- [ ] `/su setup`: the guide's strip under the title bar (step, a square per page, what the feature does); the tab list shows pages set up in teal and cannot be clicked; BACK, TURN OFF FEATURE, SETUP LATER and NEXT in the footer.
+- [ ] The STAFF groups column with many groups: the wheel over it scrolls the groups; + Add stays above the operators switch.
+- [ ] Known limit: a GUI narrower than 427 px (a 4:3 window such as 1024 x 768 gives 341) leaves a page under 330 px, where SERVERS and SUPPORT draw outside their boxes.
+
+## 2026-11-24: audit of the staff screen at four sizes (SU-154)
+
+Two independent layout reviews worked through every page with Minecraft's real glyph widths (from the client jar's font textures) at 427 x 240, 480 x 270, 640 x 360 and 960 x 540 GUI, and in the setup guide. 22 findings: 19 fixed, 3 left, and two smaller leftovers (below). GameTests **326/326**.
+
+- The setup guide's Finish page lost its last rows below 255 GUI px of window height: the rows pack tighter to fit the box.
+- STAFF: with many groups the rows ran over the operators switch (a click on it added a group): the groups column scrolls.
+- ROOMS: the state column cut "not placed" and the days of grace at every size, SURE? read "Sur…", and the SERVERS heading was cut: widened and fitted.
+- SERVERS: the list's scroll was not kept in range when the window grew or servers went; a long server name ran out of the sample line's box.
+- CLIENTS: "Nobody with a report is online." stayed put while the list scrolled; the refusal message box grows with the page.
+- DROPS: times of 100 to 120 min ran into the ×.
+- CHUNKS: the last no-owner key ran past its box, at the old size too.
+- ENTITIES: "+N more" chips ran out of the column; the never-counted box covered its ADD key's edge; the SURE sentence lost its third line on narrow pages.
+- Bold key labels measured plain ran past their keys: ASK EVERYONE AGAIN, TURN OFF FEATURE, TURN ON FEATURE, REFRESH, ADD, CLEAR ITEMS, UNLOAD and RESTORE. The player counter's big number crossed the divider at nine digits.
+- The LOG tab's full-text hover was clipped in the guide.
+- STAFF: the ORDER label touched the swatches.
+
+Left:
+- Narrow 4:3 windows (GUI under 427 px wide): see the known limit above.
+- SUPPORT on a big page is a fixed block with the rest of the page empty (D757 keeps settings boxes their width).
+- Fitted text on the smallest window: six of the guide strip's descriptions and the Welcome page's config path end in "…".
+- CHUNKS: machines with no owner beyond the rows shown cannot be scrolled to (as before).
+- SERVERS in the guide on the smallest window: a server marked UNKNOWN with a picture in use and a different file can put the guide's status line 3 px over the sample line.
+
+## 2026-11-24: code review of the day's work (SU-147, SU-154)
+
+Three independent reviews read all the code written today: the server side and network, the staff screen's frame and the setup guide, and the 11 reworked tabs. 10 real bugs, 9 fixed; 13 smaller points, 8 fixed. GameTests **328/328**.
+
+- `/su chunks tp` could land past the world border in a chunk the border cuts through: only the columns inside are tried (GameTested).
+- The ENTITIES count read the fullest lists shown (8 at most each, and only chunks of 10 mobs or more), so it stopped at 16 and missed quiet chunks over a small number. It counts every chunk on this server (GameTested: a chunk of 5 mobs over a number of 1 counts), plus other servers' as last heard.
+- The server's name is cut to 64 characters for the counts packet (a longer one broke every answer).
+- ENTITIES: on a short window the 7th and 8th fullest chunks could not be seen: the list scrolls with the wheel.
+- The arrow keys switched tabs while the LOG tab's menu was open (and the menu came back on the next visit); holding an arrow key sent each passing tab's request: one move every 150 ms; with Shift or Ctrl held they do nothing.
+- The wheel over the tab list or the title bar scrolled the open tab.
+- A box taken away by a refresh kept the focus, swallowing keys and blocking the arrows.
+- Each step of a window resize asked the server for the counts.
+- STAFF: UP and DOWN could move the group out of view: it is scrolled to.
+- SERVERS: on a narrow page the chat tag ran over the server name: the list keeps at least 140 px.
+- The guide strip's last square (Finish) is teal once every page is set up or off.
+- The teleport GameTest no longer makes its player an operator (it wrote ops.json).
+
+Left: STAFF's group editor (the colour code box and REMOVE) runs off a page under 330 px wide, with the narrow 4:3 windows above; on Mohist a plugin that sends the player elsewhere reads as "stopped"; the player-reach guess (view distance plus two) may be one chunk out at the edge; half-typed text in the ENTITIES and CHUNKS add boxes is lost on a resize (as before); a few 1 px touches at the old size.
+

@@ -25,7 +25,7 @@ import java.util.UUID;
  * counts, and any server not heard from for five minutes in amber (R5). The server checks FREE again.
  */
 final class RoomsTab {
-    private static final int LEFT_X = 8, TOP = 22, LEFT_W = 166, BOX_H = 158, RIGHT_X = 180, RIGHT_W = 156, ROW = 10;
+    private static final int LEFT_X = 8, TOP = 22, GAP = 6, ROW = 10;
     private static final int REFRESH_TICKS = 100;
     private static final long SURE_MS = 3000, NOTE_MS = 4000;
     private static final float TINY = 0.6f, SMALL = 0.7f;
@@ -49,6 +49,31 @@ final class RoomsTab {
 
     RoomsTab(AdminScreen host) {
         this.host = host;
+    }
+
+    // ------------------------------------------------------------------ layout (from the page size; 344 x 210 gave 166, 156 and 158)
+
+    /** How much wider the page is than the old fixed panel's 344 (less than 0 on the narrowest page). */
+    private int extraW() {
+        return host.pageW() - 344;
+    }
+
+    /** The owners box's width: half the extra width goes to each box. */
+    private int leftW() {
+        return 166 + extraW() / 2;
+    }
+
+    private int rightX() {
+        return LEFT_X + leftW() + GAP;
+    }
+
+    private int rightW() {
+        return host.pageW() - rightX() - 8;
+    }
+
+    /** Both boxes' height: down to 30 above the page's bottom, where the footer is. */
+    private int boxH() {
+        return host.pageH() - TOP - 30;
     }
 
     void open() {
@@ -93,7 +118,7 @@ final class RoomsTab {
     }
 
     void addWidgets(int x, int y) {
-        searchBox = new EditBox(host.font(), x + LEFT_X + 3, y + TOP + 3, LEFT_W - 6, 11, Component.literal(Tr.t("rooms_admin.find")));
+        searchBox = new EditBox(host.font(), x + LEFT_X + 3, y + TOP + 3, leftW() - 6, 11, Component.literal(Tr.t("rooms_admin.find")));
         searchBox.setMaxLength(16);
         searchBox.setHint(Component.literal(Tr.t("rooms_admin.find")).withStyle(ChatFormatting.DARK_GRAY));
         searchBox.setValue(query);
@@ -135,22 +160,23 @@ final class RoomsTab {
 
     private void drawOwners(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int lx = x + LEFT_X, ly = y + TOP;
-        Ui.inset(g, lx, ly, LEFT_W, BOX_H);
+        int lx = x + LEFT_X, ly = y + TOP, lw = leftW(), bh = boxH();
+        Ui.inset(g, lx, ly, lw, bh);
         int hy = ly + 18;
-        int cRooms = lx + 84, cOver = lx + 116, cServers = lx + 142;
+        // the owner's name takes the extra width; the counts keep their widths at the right
+        int cRooms = lx + lw - 82, cOver = lx + lw - 50, cServers = lx + lw - 30;
         Ui.text(g, font, Tr.t("rooms_admin.owner").toUpperCase(Locale.ROOT), lx + 5, hy, Ui.MUTED, TINY);
         Ui.text(g, font, Tr.t("rooms_admin.rooms").toUpperCase(Locale.ROOT), cRooms, hy, Ui.MUTED, TINY);
         Ui.text(g, font, Tr.t("rooms_admin.over").toUpperCase(Locale.ROOT), cOver, hy, Ui.MUTED, TINY);
-        Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.servers").toUpperCase(Locale.ROOT), LEFT_W - (cServers - lx) - 3, TINY), cServers, hy, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.servers").toUpperCase(Locale.ROOT), lw - (cServers - lx) - 3, TINY), cServers, hy, Ui.MUTED, TINY);
         if (data == null) {
             return;
         }
         List<AdminRoomsPacket.Owner> owners = shown();
-        int top = ly + 27, visible = (BOX_H - 29) / ROW;
+        int top = ly + 27, visible = (bh - 29) / ROW;
         if (owners.isEmpty()) {
             String empty = data.owners().isEmpty() ? Tr.t("rooms_admin.none") : Tr.t("rooms_admin.no_match");
-            Ui.text(g, font, Ui.fit(font, empty, LEFT_W - 10, TINY), lx + 5, top + 2, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, empty, lw - 10, TINY), lx + 5, top + 2, Ui.MUTED, TINY);
             return;
         }
         ownerScroll = Math.max(0, Math.min(ownerScroll, Math.max(0, owners.size() - visible)));
@@ -160,12 +186,12 @@ final class RoomsTab {
             int ry = top + i * ROW;
             boolean on = o.id().equals(picked);
             if (on) {
-                g.fill(lx + 1, ry, lx + LEFT_W - 1, ry + ROW, PICKED);
+                g.fill(lx + 1, ry, lx + lw - 1, ry + ROW, PICKED);
                 g.fill(lx + 1, ry, lx + 3, ry + ROW, Ui.VIOLET);
-            } else if (mx >= lx && mx < lx + LEFT_W && my >= ry && my < ry + ROW) {
-                g.fill(lx + 1, ry, lx + LEFT_W - 1, ry + ROW, 0x22B58CFF);
+            } else if (mx >= lx && mx < lx + lw && my >= ry && my < ry + ROW) {
+                g.fill(lx + 1, ry, lx + lw - 1, ry + ROW, 0x22B58CFF);
             }
-            String name = Ui.fit(font, ownerName(o), cRooms - lx - 9, SMALL);
+            String name = o.name().isEmpty() ? Ui.fit(font, ownerName(o), cRooms - lx - 9, SMALL) : Ui.fitBold(font, ownerName(o), cRooms - lx - 9, SMALL);
             Ui.text(g, font, Component.literal(name).withStyle(o.name().isEmpty() ? ChatFormatting.ITALIC : ChatFormatting.BOLD), lx + 5, ry + 1, o.name().isEmpty() ? Ui.MUTED : Ui.TEXT, SMALL);
             String rooms = limit > 0 && !o.exempt() ? o.count() + " / " + limit : Integer.toString(o.count());
             Ui.text(g, font, rooms, cRooms, ry + 2, Ui.TEXT, TINY);
@@ -179,7 +205,7 @@ final class RoomsTab {
             }
             Ui.text(g, font, Integer.toString(o.servers()), cServers, ry + 2, Ui.MUTED, TINY);
             UUID id = o.id();
-            hits.add(new Ui.Hit(lx, ry, LEFT_W, ROW, () -> pick(id)));
+            hits.add(new Ui.Hit(lx, ry, lw, ROW, () -> pick(id)));
         }
     }
 
@@ -208,12 +234,12 @@ final class RoomsTab {
 
     private void drawRooms(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int px = x + RIGHT_X, py = y + TOP;
-        Ui.inset(g, px, py, RIGHT_W, BOX_H);
+        int px = x + rightX(), py = y + TOP, rw = rightW(), bh = boxH();
+        Ui.inset(g, px, py, rw, bh);
         AdminRoomsPacket.Owner owner = pickedOwner();
         boolean current = data != null && data.picked().equals(picked) && !AdminRoomsPacket.NONE.equals(picked);
         if (owner == null || !current) {
-            Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.pick"), RIGHT_W - 10, TINY), px + 5, py + 5, Ui.MUTED, TINY);
+            Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.pick"), rw - 10, TINY), px + 5, py + 5, Ui.MUTED, TINY);
             drawFoot(g, px, py, null);
             return;
         }
@@ -222,14 +248,15 @@ final class RoomsTab {
         int over = owner.over(limit);
         String overText = over > 0 ? Tr.t("rooms_admin.over_by", over) : owner.exempt() ? Tr.t("rooms_admin.exempt") : "";
         int ow = Ui.width(font, overText, TINY);
-        Ui.text(g, font, Component.literal(Ui.fit(font, head, RIGHT_W - 14 - ow, TINY)).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
+        Ui.text(g, font, Component.literal(Ui.fitBold(font, head, rw - 14 - ow, TINY)).withStyle(ChatFormatting.BOLD), px + 5, py + 5, Ui.VIOLET, TINY);
         if (!overText.isEmpty()) {
-            Ui.text(g, font, overText, px + RIGHT_W - 5 - ow, py + 5, over > 0 ? RED : Ui.VIOLET, TINY);
+            Ui.text(g, font, overText, px + rw - 5 - ow, py + 5, over > 0 ? RED : Ui.VIOLET, TINY);
         }
         List<RoomsViewPacket.Room> rooms = data.rooms();
-        int top = py + 15, visible = (BOX_H - 15 - 22) / ROW;
+        int top = py + 15, visible = (bh - 15 - 22) / ROW;
         roomScroll = Math.max(0, Math.min(roomScroll, Math.max(0, rooms.size() - visible)));
-        int cName = px + 18, cServer = px + 60, cState = px + 98, cKey = px + RIGHT_W - 25;
+        // the room's name and its server share the extra width; the size, state and key keep theirs
+        int more = rw - 156, cName = px + 18, cServer = px + 52 + more / 2, cState = px + 88 + more, cKey = px + rw - 25; // the state column fits "grace · 30 d" (audit of SU-154)
         RoomsViewPacket.Room hovered = null;
         long now = System.currentTimeMillis();
         for (int i = 0; i < visible && roomScroll + i < rooms.size(); i++) {
@@ -237,16 +264,16 @@ final class RoomsTab {
             int ry = top + i * ROW;
             String key = r.server() + "|" + r.x() + "|" + r.z();
             boolean sure = key.equals(sureKey) && now < sureUntil;
-            boolean hover = mx >= px && mx < px + RIGHT_W && my >= ry && my < ry + ROW;
+            boolean hover = mx >= px && mx < px + rw && my >= ry && my < ry + ROW;
             if (hover || sure) {
-                g.fill(px + 1, ry, px + RIGHT_W - 1, ry + ROW, PICKED);
+                g.fill(px + 1, ry, px + rw - 1, ry + ROW, PICKED);
             }
             if (hover) {
                 hovered = r;
             }
             Ui.text(g, font, Integer.toString(r.size()), px + 5, ry + 2, Ui.TEXT, TINY);
             boolean named = !r.name().isEmpty();
-            Ui.text(g, font, Component.literal(Ui.fit(font, named ? r.name() : "·", cServer - cName - 3, TINY)).withStyle(named ? ChatFormatting.BOLD : ChatFormatting.RESET),
+            Ui.text(g, font, Component.literal(named ? Ui.fitBold(font, r.name(), cServer - cName - 3, TINY) : "·").withStyle(named ? ChatFormatting.BOLD : ChatFormatting.RESET),
                     cName, ry + 2, named ? Ui.TEXT : Ui.MUTED, TINY);
             boolean here = r.here(data.server());
             Ui.text(g, font, Ui.fit(font, r.server(), cState - cServer - 3, TINY), cServer, ry + 2, here ? Ui.VIOLET : Ui.MUTED, TINY);
@@ -268,13 +295,14 @@ final class RoomsTab {
                     if (sure) {
                         g.fill(cKey, ry + 1, cKey + 22, ry + ROW - 1, 0xFFD63B2F);
                         String s = Tr.t("rooms_admin.sure");
-                        Ui.text(g, font, Component.literal(Ui.fit(font, s, 20, TINY)).withStyle(ChatFormatting.BOLD), cKey + (22 - Ui.width(font, s, TINY)) / 2, ry + 2, 0xFFFFFFFF, TINY);
+                        String sf = Ui.fitBold(font, s, 22, TINY);
+                        Ui.text(g, font, Component.literal(sf).withStyle(ChatFormatting.BOLD), cKey + (22 - Ui.widthBold(font, sf, TINY)) / 2, ry + 2, 0xFFFFFFFF, TINY);
                     } else {
-                        Ui.text(g, font, Component.literal(Tr.t("rooms_admin.free")).withStyle(ChatFormatting.BOLD), cKey + 2, ry + 2, RED, TINY);
+                        Ui.text(g, font, Component.literal(Ui.fitBold(font, Tr.t("rooms_admin.free"), 20, TINY)).withStyle(ChatFormatting.BOLD), cKey + 2, ry + 2, RED, TINY);
                     }
                     hits.add(new Ui.Hit(cKey, ry, 22, ROW, () -> free(r, key)));
                 }
-                case RoomsViewPacket.GIVE_PLACED -> Ui.text(g, font, Tr.t("rooms_admin.free"), cKey + 2, ry + 2, OFF, TINY);
+                case RoomsViewPacket.GIVE_PLACED -> Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.free"), 22, TINY), cKey + 2, ry + 2, OFF, TINY);
                 case RoomsViewPacket.GIVE_ELSEWHERE -> Ui.text(g, font, Ui.fit(font, Tr.t("rooms_admin.there"), 22, TINY), cKey + 2, ry + 2, Ui.MUTED, TINY);
                 default -> Ui.text(g, font, "·", cKey + 2, ry + 2, Ui.MUTED, TINY);
             }
@@ -285,7 +313,7 @@ final class RoomsTab {
     /** The two lines at the foot of the rooms box: a note after FREE, else the hovered room's details, else the hint. */
     private void drawFoot(GuiGraphics g, int px, int py, @Nullable RoomsViewPacket.Room r) {
         Font font = host.font();
-        int fy = py + BOX_H - 20, w = RIGHT_W - 10;
+        int fy = py + boxH() - 20, w = rightW() - 10;
         List<String> lines = new ArrayList<>();
         int colour = Ui.MUTED;
         if (System.currentTimeMillis() < noteUntil) {
@@ -336,9 +364,9 @@ final class RoomsTab {
 
     private void drawFooter(GuiGraphics g, int x, int y, List<Ui.Hit> hits) {
         Font font = host.font();
-        int fy = y + AdminScreen.H - 8 - 14;
+        int fy = y + host.pageH() - 8 - 14;
         String key = Tr.t("rooms_admin.refresh");
-        int kw = Ui.width(font, key, TINY) + 16, kx = x + AdminScreen.W - 8 - kw;
+        int kw = Ui.widthBold(font, key, TINY) + 16, kx = x + host.pageW() - 8 - kw;
         Ui.frame(g, kx, fy, kw, 14, Ui.DIM);
         Ui.text(g, font, Component.literal(key).withStyle(ChatFormatting.BOLD), kx + 8, fy + 5, Ui.MUTED, TINY);
         hits.add(new Ui.Hit(kx, fy, kw, 14, this::open));
@@ -372,7 +400,7 @@ final class RoomsTab {
 
     boolean scroll(double mx, double delta) {
         int step = (int) Math.signum(delta);
-        if (mx < drawnX + RIGHT_X) {
+        if (mx < drawnX + rightX()) {
             ownerScroll -= step;
         } else {
             roomScroll -= step;

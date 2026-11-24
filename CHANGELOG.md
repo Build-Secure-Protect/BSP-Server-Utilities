@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-24
+
+`/su chunks` (SU-147) and the staff screen almost full screen (SU-154). The network protocol is 13: players need the new modpack, and every server the new jar, at the same time.
+
+### Changed
+- The staff screen (`/su`) fills the game window less a small margin, at every window size; text stays the same size and the extra room shows more. The tabs are a list down the left side under four headings (Players: RULES, CLIENTS, AFK. Staff: STAFF, LOG. World: CHUNKS, ENTITIES, DROPS, ROOMS. Network: SERVERS, SUPPORT, TUTORIAL). The up and down arrow keys move through the list while no box is being typed in. A gold number beside CLIENTS counts today's refusals (up to 20, as many as the list keeps), and beside ENTITIES the chunks over a mob, item or arrow limit: every one on this server, and other servers' fullest as last heard while someone had the ENTITIES tab open. Both are asked for when the screen opens and every 10 seconds. The title bar names this server and how many are on it, with a close key. Each page has a line under it saying what the page is for. Lists show more rows and give the extra width to their longest column. Settings boxes keep their width. In the setup guide its strip runs under the title bar, and the tab list shows the pages set up in teal.
+
+### Added
+- `/su chunks` (operators and BSP-Core admins, and the console): this server's loaded chunks. It gives a total and, for each dimension, how many chunks are loaded and how many tick (within the simulation distance or a ticket's reach), the entities in them (players not counted) and the block entities. Each dimension also says what loads its chunks: players nearby, mods' tickets, `/forceload`, the spawn area, or other. The reason is worked out from distance, as a ticket also loads the chunks beside it. Then come the chunks each mod's tickets hold, and the five chunks with the most entities. Click one of those to go there. `/su chunks tp <dimension> <x> <z>` (chunk coordinates) goes only to a chunk that is loaded and inside the world border (of a chunk the border cuts through, only the part inside), so a typed command never loads or generates land. It picks the column nearest the chunk's middle with a safe place: dry ground at the surface first, then the top of water, then lower down (a cave). With a roof, as in the Nether, it picks the highest safe place under it. It never lands in lava, fire, a portal or a cobweb. Each teleport that arrives is in the Action Log as "Chunk teleports"; one stopped by another mod or a plugin is neither logged nor reported as done.
+
 ## [0.23.0] - 2026-11-24
 
 Tutorials (SU-137 to SU-146). The network protocol is 12: players need the new modpack, and every server the new jar, at the same time.

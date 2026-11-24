@@ -26,6 +26,7 @@ import java.util.Locale;
  * left, with the line as it will read.
  */
 final class SetupGuide {
+    /** The strip's height under the title bar. */
     static final int OFFSET = 14;
     /** Pages: every feature, then Finish. */
     static final int FINISH = Feature.values().length, PAGES = FINISH + 1;
@@ -74,6 +75,11 @@ final class SetupGuide {
 
     private SetupState.Status status(Feature f) {
         return view.statuses().getOrDefault(f, SetupState.Status.NOT_YET);
+    }
+
+    /** Whether a feature's page is set up (or turned off), for the tab list's teal marks; false for null. */
+    boolean done(@Nullable Feature f) {
+        return f != null && (status(f) == SetupState.Status.DONE || status(f) == SetupState.Status.OFF);
     }
 
     private static void send(SetupEditPacket.Action a, Feature f, String arg) {
@@ -179,7 +185,7 @@ final class SetupGuide {
         }
         numberBox = titleBox = welcomeBox = null;
         if (feature() == Feature.PLAYERS) {
-            int bx = x + 8, by = y + 22, rx = bx + RIGHT, rw = AdminScreen.W - 16 - RIGHT - 6;
+            int bx = x + 8, by = y + 22, rx = bx + RIGHT, rw = host.pageW() - 16 - RIGHT - 6;
             numberBox = new EditBox(host.font(), bx + 7, by + 58, 58, 12, Component.literal(Tr.t("admin.setup.players.set_number")));
             numberBox.setMaxLength(12);
             numberBox.setValue(number);
@@ -208,27 +214,38 @@ final class SetupGuide {
 
     // ------------------------------------------------------------------ drawing
 
-    /** The progress bar and the strip above the body, and the footer keys below it. */
+    /**
+     * The strip under the title bar, across the screen (refined page R5): the step, a square per page (done in teal, this
+     * one in violet) and what the feature does.
+     */
+    void renderStrip(GuiGraphics g, int x, int y, int w) {
+        Font font = host.font();
+        g.fill(x, y, x + w, y + OFFSET, 0xFF1A1530);
+        g.fill(x, y + OFFSET - 1, x + w, y + OFFSET, 0xFF3D2F5C);
+        String step = Tr.t("admin.setup.step", page + 1, PAGES);
+        Ui.text(g, font, Component.literal(step).withStyle(ChatFormatting.BOLD), x + 7, y + 5, Ui.VIOLET, TINY);
+        int cx = x + 7 + Ui.widthBold(font, step, TINY) + 6;
+        Feature[] all = Feature.values();
+        for (int i = 0; i < PAGES; i++) {
+            boolean here = i == page, isDone = i < FINISH ? done(all[i]) : java.util.Arrays.stream(all).allMatch(this::done);
+            g.fill(cx, y + 5, cx + 4, y + 9, here ? Ui.VIOLET : isDone ? Ui.TEAL : 0xFF3A4150);
+            cx += 6;
+        }
+        cx += 4;
+        Ui.text(g, font, Ui.fit(font, about(feature()), x + w - 7 - cx, TINY), cx, y + 5, Ui.TEXT, TINY);
+    }
+
+    /** The footer keys under the page, in place of the tab's own. */
     void renderFrame(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int top = y - OFFSET;
-        g.fill(x + 8, top + 20, x + AdminScreen.W - 8, top + 22, Ui.DIM);
-        g.fill(x + 8, top + 20, x + 8 + (AdminScreen.W - 16) * (page + 1) / PAGES, top + 22, Ui.VIOLET);
-        int sy = top + 24;
-        g.fill(x + 8, sy, x + AdminScreen.W - 8, sy + 11, 0xFF1A1530);
-        Ui.frame(g, x + 8, sy, AdminScreen.W - 16, 11, 0xFF3D2F5C);
-        String step = Tr.t("admin.setup.step", page + 1, PAGES);
-        Ui.text(g, font, Component.literal(step).withStyle(ChatFormatting.BOLD), x + 12, sy + 3, Ui.VIOLET, TINY);
-        int sw = Ui.width(font, step, TINY) + 8;
-        Ui.text(g, font, Ui.fit(font, about(feature()), AdminScreen.W - 24 - sw, TINY), x + 12 + sw, sy + 3, Ui.TEXT, TINY);
         // the footer
-        int fy = y + AdminScreen.H - 8 - 14;
-        g.fill(x + 1, fy - 2, x + AdminScreen.W - 1, y + AdminScreen.H - 1, Ui.PANEL);
+        int fy = y + host.pageH() - 8 - 14;
+        g.fill(x + 1, fy - 2, x + host.pageW() - 1, y + host.pageH() - 1, Ui.PANEL);
         Feature f = feature();
         if (page > 0) {
             key(g, x + 8, fy, Tr.t("admin.setup.back"), Style.GHOST, mx, my, hits, () -> go(page - 1));
         }
-        int kx = x + AdminScreen.W - 8;
+        int kx = x + host.pageW() - 8;
         if (f == null) {
             kx -= key(g, kx, fy, Tr.t("admin.setup.done"), Style.VIOLET, mx, my, hits, () -> {
                 finished = true;
@@ -247,8 +264,8 @@ final class SetupGuide {
                 boolean sure = System.currentTimeMillis() < offSureUntil;
                 key(g, kx, fy, Tr.t(sure ? "rules.sure" : "admin.setup.off"), sure ? Style.SURE : Style.WARN, mx, my, hits, this::off, true);
                 if (sure) {
-                    g.fill(x + 8, fy - 14, x + AdminScreen.W - 8, fy - 3, 0xFF3A2020);
-                    Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.log_warning"), AdminScreen.W - 24, TINY), x + 12, fy - 11, Ui.BAD, TINY);
+                    g.fill(x + 8, fy - 14, x + host.pageW() - 8, fy - 3, 0xFF3A2020);
+                    Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.log_warning"), host.pageW() - 24, TINY), x + 12, fy - 11, Ui.BAD, TINY);
                 }
             }
         }
@@ -298,7 +315,7 @@ final class SetupGuide {
     /** Welcome, Display panels or Finish. */
     void renderCustom(GuiGraphics g, int x, int y, int mx, int my, List<Ui.Hit> hits) {
         Font font = host.font();
-        int bx = x + 8, by = y + 22, bw = AdminScreen.W - 16, bh = AdminScreen.H - 22 - 26;
+        int bx = x + 8, by = y + 22, bw = host.pageW() - 16, bh = host.pageH() - 22 - 26;
         Ui.inset(g, bx, by, bw, bh);
         Feature f = feature();
         if (f == Feature.WELCOME) {
@@ -333,6 +350,8 @@ final class SetupGuide {
         // Finish: every page and where it stands
         int ry = by + 4;
         int listW = bw - 150;
+        // 13 apart when there is room; tighter on a short page so every feature stays in the box (audit of SU-154)
+        int rowH = Math.max(10, Math.min(13, (bh - 6) / Feature.values().length));
         for (Feature each : Feature.values()) {
             String label = featureName(each);
             Ui.text(g, font, Ui.fit(font, label, listW - 60, SMALL), bx + 6, ry + 2, Ui.TEXT, SMALL);
@@ -362,9 +381,9 @@ final class SetupGuide {
                 }
             }
             int pw = Ui.width(font, pill, TINY) + 8, px = bx + listW - pw;
-            g.fill(px, ry + 1, px + pw, ry + 10, bg);
-            Ui.text(g, font, pill, px + 4, ry + 3, fg, TINY);
-            ry += 13;
+            g.fill(px, ry + 1, px + pw, ry + rowH - 3, bg);
+            Ui.text(g, font, pill, px + 4, ry + (rowH - 7) / 2, fg, TINY);
+            ry += rowH;
             if (each.ordinal() < Feature.values().length - 1) {
                 g.fill(bx + 3, ry - 2, bx + listW + 2, ry - 1, Ui.ROW_LINE);
             }
@@ -385,7 +404,7 @@ final class SetupGuide {
         int lx = bx + 7, lw = RIGHT - 14;
         Ui.text(g, font, Tr.t("admin.setup.players.shown").toUpperCase(Locale.ROOT), lx, by + 6, Ui.MUTED, TINY);
         String shown = com.mrgregles.bsp_server_utilities.players.PlayerCounter.format(p.shown());
-        float big = Math.min(2f, lw / (float) Math.max(1, Ui.width(font, shown, 1f)));
+        float big = Math.min(2f, lw / (float) Math.max(1, Ui.widthBold(font, shown, 1f)));
         Ui.text(g, font, Component.literal(shown).withStyle(ChatFormatting.BOLD), lx, by + 15, Ui.GOLD, big);
         Ui.text(g, font, Ui.fit(font, Tr.t("admin.setup.players.real", com.mrgregles.bsp_server_utilities.players.PlayerCounter.format(p.real())), lw, TINY), lx, by + 35, Ui.MUTED, TINY);
         Ui.text(g, font, Tr.t("admin.setup.players.set_number").toUpperCase(Locale.ROOT), lx, by + 49, Ui.MUTED, TINY);
@@ -435,7 +454,7 @@ final class SetupGuide {
     /** Draws a footer key with its left edge at x (or its right edge, when {@code fromRight}); returns its width. */
     private int key(GuiGraphics g, int x, int y, String label, Style style, int mx, int my, List<Ui.Hit> hits, Runnable action, boolean fromRight) {
         Font font = host.font();
-        int w = Math.max(36, Ui.width(font, label, TINY) + 14), h = 14;
+        int w = Math.max(36, Ui.widthBold(font, label, TINY) + 14), h = 14;
         int kx = fromRight ? x - w : x;
         boolean hover = mx >= kx && mx < kx + w && my >= y && my < y + h;
         int text;
@@ -462,7 +481,7 @@ final class SetupGuide {
                 text = Ui.TEXT;
             }
         }
-        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), kx + (w - Ui.width(font, label, TINY)) / 2, y + 5, text, TINY);
+        Ui.text(g, font, Component.literal(label).withStyle(ChatFormatting.BOLD), kx + (w - Ui.widthBold(font, label, TINY)) / 2, y + 5, text, TINY);
         hits.add(new Ui.Hit(kx, y, w, h, action));
         return w;
     }

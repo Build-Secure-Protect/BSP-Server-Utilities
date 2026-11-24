@@ -66,12 +66,12 @@ final class TutorialTab {
         // inside the setup guide the guide's keys take the footer and its clip ends at y + H - 24, so the list is shorter
         // and OPEN BUILDER sits above that line (audit of SU-146)
         boolean guide = host.inGuide();
-        int lx = x + 8, ly = y + 24, lw = AdminScreen.W - 16, lh = AdminScreen.H - 24 - 30 - 26 - (guide ? 18 : 0);
+        int lx = x + 8, ly = y + 24, lw = host.pageW() - 16, lh = host.pageH() - 24 - 30 - 26 - (guide ? 18 : 0);
         Ui.inset(g, lx, ly, lw, lh);
         CompoundTag v = ClientTutorialAdmin.view();
         int ry = ly + 3;
         if (v == null) {
-            Ui.text(g, font, Tr.t("tutorial.b.loading"), lx + 6, ry + 2, Ui.MUTED, SMALL);
+            Ui.text(g, font, Ui.fit(font, Tr.t("tutorial.b.loading"), lw - 12, SMALL), lx + 6, ry + 2, Ui.MUTED, SMALL);
         } else if (v.getList("list", Tag.TAG_COMPOUND).isEmpty()) {
             int ty = ry + 2;
             for (String line : Ui.wrap(font, Tr.t("tutorial.tab.none"), lw - 12, SMALL)) {
@@ -133,9 +133,9 @@ final class TutorialTab {
                 Ui.text(g, font, Ui.fit(font, at.toString(), lw, TINY), lx, cy + 10, Ui.MUTED, TINY);
             }
         }
-        int fy = guide ? y + AdminScreen.H - 24 - 16 : y + AdminScreen.H - 8 - 14;
+        int fy = guide ? y + host.pageH() - 24 - 16 : y + host.pageH() - 8 - 14;
         String open = Tr.t("tutorial.tab.open");
-        int w = Ui.widthBold(font, open.toUpperCase(Locale.ROOT), TINY) + 16, kx = x + AdminScreen.W - 8 - w;
+        int w = Ui.widthBold(font, open.toUpperCase(Locale.ROOT), TINY) + 16, kx = x + host.pageW() - 8 - w;
         boolean hot = mx >= kx && mx < kx + w && my >= fy && my < fy + 14;
         g.fill(kx, fy, kx + w, fy + 14, Ui.VIOLET);
         if (hot) {
@@ -143,6 +143,6 @@ final class TutorialTab {
         }
         Ui.text(g, font, Component.literal(open.toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD), kx + 8, fy + 4, Ui.INK, TINY);
         hits.add(new Ui.Hit(kx, fy, w, 14, () -> net.minecraft.client.Minecraft.getInstance().setScreen(new TutorialBuilderScreen(host))));
-        Ui.text(g, font, Ui.fit(font, Tr.t("tutorial.tab.hint"), AdminScreen.W - 24 - w, TINY), x + 8, fy + 4, Ui.MUTED, TINY);
+        Ui.text(g, font, Ui.fit(font, Tr.t("tutorial.tab.hint"), host.pageW() - 24 - w, TINY), x + 8, fy + 4, Ui.MUTED, TINY);
     }
 }

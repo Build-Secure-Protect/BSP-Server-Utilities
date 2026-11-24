@@ -62,6 +62,12 @@ public final class ClientAdmin {
         }
     }
 
+    public static void counts(com.mrgregles.bsp_server_utilities.network.AdminCountsPacket packet) {
+        if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
+            screen.acceptCounts(packet);
+        }
+    }
+
     public static void afk(com.mrgregles.bsp_server_utilities.network.AdminAfkPacket packet) {
         if (Minecraft.getInstance().screen instanceof AdminScreen screen) {
             screen.acceptAfk(packet);

@@ -33,6 +33,9 @@ public final class LogText {
         if (w.length >= 3 && w[1].equalsIgnoreCase("support") && SUPPORT_SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT))) {
             return true; // Support BSP writes what it changed (SU-89, D602)
         }
+        if (w.length >= 3 && w[1].equalsIgnoreCase("chunks") && w[2].equalsIgnoreCase("tp")) {
+            return true; // the teleport writes where it went (SU-147, D752)
+        }
         return w.length >= 3 && w[1].equalsIgnoreCase("players") && SELF_LOGGED.contains(w[2].toLowerCase(Locale.ROOT));
     }
 
