@@ -165,6 +165,25 @@ public final class RulesService {
         }
     }
 
+    /**
+     * A BSP-Core player reset reaching a server it was not typed on (PR17): forgets this world's copy of the player's
+     * agreement when it was made before the reset, so an agreement given since (on a server that heard late) is kept.
+     * The shared row is the origin's to clear ({@link #reset}). True when one was forgotten.
+     */
+    public static boolean forgetAgreedBefore(MinecraftServer server, UUID player, long resetMs) {
+        RulesData data = RulesData.get(server);
+        Agreement a = data.agreement(player);
+        if (a == null || a.agreedAtMs() >= resetMs) {
+            return false;
+        }
+        data.putAgreement(player, null);
+        ServerPlayer online = server.getPlayerList().getPlayer(player);
+        if (online != null) {
+            check(online);
+        }
+        return true;
+    }
+
     /** How many players agreed to the current version: across the network with shared storage, else in this world. */
     public static void countAgreed(MinecraftServer server, IntConsumer then) {
         int version = rules(server).version();

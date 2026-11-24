@@ -314,6 +314,82 @@ public final class ChunkService {
         return s != null;
     }
 
+    // ------------------------------------------------------------------ a BSP-Core player reset
+
+    /** Ticks a reset waits before its owners are judged again, so BSP-Region Guard's own reset (PR16) has abandoned the claims first. */
+    public static final int REJUDGE_DELAY_TICKS = 20;
+    private static final Map<UUID, Long> REJUDGES = new HashMap<>();
+
+    /**
+     * BSP-Core reset the player (PR17), on every server it reaches. Their suspended tickets stay suspended and when they
+     * last left is kept, so nothing loads because of the reset; an admin's RESTORE NOW hold is forgotten. A second later
+     * each of their suspended tickets has its owner found again ({@link #rejudge}). Who placed each machine is kept: the
+     * blocks stay in the world, and without it their machines would have no owner and stay loaded always (D96). The
+     * always-loaded list is the staff's setting and stays.
+     */
+    public static void forgetPlayer(MinecraftServer server, UUID player) {
+        ChunkData.get(server).hold(player, false);
+        REJUDGES.put(player, ticks + REJUDGE_DELAY_TICKS);
+        changed();
+    }
+
+    /**
+     * Finds the owner of each of the player's suspended tickets again. A ticket that was theirs only through a claim
+     * BSP-Region Guard abandoned for the reset now has no owner: it is kept unloaded with no owner, listed, as if an admin
+     * had unloaded it (D96), not given back, where it would stay loaded for good. A ticket now someone else's is kept
+     * under that player (it comes back when they join). Returns how many changed owner.
+     */
+    public static int rejudge(MinecraftServer server, UUID player) {
+        ChunkData data = ChunkData.get(server);
+        int changedOwner = 0;
+        for (ChunkData.Suspended s : List.copyOf(data.suspended().values())) {
+            if (!player.equals(s.player())) {
+                continue;
+            }
+            ServerLevel level = s.ticket().level(server);
+            if (level == null) {
+                continue;
+            }
+            ChunkOwners.Found f = ChunkOwners.find(level, s.ticket(), data);
+            UUID now = f == null ? null : f.player();
+            if (player.equals(now)) {
+                continue;
+            }
+            String name = now == null || server.getProfileCache() == null ? "" : server.getProfileCache().get(now).map(p -> p.getName()).orElse("");
+            data.putSuspended(new ChunkData.Suspended(s.ticket(), now, name, s.sinceMs()));
+            changedOwner++;
+        }
+        if (changedOwner > 0) {
+            com.mrgregles.bsp_server_utilities.BSPServerUtilities.LOGGER.info("Chunk unloading: {} unloaded ticket(s) of reset player {} have a new owner or none (kept unloaded)", changedOwner, player);
+            changed();
+        }
+        return changedOwner;
+    }
+
+    private static void drainRejudges(MinecraftServer server) {
+        if (REJUDGES.isEmpty()) {
+            return;
+        }
+        for (UUID id : List.copyOf(REJUDGES.keySet())) {
+            Long due = REJUDGES.get(id);
+            if (due != null && ticks >= due) {
+                REJUDGES.remove(id);
+                rejudge(server, id);
+            }
+        }
+    }
+
+    /** Whether a reset's owner check is still waiting (tests). */
+    public static boolean rejudgePending(UUID player) {
+        return REJUDGES.containsKey(player);
+    }
+
+    /** Runs a waiting reset owner check now (tests). */
+    public static int rejudgeNowForTests(MinecraftServer server, UUID player) {
+        REJUDGES.remove(player);
+        return rejudge(server, player);
+    }
+
     // ------------------------------------------------------------------ lifecycle
 
     /** Who placed each machine (D87), for owners the machine does not save itself. */
@@ -343,6 +419,7 @@ public final class ChunkService {
         startedMs = clock.getAsLong();
         RESTORES.clear();
         OWNERS.clear();
+        REJUDGES.clear();
         ticks = 0;
         Storage s = Storage.active();
         if (s != null) {
@@ -360,6 +437,7 @@ public final class ChunkService {
 
     public static void tick(MinecraftServer server) {
         drainRestores(server, RESTORES_PER_TICK);
+        drainRejudges(server);
         if (++ticks % SWEEP_TICKS == 0) {
             sweep(server);
         }

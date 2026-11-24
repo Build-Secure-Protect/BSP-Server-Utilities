@@ -104,6 +104,13 @@ public final class ChunkData extends SavedData {
         setDirty();
     }
 
+    /** Forgets when the player last left (tests clean up their mock players). */
+    public void forgetLastLeftForTests(UUID player) {
+        if (lastLeft.remove(player) != null) {
+            setDirty();
+        }
+    }
+
     public Set<UUID> held() {
         return held;
     }

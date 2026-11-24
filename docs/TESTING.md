@@ -2221,6 +2221,17 @@ The first run had one failure, `a_players_bank_and_market_are_read_and_refunded_
 - Step 3 passed: F3 and JourneyMap's minimap are gone from BSP Stream (owner, 2026-11-24).
 - Not yet reported: steps 1 (where the eye key stands now), 4 (the "Menu hidden" card), 6, 7, 9 and 10.
 
+## 2026-11-24: BSP-Core's player reset (PR17)
+
+Needs a BSP-Core with `/bsp player reset` (newer than 1.22.0) on every server, with this jar. GameTests (no BSP-Core with the event exists yet, so they call the handler directly and hook a stand-in event by its class name): `RulesGameTests.the_bsp_core_reset_is_heard_by_class_name_and_nothing_is_registered_when_the_class_is_missing`, `RulesGameTests.a_bsp_core_reset_asks_for_the_rules_again_and_a_late_server_keeps_an_agreement_given_since`, `ChunkGameTests.a_bsp_core_reset_keeps_the_players_chunks_unloaded_and_leaves_other_players_alone`.
+
+On the network, with a test player who has agreed to the rules and has a chunk-loading machine on server B:
+1. On server A, `/bsp player reset <name> confirm`. A's log: "BSP-Core reset <name> (<uuid>): rules agreement cleared for the network; chunk owners checked again in a second". B's log: the same line with "unchanged here" or "cleared on this server" (whichever notice reached B first).
+2. The player joins any server: the rules popup shows again, and they are not welcomed as a new player (the public player counter is unchanged).
+3. On B, the player's machines stay unloaded through the reset: nothing loads. Those they placed (or that save them as owner) stay listed under their name and come back when they join B. A machine that was theirs only through a claim BSP-Region Guard gave up in the reset moves to "no owner", stays unloaded (B's log: "Chunk unloading: 1 unloaded ticket(s) of reset player ... have a new owner or none"), and does not come back when they join; an admin can RESTORE it from the CHUNKS tab.
+4. Their staff panel notes and tags, bans, staff talks, Action Log lines, totem steals and last seen are all still there.
+5. With a BSP-Core older than the reset: nothing in the log, nothing changes.
+
 ## 2026-11-24: Streamer Mode's menu (SU-132)
 
 **What it does.** Look C as confirmed (D713, D714, `tools/preview/streamer_refined.html`). The eye key, and `/streamer` without a word, open `client/StreamerScreen`:
@@ -2320,7 +2331,7 @@ The first run failed only the two flaky Action Log tests (bank and board), toget
 2. Teleport yourself (`/tp ~10 ~ ~`): Minecraft's "Teleported ... to x, y, z" is missing from BSP Stream.
 3. Open chat and type `/tp 100 64 -200`: BSP Stream's input box stays empty while it holds the numbers; typing plain words shows them.
 4. Set "Chat: lines with coordinates" to SHOWN: the messages come back in BSP Stream.
-5. The Teleport band (with today's BSP-Teleport): still a "Menu hidden" card in BSP Stream, and its page in the menu has the gold line. Set "Teleport band: coordinates" to SHOWN: the band shows in BSP Stream.
+5. The Teleport band (with BSP-Teleport before 3.9.2; for 3.9.2 see "BSP-Teleport 3.9.2 hides its own coordinates" below): still a "Menu hidden" card in BSP Stream, and its page in the menu has the gold line. Set "Teleport band: coordinates" to SHOWN: the band shows in BSP Stream.
 6. If the settings file from the earlier test had BSP-Teleport's band hidden, its page now shows "Teleport band: coordinates" as HIDDEN.
 
 **Owner's test (2026-11-24):** passed: "The chat coordinates are hidden and work as intended".
@@ -2420,3 +2431,16 @@ GameTests **303/303** on five runs in a row.
 - The new full-log test puts the world's entries back in time order rather than the order they were added: the same entries, and the oldest is still pushed out first.
 
 GameTests **303/303** on three more runs in a row after the audit.
+
+## 2026-11-24: BSP-Teleport 3.9.2 hides its own coordinates (request SU-TP2 answered)
+
+**What changed here:** wording only, no code. BSP-Teleport 3.9.2 asks `StreamerMode.hidesNow` at the top of every draw of the band (`bsp_teleport:band_coordinates`), the portal screen and the portal chooser (both `bsp_teleport:portal_coordinates`). Checked against its code: `compat/ServerUtilities` (looked up once by class name, false on any failure), `client/BandScreen`, `client/PortalScreen`, `client/PortalChooserScreen`. BSP-Teleport's admin screen (`AdminScreen`, portal rows with x, y, z) does not ask and needs no id: the catalog hides it whole as its own item, "Teleport admin screen", hidden by default since the audit of SU-135 (BSP-Teleport's handoff says otherwise; it is mistaken there).
+- Menu lines (from `tools/gen_lang.py`): the band item reads "The x y z under homes, warps and allies", the portal item "The x, y, z on the portal screen and its chooser", and the gold line "Before BSP-Teleport 3.9.2, the whole menu is hidden; from 3.9.2, only the numbers". All three fit the menu's row.
+- `docs/API.md` "Ids so far" names allies and the chooser, and 3.9.2 as the first version that asks.
+
+**Untested in a client.** With BSP-Teleport 3.9.2 and Streamer Mode on (BSP-Teleport's own steps are in its `docs/TESTING.md`, "Coordinates hidden from a stream", steps 1 to 7):
+1. Open the Teleport band. BSP Stream may show the "Menu hidden" card for its first frame only. After that it shows the band, with `• • •` in place of the x, y, z of homes, warps and the TEAM tab's allies. Server and world names stay.
+2. In the Streamer Mode menu, BSP-Teleport's page: the gold line has gone from "Teleport band: coordinates". "Portal screen: position" keeps its gold line until a portal screen has been opened once.
+3. Open a portal's screen, then step into a portal with several destinations: both show `• • •` in BSP Stream, and the numbers in the game window.
+4. Set both items to SHOWN: the numbers appear in BSP Stream.
+5. Restart the game: the gold lines are back until each screen is opened once (the menu remembers this only while the game runs).

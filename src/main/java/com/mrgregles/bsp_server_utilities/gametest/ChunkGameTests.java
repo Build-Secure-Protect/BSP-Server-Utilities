@@ -340,4 +340,68 @@ public class ChunkGameTests {
         }
         h.succeed();
     }
+
+    @GameTest(template = EMPTY)
+    public void a_bsp_core_reset_keeps_the_players_chunks_unloaded_and_leaves_other_players_alone(GameTestHelper h) {
+        ServerPlayer owner = TestPlayers.mockServerPlayer(h);
+        ServerPlayer other = TestPlayers.mockServerPlayer(h);
+        Rig o = rig(h, BSPServerUtilities.MODID, new BlockPos(6, 2, 6), other);
+        Rig claim = rig(h, BSPServerUtilities.MODID, new BlockPos(9, 2, 2), null);
+        Rig r = rig(h, BSPServerUtilities.MODID, new BlockPos(6, 2, 2), owner);
+        ChunkService.useForTests(r.now()::get, r::online);
+        MinecraftServer server = r.server();
+        ChunkData data = ChunkData.get(server);
+        try {
+            ChunkService.onLogout(owner);
+            ChunkService.onLogout(other);
+            r.now().addAndGet(5 * MIN);
+            ChunkService.sweep(server);
+            h.assertTrue(r.suspended() && o.suspended() && !r.live() && !o.live(), "both away five minutes: both machines unloaded");
+            // a machine charged to the reset player only through their claim (no saved owner, no placer): unloaded as theirs
+            ChunkTickets.remove(claim.level(), claim.ticket());
+            data.putSuspended(new ChunkData.Suspended(claim.ticket(), owner.getUUID(), "Reset", r.now().get()));
+            h.assertTrue(claim.suspended() && !claim.live(), "the claim machine is unloaded under the reset player");
+            data.hold(owner.getUUID(), true);
+            data.hold(other.getUUID(), true);
+            long ownerLeft = data.lastLeft(owner.getUUID()), otherLeft = data.lastLeft(other.getUUID());
+
+            long resetMs = r.now().get();
+            com.mrgregles.bsp_server_utilities.players.PlayerReset.Result res = com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, owner.getUUID(), "Reset", resetMs, false);
+            h.assertTrue(res.applied(), "the reset is applied: " + res);
+            h.assertTrue(!data.held().contains(owner.getUUID()), "the admin's hold on the reset player is forgotten");
+            h.assertTrue(Long.valueOf(ownerLeft).equals(data.lastLeft(owner.getUUID())), "when they left is kept, so nothing loads because of the reset");
+            h.assertTrue(owner.getUUID().equals(data.placer(ChunkOwners.posKey(r.level(), r.pos()))), "who placed the machine is kept (the block stays in the world)");
+            h.assertTrue(Long.valueOf(otherLeft).equals(data.lastLeft(other.getUUID())) && data.held().contains(other.getUUID()), "the other player's records are untouched");
+            h.assertTrue(ChunkService.rejudgePending(owner.getUUID()) && claim.suspended() && owner.getUUID().equals(data.suspended().get(claim.ticket().key()).player()),
+                    "the owners are checked again a second later (after BSP-Region Guard's own reset), not at once");
+
+            h.assertTrue(ChunkService.rejudgeNowForTests(server, owner.getUUID()) == 1, "one ticket changes owner: the claim machine's");
+            ChunkService.drainRestores(server, 1000);
+            h.assertTrue(r.suspended() && !r.live() && owner.getUUID().equals(data.suspended().get(r.ticket().key()).player()),
+                    "the reset player's own machine stays unloaded, still theirs (its placer)");
+            ChunkData.Suspended c = data.suspended().get(claim.ticket().key());
+            h.assertTrue(c != null && c.player() == null && !claim.live(), "the claim machine has no owner now: kept unloaded with no owner, listed (D96), not loaded for good");
+            h.assertTrue(o.suspended() && !o.live(), "the other player's machine stays unloaded until they come back");
+            ForgeChunkManager.forceChunk(claim.level(), claim.ticket().modId(), claim.pos(), claim.ticket().chunkPos().x, claim.ticket().chunkPos().z, true, false);
+            ChunkService.sweep(server);
+            h.assertTrue(claim.suspended() && !claim.live(), "and taken again when its mod adds the ticket back, as an admin's unload is");
+            h.assertTrue(com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, owner.getUUID(), "Reset", resetMs, false) == com.mrgregles.bsp_server_utilities.players.PlayerReset.Result.ALREADY,
+                    "the same reset heard twice does nothing the second time");
+
+            r.online().add(owner);
+            ChunkService.onLogin(owner);
+            ChunkService.drainRestores(server, 1000);
+            h.assertTrue(r.live() && !r.suspended(), "their own machine comes back when they join, as for anyone");
+            h.assertTrue(claim.suspended() && !claim.live(), "the claim machine does not: it is no longer theirs");
+        } finally {
+            data.hold(other.getUUID(), false);
+            data.forgetLastLeftForTests(owner.getUUID());
+            data.forgetLastLeftForTests(other.getUUID());
+            ChunkService.rejudgeNowForTests(server, owner.getUUID());
+            r.close();
+            claim.close();
+            o.close(); // last: its settings copy is the one from before the rigs
+        }
+        h.succeed();
+    }
 }

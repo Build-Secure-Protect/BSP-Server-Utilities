@@ -817,6 +817,68 @@ public final class BspCore {
                    java.util.UUID thief, String thiefName, boolean success, String reasonKey);
     }
 
+    // ------------------------------------------------------------------ player reset (BSP-Core's /bsp player reset, PR17)
+
+    /** BSP-Core's event posted on every server a player reset reaches, read by name: this mod builds against older BSP-Core jars. */
+    public static final String PLAYER_RESET_EVENT = "com.mrgregles.bsp_core.api.event.PlayerResetEvent$Forgotten";
+
+    /** What a reset says: who, under which name, when (the same on every server), whether it was typed here, by whom. */
+    public interface PlayerResetListener {
+        void forgotten(net.minecraft.server.MinecraftServer server, java.util.UUID player, String name, long resetMs, boolean origin, String by);
+    }
+
+    private static boolean resetHooked;
+
+    /**
+     * Calls {@code listener} for every BSP-Core player reset that reaches this server; once (at server start), and
+     * nothing without BSP-Core or with a BSP-Core older than the event. True when listening.
+     */
+    public static boolean onPlayerReset(PlayerResetListener listener) {
+        if (resetHooked) {
+            return true;
+        }
+        if (!isLoaded()) {
+            return false;
+        }
+        resetHooked = hookPlayerReset(PLAYER_RESET_EVENT, listener) != null;
+        return resetHooked;
+    }
+
+    /**
+     * Listens for the event class of that name, its getters read by reflection ({@code getServer}, {@code getPlayer},
+     * {@code getName}, {@code getResetMs}, {@code isOrigin}, {@code getBy}). Returns the registered listener (for
+     * {@code EVENT_BUS.unregister}), or null, with nothing registered, when the class or a getter is missing. Tests call
+     * it with their own stand-in class.
+     */
+    @SuppressWarnings("unchecked")
+    @org.jetbrains.annotations.Nullable
+    public static Object hookPlayerReset(String className, PlayerResetListener listener) {
+        try {
+            Class<?> type = Class.forName(className);
+            if (!net.minecraftforge.eventbus.api.Event.class.isAssignableFrom(type)) {
+                return null;
+            }
+            java.lang.reflect.Method server = type.getMethod("getServer"), player = type.getMethod("getPlayer"), name = type.getMethod("getName"),
+                    resetMs = type.getMethod("getResetMs"), origin = type.getMethod("isOrigin"), by = type.getMethod("getBy");
+            java.util.function.Consumer<net.minecraftforge.eventbus.api.Event> handler = e -> {
+                try {
+                    Object n = name.invoke(e), b = by.invoke(e);
+                    listener.forgotten((net.minecraft.server.MinecraftServer) server.invoke(e), (java.util.UUID) player.invoke(e),
+                            n == null ? "" : n.toString(), (Long) resetMs.invoke(e), (Boolean) origin.invoke(e), b == null ? "" : b.toString());
+                } catch (ReflectiveOperationException | LinkageError | RuntimeException x) {
+                    // nothing thrown here may reach BSP-Core's reset
+                    BSPServerUtilities.LOGGER.warn("BSP-Server Utilities: a player reset was not applied: {}", x.toString());
+                }
+            };
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                    (Class<net.minecraftforge.eventbus.api.Event>) type, handler);
+            return handler;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            BSPServerUtilities.LOGGER.debug("BSP-Core player reset event not reachable ({}): {}", className, e.toString());
+            return null;
+        }
+    }
+
     private static boolean stealsHooked;
 
     /**

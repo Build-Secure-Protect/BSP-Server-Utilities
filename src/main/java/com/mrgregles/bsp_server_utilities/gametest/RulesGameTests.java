@@ -299,4 +299,121 @@ public class RulesGameTests {
         h.assertTrue(RulesAnswerPacket.decode(buf).equals(answer), "the answer comes back unchanged");
         h.succeed();
     }
+
+    // ------------------------------------------------------------------ BSP-Core's player reset (PR17)
+
+    /** Stands in for BSP-Core's {@code PlayerResetEvent$Forgotten}, which the BSP-Core jar this mod builds against lacks. */
+    public static class ResetStandIn extends net.minecraftforge.eventbus.api.Event {
+        private final MinecraftServer server;
+        private final java.util.UUID player;
+        private final String name, by;
+        private final long resetMs;
+        private final boolean origin;
+
+        public ResetStandIn(MinecraftServer server, java.util.UUID player, String name, long resetMs, boolean origin, String by) {
+            this.server = server;
+            this.player = player;
+            this.name = name;
+            this.resetMs = resetMs;
+            this.origin = origin;
+            this.by = by;
+        }
+
+        public MinecraftServer getServer() {
+            return server;
+        }
+
+        public java.util.UUID getPlayer() {
+            return player;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public long getResetMs() {
+            return resetMs;
+        }
+
+        public boolean isOrigin() {
+            return origin;
+        }
+
+        public String getBy() {
+            return by;
+        }
+    }
+
+    @GameTest(template = EMPTY)
+    public void the_bsp_core_reset_is_heard_by_class_name_and_nothing_is_registered_when_the_class_is_missing(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        AtomicReference<String> got = new AtomicReference<>();
+        com.mrgregles.bsp_server_utilities.compat.BspCore.PlayerResetListener listener = (srv, id, name, ms, origin, by) ->
+                got.set((srv == server) + " " + id + " " + name + " " + ms + " " + origin + " " + by);
+        h.assertTrue(com.mrgregles.bsp_server_utilities.compat.BspCore.hookPlayerReset("com.mrgregles.bsp_core.api.event.NoSuchEvent$Forgotten", listener) == null, "a missing class: not listening");
+        h.assertTrue(com.mrgregles.bsp_server_utilities.compat.BspCore.hookPlayerReset("java.lang.String", listener) == null, "a class that is not an event: not listening");
+        boolean real;
+        try {
+            Class.forName(com.mrgregles.bsp_server_utilities.compat.BspCore.PLAYER_RESET_EVENT);
+            real = true;
+        } catch (ClassNotFoundException e) {
+            real = false;
+        }
+        h.assertTrue(com.mrgregles.bsp_server_utilities.compat.BspCore.onPlayerReset(listener) == (real && com.mrgregles.bsp_server_utilities.compat.BspCore.isLoaded()),
+                "listening at server start exactly when BSP-Core has the event (it " + (real ? "has" : "does not") + " here)");
+        MinecraftForge.EVENT_BUS.post(new ResetStandIn(server, java.util.UUID.randomUUID(), "Nobody", 1L, false, "Admin"));
+        h.assertTrue(got.get() == null, "nothing hears an event that was never hooked");
+
+        Object hooked = com.mrgregles.bsp_server_utilities.compat.BspCore.hookPlayerReset(ResetStandIn.class.getName(), listener);
+        try {
+            h.assertTrue(hooked != null, "a class with the getters: listening");
+            java.util.UUID id = java.util.UUID.randomUUID();
+            MinecraftForge.EVENT_BUS.post(new ResetStandIn(server, id, "Steve", 1234L, true, "Admin"));
+            h.assertTrue(("true " + id + " Steve 1234 true Admin").equals(got.get()), "every getter read by reflection: " + got.get());
+        } finally {
+            if (hooked != null) {
+                MinecraftForge.EVENT_BUS.unregister(hooked);
+            }
+        }
+        got.set(null);
+        MinecraftForge.EVENT_BUS.post(new ResetStandIn(server, java.util.UUID.randomUUID(), "Gone", 5L, false, "Admin"));
+        h.assertTrue(got.get() == null, "unregistered when done: nothing hears it any more");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public void a_bsp_core_reset_asks_for_the_rules_again_and_a_late_server_keeps_an_agreement_given_since(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        java.util.UUID id = java.util.UUID.randomUUID();
+        int version = RulesService.rules(server).version();
+        RulesData data = RulesData.get(server);
+        try {
+            data.putAgreementForTests(id, new Agreement(version, 1_000L, "test", "Reset"));
+            com.mrgregles.bsp_server_utilities.players.PlayerReset.Result late = com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 500L, false);
+            h.assertTrue(late.applied() && !late.rulesForNetwork() && !late.rulesHere() && RulesService.agreement(server, id) != null,
+                    "another server, the agreement made after the reset: kept (" + late + ")");
+            com.mrgregles.bsp_server_utilities.players.PlayerReset.Result here = com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 2_000L, false);
+            h.assertTrue(here.applied() && !here.rulesForNetwork() && here.rulesHere() && RulesService.agreement(server, id) == null,
+                    "another server, the agreement made before the reset: this world's copy forgotten (" + here + ")");
+
+            data.putAgreementForTests(id, new Agreement(version, 2_100L, "test", "Reset"));
+            com.mrgregles.bsp_server_utilities.players.PlayerReset.Result origin = com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 2_500L, true);
+            h.assertTrue(origin.applied() && origin.rulesForNetwork() && RulesService.agreement(server, id) == null,
+                    "where it was typed: the agreement cleared for the network, so the rules popup shows again (" + origin + ")");
+
+            data.putAgreementForTests(id, new Agreement(version, 3_000L, "test", "Reset"));
+            com.mrgregles.bsp_server_utilities.players.PlayerReset.Result after = com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 2_900L, true);
+            h.assertTrue(after.applied() && !after.rulesForNetwork() && RulesService.agreement(server, id) != null,
+                    "where it was typed, but the agreement was given after the reset (a repeat after a restart): kept (" + after + ")");
+
+            data.putAgreementForTests(id, new Agreement(version, 4_000L, "test", "Reset"));
+            h.assertTrue(com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 2_500L, true) == com.mrgregles.bsp_server_utilities.players.PlayerReset.Result.ALREADY
+                    && RulesService.agreement(server, id) != null, "the same reset heard again does nothing: the agreement given since stays");
+            h.assertTrue(com.mrgregles.bsp_server_utilities.players.PlayerReset.forget(server, id, "Reset", 2_000L, false) == com.mrgregles.bsp_server_utilities.players.PlayerReset.Result.ALREADY,
+                    "nor on another server");
+        } finally {
+            data.putAgreementForTests(id, null);
+        }
+        h.succeed();
+    }
 }

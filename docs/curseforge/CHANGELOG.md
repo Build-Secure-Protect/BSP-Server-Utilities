@@ -10,7 +10,7 @@ Stream your game without giving away where your base is. Streamer Mode makes a s
 - **Choose what OBS must not see,** mod by mod, each with a HIDDEN or SHOWN switch:
   - **Minecraft:** the F3 screen, chat, chat messages that hold coordinates, the player list, boss bars, titles, the action bar and the scoreboard. Hiding coordinates in chat also hides command suggestions (Minecraft offers the block you are looking at), what you are typing when it is a command or holds a position, and chat's hover text.
   - **JourneyMap:** the minimap, or only its coordinate lines with the map kept; waypoint markers; its menus.
-  - **BSP-Teleport:** the coordinates in the Teleport band and on the portal screen, and its admin screen.
+  - **BSP-Teleport:** the coordinates in the Teleport band, on the portal screen and on the portal chooser (BSP-Teleport 3.9.2 or newer hides only the numbers; an older one has the band and portal screen hidden whole), and its admin screen.
   - **BSP-Core:** the sentinel strip, the recall card, the Team screen, its admin screen and the Accelerator screen.
   - **BSP Region Guard:** the Land Office and region screens.
   - **BSP-Server Utilities:** the admin screen.

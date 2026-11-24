@@ -15,8 +15,9 @@ boolean hide = com.mrgregles.bsp_server_utilities.api.StreamerMode.hidesNow("bsp
 - **Safe anywhere:** always false on a server or with a null id.
 - **Server Utilities is optional for most mods:** look the method up once by name (reflection or a `MethodHandle`), and treat a missing class or any error as false.
 - **Ids so far** (each is an item on its mod's page in the menu):
-  - `bsp_teleport:band_coordinates`: the x, y, z under the Teleport band's homes, warps and teammates;
-  - `bsp_teleport:portal_coordinates`: the portal screen's position line.
+  - `bsp_teleport:band_coordinates`: the x, y, z under the Teleport band's homes, warps and allies (the TEAM tab's ALLIES side);
+  - `bsp_teleport:portal_coordinates`: the x, y, z on the portal screen (its position line, a picked portal's line, position destinations) and on the portal chooser.
+  - BSP-Teleport asks about both from **3.9.2**. With an earlier BSP-Teleport, Server Utilities hides the band and the portal screen whole in the stream.
 - New ids are added here when another mod asks for one (`Requests for Other Mods`).
 
 

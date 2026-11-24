@@ -75,6 +75,8 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.mobs.Crowding.registerNotices(); // crowded drops and arrows (SU-66 to SU-68)
         com.mrgregles.bsp_server_utilities.steals.StealRecorder.register(); // totem steals for the staff panel (SU-95)
         com.mrgregles.bsp_server_utilities.check.ClientCheckService.registerEvents();
+        // BSP-Core's player reset (PR17), by class name: listened for from the server's start
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStartingEvent e) -> com.mrgregles.bsp_server_utilities.players.PlayerReset.register());
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent e) -> {
             Storage.start(e.getServer());
             RulesService.onServerStarted(e.getServer());

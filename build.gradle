@@ -163,6 +163,23 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Always a full compile: the mixin annotation processor writes the reference map only for the mixins it sees, so an
+    // incremental compile could ship a jar without one (0.11.0's first jar, which stopped servers at launch).
+    options.incremental = false
+}
+
+// The shipped jar must carry a complete mixin reference map (tools/check_refmap.py), or a real server stops at launch.
+tasks.register('checkRefmap', Exec) {
+    group = 'verification'
+    description = 'Checks the built jar carries a complete mixin reference map (tools/check_refmap.py).'
+    dependsOn 'reobfJar'
+    def jarFile = tasks.named('jar', Jar).flatMap { it.archiveFile }
+    inputs.file(jarFile)
+    inputs.file('tools/check_refmap.py')
+    commandLine 'python3', 'tools/check_refmap.py', jarFile.get().asFile.path
+}
+tasks.named('build') {
+    dependsOn 'checkRefmap'
 }
 
 // The screen text: every key the client code looks up must exist in the language file (tools/gen_lang.py writes it).
