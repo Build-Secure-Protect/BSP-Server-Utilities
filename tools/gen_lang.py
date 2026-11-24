@@ -1212,7 +1212,6 @@ TUTORIAL_MSG = {
     "changed": "%s has changed since you started it, and your stop is gone. Type /tutorial to start it again.",
     "finished": "You finished %s. Type /tutorial to take it again or try another.",
     "ended": "%s has ended. Type /tutorial to pick it up again.",
-    "moving": "Taking you to %s",
     "elsewhere": "The next stop, %s, is on %s. Go there and the tutorial picks up where you left it.",
     "resume_none": "You are not taking a tutorial right now. Type /tutorial to see them.",
     "not_found": "There is no tutorial with that id.",
@@ -1427,9 +1426,28 @@ CHUNKS_CMD = {
     "tp_not_loaded": "%s chunk %s, %s is not loaded. Only a loaded chunk can be visited, so none is loaded or generated for this.",
     "tp_border": "%s chunk %s, %s is outside the world border.",
     "tp_stopped": "The move to %s chunk %s, %s was stopped by the server or another mod.",
+    # the LAG tab's GO THERE on a chunk of another server (SU-150)
+    "tp_needs_teleport": "Going to a chunk on another server needs BSP-Teleport.",
+    "tp_other_refused": "BSP-Teleport could not start the move to %s.",
+    # TP beside a block in the LAG tab's PROFILER (SU-152, D750)
+    "tp_beside_done": "Went beside %s %s %s in %s: %s %s %s.",
+    "tp_beside_chunk": "No place to stand within %s blocks of %s %s %s in %s, so to its chunk's safe place: %s %s %s.",
 }
 KEYS.update({"message.bsp_server_utilities.chunks." + k: v for k, v in CHUNKS_CMD.items()})
 KEYS["gui.bsp_server_utilities.panel.log.kind.chunk_tp"] = "Chunk teleports"
+
+# the lag profiler's samples (SU-151; D749, D752, D761): what an editor is told, here or on the server they are on
+KEYS["gui.bsp_server_utilities.panel.log.kind.lag_sample"] = "Lag samples"
+KEYS["message.bsp_server_utilities.lag.sample_started"] = "Sampling %s for %s s."
+KEYS["message.bsp_server_utilities.lag.sample_running"] = "A sample is already running on %s, started by %s, %s s left. One sample runs on a server at a time."
+KEYS["message.bsp_server_utilities.lag.sample_stopped"] = "The sample on %s stopped after %s s, with what it had."
+KEYS["message.bsp_server_utilities.lag.sample_done"] = "The sample on %s is done. Its results are in the LAG tab."
+KEYS["message.bsp_server_utilities.lag.sample_not_running"] = "No sample is running on %s."
+KEYS["message.bsp_server_utilities.lag.sample_unavailable"] = "The profiler is unavailable on %s: that server's code differs where it times ticks. Its log says more."
+KEYS["message.bsp_server_utilities.lag.sample_no_storage"] = "%s cannot be reached: this server is not connected to the others."
+# who started a sample, when someone else stopped it (audit of SU-153)
+KEYS["message.bsp_server_utilities.lag.sample_stopped_by"] = "Your sample on %s was stopped by %s after %s s, with what it had."
+# (what BSP-Teleport shows an editor arriving from the LAG tab is plain text in LagNetwork.ARRIVED: its API takes a string)
 
 # the staff screen almost full screen (SU-154, D754 to D757): the tab list's groups, each page's line, the title bar
 STAFF_SCREEN = {
@@ -1450,8 +1468,168 @@ STAFF_SCREEN = {
     "admin.page.mobs": "Mobs, items and arrows each chunk may hold",
     "admin.page.support": "The Support BSP page, message and chat link",
     "admin.page.tutorial": "Guided tours of the network for players",
+    "admin.page.lag": "Loaded chunks and what lags them",
 }
 KEYS.update({"gui.bsp_server_utilities." + k: v for k, v in STAFF_SCREEN.items()})
+KEYS["gui.bsp_server_utilities.admin.tab.lag"] = "LAG"
+
+# the LAG tab's LOADED half (SU-150; D746 to D748, D750, D752, D758; tools/preview/lag_refined.html R1 to R3, R7, R8)
+LAG_GUI = {
+    "loaded": "Loaded",
+    "profiler": "Profiler",
+    "c.entities": "Entities",
+    "c.entities_short": "Ent.",
+    # one short form for block entities: B.E. in the keys and the list, spelled out where there is room (audit of SU-153)
+    "c.blocks": "B.E.",
+    "c.why": "Why",
+    "list": "List",
+    "map": "Map",
+    "this_server": "this server",
+    "waiting": "Asking the servers…",
+    "asking_map": "Asking %s for this world's chunks…",
+    "no_answer": "%s did not answer. Pick it again in the world menu to ask once more.",
+    "no_chunks": "No chunk of this world is loaded.",
+    "zoom": "1 square = %s × %s chunks",
+    # the world menu
+    "menu.answered": "answered %s s ago",
+    "menu.asking": "asking…",
+    "menu.not_heard": "silent · %s s ago",
+    "menu.chunks": "%s chunks",
+    "menu.none": "No server has answered. Open the tab again to ask once more.",
+    # the legend
+    "legend.e0": "0–9",
+    "legend.e1": "10–49",
+    "legend.e2": "50–99",
+    "legend.e3": "100+ entities",
+    "legend.b3": "100+ block entities",
+    "legend.unloaded": "not loaded",
+    "legend.player": "players %s",
+    "legend.ticket": "mod tickets %s",
+    "legend.forced": "/forceload %s",
+    "legend.spawn": "spawn %s",
+    "legend.other": "other %s",
+    # why a chunk is loaded, in the side panel and the list
+    "why.player": "players",
+    "why.ticket": "mod ticket",
+    "why.forced": "/forceload",
+    "why.spawn": "spawn area",
+    "why.other": "other",
+    # the picked chunk
+    "side.chunk": "Chunk %s, %s",
+    "side.blocks": "blocks %s..%s, %s..%s",
+    "side.ticking": "ticking",
+    "side.not_ticking": "loaded, not ticking",
+    "side.loaded_by": "Loaded by",
+    "side.entities": "Entities",
+    "side.block_entities": "Block entities",
+    "side.none": "none",
+    "side.go": "Go there",
+    "side.home": "Home",
+    "side.pick": "Click a square for its chunk: what keeps it loaded and what is in it. The wheel zooms, dragging moves the map, HOME centres the map on you.",
+    "side.asking": "Asking %s about this chunk…",
+    "side.not_loaded": "This chunk is not loaded. A loaded square is coloured.",
+    "side.no_spot": "No safe place to stand in this chunk.",
+    "side.go_tip": "To the highest safe block nearest the chunk's middle",
+    "side.wait_here": "Waiting for this server's name: GO THERE, TP and OUTLINE work once it is in.",
+    "side.more": "+%s more",
+    # the footer
+    "foot.world": "%s: %s chunks · %s entities · %s block entities",
+    "foot.network": "network %s chunks",
+    "foot.list": "%s chunks · %s entities · %s block entities on %s servers",
+    "foot.show": "Show on map",
+    # the list
+    "col.server": "Server",
+    "col.world": "World",
+    "col.chunk": "Chunk",
+    "col.who": "Loaded by",
+    "col.ent": "Ent.",
+    "col.be": "B.E.",
+    "tp": "TP",
+    "list.none": "No chunk with entities or block entities on any server that answered.",
+    "list.asking": "Asking %s for a safe place in chunk %s, %s…",
+    "list.no_spot": "%s has no safe place in chunk %s, %s, or it is not loaded.",
+}
+KEYS.update({"gui.bsp_server_utilities.lag." + k: v for k, v in LAG_GUI.items()})
+
+# the LAG tab's PROFILER half and the outline in the world (SU-152; D749 to D752, D759 to D761; lag_refined.html R4 to R6, R8)
+LAG_PROFILER_GUI = {
+    # the keys
+    "p.seconds": "%s s",
+    "p.run": "Run sample",
+    "p.stop": "Stop",
+    "p.server_tip": "The server and world the map shows. A sample runs on this server; the menu picks another.",
+    "p.run_tip": "Times every block entity, entity and chunk for %s seconds on %s, then colours the map by milliseconds per tick.",
+    "p.stop_tip": "Ends the running sample with what it has.",
+    # the line under the keys
+    "p.asking": "Asking %s for its samples…",
+    "p.sampling": "Sampling %s",
+    "p.left": "%s s left",
+    "p.started_by": "started by %s",
+    "p.length": "%s s",
+    "p.length_stopped": "%s of %s s",
+    "p.ago.s": "%s s ago",
+    "p.ago.min": "%s min ago",
+    "p.ago.h": "%s h ago",
+    "p.ago.d": "%s d ago",
+    "p.tick": "tick",
+    "p.of_tick": "/ 50 ms",
+    "p.outside": "%s ms not in any chunk",
+    "p.none_line": "%s has no sample to show: pick a length and RUN SAMPLE.",
+    # the legend
+    "p.legend.0": "under 0.5",
+    "p.legend.1": "0.5–2",
+    "p.legend.2": "2–5",
+    "p.legend.3": "5+ ms per tick",
+    # the side panel
+    "p.side.first": "A sample runs on %s. The map colours in when it ends: each square by how long its chunk takes each tick.",
+    "p.side.none": "Pick 10, 30 or 60 seconds and RUN SAMPLE. The map then colours each chunk of %s by how long it takes each tick; a click on a square shows what in it takes the time.",
+    "p.side.last": "The last sample · %s · %s",
+    "p.side.keeps": "The map keeps the last sample's colours until the running one ends. Pick a chunk for its blocks.",
+    "p.side.pick": "Click a square for what takes the time in its chunk. WORST ANYWHERE below lists the slowest chunks of every world on %s.",
+    "p.side.chunk": "Chunk %s, %s · %s ms",
+    "p.side.not_timed": "This chunk is not among the sample's %s slowest.",
+    "p.side.share": "%s%% of the tick",
+    "p.side.kinds": "Block or entity",
+    "p.col.ms_short": "ms",
+    "p.k.scheduled": "scheduled ticks",
+    "p.k.scheduled_what": "block and fluid updates",
+    "p.k.chunk": "chunk tick",
+    "p.k.chunk_what": "random ticks, spawning",
+    "p.k.entity": "entity",
+    "p.k.mod_entity": "%s entity",
+    # how many of a kind ticked in the chunk during the sample, not how many are there (audit of SU-153)
+    "p.k.ticked": "%s ×%s ticked",
+    "p.k.ticked_tip": "%s of this kind ticked in this chunk during the sample. It is not a count of how many are there.",
+    "p.tp_tip": "Beside the slowest one, at %s %s %s, facing it",
+    "p.tp_other_tip": "On another server: to the safe place in this chunk",
+    "p.outline": "Outline top 10",
+    "p.outline_short": "Outline",
+    "p.outline_tip": "Red boxes round the sample's 10 slowest blocks, seen through walls, for five minutes. Only you see them; press again to clear them.",
+    "p.outline_on": "The outline shows for %s more. Press again to clear it.",
+    "p.outline_here_only": "The outline is drawn in this server's worlds: run a sample here to outline its blocks.",
+    "p.outline_none": "This sample timed no block.",
+    "p.outline_shown": "Outline: %s of its %s blocks are in this world. Close the screen to see them.",
+    "p.outline_cleared": "Outline cleared.",
+    # the footer
+    "p.worst": "Worst anywhere",
+    "p.chip": "%s · %s",
+    "p.worst_tip": "Shows %s chunk %s, %s on the map",
+    "p.foot.list": "%s chunks in the sample of %s",
+    # the list
+    "p.col.ms": "ms/tick",
+    "p.col.share": "Share",
+    "p.share": "%s%%",
+    "p.list.none": "%s has no sample to list. RUN SAMPLE above times one.",
+    # the outline in the world (D751)
+    "outline.label": "%s · %s ms",
+    "outline.hud": "Lag outline: %s blocks · %s left",
+}
+KEYS.update({"gui.bsp_server_utilities.lag." + k: v for k, v in LAG_PROFILER_GUI.items()})
+# review of the LAG audit fixes: an answer between servers can take up to about 14 s without Redis, so a server is
+# waited for until its question closes (15 s); OUTLINE refused when none of the sample's blocks is in the viewer's world
+KEYS["gui.bsp_server_utilities.lag.waiting_for"] = "Waiting for %s to answer…"
+KEYS["gui.bsp_server_utilities.lag.menu.waiting"] = "waiting…"
+KEYS["gui.bsp_server_utilities.lag.p.outline_none_here"] = "No block of this sample is in your world."
 
 
 def main():

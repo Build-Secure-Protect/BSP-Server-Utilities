@@ -65,6 +65,9 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.web.WebNotes.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebBans.registerNotices(); // network bans (SU-44)
         com.mrgregles.bsp_server_utilities.rooms.RoomList.registerNotices(); // Compact Machines rooms (SU-54)
+        com.mrgregles.bsp_server_utilities.lag.LagNetwork.registerNotices(); // the LAG tab across the network (SU-149)
+        com.mrgregles.bsp_server_utilities.lag.LagProfiler.registerNotices(); // the lag profiler's samples (SU-151)
+        com.mrgregles.bsp_server_utilities.lag.LagProfiler.registerEvents();
         com.mrgregles.bsp_server_utilities.rooms.RoomLimit.registerEvents(); // the room limit (SU-55)
         com.mrgregles.bsp_server_utilities.rooms.RoomLosses.registerEvents(); // lost machines and the grace list (SU-56)
         com.mrgregles.bsp_server_utilities.rooms.RoomLosses.registerNotices();

@@ -2706,3 +2706,161 @@ Three independent reviews read all the code written today: the server side and n
 
 Left: STAFF's group editor (the colour code box and REMOVE) runs off a page under 330 px wide, with the narrow 4:3 windows above; on Mohist a plugin that sends the player elsewhere reads as "stopped"; the player-reach guess (view distance plus two) may be one chunk out at the edge; half-typed text in the ENTITIES and CHUNKS add boxes is lost on a resize (as before); a few 1 px touches at the old size.
 
+## 2026-11-24: the LAG tab's loaded chunks, server side (SU-149)
+
+Look BA C (D758), `tools/preview/lag_refined.html`. Protocol **14** (`LagAskPacket`, `LagAnswerPacket`). Notice kinds `lag_ask` and `lag_answer`. GameTests (`LagGameTests`, 3): a world's summary and map carry a chunk a mod's ticket holds, with the reason and ticking, every chunk with one reason, the list capped at 50, and the text forms read back the same; a chunk's detail counts entities and block entities by kind, says when a chunk is not loaded, and never loads one; an editor's question is answered here at once and asked of every other server (the summaries) or of the one named (a map, a detail); an answer is passed on while the question is open (15 s; the summaries stay open for every server); another server's question naming this one is answered, one naming another is not; a player who may not edit gets nothing; asks closer than 300 ms are dropped. **Nothing to see in game yet**: the screen is SU-150.
+
+To check with two servers and Redis once SU-150 is in: the other server's worlds appear within a second or two; with Redis down, within the notice table's poll.
+
+
+## 2026-11-24: the LAG tab's LOADED half (SU-150)
+
+Look BA C (D758), frames R1 to R3, R7 and R8 of `tools/preview/lag_refined.html`. `client/LagTab.java`; the tab is LAG in the World group after DROPS. Server additions: a chunk's detail carries the safe spot its own server works out (`ChunkCommands.safeSpot`, only for a loaded chunk), and `LagGoPacket` (still protocol **14**) moves an editor to a chunk: on this server through `ChunkCommands.teleport` (the spot worked out again), on another through BSP-Teleport to the given spot, logged as `chunk_tp` with the server's name once BSP-Teleport takes the move.
+
+GameTests (`LagGoGameTests`, 3; **334/334** in all):
+- A loaded chunk's detail has a safe spot inside the chunk, standable (or on water), the same one `/su chunks tp` uses; the detail reads back the same with a spot and without; a chunk not loaded has none and is not loaded for one.
+- GO THERE on this server: a player who may not edit moves nowhere and nothing is logged; an editor stands in the chunk afterwards, logged once as `chunk_tp`; this server named by its name works the same.
+- GO THERE on another server: a player who may not edit is not moved; an editor's move goes through BSP-Teleport to the middle of the given spot, logged once with the server's name; a move BSP-Teleport could not start is not logged; without BSP-Teleport nothing happens.
+
+**Untested in a client.** Everything on the screen is built but not seen in game. To check:
+- The map at the four window sizes: 480 × 270 (17 × 17 squares), 427 × 240 (13 × 13, the world key without the server, the colour keys ENT., B.E., WHY), 960 × 540 (33 × 33), and the smallest page; nothing drawn under the tab list or past the page.
+- ENTITIES, BLOCK ENT. and WHY colourings and their legends (WHY counts each reason); unloaded chunks near black; the viewer's chunk framed in white.
+- The wheel zooms out four steps and back in, the legend saying how many chunks a square is; a zoomed-out square sums its chunks and takes the first reason; dragging moves the map without picking; HOME comes back to the viewer (from another world or server too).
+- Clicking a square: CHUNK x, z, blocks, ticking, loaded by and whose, the totals and the chips of the top kinds; a square not loaded says so; zoomed out, a click picks the square's busiest chunk.
+- GO THERE on this server (the screen closes, the chat line, the Action Log); on another server with BSP-Teleport (needs two servers and Redis); greyed with no safe spot, with a hover saying why.
+- The world menu: every server's worlds with chunk counts and "answered N s ago"; a stopped server grey after 5 s with the age of its last answer; picking a world asks for its map once.
+- LIST: every server's busiest chunks; clicking each heading sorts (again: the other way); TP on this server's row and on another's (it asks that server for its safe spot first); SHOW ON MAP with a row picked.
+- The PROFILER key is drawn off with a hover; the profiler is SU-151 and SU-152.
+
+## 2026-11-24: the lag profiler, server side (SU-151)
+
+Frames R4 to R6 of `tools/preview/lag_refined.html`; owner decisions D749, D751 to D753, D759 to D761. Still protocol **14** (`LagSamplePacket`; `LagAskPacket.Kind.PROFILE`). Notice kinds `lag_sample` (a START or STOP passed on to the server it names) and `lag_said` (what an editor is told, passed to the server they are on). Action Log kind `lag_sample` ("Lag samples").
+
+How it measures: two mixins, HEAD and RETURN injects only, each first reading one volatile boolean (`LagTimer.on`), so a server not sampling pays one read per hook. `BlockEntityTickLagMixin` times `LevelChunk$BoundTickingBlockEntity.tick()` (each block entity's tick); `ServerLevelLagMixin` times `tickNonPassenger` (an entity with its passengers), `tickChunk` (a chunk's own tick: random ticks, spawning, lightning) and `tickBlock` / `tickFluid` (scheduled ticks, counted in their chunk as "scheduled ticks"). The whole tick is timed between `ServerTickEvent` START (highest priority) and END (lowest). A sample starts timing at the next tick and ends after its length in ticks (20 a second), so on a server running at 10 TPS a 30 s sample takes about 60 s. Every inject has `require = 0`; `LagMixinPlugin` checks the hooks went in, and when one did not, the profiler refuses samples and logs once.
+
+GameTests (`LagProfilerGameTests`, 5; **339/339** in all, twice in a row):
+- Nothing is recorded outside a sample: the record calls leave the collector empty.
+- Timings driven by hand (5 ms and 1 ms hoppers, two armour stands, a scheduled redstone tick, chunk ticks, over 20 ticks of 50 ms): the busy chunk first at 9.1 ms per tick, with its share of the tick; its kinds ranked (hoppers 6.0 ms, two of them, the slow one worst; armour stands with the worst one's place; scheduled ticks; the chunk's own tick as one line); a chunk not loaded at the end put down as "other"; 40.7 ms not in any chunk; OUTLINE's blocks the slowest first, a scheduled tick by its block's id; the result reads back the same.
+- The text form: 200 chunks of 12 kinds with long names read back the same under the packet's limit; a profile carries the running sample and the last finished one, or neither; a result too big is cut by whole chunks, keeping the blocks.
+- A real sample (shortened to 100 ticks): a player who may not edit starts nothing, a length not offered is refused, a second start is refused, PROFILE while it runs says who and how far; the test chunk's hoppers and armour stands are timed; it ends by itself after 100 ticks, is kept with its chunks ranked and capped, fits in the tick, and is logged once as `lag_sample` by who started it; the timings are cleared; STOP with nothing running does nothing; the last result stays while the next runs; STOP ends the next one with what it had, logged with who stopped it.
+- Across servers (memory storage): a START for another server is passed on with a notice naming it, the length and who, and does not start here; that server's PROFILE is passed to the editor; a notice naming another server starts nothing; one naming this server starts here and sends this server's PROFILE back; a second start is refused, the asker told on their server who runs it and the time left; a PROFILE ask naming this server is answered; a STOP notice stops it, keeps what it had and logs it once.
+
+Not tested by a GameTest: a chunk's own tick from a real run (it needs a player near; only the timings driven by hand test it).
+
+**Untested in game.** No screen yet (SU-152). To check on a real server:
+- The cost while sampling on a busy server: TPS and MSPT during a 60 s sample on the busiest server, against the same minute without one (the hooks cost two `System.nanoTime()` calls and a few map updates per block entity, entity and scheduled tick). With no sample running the cost should not show.
+- Mohist backends, where Bukkit patches may change these methods: the server starts and runs whatever happens; if a hook did not go in, the log says once "the lag profiler is unavailable on this server" naming the missing hooks, and a START is refused with a chat line. If none is logged, check a sample's figures look sane (block entities and entities present, "not in any chunk" well under the tick).
+- Two servers and Redis: START on another server from the PROFILER (once SU-152 is in) starts there, its PROFILE comes back, a refusal and "done" reach the editor on their own server.
+- The Action Log shows "Lag samples" in the kind menu, with the line `sampled 30 s on <server>: tick N ms, worst chunk X, Z in <world> at N ms`.
+
+## 2026-11-24: the lag profiler screen and the outline (SU-152)
+
+Frames R4, R5, R6 and R8 of `tools/preview/lag_refined.html`; owner decisions D749 to D752, D759 to D761. The PROFILER half of `client/LagTab.java`, `client/LagOutline.java` (the boxes in the world and the HUD line), and the sums both use in `lag/LagView.java` (the ms ramp, a square's colour, the squares at a zoom, a running sample's time left and progress, when to ask again, the outline's clock, how long ago). Server additions: `ChunkCommands.spotNear` (the nearest place to stand within 3 blocks of a block, only in loaded chunks inside the border), `ChunkCommands.goBeside` / `teleportBeside` (there, facing the block, else the chunk's safe spot; logged as `chunk_tp`, "went beside X Y Z in chunk ..."), and `LagGoPacket.beside` (still protocol **14**): on this server the given place is the block to stand beside; on another server the screen asks that server for the chunk's safe spot and goes there through BSP-Teleport, as GO THERE does. The screen asks PROFILE when the PROFILER opens, when the menu picks another server, about every 2 s while a sample runs (only while the PROFILER is open) and once more when it should have ended.
+
+GameTests (`LagScreenGameTests`, 6; **345/345** in all, twice in a row):
+- The ramp's four colours at their edges (0.5, 2 and 5 ms); a square with a timed chunk takes its ms colour, a loaded one with no time the darkest loaded colour, one neither loaded nor timed the not-loaded colour.
+- One world's timed chunks become squares, one a chunk; at ×2 the chunks' times are summed and the slowest is kept for a click; another world's chunks stay out.
+- A running sample: the time left from the ticks still to go less the time since the answer, never under 0; progress; whole seconds rounded up; asked again after 2 s, and once (only once) as soon as it should have ended.
+- The outline's m:ss (5:00 at the start, five minutes), how long ago in seconds, minutes, hours and days, the ms text (two decimals under 1 ms), the share of a 50 ms tick, the worst chunks of every world slowest first, one world's blocks.
+- Beside a block: the nearest place on the block's own level in a fixed order, standable; the player stands there facing the block; walled in, nothing within reach, so the chunk's safe spot (the one GO THERE uses); a block in a chunk not loaded has no place and is not gone to, and nothing is loaded.
+- Through the packet: a player who may not edit is refused and moves nowhere, nothing logged; an editor stands beside the block, logged once; GO THERE without beside goes to the chunk; the packet reads back the same with beside and without.
+
+**Untested in a client.** Everything on the screen and in the world is built but not seen in game. To check:
+- PROFILER on this server: 10 S / 30 S / 60 S (30 lit at first), RUN SAMPLE; the chat line; the line under the keys "Sampling <server>", the bar filling, "N s left" counting down, "started by <name>"; the length keys greyed and STOP in red while it runs; a second editor opening LAG sees the same bar.
+- STOP: the sample ends with what it had; the line then gives "<server> · N of 30 s · ...".
+- When it ends by itself the screen asks once more and the results come in without reopening: the map coloured by ms per tick (the four colours and the legend), chunks outside the result loaded in the darkest colour, the line "<server> · 30 s · <ago> · <by> · tick <avg> / 50 ms · not in any chunk <ms>", the tick amber from 25 ms and red from 45.
+- The side panel: with no sample, the line telling the editor to run one; while one runs with an older result, "THE LAST SAMPLE · <ago> · <by>" and the note; a picked chunk "CHUNK x, z · N MS", its share and why/whose, its kinds ranked with counts and the mod or "entity" in grey, ms coloured, TP where there is a place; a chunk not in the result says it is not among the 200 slowest.
+- TP beside a block entity on this server: the screen closes, the editor stands beside it facing it, the chat line, the Action Log; a block walled in sends them to the chunk's safe spot with a line saying so.
+- PROFILER on another server (two servers and Redis): the world menu picks it, RUN SAMPLE starts there, the line and bar update, the results come back; TP and GO THERE ask that server for the chunk's safe spot and go through BSP-Teleport (greyed without it); OUTLINE greyed with its hover.
+- OUTLINE TOP 10: the red boxes through walls with "<block> · <ms> ms" over each, only in the world the editor is in; the HUD line "Lag outline: N blocks · m:ss left" counting down; pressing it again clears them (the key lit while they show, its hover giving the time left); they clear after five minutes, on logout and on a move to another server; another player sees nothing.
+- WORST ANYWHERE chips: the slowest chunks of every world, another world's named; a click moves the map to its world, centres and picks it.
+- LIST in PROFILER: world, chunk, loaded by, ms/tick, share, sortable by each heading, TP, SHOW ON MAP with a row picked.
+- Zoomed out, a square sums its chunks' times and a click picks the slowest one.
+- The four window sizes: 480 × 270, 427 × 240 (the world key without the server; at the narrowest page the lengths as 10 / 30 / 60), 960 × 540, and the smallest page (330 × 192): nothing under the tab list or past the page, the line under the keys cut cleanly, OUTLINE shortening to OUTLINE beside GO THERE in a narrow side panel.
+- Cost: no PROFILE asks while the PROFILER is closed or no sample runs; the outline's boxes and labels do not drop the frame rate.
+
+## 2026-11-24: audit of the LAG tab (SU-153)
+
+A review of the LAG tab and the lag profiler, each finding checked against the code first. All were real and are fixed; none was left.
+
+Server:
+- **S1 fixed.** An answer between servers is at most `LagNetwork.NOTICE_MAX` (256,000 characters, head included): `LagNetwork.answer` gives the payload what is left after the head. A map (`LagSnapshot.encodeMap(world, rows, budget, x, z)`) keeps whole rows, the nearest the ask's x, z first; the screen's MAP ask carries the map's middle (the viewer's chunk, or the centre once set; SHOW ON MAP and WORST ANYWHERE set the centre before asking). PROFILE (`LagResult.encodeProfile(profile, budget)`) keeps the slowest chunks, cut from the end. An answer to an editor on the same server keeps the packet's 1,000,000.
+- **S2 fixed.** `lag_ask`, `lag_sample` and `lag_said` notices created more than 60 s before now (`LagNetwork.LATE_MS`, each class's clock) are dropped.
+- **S3 fixed.** `LagProfiler.serverStopping` (the `ServerStoppingEvent` hook, at HIGH so it runs before the storage closes) finishes a running sample, logs it once as "sampled N of M s on <server>, cut short by the server stopping", tells no one, then clears.
+- **S4 fixed.** `LagProfiler.Top` (a min-heap of N) keeps the 200 slowest chunks and OUTLINE's places (twice 10, as a place is at most a block entity and a scheduled tick) without sorting everything timed.
+- **S5 fixed.** `ChunkCensus.reason` / `reasons(level).at(x, z)` work out one chunk's reason and who by `ChunkCensus.of`'s rules and order (players within view + 2, a Forge ticket within 2, `/forceload` within 2, spawn within 11, else other); used by `LagSnapshot.detail` and by the profiler's result. SUMMARY asks reuse summaries taken within the last second (`LagSnapshot.summariesForAsk`).
+- **S6 fixed.** START and STOP each have the asks' 300 ms per-player gap (`LagNetwork.pass`, slots after the ask kinds).
+- **S7 fixed.** `BlockEntityTickLagMixin` shadows nothing: the place and type come from `TickingBlockEntity.getPos()` / `getType()` on the ticker (the id looked up once per type), the level from the new `LevelLagMixin` (HEAD and RETURN of `Level.tickBlockEntities`, `require = 0`, server levels and the server thread only).
+- **S8 fixed.** `LagMixinPlugin` says which lag mixins it expects and which were applied (system properties); `LagProfiler.missing()` loads the one late target class (`LevelChunk$BoundTickingBlockEntity`) first and counts a mixin never applied as missing.
+- **S9 fixed.** Every server-name comparison of the LAG notices and packets cleans both sides (`LagNetwork.sameServer`; the screen compares the same way).
+- **S10 fixed.** When another editor stops a sample, whoever started it is told too (`message...lag.sample_stopped_by`, through the same path as every other line, so on any server).
+- **S11 fixed.** The line BSP-Teleport shows on arrival is the lang key `message.bsp_server_utilities.lag.arrived`.
+- **S12 fixed.** Every Lag* GameTest starts with `LagProfiler.resetForTests()`: a running sample dropped (not logged), the real clocks and senders back, the summaries cache cleared.
+- **S13 fixed.** `LagResult.Entry` says its count is how many of the kind ticked in the chunk during the sample; the side panel reads "hopper ×4 ticked" when it fits, else "hopper ×4" with the meaning in the hover.
+
+Client:
+- **C1 fixed.** The MAP answer's first line is its world (`LagSnapshot.MapAnswer`); `ClientLag.Map` keeps it; the tab takes a map only for the server and world it shows.
+- **C2 fixed.** A GO THERE or TP waiting on another server is dropped in `LagTab.close()` (now also called when the staff screen closes on the LAG tab) and acts only within 5 s of asking.
+- **C3 fixed.** "This server" is never guessed from an answer: until the counts name it, no map or detail is taken for it, and GO THERE, TP and OUTLINE are greyed with a waiting hover. The tab clears the last map and detail when it opens.
+- **C4 fixed.** PROFILE asks are queued and flushed with the same pacing as MAP and DETAIL.
+- **C5 fixed.** The WHY counts are reset with the squares.
+- **C6 fixed.** LIST (LOADED): a row's hit box ends 2 px before the TP key.
+- **C7 fixed.** `squareAt` stops at the map's last pixel.
+- **C8 fixed.** The PROFILER's map looks the squares up once a frame; the footer's sums of the map rows are worked out once per map.
+- **C9 fixed.** The outline draws through a buffer of its own and flushes only that; the HUD line is hidden while F3 is open; the outline clears when the player is in another world than the one it was shown in (and on login and logout, as before).
+- **C10 fixed.** GO THERE and TP to another server are not greyed for a missing `bsp_teleport` on the client; the server says so.
+
+Layout and wording:
+- **L1 fixed.** The LOADED side panel gives entity chips at most half the rows left (more when the block entities need less), and a cut set ends with "+N more".
+- **L2 fixed.** The PROFILER's ranked kinds, when cut, end with "+N more".
+- **L3 fixed.** The zoom ("1 square = 4 × 4 chunks") is in the map's corner; the legend wraps to a second line above the footer when its items do not fit on one.
+- **L4 fixed.** The PROFILER line measures the tick and the part not in any chunk first and fits who, when and how long to what is left.
+- **L5 fixed.** The LIST headings use "B.E."; the chunk column is 48 px in both lists.
+- **L6 fixed.** The side panel's TP key is measured as drawn (+ 10).
+- **L7 fixed.** The world menu says "silent · N s ago"; a list longer than the menu has a 1 px scroll bar.
+- **L8 fixed.** The keys sit at y + 22.
+- **L9 fixed.** The world key's name is fitted to the key less " ▾", then the ▾ added.
+- **Wording fixed.** "every world on <server>"; "until the running one ends"; "N ms not in any chunk"; "B.E." in the keys and the list, "block entities" spelled out elsewhere; "mod tickets" in the legend, "mod ticket" for one chunk; "HOME centres the map on you".
+
+GameTests added (6; **351/351** in all, twice in a row):
+- `LagGameTests.mapCutKeepsTheNearestAndNamesItsWorld`: a map over the cap is cut to it by whole rows, the kept rows the nearest the middle asked for, still naming its world; the full map and an empty one read back the same with their world; an answer here keeps the packet's limit; this server's own map cut to a budget.
+- `LagGameTests.lateQuestionsAndSamplesAreDropped`: a MAP ask, a SUMMARY ask and a STOP over a minute old get nothing; seconds old they are answered.
+- `LagGameTests.serverNamesWithABarMatchOnBothSides`: on a server called `al|pha`, an ask and a STOP naming `al/pha` are answered, and an editor's MAP ask naming it is answered at once.
+- `LagProfilerGameTests.topKeepsTheBestWithoutSortingAll`: the heap's ten equal a full sort's first ten; fewer than ten; none.
+- `LagProfilerGameTests.startAndStopCloserThanTheGapAreDropped`: a second STOP or START within 300 ms is dropped, START and STOP apart, heard again after the gap.
+- `LagProfilerGameTests.sampleCutByTheServerStoppingIsLoggedOnce` (batch of its own): the stopping hook's method ends a running sample, logs it once as cut short by the stop, clears it; a second call logs nothing.
+- Updated: `summaryAndMapCarryALoadedChunk` checks every loaded chunk's one-chunk reason against the census's and the detail against the map (S5), and the map's round trip with its world (C1); the across-servers answers check the cap and the world; a PROFILE cut to the cap between servers keeps the slowest chunks in order (`textFormReadsBackUnderTheLimit`); the notices in the across-servers test carry real times.
+
+**Untested in a client or on a real network.** The screen changes (C1 to C10, L1 to L9) are built but not seen in game; check at 427 × 240, 480 × 270, 640 × 360 and 960 × 540: the legend's second line in WHY at 427, the zoom label in the map's corner, "+N more" chips with a chunk of many kinds, the PROFILER line at 427 with long names, the menu's scroll bar with many servers, GO THERE greyed for a moment when the screen opens before the counts. The outline through its own buffer (boxes and labels still drawn, nothing else in the world flickering), its HUD line hidden under F3, and its clearing on a portal. On a real network: a cut map through Redis, a sample stopped by another editor telling its starter, the arrival line from BSP-Teleport, and the profiler on a Mohist backend (a missing target class now refuses samples).
+
+## 2026-11-24: review of the LAG audit fixes
+
+Screen:
+- **1 fixed.** GO THERE and TP to another server wait as long as the question is open (`LagNetwork.OPEN_MS`, 15 s; an answer without Redis takes up to about 14 s). A server is greyed after 5 s as before, but worded as waiting ("Waiting for <server> to answer…", "waiting…" in the world menu) until 15 s have passed, and only then "did not answer"; a late map, summary or PROFILE answer is still taken.
+- **2 fixed.** The zoom ("1 square = 4 × 4 chunks") ends the legend's first line, its width kept free so the items wrap round it; nothing covers the map. Chosen over a "×2" in the corner, which at 337 × 206 (9 to 10 px squares) covers more than one square from ×16.
+- **3 fixed.** A TP's DETAIL ask has a slot of its own (sent first, the kind's one gap kept for the server's pacing), and `ClientLag` keeps the last four detail answers, so a pick or SHOW ON MAP right after a TP neither replaces its ask nor its answer.
+- **4 fixed.** While this server's name is not known, the map and the side panel show "Waiting for this server's name…" (`lag.side.wait_here`), and so do GO THERE's hover and the PROFILER's status, never "did not answer".
+- **5 fixed.** The room under the map is two legend lines with 2 px above and below (`LEGEND_H` 14); a line is drawn only 2 px clear of the footer's line. At 337 × 206 the LOADED map is 129 px (it was 142, flush with the footer).
+- **6 fixed.** OUTLINE is refused with "No block of this sample is in your world." (also its hover) when none of the sample's blocks is in the viewer's world.
+- **7 fixed.** The LIST rows and the PROFILER list rows are kept sorted and made again only when the summaries change (`ClientLag.summariesVersion`), the sort changes, this server's name arrives, or the sample shown changes; a row's grey is read as it is drawn.
+- **8 fixed.** The PROFILER's world key is measured against the wider of RUN SAMPLE and STOP, so it keeps one width and one form as a sample starts and ends.
+
+Server:
+- **9 fixed.** `LagProfiler.reset()` (start and stop) clears the summaries cache (`LagSnapshot.clearCache`) and the open questions and ask gaps (`LagNetwork.serverStopped`); where answers go and the clock are kept.
+- **10 fixed.** A map ask's middle may be `LagSnapshot.BUSIEST` (`Integer.MIN_VALUE` for both x and z): a cut map keeps the rows nearest the world's busiest chunk (most entities, then block entities, as the screen centres). The screen sends it when it is not centred and the viewer is not in the world, and a change of world resets the centre.
+- **11 fixed.** Another server's lag_ask is answered only while it is open (15 s, `ASK_LATE_MS`); lag_sample and lag_said keep 60 s. The first lag notice dropped as late is logged once (info). The servers' clocks must agree (NTP), as for the shared storage's own 10-minute filter: the age of a notice is this server's clock less the sender's.
+- **12 fixed.** `LagTimer.blockEntitiesStart` puts the level it replaces aside and `blockEntitiesEnd` gives it back, so a nested `Level.tickBlockEntities` returns to the outer level, not to none.
+- **13 fixed.** The spots' order breaks equal times by world and place, then kind (a block entity before a scheduled tick), then label.
+- **14 fixed.** A player's ask gaps are dropped on `PlayerLoggedOutEvent` (and all of them on stop); `Summary.byWhy()` returns a copy.
+- **15 fixed.** The BSP-Teleport arrival line was `Component.translatable(...).getString()` on the server, which on a dedicated server is the raw key (Forge loads only data-pack lang files there, not a mod's `assets`). BSP-Teleport's API takes plain text it shows as is, so the line is English in code (`LagNetwork.ARRIVED`), as `WebTeleports.MESSAGE` already is; the same was fixed in `TutorialRunner` ("Taking you to <tutorial>"). Every other lag line to a player is sent as the translatable Component; the Action Log texts stay English in code. The two unused lang keys are gone.
+
+GameTests added (6; **357/357** in all, twice in a row):
+- `LagGameTests.stoppingClearsTheCacheAndOpenQuestions` (batch of its own): the stopping path drops the summaries cache, the open questions and the ask gaps; the sender and the test's clock are kept.
+- `LagGameTests.busiestFlagCutKeepsTheRowsNearestTheBusiest`: a cut with the flag keeps the busiest chunk first and only rows near it, the same as asking for its place; this server's own map and a notice with the flag are answered.
+- `LagGameTests.questionsAreAnsweredOnlyWhileOpen`: a lag_ask 20 s old is dropped, one 10 s old answered, a STOP 20 s old acted on.
+- `LagGameTests.logoutDropsTheAskGapAndCountsAreCopies`: logging out drops the ask gap; `byWhy()` is a copy, for a summary and for the cached ones.
+- `LagProfilerGameTests.nestedBlockEntityLevelsRestoreTheOuter`: through the `LagTimer` hooks, the nested tick is the inner world's, the outer is back after it, none after the outer returns.
+- `LagProfilerGameTests.spotsAtOnePlaceAndTimeKeepOneOrder`: a block entity and a scheduled tick, and two types, at one place and time give the same blocks in the same order whichever was recorded first.
+- Updated: `LagGoGameTests.goElsewhereThroughBspTeleportOnly` checks the arrival line is the plain text, not a key.
+
+**Untested in a client or on a real network.** 1 to 8 are built but not seen in game: check at 337 × 206 (the zoom at the legend's end in WHY with big counts, the 2 px gap under the second line, the smaller map), the waiting wording between 5 and 15 s with a server off Redis, a pick right after a TP to another server, the screen opened before the counts, OUTLINE refused in another world, and the world key as a sample starts and stops. On a real network: the arrival line from BSP-Teleport, and the late log with a server's clock set wrong.

@@ -22,7 +22,7 @@ import java.util.Locale;
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), almost full screen with a list of tabs down the left
  * (D754 to D757, {@code tools/preview/staff_fullscreen_refined.html}): the RULES page ({@code tools/preview/rules_refined.html}),
- * STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}), SUPPORT ({@link SupportTab}) and TUTORIAL ({@link TutorialTab}).
+ * STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}), SUPPORT ({@link SupportTab}), TUTORIAL ({@link TutorialTab}) and LAG ({@link LagTab}).
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -64,13 +64,13 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10, TUTORIAL = 11;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10, TUTORIAL = 11, LAG = 12;
     /** The tab list's groups (D755), each a heading key and its tabs in order. */
     private static final String[] GROUP_KEYS = {"admin.group.players", "admin.group.staff", "admin.group.world", "admin.group.network"};
-    private static final int[][] GROUPS = {{RULES, CLIENTS, AFK}, {STAFF, LOG}, {CHUNKS, MOBS, DROPS, ROOMS}, {SERVERS, SUPPORT, TUTORIAL}};
+    private static final int[][] GROUPS = {{RULES, CLIENTS, AFK}, {STAFF, LOG}, {CHUNKS, MOBS, DROPS, LAG, ROOMS}, {SERVERS, SUPPORT, TUTORIAL}};
     /** Each tab's name and its page line, written out in full so the language check sees every key. */
-    private static final String[] TAB_KEYS = {"admin.tab.rules", "admin.tab.staff", "admin.tab.log", "admin.tab.afk", "admin.tab.chunks", "admin.tab.drops", "admin.tab.clients", "admin.tab.servers", "admin.tab.rooms", "admin.tab.mobs", "admin.tab.support", "admin.tab.tutorial"};
-    private static final String[] PAGE_KEYS = {"admin.page.rules", "admin.page.staff", "admin.page.log", "admin.page.afk", "admin.page.chunks", "admin.page.drops", "admin.page.clients", "admin.page.servers", "admin.page.rooms", "admin.page.mobs", "admin.page.support", "admin.page.tutorial"};
+    private static final String[] TAB_KEYS = {"admin.tab.rules", "admin.tab.staff", "admin.tab.log", "admin.tab.afk", "admin.tab.chunks", "admin.tab.drops", "admin.tab.clients", "admin.tab.servers", "admin.tab.rooms", "admin.tab.mobs", "admin.tab.support", "admin.tab.tutorial", "admin.tab.lag"};
+    private static final String[] PAGE_KEYS = {"admin.page.rules", "admin.page.staff", "admin.page.log", "admin.page.afk", "admin.page.chunks", "admin.page.drops", "admin.page.clients", "admin.page.servers", "admin.page.rooms", "admin.page.mobs", "admin.page.support", "admin.page.tutorial", "admin.page.lag"};
     private int tab = RULES;
     @Nullable
     private com.mrgregles.bsp_server_utilities.network.AdminCountsPacket counts;
@@ -88,6 +88,7 @@ public class AdminScreen extends Screen {
     private final MobsTab mobs = new MobsTab(this);
     private final SupportTab support = new SupportTab(this);
     private final TutorialTab tutorial = new TutorialTab(this);
+    private final LagTab lag = new LagTab(this);
     /** The setup guide, while the panel shows it (D156). */
     @Nullable
     private SetupGuide guide;
@@ -142,6 +143,11 @@ public class AdminScreen extends Screen {
     /** The page's height, down to the panel's bottom edge (the fixed panel's 210 once). */
     int pageH() {
         return panelH() - TITLE_H - guideOff();
+    }
+
+    /** This server's name on the network, from the counts; empty until they come. */
+    String hereServer() {
+        return counts == null ? "" : counts.here();
     }
 
     /** The tab list's open-tab counts arrived: refused today, and chunks over a limit. */
@@ -424,6 +430,8 @@ public class AdminScreen extends Screen {
             support.open();
         } else if (tab == TUTORIAL) {
             tutorial.open();
+        } else if (tab == LAG) {
+            lag.open();
         }
     }
 
@@ -434,6 +442,9 @@ public class AdminScreen extends Screen {
         log.closeMenu();
         if (tab == TUTORIAL) {
             tutorial.close();
+        }
+        if (tab == LAG) {
+            lag.close();
         }
         save();
         staff.flush();
@@ -483,8 +494,8 @@ public class AdminScreen extends Screen {
             clients.addWidgets(left(), top());
             return;
         }
-        if (tab == SERVERS) {
-            return; // no boxes: the list, the previews and REFRESH are drawn
+        if (tab == SERVERS || tab == LAG) {
+            return; // no boxes: everything on these tabs is drawn
         }
         if (tab == ROOMS) {
             rooms.addWidgets(left(), top());
@@ -599,6 +610,9 @@ public class AdminScreen extends Screen {
         if (tab == SUPPORT) {
             support.tick();
         }
+        if (tab == LAG) {
+            lag.tick();
+        }
         if (titleBox != null) {
             titleBox.tick();
         }
@@ -626,6 +640,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == TUTORIAL) {
             tutorial.close();
+        }
+        if (tab == LAG) {
+            lag.close(); // a GO THERE waiting on another server never moves the editor once the screen is gone
         }
         super.removed();
     }
@@ -849,6 +866,10 @@ public class AdminScreen extends Screen {
             super.render(g, mx, my, partial);
             return;
         }
+        if (tab == LAG) {
+            lag.render(g, x, y, mx, my, hits);
+            return;
+        }
         if (tab == CLIENTS) {
             clients.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the reason, message and add boxes
@@ -1060,6 +1081,10 @@ public class AdminScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0 && tab == LAG && guide == null && lag.press(mx, my)) {
+            setFocused(null);
+            return true; // a press on the map: a click picks a square when released, a drag moves the map
+        }
         if (button == 0) {
             for (Ui.Hit hit : List.copyOf(hits)) {
                 if (hit.contains(mx, my)) {
@@ -1070,6 +1095,22 @@ public class AdminScreen extends Screen {
             }
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (button == 0 && tab == LAG && lag.drag(mx, my, dx, dy)) {
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (button == 0 && tab == LAG && lag.release(mx, my)) {
+            return true;
+        }
+        return super.mouseReleased(mx, my, button);
     }
 
     @Override
@@ -1106,6 +1147,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == TUTORIAL) {
             return tutorial.scroll(delta); // the tutorials list (audit of SU-146)
+        }
+        if (tab == LAG) {
+            return lag.scroll(mx, my, delta);
         }
         if (tab == SUPPORT) {
             return super.mouseScrolled(mx, my, delta); // the sentence box, not the hidden rules list (audit of 0.15.0)

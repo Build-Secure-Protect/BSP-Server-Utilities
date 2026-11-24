@@ -218,6 +218,78 @@ public final class ChunkCensus {
         return new Dim(dim, rows);
     }
 
+    /** Why one chunk is loaded and by whom (a player's name or a mod id; empty when no one). */
+    public record Reason(Why why, String who) {
+    }
+
+    /**
+     * Why one chunk of a level is loaded, by the same rules as {@link #of} (first match wins, in the same order of players
+     * and tickets), without taking the census of the whole level: the LAG tab's detail of one chunk (audit of SU-153).
+     * Meant for a loaded chunk; for one that is not, it says what would hold it.
+     */
+    public static Reason reason(ServerLevel level, int x, int z) {
+        return reasons(level).at(x, z);
+    }
+
+    /** What {@link #reason} reads from a level, once, for asking about several of its chunks. */
+    public static Reasons reasons(ServerLevel level) {
+        return new Reasons(level);
+    }
+
+    /** A level's players, tickets, forced chunks and spawn as {@link #of} reads them, asked one chunk at a time. */
+    public static final class Reasons {
+        private final List<ChunkPos> players = new ArrayList<>(), tickets = new ArrayList<>();
+        private final List<String> names = new ArrayList<>(), mods = new ArrayList<>();
+        private final long[] forced;
+        @org.jetbrains.annotations.Nullable
+        private final ChunkPos spawn;
+        private final int view;
+
+        Reasons(ServerLevel level) {
+            view = level.getServer().getPlayerList().getViewDistance() + TICKET_REACH;
+            boolean spectatorsLoad = level.getGameRules().getBoolean(GameRules.RULE_SPECTATORSGENERATECHUNKS);
+            for (ServerPlayer p : level.players()) {
+                if (p.isSpectator() && !spectatorsLoad) {
+                    continue;
+                }
+                players.add(p.chunkPosition());
+                names.add(p.getGameProfile().getName());
+            }
+            for (ChunkTickets.Ticket t : ChunkTickets.live(level)) {
+                tickets.add(t.chunkPos());
+                mods.add(t.modId());
+            }
+            forced = level.getForcedChunks().toLongArray();
+            spawn = level.dimension() == Level.OVERWORLD ? new ChunkPos(level.getSharedSpawnPos()) : null;
+        }
+
+        private static boolean near(ChunkPos c, int x, int z, int reach) {
+            return Math.abs(c.x - x) <= reach && Math.abs(c.z - z) <= reach;
+        }
+
+        public Reason at(int x, int z) {
+            for (int i = 0; i < players.size(); i++) {
+                if (near(players.get(i), x, z, view)) {
+                    return new Reason(Why.PLAYER, names.get(i));
+                }
+            }
+            for (int i = 0; i < tickets.size(); i++) {
+                if (near(tickets.get(i), x, z, TICKET_REACH)) {
+                    return new Reason(Why.TICKET, mods.get(i));
+                }
+            }
+            for (long f : forced) {
+                if (near(new ChunkPos(f), x, z, TICKET_REACH)) {
+                    return new Reason(Why.FORCED, "");
+                }
+            }
+            if (spawn != null && near(spawn, x, z, SPAWN_REACH)) {
+                return new Reason(Why.SPAWN, "");
+            }
+            return new Reason(Why.OTHER, "");
+        }
+    }
+
     /** Marks every chunk within {@code reach} (square) of {@code centre} with {@code who}, keeping the first mark. */
     private static void spread(Long2ObjectOpenHashMap<String> into, ChunkPos centre, int reach, String who) {
         for (int dx = -reach; dx <= reach; dx++) {

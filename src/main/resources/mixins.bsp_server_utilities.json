@@ -4,6 +4,7 @@
   "package": "com.mrgregles.bsp_server_utilities.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "bsp_server_utilities.refmap.json",
+  "plugin": "com.mrgregles.bsp_server_utilities.mixin.LagMixinPlugin",
   "mixins": [
     "CreativeSlotMixin",
     "ContainerClickMixin",
@@ -11,7 +12,10 @@
     "PlayerListLoginMixin",
     "ItemEntityHurtMixin",
     "EntityBelowWorldMixin",
-    "ChunkMapAccess"
+    "ChunkMapAccess",
+    "BlockEntityTickLagMixin",
+    "ServerLevelLagMixin",
+    "LevelLagMixin"
   ],
   "server": [],
   "client": [

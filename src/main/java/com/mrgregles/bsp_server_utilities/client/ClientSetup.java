@@ -61,6 +61,7 @@ public final class ClientSetup {
         ClientAfkCheck.register();
         ClientSupport.register();
         ClientTalk.register(); // private staff messages (SU-106)
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut e) -> ClientLag.clear()); // the LAG tab's answers (SU-149)
         StreamerMode.register(); // Streamer Mode's stream picture, key and /streamer (SU-131)
         event.enqueueWork(() -> BspCore.registerBoard("staff_online", "gui.bsp_server_utilities.staff.title", () -> {
             List<BspCore.Line> out = new ArrayList<>();

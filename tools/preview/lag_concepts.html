@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAG Tab Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Set BA: the LAG tab (SU-148; D746 to D753). Each frame is 480 x 270 GUI px (1920 x 1080 at GUI scale 4), drawn at 1.5x, inside the staff screen of look BB B. Sample data. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#7a4fd6; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#b58cff; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#b58cff; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; } h3{ font-size:16px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:86ch; }
+section{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+.set{ border-top:2px solid var(--line); padding-top:18px; display:flex; flex-direction:column; gap:22px; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:16px; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+@media (max-width:760px){ .stage{ flex-wrap:nowrap; justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); max-width:720px; margin-top:6px; }
+ul{ margin:0; padding-left:20px; } li{ margin-bottom:5px; max-width:90ch; }
+.fw{ width:720px; height:405px; flex:none; position:relative; }
+.f{ --P:#10151C; --S:#0B0E13; --D:#2A2F3A; --H:#3A4150; --M:#9AA3B5; --T:#E6EAF2; --I:#6B7180; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --A:#F2B544; --V:#B58CFF;
+  position:absolute; left:0; top:0; width:480px; height:270px; transform:scale(1.5); transform-origin:0 0; overflow:hidden; font:500 7px/1.3 var(--body); color:var(--T);
+  background:linear-gradient(#5d8fc4,#9cc3e6 45%,#5b7f3a 45%,#4b6b2f 70%,#3e5a28); }
+.dim{ position:absolute; inset:0; background:rgba(5,7,10,.62); }
+.box{ position:absolute; left:8px; top:8px; width:464px; height:254px; background:var(--P); box-shadow:0 0 0 1px var(--V); }
+.ttl{ font:600 8.5px Oswald,var(--body); letter-spacing:.14em; text-transform:uppercase; color:var(--V); white-space:nowrap; }
+.m{ color:var(--M); } .i{ color:var(--I); } .q{ color:var(--Q); } .g{ color:var(--G); } .r{ color:var(--R); } .a{ color:var(--A); } .v{ color:var(--V); }
+.k{ display:inline-grid; place-items:center; height:12px; padding:0 5px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); font:600 5.8px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+.k.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); } .k.v{ background:var(--V); color:#120d1c; box-shadow:none; } .k.r{ box-shadow:inset 0 0 0 1px rgba(255,107,92,.7); color:var(--R); }
+.k.sm{ height:9px; padding:0 3px; font-size:5px; }
+.seg{ display:inline-flex; } .seg .k + .k{ margin-left:-1px; }
+.lbl{ font:600 5.2px Oswald,var(--body); letter-spacing:.14em; color:var(--I); text-transform:uppercase; white-space:nowrap; }
+.well{ position:absolute; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); overflow:hidden; }
+.chip{ display:inline-flex; align-items:center; height:8px; padding:0 3px; font:600 4.8px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); white-space:nowrap; }
+.foot{ position:absolute; left:74px; right:0; bottom:0; height:14px; display:flex; align-items:center; gap:6px; padding:0 8px; font-size:5.6px; color:var(--I); box-shadow:inset 0 1px 0 var(--D); white-space:nowrap; }
+.side{ position:absolute; left:0; top:18px; width:74px; bottom:0; background:var(--S); box-shadow:inset -1px 0 0 var(--D); padding:3px 0; }
+.side .gh{ font:600 4.9px Oswald,var(--body); letter-spacing:.16em; color:var(--I); padding:4px 7px 1px; text-transform:uppercase; height:11px; box-sizing:border-box; }
+.side .it{ height:11.5px; display:flex; align-items:center; gap:4px; padding:0 7px; font:600 6px Oswald,var(--body); letter-spacing:.1em; color:var(--M); text-transform:uppercase; }
+.side .it .dot{ width:4px; height:4px; background:var(--H); flex:none; }
+.side .it.on{ background:#1A1530; color:var(--V); box-shadow:inset 2px 0 0 var(--V); } .side .it.on .dot{ background:var(--V); }
+.side .it .n{ margin-left:auto; font:600 5px var(--body); color:var(--G); }
+.row{ display:grid; gap:4px; align-items:center; height:11px; padding:0 4px; font-size:5.9px; white-space:nowrap; box-shadow:inset 0 -1px 0 #161B23; }
+.row > span{ overflow:hidden; text-overflow:ellipsis; }
+.row.head{ color:var(--I); font:600 4.8px Oswald,var(--body); letter-spacing:.12em; text-transform:uppercase; height:10px; }
+.row.sel{ background:#1A1530; box-shadow:inset 2px 0 0 var(--V); }
+.t{ font-family:var(--mono); font-size:5.4px; color:var(--I); }
+.bar{ height:4px; background:#1E2430; position:relative; } .bar i{ position:absolute; left:0; top:0; bottom:0; }
+.tp{ display:inline-grid; place-items:center; height:8px; padding:0 3px; font:600 4.8px Oswald,var(--body); letter-spacing:.1em; color:var(--Q); box-shadow:inset 0 0 0 1px rgba(25,211,176,.55); }
+.kv{ display:flex; justify-content:space-between; gap:6px; font-size:6px; padding:2px 0; box-shadow:inset 0 -1px 0 #1A1F27; } .kv span:first-child{ color:var(--M); }
+.sub{ display:flex; gap:0; } .sub .st{ height:12px; display:grid; place-items:center; padding:0 8px; font:600 6px Oswald,var(--body); letter-spacing:.12em; color:var(--I); text-transform:uppercase; box-shadow:inset 0 -1px 0 var(--D); }
+.sub .st.on{ color:var(--V); box-shadow:inset 0 -2px 0 var(--V); }
+.stat{ display:flex; flex-direction:column; gap:1px; padding:3px 6px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.stat b{ font:600 9px Oswald,var(--body); color:var(--T); letter-spacing:.04em; } .stat span{ font-size:5px; color:var(--I); text-transform:uppercase; letter-spacing:.12em; font-family:Oswald,var(--body); }
+.grid{ position:absolute; display:grid; gap:1px; background:#0A0C10; }
+.grid i{ display:block; }
+.legend{ display:flex; gap:3px; align-items:center; font-size:5px; color:var(--I); }
+.legend i{ width:8px; height:5px; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>The LAG tab: three options (set BA)</h1>
+    <p class="lede">The LAG tab sits under World in the staff screen's tab list (D746). It has two halves: <b>Loaded</b>, every loaded chunk on this server and the network with its entities and block entities, and <b>Profiler</b>, a timed sample showing which chunks cost the most tick time and the blocks and entities inside them. Each option is drawn twice: the Loaded half, then the Profiler after a 30-second sample (D749). Every frame is a 1920 × 1080 window at GUI scale 4; bigger windows show more rows. Sample data.</p>
+  </header>
+
+  <div class="set">
+    <h2>Set BA: the LAG tab</h2>
+    <section>
+      <h3>A. Two halves as keys across the top, each a full-width table, the picked row's details in a strip below</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="a1"></div></div><p class="cap">Loaded: a row of totals, then a table sorted by any column (entities here). SERVER and DIMENSION filter it. TP on each row goes to the chunk (D750); the picked chunk's details sit in the strip under the table.</p></div>
+        <div><div class="fw"><div class="f" id="a2"></div></div><p class="cap">Profiler: the server, the length (10, 30 or 60 s) and RUN SAMPLE above the ranked chunks, each with ms per tick and a bar of its share of the 50 ms tick. Picking one lists its blocks and entities underneath. "Not in any chunk" is world generation, saving and the network.</p></div>
+      </div>
+    </section>
+    <section>
+      <h3>B. A list of chunks on the left, the picked chunk opened up on the right</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="b1"></div></div><p class="cap">Loaded: the left list is compact (where, entities, block entities). The right side shows the picked chunk in full: why it is loaded and by whom, its entities by type, its busiest block entities, TP, and SAMPLE THIS SERVER.</p></div>
+        <div><div class="fw"><div class="f" id="b2"></div></div><p class="cap">Profiler: the same two sides, with the list ranked by ms per tick. The right side shows the chunk's blocks and entities by cost, each with TP (standing beside the block, D750). OUTLINE puts a red box on the top 10 for five minutes (D751).</p></div>
+      </div>
+    </section>
+    <section>
+      <h3>C. A map of chunks around a place, coloured by entities or by tick time, with a side panel</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="c1"></div></div><p class="cap">Loaded: a grid of the loaded chunks around a centre (you, or the busiest area), each square coloured by entities, block entities or why it is loaded. Click a square for its details on the right; drag to move; the wheel zooms. A list view is one key away.</p></div>
+        <div><div class="fw"><div class="f" id="c2"></div></div><p class="cap">Profiler: the same map coloured by ms per tick, so clusters of lag stand out (a farm, a machine room). The side panel ranks the picked chunk's blocks; a strip under the map lists the worst chunks anywhere, to jump to.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>The same in every option</h2>
+    <ul>
+      <li>Other servers' rows come when the tab opens, answered within a few seconds (D748); a server not heard from is greyed. TP to another server goes through BSP-Teleport, greyed without it.</li>
+      <li>A sample on another server runs there and its results come back here. Only one sample runs per server at a time; a second editor sees it running and its results.</li>
+      <li>Editors only (D747). Teleports and samples are in the Action Log (D752).</li>
+      <li>The profiler times block entities and entities by position, and each chunk's own tick (random ticks, spawning). It costs nothing outside a sample.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const GROUPS = [['Players',['RULES','CLIENTS','AFK']],['Staff',['STAFF','LOG']],['World',['CHUNKS','ENTITIES','DROPS','LAG','ROOMS']],['Network',['SERVERS','SUPPORT','TUTORIAL']]];
+function chrome(f, head){
+  let side = '';
+  GROUPS.forEach(g => { side += `<div class="gh">${g[0]}</div>`; g[1].forEach(t => { side += `<div class="it ${t === 'LAG' ? 'on' : ''}"><span class="dot"></span>${t}${t === 'ENTITIES' ? '<span class="n">3</span>' : ''}</div>`; }); });
+  return `<div class="dim"></div><div class="box">
+    <div style="position:absolute;left:0;right:0;top:0;height:18px;display:flex;align-items:center;padding:0 8px;box-shadow:inset 0 -1px 0 var(--D)"><span class="ttl">Server Utilities</span><span class="m" style="margin-left:8px;font-size:5.6px">survival · 14 online</span><span class="m" style="margin-left:auto;font-weight:600;font-size:8px">×</span></div>
+    <div class="side">${side}</div>
+    <div style="position:absolute;left:82px;top:25px;display:flex;align-items:baseline;gap:6px;white-space:nowrap"><span style="font:600 8px Oswald,var(--body);letter-spacing:.12em">LAG</span><span class="m" style="font-size:5.6px">${head}</span></div>
+    ${f}</div>`;
+}
+const P = 82, W = 374; // the page's content left and width inside the box
+const LOADED = [
+  ['survival','overworld','-12, 40','-184 · 648','players · Kestrel_',212,'item',38,'r'],
+  ['survival','overworld','3, 9','56 · 152','mekanism ticket',140,'cow',96,'a'],
+  ['skyblock','overworld','0, 0','8 · 8','spawn area',96,'chicken',22,'a'],
+  ['survival','the_nether','-40, 12','-632 · 200','create ticket',64,'zombified_piglin',210,''],
+  ['creative','overworld','22, -5','360 · -72','players · Mrgregles',41,'armor_stand',12,''],
+  ['survival','overworld','4, 9','72 · 152','mekanism ticket',33,'item',188,''],
+  ['skyblock','overworld','1, 0','24 · 8','spawn area',30,'chicken',4,''],
+  ['survival','overworld','-11, 40','-168 · 648','players · Kestrel_',28,'item',61,''],
+  ['survival','overworld','8, 2','136 · 40','/forceload',19,'villager',8,''],
+  ['creative','overworld','21, -5','344 · -72','players · Mrgregles',12,'painting',31,''],
+  ['survival','the_end','0, 0','8 · 8','other',9,'ender_dragon',0,''],
+  ['skyblock','overworld','-1, 1','-8 · 24','spawn area',8,'chicken',2,''],
+  ['survival','overworld','5, 9','88 · 152','mekanism ticket',6,'item',140,''],
+  ['survival','overworld','3, 10','56 · 168','mekanism ticket',4,'cow',72,''],
+];
+const PROF = [
+  ['survival','overworld','3, 9', 9.8, 'mekanism ticket'],
+  ['survival','overworld','4, 9', 6.1, 'mekanism ticket'],
+  ['survival','overworld','-12, 40', 3.4, 'players'],
+  ['survival','the_nether','-40, 12', 2.2, 'create ticket'],
+  ['survival','overworld','5, 9', 1.7, 'mekanism ticket'],
+  ['survival','overworld','8, 2', 0.9, '/forceload'],
+  ['survival','overworld','-11, 40', 0.6, 'players'],
+  ['survival','overworld','3, 10', 0.4, 'mekanism ticket'],
+];
+const BLOCKS = [
+  ['mekanism:digital_miner','Mekanism','56 64 150', 1, 4.1, 'be'],
+  ['minecraft:hopper','Minecraft','×84 in the chunk', 84, 2.3, 'be'],
+  ['create:mechanical_drill','Create','×12 in the chunk', 12, 1.4, 'be'],
+  ['minecraft:item','Minecraft','×38 entities', 38, 0.9, 'en'],
+  ['mekanism:logistical_transporter','Mekanism','×46 in the chunk', 46, 0.6, 'be'],
+  ['minecraft:cow','Minecraft','×96 entities', 96, 0.4, 'en'],
+  ['chunk tick','random ticks, spawning','', 0, 0.1, 'ck'],
+];
+const c = n => n === 'r' ? 'var(--R)' : n === 'a' ? 'var(--A)' : 'var(--T)';
+const ms = v => v.toFixed(1) + ' ms';
+const share = v => Math.min(100, Math.round(v / 50 * 100));
+const barColour = v => v >= 5 ? 'var(--R)' : v >= 2 ? 'var(--A)' : 'var(--Q)';
+
+/* ---------------- A ---------------- */
+function subTabs(on){ return `<div class="sub" style="position:absolute;left:${P}px;top:39px">${['Loaded','Profiler'].map(s => `<span class="st ${s === on ? 'on' : ''}">${s}</span>`).join('')}</div>`; }
+(function(){
+  const stats = `<div style="position:absolute;left:${P + 104}px;top:37px;display:flex;gap:3px">
+    <span class="k on">SERVER: ALL ▾</span><span class="k on">DIMENSION: ALL ▾</span><span class="k">↻</span></div>`;
+  let rows = `<div class="row head" style="grid-template-columns:38px 40px 34px 90px 1fr 28px 30px 16px"><span>Server</span><span>Dimension</span><span>Chunk</span><span>Loaded by</span><span>Most</span><span style="color:var(--V)">Entities ▾</span><span>Block ent.</span><span></span></div>`;
+  LOADED.slice(0, 11).forEach((r, i) => rows += `<div class="row ${i === 1 ? 'sel' : ''}" style="grid-template-columns:38px 40px 34px 90px 1fr 28px 30px 16px"><span class="m">${r[0]}</span><span class="m">${r[1]}</span><span class="t">${r[2]}</span><span>${r[4]}</span><span class="m">${r[6]}</span><span style="color:${c(r[8])};font-weight:600">${r[5]}</span><span>${r[7]}</span><span><span class="tp">TP</span></span></div>`);
+  const tot = `<div style="position:absolute;left:${P}px;top:54px;display:flex;gap:3px">
+    <div class="stat"><b>3,412</b><span>chunks loaded</span></div><div class="stat"><b>2,980</b><span>ticking</span></div><div class="stat"><b>5,120</b><span>entities</span></div><div class="stat"><b>812</b><span>block entities</span></div><div class="stat"><b>3</b><span>servers</span></div></div>`;
+  const strip = `<div class="well" style="left:${P}px;top:216px;width:${W}px;height:20px;padding:3px 5px;box-sizing:border-box;display:flex;align-items:center;gap:6px;font-size:6px;white-space:nowrap">
+    <span class="v" style="font-weight:600">survival · overworld 3, 9</span><span class="m">mekanism ticket · Pippa_Builds</span><span class="m">cow ×96, item ×31</span><span style="margin-left:auto" class="k sm">GO THERE</span></div>`;
+  document.getElementById('a1').innerHTML = chrome(`${subTabs('Loaded')}${stats}${tot}
+    <div class="well" style="left:${P}px;top:79px;width:${W}px;height:134px">${rows}</div>${strip}
+    <div class="foot"><span>Every loaded chunk on the network · asked when the tab opens</span></div>`, 'Loaded chunks and what lags them');
+  // profiler
+  const ctl = `<div style="position:absolute;left:${P + 104}px;top:37px;display:flex;gap:3px;align-items:center">
+    <span class="k on">SERVER: SURVIVAL ▾</span><span class="seg"><span class="k">10 S</span><span class="k on">30 S</span><span class="k">60 S</span></span><span class="k v">RUN SAMPLE</span></div>`;
+  const sum = `<div style="position:absolute;left:${P}px;top:54px;right:8px;display:flex;gap:6px;align-items:center;font-size:6px;white-space:nowrap">
+    <span class="m">30 s, 2 min ago ·</span><span>tick <b class="a">38.2 ms</b> of 50</span><span class="m">· in chunks 26.1 · not in any chunk 12.1</span><span class="k sm r" style="margin-left:auto">OUTLINE TOP 10</span></div>`;
+  let rk = `<div class="row head" style="grid-template-columns:14px 50px 36px 1fr 44px 70px 16px"><span>#</span><span>Dimension</span><span>Chunk</span><span>Loaded by</span><span style="color:var(--V)">ms / tick ▾</span><span>Share of the tick</span><span></span></div>`;
+  PROF.slice(0, 5).forEach((r, i) => rk += `<div class="row ${i === 0 ? 'sel' : ''}" style="grid-template-columns:14px 50px 36px 1fr 44px 70px 16px"><span class="i">${i + 1}</span><span class="m">${r[1]}</span><span class="t">${r[2]}</span><span class="m">${r[4]}</span><span style="font-weight:600;color:${barColour(r[3])}">${ms(r[3])}</span><span><div class="bar"><i style="width:${share(r[3])}%;background:${barColour(r[3])}"></i></div></span><span><span class="tp">TP</span></span></div>`);
+  let bl = `<div class="row head" style="grid-template-columns:1fr 48px 62px 40px 16px"><span>In chunk 3, 9: block or entity</span><span>Mod</span><span>Where</span><span style="color:var(--V)">ms / tick</span><span></span></div>`;
+  BLOCKS.slice(0, 5).forEach(b => bl += `<div class="row" style="grid-template-columns:1fr 48px 62px 40px 16px"><span>${b[0]}</span><span class="m">${b[1]}</span><span class="t">${b[2]}</span><span style="font-weight:600;color:${barColour(b[4] * 1.3)}">${ms(b[4])}</span><span>${b[5] === 'ck' ? '' : '<span class="tp">TP</span>'}</span></div>`);
+  document.getElementById('a2').innerHTML = chrome(`${subTabs('Profiler')}${ctl}${sum}
+    <div class="well" style="left:${P}px;top:66px;width:${W}px;height:73px">${rk}</div>
+    <div class="well" style="left:${P}px;top:143px;width:${W}px;height:84px">${bl}</div>
+    <div class="foot"><span>Times block entities and entities by position, and each chunk's own tick · costs nothing outside a sample</span></div>`, 'Loaded chunks and what lags them');
+})();
+
+/* ---------------- B ---------------- */
+(function(){
+  const LW = 150, RX = P + LW + 6, RW = W - LW - 6;
+  const top = `<div style="position:absolute;left:${P}px;top:39px;display:flex;gap:3px;align-items:center"><span class="seg"><span class="k on">LOADED</span><span class="k">PROFILER</span></span><span class="k on">ALL SERVERS ▾</span><span class="k">SORT: ENTITIES ▾</span></div>`;
+  let list = `<div class="row head" style="grid-template-columns:1fr 22px 22px"><span>Chunk</span><span>Ent.</span><span>B.e.</span></div>`;
+  LOADED.slice(0, 16).forEach((r, i) => list += `<div class="row ${i === 1 ? 'sel' : ''}" style="grid-template-columns:1fr 22px 22px"><span><span class="m">${r[0].slice(0, 4)}</span> ${r[1] === 'overworld' ? '' : '<span class="i">' + r[1].replace('the_', '') + '</span> '}<span class="t">${r[2]}</span></span><span style="color:${c(r[8])};font-weight:600">${r[5]}</span><span>${r[7]}</span></div>`);
+  const detail = `<div style="display:flex;align-items:baseline;gap:5px"><span class="v" style="font:600 7.5px Oswald,var(--body);letter-spacing:.06em">SURVIVAL · OVERWORLD 3, 9</span><span class="m" style="font-size:5.6px">blocks 48..63, 144..159</span></div>
+    <div class="kv" style="margin-top:3px"><span>Loaded by</span><span>mekanism ticket · Pippa_Builds (away 12 min)</span></div>
+    <div class="kv"><span>Ticking</span><span>yes</span></div>
+    <div class="lbl" style="margin-top:5px">Entities · 140</div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:2px"><span class="chip">cow ×96</span><span class="chip">item ×31</span><span class="chip">sheep ×13</span></div>
+    <div class="lbl" style="margin-top:5px">Block entities · 96</div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:2px"><span class="chip">hopper ×84</span><span class="chip">digital_miner ×1</span><span class="chip">chest ×11</span></div>
+    <div style="display:flex;gap:3px;margin-top:8px"><span class="k" style="color:var(--Q);box-shadow:inset 0 0 0 1px var(--Q)">GO THERE</span><span class="k">SAMPLE THIS SERVER</span></div>`;
+  document.getElementById('b1').innerHTML = chrome(`${top}
+    <div class="well" style="left:${P}px;top:55px;width:${LW}px;height:181px">${list}</div>
+    <div class="well" style="left:${RX}px;top:55px;width:${RW}px;height:181px;padding:5px 7px;box-sizing:border-box">${detail}</div>
+    <div class="foot"><span>3,412 chunks · 5,120 entities · 812 block entities on 3 servers</span></div>`, 'Loaded chunks and what lags them');
+  // profiler
+  const top2 = `<div style="position:absolute;left:${P}px;top:39px;right:8px;display:flex;gap:3px;align-items:center"><span class="seg"><span class="k">LOADED</span><span class="k on">PROFILER</span></span><span class="k on">SURVIVAL ▾</span><span class="seg"><span class="k">10 S</span><span class="k on">30 S</span><span class="k">60 S</span></span><span class="k v">RUN</span><span class="m" style="margin-left:auto;font-size:5.6px">tick <b class="a">38.2</b> / 50 ms</span></div>`;
+  let l2 = `<div class="row head" style="grid-template-columns:1fr 30px"><span>Chunk</span><span>ms/tick</span></div>`;
+  PROF.forEach((r, i) => l2 += `<div class="row ${i === 0 ? 'sel' : ''}" style="grid-template-columns:1fr 30px;height:13px"><span><span class="t">${r[2]}</span> <span class="i">${r[1] === 'overworld' ? '' : r[1].replace('the_', '')}</span><div class="bar" style="margin-top:1px"><i style="width:${share(r[3]) * 2}%;background:${barColour(r[3])}"></i></div></span><span style="font-weight:600;color:${barColour(r[3])}">${r[3].toFixed(1)}</span></div>`);
+  l2 += `<div class="row" style="grid-template-columns:1fr 30px;height:13px"><span class="i">not in any chunk</span><span class="i">12.1</span></div>`;
+  let d2 = `<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:3px"><span class="v" style="font:600 7.5px Oswald,var(--body);letter-spacing:.06em">3, 9 · 9.8 MS PER TICK</span><span class="m" style="font-size:5.6px">20% of the tick</span></div>`;
+  d2 += `<div class="row head" style="grid-template-columns:1fr 40px 26px 16px;padding:0"><span>Block or entity</span><span>Where</span><span>ms</span><span></span></div>`;
+  BLOCKS.forEach(b => d2 += `<div class="row" style="grid-template-columns:1fr 40px 26px 16px;padding:0"><span>${b[0].split(':')[1] || b[0]} <span class="i">${b[1]}</span></span><span class="t">${b[2].replace(' in the chunk', '').replace(' entities', '')}</span><span style="font-weight:600;color:${barColour(b[4] * 1.3)}">${b[4].toFixed(1)}</span><span>${b[5] === 'ck' ? '' : '<span class="tp">TP</span>'}</span></div>`);
+  d2 += `<div style="display:flex;gap:3px;margin-top:6px"><span class="k r">OUTLINE TOP 10</span><span class="k">GO TO CHUNK</span></div>`;
+  document.getElementById('b2').innerHTML = chrome(`${top2}
+    <div class="well" style="left:${P}px;top:55px;width:${LW}px;height:181px">${l2}</div>
+    <div class="well" style="left:${RX}px;top:55px;width:${RW}px;height:181px;padding:5px 7px;box-sizing:border-box">${d2}</div>
+    <div class="foot"><span>Sampled 30 s on survival, 2 min ago, by Mrgregles</span></div>`, 'Loaded chunks and what lags them');
+})();
+
+/* ---------------- C ---------------- */
+(function(){
+  const MW = 214, MH = 166, N = 17, cell = Math.floor((MH - 2) / N) ;
+  function map(kind){
+    let g = '';
+    for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
+      const dx = x - 8, dz = z - 8, d = Math.max(Math.abs(dx), Math.abs(dz));
+      const loaded = d <= 7 || (Math.abs(dx - 5) <= 2 && Math.abs(dz + 6) <= 2);
+      let col = '#0E1117';
+      if (loaded) {
+        const hot = Math.exp(-((dx - 2) ** 2 + (dz - 1) ** 2) / 3) * 1 + Math.exp(-((dx + 4) ** 2 + (dz - 4) ** 2) / 2) * .6 + ((x * 7 + z * 13) % 10) / 60;
+        const v = kind === 'ms' ? hot : hot * .8 + ((x * 3 + z * 5) % 7) / 25;
+        col = v > .8 ? '#FF6B5C' : v > .5 ? '#F2B544' : v > .25 ? '#5E7F45' : '#26303C';
+      }
+      const sel = dx === 2 && dz === 1;
+      const me = dx === 0 && dz === 0;
+      g += `<i style="background:${col};${sel ? 'outline:1px solid #B58CFF;outline-offset:-1px;' : ''}${me ? 'box-shadow:inset 0 0 0 2px #E6EAF2;' : ''}"></i>`;
+    }
+    return `<div class="grid" style="left:${P}px;top:55px;width:${cell * N + N - 1}px;height:${cell * N + N - 1}px;grid-template-columns:repeat(${N},${cell}px);grid-auto-rows:${cell}px">${g}</div>`;
+  }
+  const RX = P + MW + 6, RW = W - MW - 6;
+  const top = (on) => `<div style="position:absolute;left:${P}px;top:39px;right:8px;display:flex;gap:3px;align-items:center"><span class="seg"><span class="k ${on === 'L' ? 'on' : ''}">LOADED</span><span class="k ${on === 'P' ? 'on' : ''}">PROFILER</span></span><span class="k on">SURVIVAL · OVERWORLD ▾</span>${on === 'L' ? '<span class="seg"><span class="k on">ENTITIES</span><span class="k">BLOCK ENT.</span><span class="k">WHY</span></span>' : '<span class="seg"><span class="k on">30 S</span></span><span class="k v">RUN</span>'}<span class="k" style="margin-left:auto">LIST</span></div>`;
+  const legend = (a, b, cc) => `<div class="legend" style="position:absolute;left:${P}px;top:${55 + MH + 2}px"><i style="background:#26303C"></i>${a}<i style="background:#5E7F45"></i><i style="background:#F2B544"></i><i style="background:#FF6B5C"></i>${b}<i style="background:#0E1117;box-shadow:inset 0 0 0 1px #2A2F3A"></i>${cc}<span style="margin-left:6px">◻ you</span></div>`;
+  const side1 = `<div class="v" style="font:600 7.5px Oswald,var(--body);letter-spacing:.06em">CHUNK 3, 9</div><div class="m" style="font-size:5.6px;margin-bottom:3px">blocks 48..63, 144..159</div>
+    <div class="kv"><span>Loaded by</span><span>mekanism ticket</span></div><div class="kv"><span>Owner</span><span>Pippa_Builds</span></div><div class="kv"><span>Entities</span><span class="a">140</span></div><div class="kv"><span>Block entities</span><span>96</span></div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px"><span class="chip">cow ×96</span><span class="chip">item ×31</span><span class="chip">hopper ×84</span></div>
+    <div style="display:flex;gap:3px;margin-top:7px"><span class="k" style="color:var(--Q);box-shadow:inset 0 0 0 1px var(--Q)">GO THERE</span></div>`;
+  document.getElementById('c1').innerHTML = chrome(`${top('L')}${map('en')}${legend('few', 'many entities', 'not loaded')}
+    <div class="well" style="left:${RX}px;top:55px;width:${RW}px;height:${MH}px;padding:5px 7px;box-sizing:border-box">${side1}</div>
+    <div class="foot"><span>17 × 17 chunks around you · drag to move · wheel to zoom · 3,412 loaded on the network</span></div>`, 'Loaded chunks and what lags them');
+  let side2 = `<div class="v" style="font:600 7.5px Oswald,var(--body);letter-spacing:.06em">CHUNK 3, 9 · 9.8 MS</div><div class="m" style="font-size:5.6px;margin-bottom:3px">20% of a 38.2 ms tick</div>`;
+  BLOCKS.slice(0, 6).forEach(b => side2 += `<div class="kv"><span>${b[0].split(':')[1] || b[0]}${b[3] > 1 ? ' ×' + b[3] : ''}</span><span style="color:${barColour(b[4] * 1.3)};font-weight:600">${b[4].toFixed(1)}</span></div>`);
+  side2 += `<div style="display:flex;gap:3px;margin-top:6px"><span class="k r">OUTLINE</span><span class="k" style="color:var(--Q);box-shadow:inset 0 0 0 1px var(--Q)">GO THERE</span></div>`;
+  let worst = `<span class="lbl">Worst anywhere</span>`;
+  PROF.slice(0, 4).forEach(r => worst += `<span class="chip" style="color:${barColour(r[3])}">${r[2]} ${r[3].toFixed(1)}</span>`);
+  document.getElementById('c2').innerHTML = chrome(`${top('P')}${map('ms')}${legend('cheap', 'costly', 'not loaded')}
+    <div class="well" style="left:${RX}px;top:55px;width:${RW}px;height:${MH}px;padding:5px 7px;box-sizing:border-box">${side2}</div>
+    <div class="foot" style="gap:4px">${worst}</div>`, 'Loaded chunks and what lags them');
+})();
+</script>
+</body>
+</html>

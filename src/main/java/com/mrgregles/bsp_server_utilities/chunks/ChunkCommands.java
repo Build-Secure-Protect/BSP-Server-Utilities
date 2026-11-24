@@ -163,7 +163,8 @@ public final class ChunkCommands {
     public record Went(Outcome outcome, @Nullable BlockPos spot) {
     }
 
-    private static int teleport(ServerPlayer player, ServerLevel level, int x, int z) {
+    /** {@link #go} and the line that says how it went; 1 when the player went (the command and the LAG tab's GO THERE). */
+    public static int teleport(ServerPlayer player, ServerLevel level, int x, int z) {
         String dim = shortDim(level.dimension().location().toString());
         Went w = go(player, level, new ChunkPos(x, z));
         player.sendSystemMessage(switch (w.outcome()) {
@@ -199,6 +200,101 @@ public final class ChunkCommands {
         ActionLog.record(player.server, ActionLog.entryFor(player, ActionLog.tracked(player).orElse(new Staff.Role("", "Admin", Staff.OPERATOR_COLOUR)),
                 LogEntry.CHUNK_TP, "went to chunk " + chunk.x + ", " + chunk.z + " in " + level.dimension().location() + " (" + spot.getX() + " " + spot.getY() + " " + spot.getZ() + ")"));
         return new Went(Outcome.WENT, spot);
+    }
+
+    /** How far from a block the LAG tab's TP beside it looks for a place to stand (D750), in blocks each way. */
+    public static final int BESIDE_REACH = 3;
+
+    /**
+     * {@link #goBeside} and the line that says how it went; 1 when the player went (TP on a block in the LAG tab's
+     * PROFILER, D750).
+     */
+    public static int teleportBeside(ServerPlayer player, ServerLevel level, BlockPos block) {
+        String dim = shortDim(level.dimension().location().toString());
+        ChunkPos c = new ChunkPos(block);
+        Went w = goBeside(player, level, block);
+        player.sendSystemMessage(switch (w.outcome()) {
+            case WENT -> near(block, w.spot(), BESIDE_REACH)
+                    ? Component.translatable(M + "tp_beside_done", block.getX(), block.getY(), block.getZ(), dim, w.spot().getX(), w.spot().getY(), w.spot().getZ())
+                    : Component.translatable(M + "tp_beside_chunk", BESIDE_REACH, block.getX(), block.getY(), block.getZ(), dim, w.spot().getX(), w.spot().getY(), w.spot().getZ());
+            case OUTSIDE_BORDER -> Component.translatable(M + "tp_border", dim, c.x, c.z).withStyle(ChatFormatting.RED);
+            case NOT_LOADED -> Component.translatable(M + "tp_not_loaded", dim, c.x, c.z).withStyle(ChatFormatting.RED);
+            case NO_SPOT -> Component.translatable(M + "tp_no_spot", dim, c.x, c.z).withStyle(ChatFormatting.RED);
+            case STOPPED -> Component.translatable(M + "tp_stopped", dim, c.x, c.z).withStyle(ChatFormatting.RED);
+        });
+        return w.outcome() == Outcome.WENT ? 1 : 0;
+    }
+
+    /** Whether a spot is within {@code reach} blocks of a block each way. */
+    public static boolean near(BlockPos block, BlockPos spot, int reach) {
+        return Math.abs(spot.getX() - block.getX()) <= reach && Math.abs(spot.getY() - block.getY()) <= reach && Math.abs(spot.getZ() - block.getZ()) <= reach;
+    }
+
+    /**
+     * Moves the player beside a block (D750), facing it: the nearest place to stand within {@value #BESIDE_REACH} blocks
+     * ({@link #spotNear}), else the safe spot of the block's chunk ({@link #safeSpot(ServerLevel, ChunkPos)}). Only a
+     * loaded chunk inside the world border; logged as {@code chunk_tp} once the player arrived, as {@link #go} is.
+     */
+    public static Went goBeside(ServerPlayer player, ServerLevel level, BlockPos block) {
+        ChunkPos chunk = new ChunkPos(block);
+        if (!level.getWorldBorder().isWithinBounds(chunk)) {
+            return new Went(Outcome.OUTSIDE_BORDER, null);
+        }
+        if (level.getChunkSource().getChunkNow(chunk.x, chunk.z) == null) {
+            return new Went(Outcome.NOT_LOADED, null);
+        }
+        BlockPos spot = spotNear(level, block, BESIDE_REACH);
+        if (spot == null) {
+            spot = safeSpot(level, chunk);
+        }
+        if (spot == null) {
+            return new Went(Outcome.NO_SPOT, null);
+        }
+        double dx = block.getX() - spot.getX(), dz = block.getZ() - spot.getZ(), dy = block.getY() + 0.5 - (spot.getY() + player.getEyeHeight());
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        float yaw = flat < 1e-6 ? player.getYRot() : (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+        float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.max(flat, 1e-6)));
+        player.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, yaw, pitch);
+        if (player.serverLevel() != level || !player.blockPosition().equals(spot)) {
+            return new Went(Outcome.STOPPED, null);
+        }
+        ActionLog.record(player.server, ActionLog.entryFor(player, ActionLog.tracked(player).orElse(new Staff.Role("", "Admin", Staff.OPERATOR_COLOUR)), LogEntry.CHUNK_TP,
+                "went beside " + block.getX() + " " + block.getY() + " " + block.getZ() + " in chunk " + chunk.x + ", " + chunk.z + " in " + level.dimension().location()
+                        + " (" + spot.getX() + " " + spot.getY() + " " + spot.getZ() + ")"));
+        return new Went(Outcome.WENT, spot);
+    }
+
+    /**
+     * The nearest place to stand within {@code reach} blocks of a block each way (D750): the same level as the block
+     * first among places as near, never the block's own place. Only places in loaded chunks inside the world border are
+     * read, so nothing is loaded. Null when there is none.
+     */
+    @Nullable
+    public static BlockPos spotNear(ServerLevel level, BlockPos block, int reach) {
+        List<BlockPos> tries = new ArrayList<>();
+        int low = level.getMinBuildHeight() + 1, high = level.getMaxBuildHeight() - 2;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dz = -reach; dz <= reach; dz++) {
+                int x = block.getX() + dx, z = block.getZ() + dz;
+                if (!level.getWorldBorder().isWithinBounds(x + 0.5, z + 0.5) || level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) {
+                    continue;
+                }
+                for (int dy = -reach; dy <= reach; dy++) {
+                    int y = block.getY() + dy;
+                    if ((dx != 0 || dy != 0 || dz != 0) && y >= low && y <= high) {
+                        tries.add(new BlockPos(x, y, z));
+                    }
+                }
+            }
+        }
+        tries.sort(Comparator.comparingInt((BlockPos p) -> (int) p.distSqr(block)).thenComparingInt(p -> Math.abs(p.getY() - block.getY()))
+                .thenComparingInt(BlockPos::getY).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
+        for (BlockPos p : tries) {
+            if (standable(level, p)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /**

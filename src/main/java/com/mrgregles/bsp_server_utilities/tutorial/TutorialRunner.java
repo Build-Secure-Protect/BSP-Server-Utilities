@@ -645,7 +645,7 @@ public final class TutorialRunner {
         }
         BspTeleport.Api api = BspTeleport.api();
         if (api == null || !api.teleport(player, new BspTeleport.Place(place.server(), place.dimension(), place.x() + 0.5, place.y(), place.z() + 0.5),
-                Component.translatable("message.bsp_server_utilities.tutorial.moving", to.title()).getString())) {
+                "Taking you to " + to.title())) { // plain text: BSP-Teleport shows it as it is (a lang key would arrive as the key)
             player.sendSystemMessage(Component.translatable("message.bsp_server_utilities.tutorial.elsewhere", to.title(), where(place)));
         }
     }

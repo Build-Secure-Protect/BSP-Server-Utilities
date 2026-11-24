@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "13"; // 13: the staff screen's counts (SU-154); 12: tutorials (SU-138 to SU-144); 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "14"; // 14: the LAG tab's loaded chunks (SU-149); 13: the staff screen's counts (SU-154); 12: tutorials (SU-138 to SU-144); 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -244,6 +244,18 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminCountsAskPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminCountsAskPacket::encode).decoder(AdminCountsAskPacket::decode)
                 .consumerMainThread(AdminCountsAskPacket::handle).add();
+        CHANNEL.messageBuilder(LagAskPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(LagAskPacket::encode).decoder(LagAskPacket::decode)
+                .consumerMainThread(LagAskPacket::handle).add();
+        CHANNEL.messageBuilder(LagAnswerPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(LagAnswerPacket::encode).decoder(LagAnswerPacket::decode)
+                .consumerMainThread(LagAnswerPacket::handle).add();
+        CHANNEL.messageBuilder(LagGoPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(LagGoPacket::encode).decoder(LagGoPacket::decode)
+                .consumerMainThread(LagGoPacket::handle).add();
+        CHANNEL.messageBuilder(LagSamplePacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(LagSamplePacket::encode).decoder(LagSamplePacket::decode)
+                .consumerMainThread(LagSamplePacket::handle).add();
     }
 
     /** Client to server. */
