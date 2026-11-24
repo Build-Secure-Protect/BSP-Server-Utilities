@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * The admin panel ({@code /su}, owner decisions D6, D34 to D39), drawn as the confirmed page
- * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}) and SUPPORT ({@link SupportTab}) tabs.
+ * {@code tools/preview/rules_refined.html}: a violet panel with the RULES, STAFF ({@link StaffTab}), LOG ({@link LogTab}), AFK ({@link AfkTab}), CHUNKS ({@link ChunksTab}), DROPS ({@link DropsTab}), CLIENTS ({@link ClientsTab}), SERVERS ({@link ServersTab}), ROOMS ({@link RoomsTab}), MOBS ({@link MobsTab}), SUPPORT ({@link SupportTab}) and TUTORIAL ({@link TutorialTab}) tabs.
  * On the left POPUP TEXT, the rules in order and + ADD RULE; on the right the picked row's boxes with counters against
  * the limits, UP, DOWN and DELETE (SURE? within three seconds). The footer has the version and how many players agreed,
  * PREVIEW (the popup as a player sees it) and ASK EVERYONE AGAIN (SURE?). Edits are sent a second after typing stops,
@@ -31,7 +31,7 @@ public class AdminScreen extends Screen {
     static final int W = 344, H = 210;
     private static final int PAD = 8, LIST_X = 8, LIST_Y = 22, LIST_W = 110, LIST_H = 158, ROW_H = 12;
     private static final int PANE_X = 126, PANE_W = 210, KEY_H = 13, FOOTER_H = 14;
-    private static final float SMALL = 0.7f, TINY = 0.6f;
+    private static final float SMALL = 0.7f, TINY = 0.6f, TAB_SCALE = 0.55f;
     private static final int SAVE_DELAY_TICKS = 20;
     private static final long SURE_MS = 3000;
     /** The row picked: {@link #POPUP} for the heading and texts, else a rule's index. */
@@ -54,7 +54,7 @@ public class AdminScreen extends Screen {
     private long deleteSureUntil, askSureUntil;
     private String note = "";
     private long noteUntil;
-    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10;
+    private static final int RULES = 0, STAFF = 1, LOG = 2, AFK = 3, CHUNKS = 4, DROPS = 5, CLIENTS = 6, SERVERS = 7, ROOMS = 8, MOBS = 9, SUPPORT = 10, TUTORIAL = 11;
     private int tab = RULES;
     private final StaffTab staff = new StaffTab(this);
     private final LogTab log = new LogTab(this);
@@ -66,6 +66,7 @@ public class AdminScreen extends Screen {
     private final RoomsTab rooms = new RoomsTab(this);
     private final MobsTab mobs = new MobsTab(this);
     private final SupportTab support = new SupportTab(this);
+    private final TutorialTab tutorial = new TutorialTab(this);
     /** The setup guide, while the panel shows it (D156). */
     @Nullable
     private SetupGuide guide;
@@ -312,6 +313,7 @@ public class AdminScreen extends Screen {
                 case CHUNKS -> next = CHUNKS;
                 case DESPAWN -> next = DROPS;
                 case SERVERS -> next = SERVERS;
+                case TUTORIAL -> next = TUTORIAL;
                 case CHECK -> {
                     next = CLIENTS;
                     clients.showRules();
@@ -360,12 +362,17 @@ public class AdminScreen extends Screen {
             mobs.open();
         } else if (tab == SUPPORT) {
             support.open();
+        } else if (tab == TUTORIAL) {
+            tutorial.open();
         }
     }
 
     private void showTab(int next) {
         if (tab == next) {
             return;
+        }
+        if (tab == TUTORIAL) {
+            tutorial.close();
         }
         save();
         staff.flush();
@@ -520,6 +527,9 @@ public class AdminScreen extends Screen {
         if (guide != null) {
             guide.closing();
         }
+        if (tab == TUTORIAL) {
+            tutorial.close();
+        }
         super.removed();
     }
 
@@ -535,30 +545,36 @@ public class AdminScreen extends Screen {
         g.fill(x, frameTop, x + W, y + H, Ui.PANEL);
         Ui.frame(g, x, frameTop, W, H + off, Ui.VIOLET);
         String[] tabs = {Tr.t("admin.tab.rules"), Tr.t("admin.tab.staff"), Tr.t("admin.tab.log"), Tr.t("admin.tab.afk"), Tr.t("admin.tab.chunks"), Tr.t("admin.tab.drops"),
-                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs"), Tr.t("admin.tab.support")};
+                Tr.t("admin.tab.clients"), Tr.t("admin.tab.servers"), Tr.t("admin.tab.rooms"), Tr.t("admin.tab.mobs"), Tr.t("admin.tab.support"), Tr.t("admin.tab.tutorial")};
         int tx = x + W - PAD;
         for (int i = tabs.length - 1; i >= 0; i--) {
-            int tabW = Math.max(22, Ui.width(font, tabs[i], TINY) + 4); // narrower keys, so eleven fit beside the title (D191; ROOMS, SU-59; MOBS, D478; SUPPORT, D605)
+            // twelve keys beside the title (D191; ROOMS, SU-59; MOBS, D478; SUPPORT, D605; TUTORIAL, D719): labels at 0.55
+            // measured bold, 2 of padding and 1 between, so the row leaves the title its room (audit of SU-146)
+            int labelW = Ui.widthBold(font, tabs[i], TAB_SCALE);
+            int tabW = labelW + 2;
             tx -= tabW;
             boolean on = i == litTab();
             g.fill(tx, frameTop + 5, tx + tabW, frameTop + 18, on ? Ui.VIOLET : Ui.DIM);
-            Ui.text(g, font, Component.literal(tabs[i]).withStyle(ChatFormatting.BOLD), tx + (tabW - Ui.width(font, tabs[i], TINY)) / 2, frameTop + 9, on ? Ui.INK : Ui.MUTED, TINY);
+            Ui.text(g, font, Component.literal(tabs[i]).withStyle(ChatFormatting.BOLD), tx + (tabW - labelW) / 2, frameTop + 9, on ? Ui.INK : Ui.MUTED, TAB_SCALE);
             int which = i;
             if (guide == null) {
                 hits.add(new Ui.Hit(tx, y + 5, tabW, 13, () -> showTab(which))); // in the guide the row only shows where you are (D161)
             }
-            tx -= 2;
+            tx -= 1;
         }
         // the title in the room the tabs leave, measured bold as drawn; smaller when the tabs need the room, and the short
-        // title when the full one would be too small to read (eleven tabs, SU-93 audit)
+        // title when the full one would be too small to read (eleven tabs, SU-93 audit); never drawn when even the short
+        // title does not fit, so the scale is never below zero (audit of SU-146)
         int room = tx - x - PAD - 2;
         Component title = Component.literal(Tr.t("admin.title")).withStyle(ChatFormatting.BOLD);
         float titleScale = Math.min(1f, room / (float) Math.max(1, font.width(title)));
         if (titleScale < 0.55f) {
             title = Component.literal(Tr.t("admin.title_short")).withStyle(ChatFormatting.BOLD);
-            titleScale = Math.min(1f, room / (float) Math.max(1, font.width(title)));
+            titleScale = room >= font.width(title) ? 1f : 0f;
         }
-        Ui.text(g, font, title, x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
+        if (titleScale > 0f) {
+            Ui.text(g, font, title, x + PAD, frameTop + 7 + Math.round((1f - titleScale) * 3), Ui.VIOLET, titleScale);
+        }
         if (guide != null) {
             renderGuide(g, x, y, mx, my, partial);
             return;
@@ -615,6 +631,11 @@ public class AdminScreen extends Screen {
         if (tab == SUPPORT) {
             support.render(g, x, y, mx, my, hits);
             super.render(g, mx, my, partial); // the link, sentence and chat link boxes
+            return;
+        }
+        if (tab == TUTORIAL) {
+            tutorial.render(g, x, y, mx, my, hits);
+            super.render(g, mx, my, partial);
             return;
         }
         if (tab == CLIENTS) {
@@ -865,6 +886,9 @@ public class AdminScreen extends Screen {
         }
         if (tab == MOBS) {
             return mobs.scroll(mx, my, delta);
+        }
+        if (tab == TUTORIAL) {
+            return tutorial.scroll(delta); // the tutorials list (audit of SU-146)
         }
         if (tab == SUPPORT) {
             return super.mouseScrolled(mx, my, delta); // the sentence box, not the hidden rules list (audit of 0.15.0)

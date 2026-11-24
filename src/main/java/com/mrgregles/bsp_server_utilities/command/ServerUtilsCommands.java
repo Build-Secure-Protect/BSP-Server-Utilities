@@ -108,6 +108,9 @@ public final class ServerUtilsCommands {
                         .then(Commands.literal("reset").executes(c -> playersChanged(c.getSource(), PlayerCounter.reset(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource())))))
                         .then(Commands.literal("true").executes(c -> playersChanged(c.getSource(), PlayerCounter.backToReal(c.getSource().getServer(), c.getSource().getPlayer(), who(c.getSource()))))))
                 .then(com.mrgregles.bsp_server_utilities.support.SupportCommands.node())
+                // the tutorial builder (SU-142, D719)
+                .then(Commands.literal("tutorial").requires(Perms::canEdit)
+                        .executes(c -> com.mrgregles.bsp_server_utilities.tutorial.TutorialAdmin.openFor(c.getSource().getPlayerOrException()) ? 1 : 0))
                 // private staff messages (SU-107, D637, D638): /su msg, /su talk [player], /su talks
                 .then(com.mrgregles.bsp_server_utilities.talk.TalkCommands.nodes().get(0))
                 .then(com.mrgregles.bsp_server_utilities.talk.TalkCommands.nodes().get(1))
@@ -155,6 +158,7 @@ public final class ServerUtilsCommands {
             return 1;
         }));
         com.mrgregles.bsp_server_utilities.support.SupportCommands.registerPlayer(d); // /support (D593, D595)
+        com.mrgregles.bsp_server_utilities.tutorial.TutorialCommands.register(d); // /tutorial (D733)
         d.register(Commands.literal("actionlog").executes(c -> {
             com.mrgregles.bsp_server_utilities.log.LogSync.open(c.getSource().getPlayerOrException());
             return 1;

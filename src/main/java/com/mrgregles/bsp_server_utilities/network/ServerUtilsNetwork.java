@@ -14,7 +14,7 @@ import java.util.List;
 
 /** The mod's channel: {@code bsp_server_utilities:main}. The server decides, the client displays. */
 public final class ServerUtilsNetwork {
-    private static final String PROTOCOL = "11"; // 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
+    private static final String PROTOCOL = "12"; // 12: tutorials (SU-138 to SU-144); 11: last seen in the staff window (SU-120); 10: private staff messages (SU-106); 9: Support BSP (SU-89); 8: the MOBS tab (SU-65); 7: Compact Machines rooms (SU-58, SU-59); 6: the staff web panel's notes counts (SU-38) and item pictures (SU-41)
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BSPServerUtilities.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -194,6 +194,31 @@ public final class ServerUtilsNetwork {
         CHANNEL.messageBuilder(AdminSupportEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(AdminSupportEditPacket::encode).decoder(AdminSupportEditPacket::decode)
                 .consumerMainThread(AdminSupportEditPacket::handle).add();
+        // tutorials (SU-138 to SU-144, D719 to D744); protocol 12.
+        CHANNEL.messageBuilder(TutorialOfferPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TutorialOfferPacket::encode).decoder(TutorialOfferPacket::decode)
+                .consumerMainThread(TutorialOfferPacket::handle).add();
+        CHANNEL.messageBuilder(TutorialPopupPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TutorialPopupPacket::encode).decoder(TutorialPopupPacket::decode)
+                .consumerMainThread(TutorialPopupPacket::handle).add();
+        CHANNEL.messageBuilder(TutorialGuidePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TutorialGuidePacket::encode).decoder(TutorialGuidePacket::decode)
+                .consumerMainThread(TutorialGuidePacket::handle).add();
+        CHANNEL.messageBuilder(TutorialAnswerPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(TutorialAnswerPacket::encode).decoder(TutorialAnswerPacket::decode)
+                .consumerMainThread(TutorialAnswerPacket::handle).add();
+        CHANNEL.messageBuilder(TutorialBlobPacket.class, id++) // both ways: the builder's view, and drafts to save
+                .encoder(TutorialBlobPacket::encode).decoder(TutorialBlobPacket::decode)
+                .consumerMainThread(TutorialBlobPacket::handle).add();
+        CHANNEL.messageBuilder(TutorialEditPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(TutorialEditPacket::encode).decoder(TutorialEditPacket::decode)
+                .consumerMainThread(TutorialEditPacket::handle).add();
+        CHANNEL.messageBuilder(TutorialModePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TutorialModePacket::encode).decoder(TutorialModePacket::decode)
+                .consumerMainThread(TutorialModePacket::handle).add();
+        CHANNEL.messageBuilder(TutorialKeyPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(TutorialKeyPacket::encode).decoder(TutorialKeyPacket::decode)
+                .consumerMainThread(TutorialKeyPacket::handle).add();
         // private staff messages (SU-106, D630 to D652); protocol 10.
         CHANNEL.messageBuilder(TalkStatePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(TalkStatePacket::encode).decoder(TalkStatePacket::decode)

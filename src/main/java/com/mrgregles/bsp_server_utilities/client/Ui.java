@@ -52,6 +52,26 @@ final class Ui {
         return font.plainSubstrByWidth(s, Math.max(0, room - font.width(dots))) + dots;
     }
 
+    /**
+     * The width of the text drawn bold at {@code scale}: bold glyphs are one unit wider each, so {@link #width} comes up
+     * short for every bold label and key (audit of SU-146).
+     */
+    static int widthBold(Font font, String s, float scale) {
+        return (int) Math.ceil(font.width(Component.literal(s).withStyle(net.minecraft.ChatFormatting.BOLD)) * scale);
+    }
+
+    /** As {@link #fit}, measured bold (audit of SU-146). */
+    static String fitBold(Font font, String s, int maxW, float scale) {
+        int room = (int) (maxW / scale);
+        Style bold = Style.EMPTY.withBold(true);
+        if (font.width(Component.literal(s).withStyle(net.minecraft.ChatFormatting.BOLD)) <= room) {
+            return s;
+        }
+        String dots = "…";
+        int dotsW = font.width(Component.literal(dots).withStyle(net.minecraft.ChatFormatting.BOLD));
+        return font.getSplitter().plainHeadByWidth(s, Math.max(0, room - dotsW), bold) + dots;
+    }
+
     /** The text broken into lines no wider than {@code maxW} at {@code scale}; line breaks in the text are kept. */
     static List<String> wrap(Font font, String s, int maxW, float scale) {
         List<String> out = new ArrayList<>();

@@ -25,7 +25,7 @@ import java.util.UUID;
  * used when the server has it, else the one BSP-Core's full jar carries (not its -slim jar); the driver is loaded before
  * connecting, so it does not matter which mod reaches the database first. One connection, reopened when it fails; used only from the
  * storage's worker thread. Tables: {@code <prefix>notices}; {@code <prefix>rules} (one row), {@code <prefix>rule_items},
- * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>mob_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>support_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots), {@code <prefix>web_chat} (public chat for the panel, 30 days).
+ * {@code <prefix>rules_agreed}; {@code <prefix>staff_settings} (one row), {@code <prefix>staff_groups}, {@code <prefix>staff_seen}; {@code <prefix>log}, {@code <prefix>log_switches}; {@code <prefix>afk_settings} (one row); {@code <prefix>chunk_settings} (one row); {@code <prefix>despawn_settings} (one row); {@code <prefix>mob_settings} (one row); {@code <prefix>check_rules} (one row), {@code <prefix>check_setup} (one row); {@code <prefix>setup_state} (one row); {@code <prefix>players}, {@code <prefix>players_settings} (one row); {@code <prefix>support_settings} (one row); {@code <prefix>server_images} (one row), {@code <prefix>server_image_bytes}; {@code <prefix>web_servers} (a row per server, the staff web panel's snapshots), {@code <prefix>web_chat} (public chat for the panel, 30 days); {@code <prefix>tutorials} (a row per tutorial copy: draft or published), {@code <prefix>tutorial_progress} (a row per player and tutorial).
  */
 public final class JdbcBackend implements StorageBackend {
     /** The MySQL drivers looked for, in order: the usual one, then the copy inside BSP-Core's full jar. */
@@ -121,6 +121,10 @@ public final class JdbcBackend implements StorageBackend {
             st.executeUpdate(STEALS_TABLE.replace("<prefix>", prefix)); // totem steals for the staff panel (SU-95), kept 90 days
             st.executeUpdate(TALKS_TABLE.replace("<prefix>", prefix)); // private staff messages (SU-105), lines kept 90 days
             st.executeUpdate(TALK_LINES_TABLE.replace("<prefix>", prefix));
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "tutorials (id CHAR(36) NOT NULL, stage VARCHAR(9) NOT NULL, name VARCHAR(64) NOT NULL, revision BIGINT NOT NULL,"
+                    + " deleted BOOLEAN NOT NULL, body MEDIUMTEXT NOT NULL, PRIMARY KEY (id, stage)) DEFAULT CHARSET=utf8mb4"); // tutorials (SU-137): the copy as SNBT
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "tutorial_progress (uuid CHAR(36) NOT NULL, tutorial CHAR(36) NOT NULL, state VARCHAR(9) NOT NULL, point INT NOT NULL,"
+                    + " reached BOOLEAN NOT NULL, history TEXT NOT NULL, at_ms BIGINT NOT NULL, PRIMARY KEY (uuid, tutorial), KEY tutorial (tutorial)) DEFAULT CHARSET=utf8mb4"); // players' places (SU-138)
             st.executeUpdate(SEEN_TABLE.replace("<prefix>", prefix)); // where each player was last seen, for the staff panel (SU-114); one row per player
             if (!hasColumn(prefix + "talks", "last_kind")) { // a talks table from before the audit of SU-111 (never released; development databases)
                 st.executeUpdate("ALTER TABLE " + prefix + "talks ADD COLUMN last_kind VARCHAR(8) NOT NULL DEFAULT '', ADD KEY open_talks (is_open)");
@@ -659,6 +663,126 @@ public final class JdbcBackend implements StorageBackend {
             ps.setString(1, s.encode());
             ps.setLong(2, s.revision());
             ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<StoredTutorial> loadTutorials() throws SQLException {
+        List<StoredTutorial> out = new ArrayList<>();
+        try (Statement st = conn().createStatement(); ResultSet rs = st.executeQuery("SELECT stage, body FROM " + prefix + "tutorials")) {
+            while (rs.next()) {
+                com.mrgregles.bsp_server_utilities.tutorial.Tutorial t = com.mrgregles.bsp_server_utilities.tutorial.Tutorial.decode(rs.getString(2));
+                if (t != null) {
+                    out.add(new StoredTutorial(rs.getString(1), t));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.tutorial.Tutorial loadTutorial(String stage, String id) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT body FROM " + prefix + "tutorials WHERE id = ? AND stage = ?")) {
+            ps.setString(1, id);
+            ps.setString(2, stage);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? com.mrgregles.bsp_server_utilities.tutorial.Tutorial.decode(rs.getString(1)) : null;
+            }
+        }
+    }
+
+    @Override
+    public void saveTutorial(String stage, com.mrgregles.bsp_server_utilities.tutorial.Tutorial t) throws SQLException {
+        // each column changes only for a newer revision; the revision itself last, as MySQL assigns left to right
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "tutorials (id, stage, name, revision, deleted, body) VALUES (?, ?, ?, ?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE name = IF(VALUES(revision) > revision, VALUES(name), name), deleted = IF(VALUES(revision) > revision, VALUES(deleted), deleted),"
+                + " body = IF(VALUES(revision) > revision, VALUES(body), body), revision = GREATEST(revision, VALUES(revision))")) {
+            ps.setString(1, t.id());
+            ps.setString(2, stage);
+            ps.setString(3, t.name());
+            ps.setLong(4, t.revision());
+            ps.setBoolean(5, t.deleted());
+            ps.setString(6, t.encode());
+            ps.executeUpdate();
+        }
+    }
+
+    private static final String PROGRESS_COLS = "uuid, tutorial, state, point, reached, history, at_ms";
+
+    private static com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress readProgress(ResultSet rs) throws SQLException {
+        UUID id = uuidOrNull(rs.getString(1));
+        if (id == null) {
+            return null;
+        }
+        com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress.State state;
+        try {
+            state = com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress.State.valueOf(rs.getString(3));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        return new com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress(id, rs.getString(2), state, rs.getInt(4), rs.getBoolean(5),
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress.parseHistory(rs.getString(6)), rs.getLong(7));
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> loadTutorialProgress(UUID player) throws SQLException {
+        List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + PROGRESS_COLS + " FROM " + prefix + "tutorial_progress WHERE uuid = ?")) {
+            ps.setString(1, player.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress p = readProgress(rs);
+                    if (p != null) {
+                        out.add(p);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public void saveTutorialProgress(com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress p) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "tutorial_progress (" + PROGRESS_COLS + ") VALUES (?, ?, ?, ?, ?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE state = IF(VALUES(at_ms) >= at_ms, VALUES(state), state), point = IF(VALUES(at_ms) >= at_ms, VALUES(point), point),"
+                + " reached = IF(VALUES(at_ms) >= at_ms, VALUES(reached), reached), history = IF(VALUES(at_ms) >= at_ms, VALUES(history), history), at_ms = GREATEST(at_ms, VALUES(at_ms))")) {
+            ps.setString(1, p.player().toString());
+            ps.setString(2, p.tutorial());
+            ps.setString(3, p.state().name());
+            ps.setInt(4, p.point());
+            ps.setBoolean(5, p.reached());
+            ps.setString(6, p.historyText());
+            ps.setLong(7, p.atMs());
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> tutorialProgressOf(String tutorial) throws SQLException {
+        List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT " + PROGRESS_COLS + " FROM " + prefix + "tutorial_progress WHERE tutorial = ?")) {
+            ps.setString(1, tutorial);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress p = readProgress(rs);
+                    if (p != null) {
+                        out.add(p);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    @Nullable
+    public com.mrgregles.bsp_server_utilities.players.Joined playerById(UUID id) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name, first_at, first_server FROM " + prefix + "players WHERE uuid = ?")) {
+            ps.setString(1, id.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? new com.mrgregles.bsp_server_utilities.players.Joined(id, rs.getString(2), rs.getLong(3), rs.getString(4)) : null;
+            }
         }
     }
 

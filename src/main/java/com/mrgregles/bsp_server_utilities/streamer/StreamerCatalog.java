@@ -61,7 +61,8 @@ public final class StreamerCatalog {
                     new Item(StreamerRules.SCREEN + "com.mrgregles.bsp_region_guard.client.OfficePlotsScreen", "rg_office", null),
                     new Item(StreamerRules.SCREEN + "com.mrgregles.bsp_region_guard.client.RegionScreen", "rg_region", null))),
             new Mod(null, "bsp_server_utilities", "bsp_server_utilities", List.of(
-                    new Item(StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.AdminScreen", "su_admin", null))));
+                    new Item(StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.AdminScreen", "su_admin", null),
+                    new Item(StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.TutorialBuilderScreen", "su_tutorial", null))));
 
     /** Hidden when Streamer Mode is first switched on (D707): everything that shows a place; also the settings' default. */
     public static final List<String> DEFAULT_HIDDEN = List.of(
@@ -82,7 +83,8 @@ public final class StreamerCatalog {
             StreamerRules.SCREEN + "com.mrgregles.bsp_core.client.AdminScreen",
             StreamerRules.SCREEN + "com.mrgregles.bsp_core.client.AcceleratorScreen",
             StreamerRules.SCREEN + "com.mrgregles.bsp_region_guard.client.RegionScreen",
-            StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.AdminScreen");
+            StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.AdminScreen",
+            StreamerRules.SCREEN + "com.mrgregles.bsp_server_utilities.client.TutorialBuilderScreen");
 
     private StreamerCatalog() {
     }

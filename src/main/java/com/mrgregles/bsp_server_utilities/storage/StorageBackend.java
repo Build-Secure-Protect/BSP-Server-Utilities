@@ -157,6 +157,35 @@ public interface StorageBackend extends com.mrgregles.bsp_server_utilities.talk.
 
     void saveSupportSettings(com.mrgregles.bsp_server_utilities.support.SupportSettings settings) throws Exception;
 
+    // ------------------------------------------------------------------ tutorials (SU-137)
+
+    /** A tutorial's copy as the network's table keeps it: its stage ("draft" or "published") and the copy. */
+    record StoredTutorial(String stage, com.mrgregles.bsp_server_utilities.tutorial.Tutorial tutorial) {
+    }
+
+    /** Every tutorial copy in the network's table, deleted markers included; rows that cannot be read are left out. */
+    List<StoredTutorial> loadTutorials() throws Exception;
+
+    /** One copy by stage and id, or null. */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.tutorial.Tutorial loadTutorial(String stage, String id) throws Exception;
+
+    /** Writes a copy; a row with the same or a newer revision is kept instead. */
+    void saveTutorial(String stage, com.mrgregles.bsp_server_utilities.tutorial.Tutorial tutorial) throws Exception;
+
+    /** One player's places in the tutorials (SU-138). */
+    List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> loadTutorialProgress(UUID player) throws Exception;
+
+    /** Writes one player's place in one tutorial (the newest wins by time). */
+    void saveTutorialProgress(com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress progress) throws Exception;
+
+    /** Every place of every player in one tutorial, for the TUTORIAL tab's counts. */
+    List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> tutorialProgressOf(String tutorial) throws Exception;
+
+    /** A player's first join on the network by id, or null (SU-138: who counts as new for the first-join tutorial). */
+    @Nullable
+    com.mrgregles.bsp_server_utilities.players.Joined playerById(UUID id) throws Exception;
+
     // ------------------------------------------------------------------ server images (SU-26)
 
     /** The network's server images, or null when none were ever saved. */

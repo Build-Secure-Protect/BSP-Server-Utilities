@@ -291,6 +291,7 @@ public final class RulesService {
         }
         release(id);
         player.sendSystemMessage(Component.translatable("message.bsp_server_utilities.rules.agreed"));
+        com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.afterRules(player); // the tutorial offer comes next (D722)
         return Outcome.AGREED;
     }
 
@@ -305,6 +306,7 @@ public final class RulesService {
     /** Starts the gate for a player who just logged in. */
     public static void login(ServerPlayer player) {
         if (!enabled()) {
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.afterRules(player); // nothing to agree to (D722)
             return;
         }
         MinecraftServer server = player.server;
@@ -346,6 +348,9 @@ public final class RulesService {
         }
         GATES.remove(g.player.getUUID());
         check(g.player);
+        if (!isHeld(g.player.getUUID())) {
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.afterRules(g.player); // nothing to agree to (D722)
+        }
     }
 
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {

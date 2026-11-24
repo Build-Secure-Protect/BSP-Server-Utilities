@@ -451,12 +451,51 @@ public final class ImageService {
             return;
         }
         WAITING.computeIfAbsent(hash, k -> new HashSet<>()).add(player.getUUID());
+        if (otherSource.test(hash)) {
+            return; // a tutorial's picture, loading again (SU-140)
+        }
         GlobalPos at = SHOWN_AT.get(hash);
         if (at != null) {
             ServerLevel level = player.server.getLevel(at.dimension());
             if (level != null && level.isLoaded(at.pos())) {
                 load(level, at.pos());
             }
+        }
+    }
+
+    /** Pictures that are not panels' (tutorial popups, SU-140): true when the hash is theirs and is being loaded again. */
+    public static java.util.function.Predicate<String> otherSource = h -> false;
+
+    /** A picture loaded elsewhere (a tutorial popup's): kept in the cache and sent to every player waiting for it. */
+    public static void delivered(MinecraftServer server, String hash, byte[] png) {
+        cache(hash, png);
+        Set<UUID> waiting = WAITING.remove(hash);
+        if (waiting != null) {
+            for (UUID id : waiting) {
+                ServerPlayer p = server.getPlayerList().getPlayer(id);
+                if (p != null) {
+                    send(p, hash, png);
+                }
+            }
+        }
+    }
+
+    /** Reads a file of the given folder by its name, refusing a name with a path in it and more than {@code maxBytes}. */
+    public static byte[] readFileIn(Path folder, String name, int maxBytes) throws ImageException {
+        if (name == null || name.isBlank() || name.contains("/") || name.contains("\\") || name.contains("..")) {
+            throw new ImageException("no_file", name == null ? "" : name);
+        }
+        Path dir = folder.toAbsolutePath().normalize(), p = dir.resolve(name).normalize();
+        try {
+            if (!p.startsWith(dir) || !dir.equals(p.getParent()) || !Files.isRegularFile(p)) {
+                throw new ImageException("no_file", name);
+            }
+            if (Files.size(p) > maxBytes) {
+                throw new ImageException("too_big", Integer.toString(maxBytes / 1024));
+            }
+            return Files.readAllBytes(p);
+        } catch (IOException e) {
+            throw new ImageException("no_file", name);
         }
     }
 

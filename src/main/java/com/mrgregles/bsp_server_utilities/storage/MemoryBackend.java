@@ -39,6 +39,8 @@ public final class MemoryBackend implements StorageBackend {
     private final Map<UUID, StaffData.Seen> seen = new HashMap<>();
     private final List<LogEntry> log = new ArrayList<>();
     private final Map<String, Boolean> switches = new HashMap<>();
+    private final Map<String, com.mrgregles.bsp_server_utilities.tutorial.Tutorial> tutorials = new java.util.LinkedHashMap<>();
+    private final Map<UUID, Map<String, com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress>> progress = new HashMap<>();
 
     /** When true every call throws, playing a database outage. */
     public synchronized void setFailing(boolean failing) {
@@ -310,6 +312,65 @@ public final class MemoryBackend implements StorageBackend {
         if (supportSettings == null || settings.revision() > supportSettings.revision()) {
             supportSettings = settings; // newer only, as the table keeps it
         }
+    }
+
+    @Override
+    public synchronized List<StoredTutorial> loadTutorials() throws Exception {
+        check();
+        List<StoredTutorial> out = new ArrayList<>();
+        tutorials.forEach((key, t) -> out.add(new StoredTutorial(key.substring(0, key.indexOf('|')), t)));
+        return out;
+    }
+
+    @Override
+    @Nullable
+    public synchronized com.mrgregles.bsp_server_utilities.tutorial.Tutorial loadTutorial(String stage, String id) throws Exception {
+        check();
+        return tutorials.get(stage + "|" + id);
+    }
+
+    @Override
+    public synchronized void saveTutorial(String stage, com.mrgregles.bsp_server_utilities.tutorial.Tutorial t) throws Exception {
+        check();
+        com.mrgregles.bsp_server_utilities.tutorial.Tutorial row = tutorials.get(stage + "|" + t.id());
+        if (row == null || t.revision() > row.revision()) {
+            tutorials.put(stage + "|" + t.id(), com.mrgregles.bsp_server_utilities.tutorial.Tutorial.decode(t.encode())); // newer only, and through the text, as the table keeps it
+        }
+    }
+
+    @Override
+    public synchronized List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> loadTutorialProgress(UUID player) throws Exception {
+        check();
+        return new ArrayList<>(progress.getOrDefault(player, Map.of()).values());
+    }
+
+    @Override
+    public synchronized void saveTutorialProgress(com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress p) throws Exception {
+        check();
+        Map<String, com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> m = progress.computeIfAbsent(p.player(), k -> new java.util.LinkedHashMap<>());
+        com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress row = m.get(p.tutorial());
+        if (row == null || p.atMs() >= row.atMs()) {
+            m.put(p.tutorial(), p);
+        }
+    }
+
+    @Override
+    public synchronized List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> tutorialProgressOf(String tutorial) throws Exception {
+        check();
+        List<com.mrgregles.bsp_server_utilities.tutorial.TutorialProgress> out = new ArrayList<>();
+        progress.values().forEach(m -> {
+            if (m.containsKey(tutorial)) {
+                out.add(m.get(tutorial));
+            }
+        });
+        return out;
+    }
+
+    @Override
+    @Nullable
+    public synchronized com.mrgregles.bsp_server_utilities.players.Joined playerById(UUID id) throws Exception {
+        check();
+        return players.get(id);
     }
 
     @Override

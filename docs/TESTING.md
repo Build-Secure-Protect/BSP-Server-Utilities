@@ -2444,3 +2444,172 @@ GameTests **303/303** on three more runs in a row after the audit.
 3. Open a portal's screen, then step into a portal with several destinations: both show `• • •` in BSP Stream, and the numbers in the game window.
 4. Set both items to SHOWN: the numbers appear in BSP Stream.
 5. Restart the game: the gold lines are back until each screen is opened once (the menu remembers this only while the game runs).
+
+## 2026-11-24: tutorials, the definitions and their shared table (SU-137)
+
+The first part of the tutorial builder (owner decisions D719 to D744; the screens are `tools/preview/tutorial_refined.html`). Nothing a player or an admin can see yet: this keeps the tutorials, cuts what they hold to its limits, and shares them across the network.
+
+**What is kept** (`tutorial/Tutorial`, `TutorialPopup`, `TutorialText`):
+- Each tutorial has a name, how it starts (first join, an area, or `/tutorial` only), who the first-join one is offered to, a start area, the offer's text, its points and the links between them. It has a draft and a published copy (`TutorialStage`).
+- Each point has a place (server, world, block, radius 1 to 8) and a popup. A popup is full (12 × 8 grid) or small (6 × 4, placed in thousandths of the screen, at least 80 × 30 of 480 × 270). It either freezes the player, with up to four buttons, or keeps them walking, with no buttons and 2 to 60 seconds on screen. It holds up to twelve boxes of text or a picture.
+- Text is paragraphs of runs. Bold, italic, underline, strikethrough, obfuscated and the colour can change mid-line; size and alignment are per paragraph. A box holds up to 1000 letters and 16 paragraphs.
+- A link drops its path unless both points are in the same world. A path holds at most 500 positions. Links that loop back are never kept.
+
+**Where it is kept:**
+- The world's `bsp_server_utilities_tutorials`.
+- With shared storage, the table `<prefix>tutorials`: one row per tutorial and stage, with the copy as SNBT in `body`. A row is replaced only by a newer revision. A deletion is a copy marked deleted, so it wins the same way. A notice `tutorial` names the stage, the id and the revision; the other servers read that row back. At start, a server takes the table's newer copies and writes back its own newer ones. A write the table refused is tried again every minute.
+
+**Rules (`TutorialService`):**
+- Only operators (level 2) and BSP-Core admins create, edit, publish or delete.
+- PUBLISH copies the draft; later edits stay in the draft.
+- One published tutorial starts on first join. Publishing another takes it over; a draft set to first join takes it from the other drafts.
+- `Tutorial.issues()` lists what the builder will mark: no points, no start or several, a fork without a GO TO BRANCH for each branch, a fork that keeps the player walking, a freezing popup with no way on, a path not drawn, an area start without an area.
+
+**GameTests (`TutorialGameTests`):**
+- `tutorials_are_kept_within_their_limits`
+- `a_tutorial_reads_back_as_it_was_saved`
+- `the_builder_marks_what_is_missing`
+- `drafts_change_until_published_and_one_starts_on_first_join`
+- `tutorials_are_one_set_for_the_network_and_the_newest_wins`
+
+**Untested against a real MySQL:** the table is made at the next start, and the `ON DUPLICATE KEY UPDATE` keeps a row unless the revision is newer. Check once on the network with two servers: create a tutorial with `/su tutorial` (SU-142), and see it on the other server.
+
+## 2026-11-24: tutorials in play: the offer, the flow, the popups, the path (SU-138 to SU-141)
+
+**Server rules, GameTested** (`TutorialRunGameTests`, 5 tests):
+- The first-join offer comes only after the rules popup. It goes to new players (first join from `Tutorial.since`, or not on the counter's list), or to everyone not finished.
+- LATER asks again at the next login; NO THANKS never; a tutorial under way resumes at login.
+- Start areas: walking in offers; LATER asks again on the next walk-in; NO THANKS never.
+- The buttons: NEXT, CLOSE, GO TO BRANCH, PREVIOUS, END, and the last NEXT finishing.
+- A popup shows within the radius; the guide carries the link's walked path; TAKE ME THERE goes through BSP-Teleport.
+- A walking popup moves on when WALKED arrives; a removed stop ends the tutorial; one tutorial at a time.
+- Places are kept in `<prefix>tutorial_progress` and resumed on another server.
+
+**In game (the owner):** a test tutorial with three stops is enough. Make it in the builder (next section) and PUBLISH it as the first-join tutorial.
+1. **First join.** Join with a player that is new to the network. After the rules popup, the offer card shows the tutorial's name and text. LATER, then log out and in: offered again. NO THANKS: the chat line, and no more offers.
+2. **`/tutorial`.** It lists the tutorial with START. START: a full popup with the name, "Stop 1 of 3" and the thin line. END TUTORIAL reads SURE?, and a second press ends it. Escape hides the popup; `/tutorial resume` shows it again.
+3. **Walking to a stop.** NEXT to a stop with a place and a walked path: gold dashes about a block up, faint through walls, fading with distance. A translucent sign on a post names the stop. Within 2 blocks its popup opens.
+4. **Walking popups.** A small popup that keeps the player walking: it shows where it was placed, its bar empties, it fades, and the next stop follows.
+5. **Forks.** A fork's GO TO BRANCH keys go their own ways; PREVIOUS goes back.
+6. **Other servers.** A stop on another server reads TAKE ME THERE › SERVER. It moves the player, and the tutorial carries on there. Without BSP-Teleport the key is off, with a gold line naming the server.
+7. **Pictures.** A picture box loads a file from `config/bsp_server_utilities/tutorial_images/` and a web address; it shows "Picture" until it arrives.
+8. **Shader packs.** With a shader pack (Iris or Oculus), the dashes and the sign still show.
+
+## 2026-11-24: the tutorial builder, the popup editor, paths and areas (SU-142 to SU-145)
+
+**Server rules, GameTested** (`TutorialAdminGameTests`, 3 tests):
+- Only those who may edit get the view or change anything. The view arrives in pieces that read back whole, under a client's 32 KB per piece.
+- SET TO HERE stores this server, this world and the block the admin stands in.
+- A saved draft keeps the server's places (only the radius is the builder's), the server's paths and the server's area (clearing is allowed).
+- Removing a stop, publishing, deleting, drawing a path and setting an area are in the Action Log under "tutorial".
+- Path mode: a point each time the admin is 3 blocks from the last, flying too; UNDO, pause and resume; asked in the sphere; KEEP WALKING asks again only after leaving it; FINISH PATH saves the path ending at the stop; Delete saves nothing.
+- Area mode: corner 1, corner 2, UNDO, SAVE AREA only with both corners.
+
+**In game (the owner, as an operator):**
+1. **The tab.** `/su`: the TUTORIAL tab, the twelfth, lists the tutorials. OPEN BUILDER (or `/su tutorial`) opens the builder over the whole screen. The setup guide's Tutorials page shows this tab.
+2. **The builder.** Tabs, +, the draft state, TEST and PUBLISH. + POINT adds a node. Drag to move it, right-drag onto another to link, drag the canvas to pan, scroll to zoom. Hold an item and click the drawer's icon to use it.
+3. **Forks.** A second link from one stop makes a fork: GO TO BRANCH keys appear on its popup.
+4. **Missing parts.** The red dots match what is missing. PUBLISH with something missing reads "n missing: publish?" and publishes on the second press.
+5. **The popup editor.** EDIT POPUP, or a double-click on a node. Drag over empty cells to make a box, drag it to move, drag its corner to size.
+6. **Text.** Type; select a word and press B, a colour and L: only that word changes, and L applies to its paragraph. Ctrl (Cmd) B, I, U, A, C, X, V work.
+7. **Pictures.** + IMAGE: pick a file from the list or type a web address; the preview shows it when loaded, or the reason it failed.
+8. **Small popups.** SMALL: the grid becomes 6 × 4 and the preview the whole screen. Drag the popup anywhere and size it by its corner; it snaps to the edges and centre lines. KEEPS WALKING shows the time on screen.
+9. **Buttons.** + BUTTON, then the label, colour and job. GO TO BRANCH offers the fork's branches; OPEN LINK takes an address and refuses one that is not https.
+10. **Paths.** SET TO HERE on two stops; pick the link; DRAW PATH moves you to the first. G starts the yellow line, with marks every 3 blocks. The next stop shows as a sphere with its name. Inside it the card shows FINISH PATH, KEEP WALKING and UNDO LAST, and the screen's edge glows. FINISH PATH: the link turns gold in the builder.
+11. **Areas.** Tutorial settings, then start "Area", then SET AREA. G at one corner, then G at the other: the violet box, and a card with SAVE AREA.
+12. **Keys.** Controls › Key Binds › BSP-Server Utilities lists the three tutorial keys. They do nothing outside a mode.
+13. **Streamer Mode.** The builder shows "Menu hidden" in BSP Stream (its item is hidden by default).
+14. **Two servers.** Edit on one: the other's builder shows the change. A player's place carries over.
+
+**Not tested anywhere:** real MySQL for `<prefix>tutorials` and `<prefix>tutorial_progress`, every screen in a client, BSP-Teleport's TAKE ME THERE.
+
+## 2026-11-24: audit of tutorials, and its fixes (SU-146)
+
+Two independent reviews read the code: the server side and the client side. 24 findings: 23 fixed, 1 left (below). GameTests **317/317**.
+
+**Server:**
+- A respawn's new player entity now carries the tutorial (`TutorialRunner.rebind` on `PlayerEvent.Clone`).
+- A tutorial deleted while players are partway ends for them at once, with a line; their offers are free again.
+- A republish shows players partway the new version at once, so a button pressed is the button seen.
+- A retried write sends its notice once it lands, so the other servers catch up (GameTested).
+- A next stop in another world reads TAKE ME THERE and goes through BSP-Teleport, whose checks apply. Only admins (GO, DRAW PATH) move directly. Arriving in that world sends the way there.
+- Tutorials turned off: nothing starts, resumes or answers. A player held by the rules cannot press buttons.
+- "New players": with the player counter off, nobody is known, so nobody counts as new. Before, everyone counted as new.
+- "Everyone not finished" offers again to those who ended early.
+- The database down at login, or when the builder opens: this world's copy is used.
+- The builder's uploads unpack to at most 16 MB.
+- Progress times keep rising for a player whatever the servers' clocks say.
+- FINISH PATH only inside the next stop's sphere.
+- A walk into a start area while another offer waits is counted later, not lost.
+- A draft whose text would pass 3 MB is not saved (the admin is told).
+
+**Client:**
+- **Focus.** Fields made again (picking a box, deleting one, a button moved, the server's reply) no longer keep taking keys. Before, they could crash the editor or write into the wrong box. The builder updates its fields in place, and ignores a view sent before its last save reached the server.
+- **Unsaved work.** The editor and the builder save their changes when another screen takes their place.
+- **Keys.** G, Z and Delete presses outside a mode are dropped instead of piling up. The finish or area card waits for an open chat box to close.
+- **Pictures.** In the editor they are matched by picture and box size, not list position. Choosing a file, a fit or a web address saves the popup, so the preview loads it. SHOW AS PLAYER shows them. Pictures in a walking popup fade with it, and the card fades once, not twice.
+- **Preview.** It follows the typing.
+- **Hidden popups.** One hidden with Escape stays hidden (the server is told) until `/tutorial resume`.
+- **TUTORIAL tab.** PUBLISH on a changed row; the picked tutorial's counts; the server stops sending views when the tab closes.
+- **Links.** A link's handle off the canvas takes no clicks.
+- **Text editor.** It works on fresh lines before each key.
+
+**Left:** the respawn rebind is not GameTested: a mock player cannot respawn.
+
+## 2026-11-24: second audit of tutorials: the whole feature and the screens' layout (SU-146)
+
+Two more independent reviews, at the owner's request. GameTests **318/318** (one new: `TutorialRunGameTests.second_audit_rules`; `TutorialAdminGameTests` gains the refused stale save). All 38 findings are fixed.
+
+**Layout (24 findings).** Positions were computed with Minecraft's real glyph widths at GUI 427 × 240, 480 × 270, 640 × 360 and 960 × 540.
+- **Admin panel.** The tab row with twelve tabs left no room for the title and drew a tiny upside-down "SU" over RULES. Tabs are now 0.55 and measured bold; the title is left out when it does not fit.
+- **Bold text** was measured plain everywhere (1 px a letter short). `Ui.widthBold` and `Ui.fitBold` now measure it: keys, titles, the offer's name, tabs, the HUD strip.
+- **The popup editor:**
+  - The button editor ran below the screen at 480 × 270: the preview shrinks while a button is picked.
+  - The link box sat over the job keys.
+  - The text toolbar ran into the preview and the colour box: it is two rows now.
+  - The settings row ran off the panel in Keeps walking: BACKGROUND wraps.
+  - The picture's error line sat inside the file list.
+  - The button list ran past the bottom at 427.
+  - Branch keys did not wrap.
+  - The labels touched the keys.
+  - SHOW AS PLAYER's line covered a small popup at the bottom.
+- **The builder:**
+  - In the settings drawer, DELETE TUTORIAL was under the offer box, and the counts crossed the bottom.
+  - The start, audience and point keys ran out of the drawer (they wrap).
+  - The links and buttons lists had no end ("+N" now).
+  - The offer box's scroll bar sat outside it.
+  - The foot's hint and legend were cut (two lines).
+  - Node icons drew over the zoom keys.
+  - The picked tab could be hidden.
+  - The tabs jumped when PUBLISH asked.
+- **Popups:**
+  - The keys overlapped (END and the rest) and could leave a small card: they are laid out to fit, and the preview uses the same code.
+  - A small freezing popup with buttons is at least 60 px tall.
+  - The "continue on" line has its own strip.
+- **Others:**
+  - The text box's hint wraps.
+  - The TUTORIAL tab scrolls.
+  - On the setup guide's Tutorials page, OPEN BUILDER was outside the guide's clip and could not be pressed.
+  - The path strip sits under any boss bars.
+
+**Behaviour (14 findings):**
+- **The builder:**
+  - It dropped server views that came within 1.5 s of a save, so SET TO HERE could be undone by the next save. It reads them later, and always takes places, paths and the area from the server.
+  - Two admins: a save based on a draft another admin has saved since is refused with a chat line.
+  - New points take ids above the published copy's, so a removed stop's id is never reused.
+- **Other servers and worlds:**
+  - Without BSP-Teleport, a button to a stop on another server was off, so players were stuck. It stays on and the chat says where to go.
+  - A fading popup never moves anyone; TAKE ME THERE is a press.
+- **Offers and popups:**
+  - A tutorial with no points is never offered.
+  - The tab's PUBLISH asks SURE? when something is missing.
+  - A popup hidden with Escape stays hidden on a republish, and is not marked hidden when a new copy replaces it on screen.
+  - A refused press shows the popup again.
+  - An answer ignored while the rules hold the player no longer blocks later offers.
+  - A first-join offer behind an area offer comes after it.
+- **Progress and data:**
+  - Places the table did not take are kept marked in the world and written again every minute and at start.
+  - Deleting marks both copies, so a publish racing a delete on another server cannot survive it.
+  - FINISH PATH keeps the stop as the last point at 500 points, and says so when the link has gone.
+
+**Still to check in game:** every screen at the owner's GUI scale 5, and at 1280 × 720.

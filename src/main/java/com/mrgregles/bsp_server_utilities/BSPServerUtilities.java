@@ -54,6 +54,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.setup.SetupService.registerNotices();
         com.mrgregles.bsp_server_utilities.players.PlayerCounter.registerNotices();
         com.mrgregles.bsp_server_utilities.support.SupportService.registerNotices(); // Support BSP (SU-89)
+        com.mrgregles.bsp_server_utilities.tutorial.TutorialService.registerNotices(); // tutorials (SU-137)
         com.mrgregles.bsp_server_utilities.support.NetworkJoins.registerNotices(); // a join to the network or a move (SU-90)
         com.mrgregles.bsp_server_utilities.talk.TalkDelivery.register(); // private staff messages reaching players and staff on every server (SU-106)
         com.mrgregles.bsp_server_utilities.web.WebTalk.register(); // and the staff web panel, live (SU-109)
@@ -92,6 +93,12 @@ public class BSPServerUtilities {
             com.mrgregles.bsp_server_utilities.setup.SetupService.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.players.PlayerCounter.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.support.SupportService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialService.onServerStarted(e.getServer());
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.retryWrites(e.getServer()); // places the table never took (audit of SU-146)
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialImages.init(() -> {
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.picturesArrived(e.getServer());
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialAdmin.refresh(e.getServer());
+            });
             com.mrgregles.bsp_server_utilities.serverimages.ServerImages.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.rooms.RoomList.onServerStarted(e.getServer());
             com.mrgregles.bsp_server_utilities.steals.StealRecorder.onServerStarted();
@@ -108,6 +115,22 @@ public class BSPServerUtilities {
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent e) -> com.mrgregles.bsp_server_utilities.despawn.DespawnService.onServerStopped());
         MinecraftForge.EVENT_BUS.addListener(ServerUtilsCommands::onRegister);
         // The rules popup: the gate at login, the hold, the popup (RulesHold blocks actions while held).
+        // tutorials (SU-138): a player's places are read at login, before the rules gate can let them through
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) -> {
+            if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.onLogin(p);
+            }
+        });
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.Clone e) -> {
+            if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.rebind(p); // a respawn's new player (audit of SU-146)
+            }
+        });
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.onLogout(e.getEntity().getUUID());
+            com.mrgregles.bsp_server_utilities.tutorial.TutorialAdmin.onLogout(e.getEntity().getUUID());
+            com.mrgregles.bsp_server_utilities.tutorial.PathRecorder.onLogout(e.getEntity().getUUID());
+        });
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, RulesService::onLogin);
         MinecraftForge.EVENT_BUS.addListener(RulesService::onLogout);
         // Staff online: presence on join and leave (and a heartbeat in the tick), the last-seen record on leave.
@@ -162,6 +185,9 @@ public class BSPServerUtilities {
                 com.mrgregles.bsp_server_utilities.players.PlayerCounter.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.support.SupportChat.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.support.SupportService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialService.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.tutorial.TutorialRunner.tick(e.getServer());
+                com.mrgregles.bsp_server_utilities.tutorial.PathRecorder.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebAgent.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.ProxyKick.tick(e.getServer());
                 com.mrgregles.bsp_server_utilities.web.WebNotes.tick(e.getServer());

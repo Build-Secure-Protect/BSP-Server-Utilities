@@ -47,6 +47,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onKeys(net.minecraftforge.client.event.RegisterKeyMappingsEvent event) {
         StreamerMode.onKeys(event);
+        ClientTutorialAdmin.onKeys(event); // path and area mode's keys (D742)
     }
 
     @SubscribeEvent

@@ -44,6 +44,12 @@ public final class PlayersData extends SavedData {
         return true;
     }
 
+    /** A player's first join on this server's list, or null. */
+    @org.jetbrains.annotations.Nullable
+    public Joined get(UUID id) {
+        return players.get(id);
+    }
+
     public boolean has(UUID id) {
         return players.containsKey(id);
     }

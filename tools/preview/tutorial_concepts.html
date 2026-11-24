@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorial Builder Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Sets AV to AZ: the tutorial builder (D719 to D736). Sample tutorials and places; each frame is 480 x 270 GUI px (1920 x 1080 at GUI scale 4), large ones drawn at 1.5x. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#7a4fd6; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#b58cff; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#b58cff; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1180px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; } h3{ font-size:16px; margin:0; color:var(--acc); }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+.set{ border-top:2px solid var(--line); padding-top:18px; display:flex; flex-direction:column; gap:22px; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.stage{ background:var(--board); border-radius:4px; padding:14px; display:flex; gap:16px; overflow-x:auto; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+@media (max-width:760px){ .stage{ flex-wrap:nowrap; justify-content:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); max-width:720px; margin-top:6px; }
+.fw.sm + .cap, .fw.sm ~ .cap{ max-width:480px; }
+ol{ margin:0; padding-left:22px; } ol li{ margin-bottom:8px; max-width:88ch; } ol b{ color:var(--fg); }
+
+/* ---------- the in-game frame ---------- */
+.fw{ width:720px; height:405px; flex:none; position:relative; }
+.fw.sm{ width:480px; height:270px; }
+.f{ --P:#10151C; --S:#0B0E13; --D:#2A2F3A; --H:#3A4150; --M:#9AA3B5; --T:#E6EAF2; --I:#6B7180; --Q:#19D3B0; --G:#FFD23A; --R:#FF6B5C; --V:#B58CFF;
+  position:absolute; left:0; top:0; width:480px; height:270px; transform:scale(1.5); transform-origin:0 0; overflow:hidden;
+  font:500 7px/1.3 var(--body); color:var(--T); background:#0B0E13; }
+.fw.sm .f{ transform:none; }
+.f > svg.world{ position:absolute; inset:0; }
+.dim{ position:absolute; inset:0; background:rgba(5,7,10,.62); }
+.box{ position:absolute; background:var(--P); box-shadow:0 0 0 1px var(--D); }
+.ttl{ font:600 8.5px Oswald,var(--body); letter-spacing:.14em; text-transform:uppercase; color:var(--V); white-space:nowrap; }
+.ttl.q{ color:var(--Q); } .ttl.g{ color:var(--G); }
+.m{ color:var(--M); } .i{ color:var(--I); } .q{ color:var(--Q); } .g{ color:var(--G); } .r{ color:var(--R); } .v{ color:var(--V); }
+.k{ display:inline-grid; place-items:center; height:12px; padding:0 5px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--M); font:600 5.8px Oswald,var(--body); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+.k.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.k.v{ background:var(--V); color:#120d1c; box-shadow:none; }
+.k.q{ box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); } .k.qf{ background:var(--Q); color:#06231d; box-shadow:none; }
+.k.g{ box-shadow:inset 0 0 0 1px var(--G); color:var(--G); } .k.gf{ background:var(--G); color:#231c02; box-shadow:none; }
+.k.r{ box-shadow:inset 0 0 0 1px rgba(255,107,92,.7); color:var(--R); }
+.sm3 .k{ padding:0 3px; font-size:5.2px; }
+.k.big{ height:16px; padding:0 9px; font-size:6.8px; }
+.seg{ display:inline-flex; } .seg .k + .k{ margin-left:-1px; }
+.lbl{ font:600 5.4px Oswald,var(--body); letter-spacing:.12em; color:var(--I); text-transform:uppercase; white-space:nowrap; }
+.bar{ position:absolute; left:0; right:0; top:0; height:20px; display:flex; align-items:center; gap:6px; padding:0 8px; box-shadow:inset 0 -1px 0 var(--D); }
+.x{ color:var(--M); font-weight:600; font-size:8px; }
+.sp{ margin-left:auto; }
+.foot{ position:absolute; left:0; right:0; bottom:0; height:12px; display:flex; align-items:center; gap:10px; padding:0 8px; font-size:5.4px; color:var(--I); box-shadow:inset 0 1px 0 var(--D); background:var(--S); }
+.row{ display:flex; align-items:center; gap:4px; }
+.well{ position:absolute; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.chip{ display:inline-flex; align-items:center; height:9px; padding:0 3px; font:600 5px Oswald,var(--body); letter-spacing:.08em; text-transform:uppercase; box-shadow:inset 0 0 0 1px var(--D); color:var(--M); white-space:nowrap; }
+.chip.g{ color:var(--G); box-shadow:inset 0 0 0 1px rgba(255,210,58,.5); } .chip.v{ color:var(--V); box-shadow:inset 0 0 0 1px rgba(181,140,255,.5); }
+.chip.q{ color:var(--Q); box-shadow:inset 0 0 0 1px rgba(25,211,176,.5); } .chip.r{ color:var(--R); box-shadow:inset 0 0 0 1px rgba(255,107,92,.5); }
+.field{ height:12px; display:flex; align-items:center; padding:0 4px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font-size:6.2px; }
+.kv{ display:flex; justify-content:space-between; gap:6px; font-size:6px; padding:2px 0; box-shadow:inset 0 -1px 0 #1A1F27; } .kv span:first-child{ color:var(--M); }
+.sw{ width:8px; height:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.15); display:inline-block; } .sw.on{ outline:1px solid var(--V); outline-offset:1px; }
+
+/* tree nodes */
+.node{ position:absolute; width:20px; height:20px; transform:translate(-50%,-50%); background:var(--P); box-shadow:inset 0 0 0 1px var(--H); display:grid; place-items:center; font:600 8px Oswald,var(--body); color:var(--T); }
+.node.fork{ box-shadow:inset 0 0 0 1px var(--G); color:var(--G); }
+.node.sel{ box-shadow:inset 0 0 0 1px var(--V), 0 0 0 2px rgba(181,140,255,.35); }
+.node.start{ box-shadow:inset 0 0 0 1px var(--Q); color:var(--Q); }
+.node .lab{ position:absolute; top:22px; left:50%; transform:translateX(-50%); font:500 5.4px var(--body); color:var(--M); white-space:nowrap; }
+.node.sel .lab{ color:var(--V); }
+.node .warn{ position:absolute; right:-4px; top:-4px; width:7px; height:7px; background:var(--R); color:#2a0b07; font:700 5px var(--body); display:grid; place-items:center; border-radius:50%; }
+.tab{ height:20px; display:flex; align-items:center; padding:0 7px; font:600 6px Oswald,var(--body); letter-spacing:.08em; color:var(--I); text-transform:uppercase; white-space:nowrap; box-shadow:inset -1px 0 0 var(--D); }
+.tab.on{ color:var(--V); background:var(--S); box-shadow:inset 0 -2px 0 var(--V), inset -1px 0 0 var(--D); }
+.grid-dots{ background-color:var(--S); background-image:radial-gradient(rgba(154,163,181,.16) .6px, transparent .7px); background-size:10px 10px; }
+.card2{ position:absolute; background:var(--P); box-shadow:inset 0 0 0 1px var(--H); padding:3px 5px; }
+.card2.sel{ box-shadow:inset 0 0 0 1px var(--V), 0 0 0 2px rgba(181,140,255,.3); }
+.card2 .n{ font-weight:600; font-size:6.4px; white-space:nowrap; } .card2 .c{ display:flex; gap:2px; margin-top:2px; }
+.ol{ font-size:6.2px; padding:2px 5px; white-space:nowrap; display:flex; gap:4px; align-items:center; }
+.ol .t{ color:var(--I); font-family:var(--mono); } .ol.sel{ background:#1A1530; box-shadow:inset 2px 0 0 var(--V); color:var(--V); }
+
+/* editor grid */
+.eg{ position:absolute; background-color:var(--S); box-shadow:inset 0 0 0 1px var(--D); }
+.eg .cell-lines{ position:absolute; inset:0; }
+.gb{ position:absolute; display:flex; align-items:center; justify-content:center; gap:3px; font:600 6px Oswald,var(--body); letter-spacing:.1em; color:var(--M); background:rgba(42,47,58,.55); box-shadow:inset 0 0 0 1px var(--H); }
+.gb.img{ background:rgba(25,211,176,.10); color:var(--Q); box-shadow:inset 0 0 0 1px rgba(25,211,176,.5); }
+.gb.sel{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); background:rgba(181,140,255,.12); }
+.gb.sel::after{ content:""; position:absolute; right:-2px; bottom:-2px; width:4px; height:4px; background:var(--V); }
+.gb.sel::before{ content:""; position:absolute; left:-2px; top:-2px; width:4px; height:4px; background:var(--V); }
+.tool{ display:inline-grid; place-items:center; width:10px; height:11px; background:var(--S); box-shadow:inset 0 0 0 1px var(--D); color:var(--T); font:700 6.4px var(--body); }
+.tool.on{ box-shadow:inset 0 0 0 1px var(--V); color:var(--V); }
+.rt{ background:var(--S); box-shadow:inset 0 0 0 1px var(--D); padding:4px 5px; font-size:6.4px; line-height:1.45; color:var(--T); }
+.rt .caret{ display:inline-block; width:.5px; height:7px; background:var(--V); vertical-align:-1px; margin:0 .5px; }
+.rt .selx{ background:rgba(181,140,255,.28); }
+.btnrow{ display:flex; align-items:center; gap:4px; font-size:6px; padding:2px 4px; box-shadow:inset 0 -1px 0 #1A1F27; }
+.btnrow .job{ color:var(--M); font-size:5.6px; margin-left:auto; }
+.menu{ position:absolute; background:#0E1218; box-shadow:0 0 0 1px var(--H), 0 4px 10px rgba(0,0,0,.6); padding:2px 0; font-size:6px; z-index:3; }
+.menu div{ padding:2px 7px; white-space:nowrap; } .menu .on{ background:#1A1530; color:var(--V); } .menu .sub{ color:var(--M); padding-left:13px; }
+
+/* popup content, as players see it */
+.pc{ position:absolute; }
+.pc h4{ margin:0; font:600 15px Oswald,var(--body); letter-spacing:.04em; color:var(--T); }
+.pc p{ margin:0 0 4px; font-size:7px; line-height:1.45; }
+.img-market{ position:absolute; overflow:hidden; background:
+  linear-gradient(#87b6e6,#cfe3f5 38%, transparent 38%),
+  repeating-linear-gradient(90deg,#d8443b 0 8%,#f3eee4 8% 16%) 0 38%/100% 12% no-repeat,
+  linear-gradient(transparent 50%, #7a5230 50% 56%, #9b6a3d 56% 74%, #6e4a2a 74% 76%, #5c8f3e 76%); box-shadow:0 0 0 1px rgba(255,255,255,.12); }
+.img-market::after{ content:""; position:absolute; left:18%; right:18%; top:58%; height:10%; background:repeating-linear-gradient(90deg,#e7c14b 0 6%,#5fa0d8 6% 12%,#c64f4f 12% 18%,transparent 18% 24%); opacity:.9; }
+.tip{ font-size:6.6px; color:var(--G); }
+.hud-hotbar{ position:absolute; left:149px; bottom:2px; width:182px; height:22px; background:rgba(0,0,0,.45); box-shadow:0 0 0 1px rgba(255,255,255,.28); display:grid; grid-template-columns:repeat(9,1fr); }
+.hud-hotbar i{ box-shadow:inset -1px 0 0 rgba(255,255,255,.12); } .hud-hotbar i:first-child{ box-shadow:inset 0 0 0 1px #fff; }
+.cross{ position:absolute; left:236px; top:131px; width:9px; height:9px; }
+.cross::before,.cross::after{ content:""; position:absolute; background:#fff; opacity:.85; } .cross::before{ left:4px; top:0; width:1px; height:9px; } .cross::after{ top:4px; left:0; height:1px; width:9px; }
+.inset{ position:absolute; box-shadow:0 0 0 1px rgba(255,255,255,.35); overflow:hidden; }
+.inset .il{ position:absolute; left:3px; top:2px; font:600 4.6px Oswald,var(--body); letter-spacing:.14em; color:#fff; opacity:.75; }
+.chat{ position:absolute; left:2px; bottom:28px; width:250px; font-size:6.2px; }
+.chat div{ background:rgba(0,0,0,.5); padding:1px 3px; }
+.chat .lk{ color:var(--G); text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Tutorial builder: three options for each screen (sets AV to AZ)</h1>
+    <p class="lede">The owner's answers D719 to D736 drawn as screens: several tutorials (one offered on first join, the others started by walking into an area), popups that freeze the player or fade while they walk, a text editor that formats mid-line, a <code>tutorial_images/</code> folder, small popups dragged anywhere, an OPEN LINK button. Each frame is the 480 × 270 GUI-pixel screen (1920 × 1080 at GUI scale 4); the large ones are drawn 1.5 times bigger. The tutorials, places and numbers are samples; the world is a drawn stand-in. Admin screens are violet, what players see is teal and gold, as in the rest of the mod.</p>
+  </header>
+
+  <!-- ============================================================ AV -->
+  <div class="set">
+    <h2>Set AV: the tree builder</h2>
+    <p class="lede">Opened from OPEN BUILDER on the TUTORIAL tab (D719). Every option shows the same sample: "Welcome to BSP", offered on first join, forking at Spawn Hall into a full tour and a quick start. A link's line says how the player gets from one point to the next: a walked path (gold), none (the next popup opens at once), or a move to another server (violet).</p>
+    <section>
+      <h3>A. The advancements screen: a canvas of nodes, a side drawer for the one picked</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="av-a"></div></div>
+        <div class="cap">Tabs across the top are the tutorials (★ is the first-join one). Nodes are dragged on a dotted canvas you pan and zoom; dragging from one node to another links them. Clicking a node fills the drawer: its popup, its place, its links, each with DRAW PATH or REDRAW. A red dot marks something missing (here, a link with no path from a point that has a place).</div></div></div>
+    </section>
+    <section>
+      <h3>B. A flow from top to bottom, with the tutorials and their start in a left column</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="av-b"></div></div>
+        <div class="cap">Each point is a card with its popup's kind; each link carries a badge (PATH 42 BLOCKS, NO PATH, TELEPORT). A fork splits into columns named after the buttons that choose them. Picking a link shows DRAW PATH under it. The left column holds every tutorial with how it starts, and the picked one's start settings.</div></div></div>
+    </section>
+    <section>
+      <h3>C. An outline on the left, the points on a plan of the world on the right</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="av-c"></div></div>
+        <div class="cap">The tree as an indented list (easy to read with many points), next to a top-down plan of where the points are, one server and world at a time, with the walked paths in gold. The plan is drawn from the points and paths only, with no terrain. A point picked in either is picked in both.</div></div></div>
+    </section>
+  </div>
+
+  <!-- ============================================================ AW -->
+  <div class="set">
+    <h2>Set AW: the popup editor</h2>
+    <p class="lede">Full screen, opened by EDIT POPUP on a node: the layout grid on the left and the preview on the right (brief). The grid is 12 × 8 for a full-screen popup and 6 × 4 for a small one (D724); a box covers a rectangle of cells you drag out. Text boxes use a new editor that formats inside a line (D725); images come from <code>tutorial_images/</code> or a web address (D726).</p>
+    <section>
+      <h3>A. Halves: grid with the box's editor under it, preview with the buttons under it</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="aw-a"></div></div>
+        <div class="cap">Everything on one page. The popup's own settings (full or small, freezes or keeps walking, background) run across the top. Selecting text in the editor and pressing B, I, U, S, a colour or a size changes only that part, as in a word processor.</div></div></div>
+    </section>
+    <section>
+      <h3>B. Three columns: settings and buttons, the grid, the preview</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="aw-b"></div></div>
+        <div class="cap">The grid is the biggest thing on the page. A box's settings float over the grid next to it (here an image box: a file from the folder or a web address, and its fit). A button's job is picked from a list, with a branch or a web address where the job needs one (D728).</div></div></div>
+    </section>
+    <section>
+      <h3>C. Tabs on the left, a large preview on the right</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="aw-c1"></div></div>
+          <div class="cap">LAYOUT, TEXT, IMAGE, BUTTONS and POPUP tabs share the left side; the preview is the largest of the three options. The TEXT tab is open here, with the editor at full width.</div></div>
+        <div><div class="fw"><div class="f" id="aw-c2"></div></div>
+          <div class="cap">A small popup's POPUP tab (D723, D727): it keeps the player walking and fades after 8 seconds. The preview becomes the whole screen, where the popup is dragged anywhere and resized by its corner. Guides snap it to the centre and the edges. Its place is kept as a share of the screen, so it lands in the same spot at every window size.</div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================================ AX -->
+  <div class="set">
+    <h2>Set AX: what the player sees</h2>
+    <p class="lede">Three looks, each shown three ways: a full-screen popup, the first-join offer straight after the rules (YES, NO THANKS, LATER; D722), and a small popup that does not freeze the player and fades as they walk (D723).</p>
+    <section>
+      <h3>A. Holo card: the mod's own panels</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ax-a1"></div></div><div class="cap">A framed card with the tutorial's name, the step on this branch and a thin progress line. END TUTORIAL sits apart on the left, the moving-on keys on the right.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-a2"></div></div><div class="cap">The offer, centred, after the rules popup closes.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-a3"></div></div><div class="cap">A popup that keeps the player walking: no keys, a bar that empties, then it fades.</div></div>
+      </div>
+    </section>
+    <section>
+      <h3>B. Guide: gold, with the stops as dots</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ax-b1"></div></div><div class="cap">A gold band on top with a dot per stop on this branch (the one lit is where you are). The buttons are gold outlines; the main one is filled.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-b2"></div></div><div class="cap">The offer as a gold card with the tutorial's name large.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-b3"></div></div><div class="cap">A walking popup as a toast with a gold edge that shortens with the time left.</div></div>
+      </div>
+    </section>
+    <section>
+      <h3>C. Floating: no frame, the content over the darkened game</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ax-c1"></div></div><div class="cap">The boxes float on the darkened game with no outer frame, so the admin's layout is the whole look. Large keys centred at the bottom.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-c2"></div></div><div class="cap">The offer in the same floating style.</div></div>
+        <div><div class="fw sm"><div class="f" id="ax-c3"></div></div><div class="cap">A walking popup as a speech bubble with how far the next stop is.</div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================================ AY -->
+  <div class="set">
+    <h2>Set AY: drawing a path</h2>
+    <p class="lede">DRAW PATH on a link teleports the admin to its first point. START PATH records a point every 3 blocks walked or flown (the yellow line); the next point is a transparent sphere of its radius; inside it, FINISH PATH (D731). While walking the mouse steers the view, so the mode's actions are keys shown on screen.</p>
+    <section>
+      <h3>A. A strip across the top, the finish as a card</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ay-a1"></div></div><div class="cap">The strip says what is being drawn, how many points and blocks so far, and how far is left; the keys are under it. The admin has turned round to look back at the line from The Bank; The Market's sphere is ahead on the right.</div></div>
+        <div><div class="fw"><div class="f" id="ay-a2"></div></div><div class="cap">Inside the sphere: the edge of the screen glows and the card asks to finish. KEEP WALKING closes it and goes on recording.</div></div>
+      </div>
+    </section>
+    <section>
+      <h3>B. A checklist card on the left, an arrow to the target</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ay-b1"></div></div><div class="cap">The steps ticked off as they happen, the numbers and the keys in one card; an arrow above the hotbar points at the sphere with the distance.</div></div>
+        <div><div class="fw"><div class="f" id="ay-b2"></div></div><div class="cap">Inside the sphere, the card's last step lights up and FINISH PATH appears beside the crosshair.</div></div>
+      </div>
+    </section>
+    <section>
+      <h3>C. Out of the way: the action bar, a compass, chat links</h3>
+      <div class="stage">
+        <div><div class="fw"><div class="f" id="ay-c1"></div></div><div class="cap">Nothing covers the view: a compass strip with the target, one line above the hotbar, and clickable chat lines to undo or cancel (opening chat frees the mouse).</div></div>
+        <div><div class="fw"><div class="f" id="ay-c2"></div></div><div class="cap">Inside the sphere, a title and a chat line with FINISH PATH and KEEP WALKING.</div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================================ AZ -->
+  <div class="set">
+    <h2>Set AZ: the player's golden path and the sign at the end</h2>
+    <p class="lede">Only the player on the tutorial sees it. It floats about a block above the walked line, is faint through walls and fades with distance (D732). Each option has a close-up of its sign in the corner.</p>
+    <section>
+      <h3>A. Dashes, and a sign on a post</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="az-a"></div></div>
+        <div class="cap">Short gold dashes, like a dotted line on a map. At the end a translucent sign on a thin post names the next stop. No other HUD.</div></div></div>
+    </section>
+    <section>
+      <h3>B. Glowing dots that ripple forward, and a floating panel</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="az-b"></div></div>
+        <div class="cap">Round gold dots a block apart; every fourth is brighter and the bright ones move forward, showing the way. The sign is a floating panel in the holo look. A small line at the top says the next stop and how far it is.</div></div></div>
+    </section>
+    <section>
+      <h3>C. Chevrons, a banner and a ring on the ground</h3>
+      <div class="stage"><div><div class="fw"><div class="f" id="az-c"></div></div>
+        <div class="cap">Gold chevrons pointing the way. At the end, a banner over a ring on the ground the size of the trigger radius, so the player can see where the popup opens. A compass mark at the top.</div></div></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>To pick</h2>
+    <div class="card"><ol>
+      <li><b>AV, the tree builder: A, B or C.</b> A is closest to the advancements screen you described; B reads top to bottom and keeps every tutorial's start in view; C shows where the points are in the world.</li>
+      <li><b>AW, the popup editor: A, B or C.</b> A has everything on one page; B gives the grid the most room; C gives the preview the most room and is the only one where the small popup's placement gets a whole page.</li>
+      <li><b>AX, what the player sees: A, B or C</b> (each comes with its offer and its walking popup, which can be mixed).</li>
+      <li><b>AY, drawing a path: A, B or C.</b></li>
+      <li><b>AZ, the golden path: A, B or C.</b> The line, the sign and the HUD line can be mixed (for example B's dots with C's ring).</li>
+    </ol></div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const add = (f, s) => { f.insertAdjacentHTML("beforeend", s); return f; };
+
+/* ---------------------------------------------------------------- a world stand-in, in perspective */
+const FOC = 260, HZ = 100, CH = 1.6;
+const P = (x, y, z) => [240 + x * FOC / z, HZ + (CH - y) * FOC / z];
+const pts = a => a.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+function shade(hex, k) { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * k)))); return "rgb(" + c.join(",") + ")"; }
+const BUILD = [
+  { x0: -7, x1: 3, y0: 0, y1: 6, z0: 38, z1: 46, c: "#9c6b3c", awn: 1 },
+  { x0: -17, x1: -7, y0: 0, y1: 8, z0: 16, z1: 28, c: "#9a9ea6" },
+  { x0: 7, x1: 13, y0: 0, y1: 5, z0: 11, z1: 19, c: "#b08a5a" },
+  { x0: 9, x1: 10, y0: 0, y1: 3, z0: 28, z1: 29, c: "#6b4a2b" },
+  { x0: 7.5, x1: 11.5, y0: 3, y1: 6.5, z0: 26.5, z1: 30.5, c: "#3d7a35" },
+  { x0: -26, x1: -18, y0: 0, y1: 5, z0: 40, z1: 50, c: "#8e939c" },
+];
+function boxSvg(b) {
+  let s = "";
+  const q = (arr, col) => s += `<polygon points="${pts(arr.map(a => P(...a)))}" fill="${col}"/>`;
+  if (b.x0 > 0) q([[b.x0, b.y0, b.z0], [b.x0, b.y0, b.z1], [b.x0, b.y1, b.z1], [b.x0, b.y1, b.z0]], shade(b.c, .72));
+  if (b.x1 < 0) q([[b.x1, b.y0, b.z0], [b.x1, b.y0, b.z1], [b.x1, b.y1, b.z1], [b.x1, b.y1, b.z0]], shade(b.c, .72));
+  if (b.y1 < CH) q([[b.x0, b.y1, b.z0], [b.x1, b.y1, b.z0], [b.x1, b.y1, b.z1], [b.x0, b.y1, b.z1]], shade(b.c, 1.15));
+  q([[b.x0, b.y0, b.z0], [b.x1, b.y0, b.z0], [b.x1, b.y1, b.z0], [b.x0, b.y1, b.z0]], b.c);
+  if (b.awn) { // a striped awning and a dark doorway on the market
+    const n = 8, w = (b.x1 - b.x0) / n;
+    for (let i = 0; i < n; i++) q([[b.x0 + i * w, 3.4, b.z0 - .01], [b.x0 + (i + 1) * w, 3.4, b.z0 - .01], [b.x0 + (i + 1) * w, 4.2, b.z0 - .01], [b.x0 + i * w, 4.2, b.z0 - .01]], i % 2 ? "#f3eee4" : "#d8443b");
+    q([[-3, 0, b.z0 - .01], [-1, 0, b.z0 - .01], [-1, 2.4, b.z0 - .01], [-3, 2.4, b.z0 - .01]], "#3a2614");
+  }
+  // block seams on the front face
+  for (let y = b.y0 + 1; y < b.y1; y++) { const a = P(b.x0, y, b.z0), c = P(b.x1, y, b.z0); s += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="rgba(0,0,0,.12)" stroke-width=".4"/>`; }
+  return s;
+}
+function ground() {
+  let s = `<defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fa4dc"/><stop offset="1" stop-color="#cfe3f5"/></linearGradient>
+    <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6c9a4a"/><stop offset="1" stop-color="#3f6a2a"/></linearGradient>
+    <radialGradient id="sph" cx=".42" cy=".38" r=".62"><stop offset="0" stop-color="rgba(190,240,255,.06)"/><stop offset=".78" stop-color="rgba(140,220,255,.16)"/><stop offset="1" stop-color="rgba(170,235,255,.42)"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="480" height="${HZ}" fill="url(#sky)"/>
+  <polygon points="0,${HZ} 60,${HZ - 9} 130,${HZ - 4} 210,${HZ - 12} 300,${HZ - 5} 380,${HZ - 10} 480,${HZ - 3} 480,${HZ} " fill="#7f9c7a"/>
+  <rect y="${HZ}" width="480" height="${270 - HZ}" fill="url(#gr)"/>`;
+  for (let z = 4; z <= 60; z += 2) { const y = P(0, 0, z)[1]; s += `<line x1="0" x2="480" y1="${y}" y2="${y}" stroke="rgba(0,0,0,.07)" stroke-width=".4"/>`; }
+  for (let x = -40; x <= 40; x += 2) { const a = P(x, 0, 2.2), b = P(x, 0, 80); s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="rgba(0,0,0,.06)" stroke-width=".4"/>`; }
+  return s;
+}
+function road(xz) {
+  const L = [], R = [];
+  xz.forEach((p, i) => {
+    const a = xz[Math.max(0, i - 1)], b = xz[Math.min(xz.length - 1, i + 1)];
+    let dx = b[0] - a[0], dz = b[1] - a[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    L.push(P(p[0] - dz * 1.3, 0, p[1] + dx * 1.3)); R.push(P(p[0] + dz * 1.3, 0, p[1] - dx * 1.3));
+  });
+  return `<polygon points="${pts(L.concat(R.reverse()))}" fill="#9a958b" opacity=".85"/>`;
+}
+const buildings = () => BUILD.slice().sort((a, b) => b.z0 - a.z0).map(boxSvg).join("");
+function walk(xz, step, fn) { // calls fn(x, z, dx, dz, dist) every `step` blocks along the polyline
+  let carry = 0, dist = 0;
+  for (let i = 0; i < xz.length - 1; i++) {
+    const [ax, az] = xz[i], [bx, bz] = xz[i + 1]; const len = Math.hypot(bx - ax, bz - az); const dx = (bx - ax) / len, dz = (bz - az) / len;
+    let t = carry;
+    while (t <= len) { fn(ax + dx * t, az + dz * t, dx, dz, dist + t); t += step; }
+    carry = t - len; dist += len;
+  }
+}
+const fade = z => Math.max(.3, Math.min(1, 1.15 - z / 55));
+function goldDashes(xz, y) {
+  let s = `<g filter="url(#glow)">`;
+  walk(xz, 1.2, (x, z, dx, dz) => {
+    const a = P(x, y, z), b = P(x + dx * .6, y, z + dz * .6); if (z < 2.2) return; const w = Math.min(3, Math.max(.7, .09 * FOC / z));
+    s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#FFD23A" stroke-linecap="round" stroke-width="${w.toFixed(2)}" opacity="${(fade(z) * .85).toFixed(2)}"/>`;
+  });
+  return s + "</g>";
+}
+function goldDots(xz, y) {
+  let s = `<g filter="url(#glow)">`;
+  walk(xz, 1, (x, z, dx, dz, d) => {
+    const a = P(x, y, z), bright = Math.round(d) % 4 === 2; if (z < 2.2) return; const r = Math.min(bright ? 3.2 : 2.2, Math.max(.6, (bright ? .17 : .11) * FOC / z));
+    s += `<circle cx="${a[0]}" cy="${a[1]}" r="${r.toFixed(2)}" fill="${bright ? "#FFE680" : "#FFD23A"}" opacity="${(fade(z) * (bright ? .95 : .6)).toFixed(2)}"/>`;
+  });
+  return s + "</g>";
+}
+function goldChevrons(xz, y) {
+  let s = `<g filter="url(#glow)" fill="none" stroke="#FFD23A" stroke-linecap="round" stroke-linejoin="round">`;
+  walk(xz, 1.6, (x, z, dx, dz) => {
+    if (z < 2.2) return; const nx = -dz, nz = dx;
+    const tip = P(x + dx * .25, y, z + dz * .25), l = P(x - dx * .15 + nx * .25, y, z - dz * .15 + nz * .25), r = P(x - dx * .15 - nx * .25, y, z - dz * .15 - nz * .25);
+    s += `<polyline points="${pts([l, tip, r])}" stroke-width="${Math.min(2.4, Math.max(.6, .1 * FOC / z)).toFixed(2)}" opacity="${(fade(z) * .85).toFixed(2)}"/>`;
+  });
+  return s + "</g>";
+}
+function adminLine(xz) {
+  const p = xz.map(([x, z]) => P(x, .15, z));
+  let s = `<polyline points="${pts(p)}" fill="none" stroke="#FFE45C" stroke-width="1.4" stroke-linejoin="round" opacity=".95" filter="url(#glow)"/>`;
+  p.forEach((q, i) => { if (i < p.length - 1) s += `<rect x="${q[0] - 1.6}" y="${q[1] - 1.6}" width="3.2" height="3.2" fill="#FFE45C" stroke="#7a6400" stroke-width=".4"/>`; });
+  return s;
+}
+function sphere(x, y, z, r, label) {
+  const c = P(x, y, z), R = r * FOC / z;
+  return `<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="url(#sph)" stroke="rgba(210,245,255,.7)" stroke-width=".7"/>
+    <ellipse cx="${c[0]}" cy="${c[1]}" rx="${R}" ry="${R * .26}" fill="none" stroke="rgba(210,245,255,.45)" stroke-width=".5"/>
+    <ellipse cx="${c[0]}" cy="${c[1]}" rx="${R * .36}" ry="${R}" fill="none" stroke="rgba(210,245,255,.3)" stroke-width=".5"/>
+    ${label ? `<text x="${c[0]}" y="${c[1] - R - 4}" text-anchor="middle" font-family="Oswald, 'Arial Narrow', sans-serif" font-weight="600" font-size="6.5" letter-spacing=".8" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="1.6" paint-order="stroke">${label}</text>` : ""}`;
+}
+function groundRing(x, z, r) {
+  const a = []; for (let i = 0; i <= 40; i++) { const t = i / 40 * Math.PI * 2; a.push(P(x + Math.cos(t) * r, .05, z + Math.sin(t) * r)); }
+  return `<polygon points="${pts(a)}" fill="rgba(255,210,58,.16)" stroke="#FFD23A" stroke-width=".9" opacity=".9"/>`;
+}
+function world(f, layers) { add(f, `<svg class="world" viewBox="0 0 480 270" width="480" height="270">${ground()}${layers.road || ""}${buildings()}${layers.over || ""}</svg>`); return f; }
+const hud = f => add(f, `<div class="hud-hotbar">${"<i></i>".repeat(9)}</div><div class="cross"></div>`);
+
+/* the player's path: Spawn Hall (behind) to The Market (ahead) */
+const PATH = [[0, 1.6], [.1, 3], [.4, 6], [1.2, 9], [2.2, 12], [2.8, 15], [2.6, 18], [1.6, 21], [.2, 24], [-1, 27], [-1.8, 30], [-2, 33]];
+/* the admin's line in AY: from The Bank (left, ahead) to where they stand, then the target ahead right */
+const DRAWN = [[-10, 15], [-8.4, 12.6], [-6.6, 10.4], [-4.6, 8.4], [-2.6, 6.6], [-1, 4.6], [0, 2.6]];
+
+/* ---------------------------------------------------------------- popup content (The Market) */
+const BODY = `<p>Sell what you make at the <b class="g">market stalls</b>. Prices are set by <i>players</i>, so check the <span class="q">price board</span> before you list anything.</p><p>Right-click a free stall to rent it for a week. Your takings wait in your <b>bank</b>.</p>`;
+const TIP = `<span class="tip"><b>Tip:</b> sneak and right-click a stall to see who sells there.</span>`;
+function popupBody(x, y, w, h, opts = {}) { // the admin's 12 x 8 layout, drawn in a box
+  const cw = w / 12, rh = h / 8;
+  const bx = (c, r, cs, rs, inner, st = "") => `<div class="pc" style="left:${x + c * cw}px;top:${y + r * rh}px;width:${cs * cw - 4}px;height:${rs * rh - 4}px;${st}">${inner}</div>`;
+  const card = opts.cards ? "background:rgba(16,21,28,.82);box-shadow:0 0 0 1px rgba(255,255,255,.08);padding:4px 6px;box-sizing:border-box;" : "";
+  return bx(0, 0, 7, 1, `<h4>The Market</h4>`, card ? "" : "") +
+    bx(8, 0, 4, 5, `<div class="img-market" style="inset:0"></div>`) +
+    bx(0, 1, 7, 4, BODY, card) +
+    bx(0, 5, 12, 1, TIP, card);
+}
+
+/* ================================================================ AV A */
+(() => {
+  const f = $("av-a"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar" style="padding:0 0 0 8px;gap:0"><span class="ttl" style="margin-right:8px">Tutorials</span>
+      <span class="tab on">★ Welcome to BSP</span><span class="tab">Mining 101</span><span class="tab">Farming basics</span><span class="tab">+</span>
+      <span class="sp g" style="font-size:6px;margin-right:6px;white-space:nowrap">Draft · 4 changes</span><span class="k" style="margin-right:4px">Test</span><span class="k v" style="margin-right:6px">Publish</span><span class="x" style="margin-right:7px">✕</span></div>
+    <div style="position:absolute;left:8px;right:8px;top:23px;height:12px;display:flex;align-items:center;gap:5px;font-size:6px">
+      <span class="lbl">Starts</span><span class="chip q">First join</span><span class="m">offered to</span><span class="chip">New players only</span>
+      <span class="i">· 9 points · 1 fork</span><span class="k sp">Tutorial settings</span></div>
+    <div class="well grid-dots" id="av-a-c" style="left:8px;top:38px;width:330px;height:204px;overflow:hidden"></div>
+    <div class="well" style="left:344px;top:38px;width:116px;height:204px;padding:6px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px">
+      <div class="ttl" style="font-size:7.5px">The Market</div>
+      <div class="kv"><span>Popup</span><span>Full · freezes</span></div>
+      <div class="kv"><span>Place</span><span>BSP-SafeRoom</span></div>
+      <div class="kv"><span></span><span class="m" style="font-family:var(--mono);font-size:5.6px">overworld 182 64 −310</span></div>
+      <div class="kv"><span>Radius</span><span>2 blocks</span></div><div class="kv"><span></span><span class="v">Go there ›</span></div>
+      <div class="row" style="gap:3px;margin:2px 0"><span class="k v">Edit popup</span><span class="k">Set to here</span></div>
+      <div class="lbl" style="margin-top:3px">Links</div>
+      <div style="font-size:6px">← The Bank <span class="g">· path 42 blocks</span></div><div class="row" style="justify-content:flex-end"><span class="k">Redraw</span></div>
+      <div style="font-size:6px">→ Land Office <span class="r">· no path</span></div><div class="row" style="justify-content:flex-end"><span class="k g">Draw path</span></div>
+      <div class="lbl" style="margin-top:3px">Buttons</div>
+      <div style="font-size:6px">NEXT <span class="m">→ Land Office</span></div><div style="font-size:6px">PREVIOUS</div>
+      <div class="row" style="margin-top:auto;justify-content:space-between"><span class="k">Duplicate</span><span class="k r">Delete</span></div>
+    </div>
+    <div class="foot"><span>Drag to pan · scroll to zoom · drag from a node to another to link</span><span class="sp"><span class="g">━</span> walked path &nbsp;<span class="m">┅</span> no path, opens at once &nbsp;<span class="v">┈</span> teleport</span></div>
+  </div>`);
+  const c = $("av-a-c");
+  const N = { w: [24, 102, "W", "Welcome", "start"], s: [72, 102, "S", "Spawn Hall", "fork"], b: [128, 52, "B", "The Bank"], m: [184, 52, "M", "The Market", "sel"],
+    l: [240, 52, "L", "Land Office"], k: [128, 154, "K", "Starter Kit"], p: [296, 102, "P", "Portal Room"], t: [240, 154, "T", "Teams Board"] };
+  const L = [["w", "s", "none"], ["s", "b", "path", "Full tour"], ["s", "k", "path", "Quick start"], ["b", "m", "path"], ["m", "l", "missing"], ["l", "p", "tp"], ["k", "t", "path"], ["t", "p", "tp"]];
+  let svg = `<svg width="330" height="204" style="position:absolute;inset:0">`;
+  L.forEach(([a, b, k, lab]) => {
+    const [x1, y1] = N[a], [x2, y2] = N[b]; const mx = (x1 + x2) / 2;
+    const d = y1 === y2 ? `M${x1 + 10} ${y1} H${x2 - 10}` : `M${x1 + 10} ${y1} H${mx} V${y2} H${x2 - 10}`;
+    const st = k === "path" ? 'stroke="#FFD23A" stroke-width="1.6"' : k === "tp" ? 'stroke="#B58CFF" stroke-width="1.2" stroke-dasharray="1 2"' : k === "missing" ? 'stroke="#FF6B5C" stroke-width="1.2" stroke-dasharray="3 2"' : 'stroke="#6B7180" stroke-width="1.2" stroke-dasharray="3 2"';
+    svg += `<path d="${d}" fill="none" ${st}/>`;
+    if (lab) svg += `<rect x="${mx - 1}" y="${(y1 + y2) / 2 - 6}" width="${lab.length * 3.3 + 6}" height="9" fill="#0B0E13" stroke="#FFD23A" stroke-opacity=".5" stroke-width=".6"/><text x="${mx + 2}" y="${(y1 + y2) / 2 + .6}" font-family="Oswald, 'Arial Narrow', sans-serif" font-size="5.2" letter-spacing=".5" fill="#FFD23A">${lab.toUpperCase()}</text>`;
+    if (k === "tp" && a === "l") svg += `<text x="${mx + 3}" y="${(y1 + y2) / 2 + 2}" font-family="IBM Plex Sans, sans-serif" font-size="5" fill="#B58CFF">BSP-Spawn</text>`;
+  });
+  c.insertAdjacentHTML("beforeend", svg + "</svg>");
+  Object.values(N).forEach(([x, y, g, lab, cls]) => c.insertAdjacentHTML("beforeend", `<div class="node ${cls || ""}" style="left:${x}px;top:${y}px">${g}<span class="lab">${lab}</span>${g === "L" ? '<span class="warn">!</span>' : ""}</div>`));
+  c.insertAdjacentHTML("beforeend", `<div class="row" style="position:absolute;right:5px;bottom:5px"><span class="k">−</span><span class="k">100%</span><span class="k">+</span></div>`);
+})();
+
+/* ================================================================ AV B */
+(() => {
+  const f = $("av-b"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="ttl">Tutorials</span><span class="i" style="font-size:6px">Welcome to BSP</span><span class="sp g" style="font-size:6px;white-space:nowrap">Draft · 4 changes</span><span class="k">Test</span><span class="k v">Publish</span><span class="x">✕</span></div>
+    <div class="well" style="left:6px;top:26px;width:116px;height:226px;padding:4px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px">
+      <div class="ol sel" style="flex-direction:column;align-items:flex-start;gap:0"><b>★ Welcome to BSP</b><span class="m" style="font-size:5.4px">First join · new players</span></div>
+      <div class="ol" style="flex-direction:column;align-items:flex-start;gap:0">Mining 101<span class="m" style="font-size:5.4px">Area · BSP-Frostwarf</span></div>
+      <div class="ol" style="flex-direction:column;align-items:flex-start;gap:0">Farming basics<span class="r" style="font-size:5.4px">Area not set</span></div>
+      <span class="k" style="margin:2px 4px">+ New tutorial</span>
+      <div style="box-shadow:inset 0 1px 0 var(--D);margin-top:4px;padding:5px 4px 0;display:flex;flex-direction:column;gap:4px">
+        <span class="lbl">Name</span><div class="field">Welcome to BSP</div>
+        <span class="lbl">Starts</span><span class="seg sm3"><span class="k on">First join</span><span class="k">Area</span><span class="k">/tutorial</span></span>
+        <span class="lbl">Offered to</span><span class="seg sm3"><span class="k on">New players</span><span class="k">Not finished</span></span>
+        <span class="lbl">The offer</span><div class="row"><span class="k">Edit text</span><span class="k">Preview</span></div>
+      </div>
+    </div>
+    <div class="well grid-dots" id="av-b-c" style="left:128px;top:26px;width:334px;height:226px;overflow:hidden"></div>
+  </div>`);
+  const c = $("av-b-c");
+  const card = (x, y, n, chips, sel) => `<div class="card2 ${sel ? "sel" : ""}" style="left:${x}px;top:${y}px;width:90px"><div class="n">${n}</div><div class="c">${chips}</div></div>`;
+  const badge = (x, y, cls, t) => `<span class="chip ${cls}" style="position:absolute;left:${x}px;top:${y}px;background:#0B0E13">${t}</span>`;
+  let svg = `<svg width="334" height="226" style="position:absolute;inset:0" fill="none">
+    <path d="M167 26 V36" stroke="#6B7180" stroke-dasharray="3 2"/>
+    <path d="M167 58 V66 H90 V76 M167 66 H244 V76" stroke="#FFD23A" stroke-width="1.4"/>
+    <path d="M90 98 V114" stroke="#FFD23A" stroke-width="1.4"/><path d="M90 136 V152" stroke="#FF6B5C" stroke-dasharray="3 2"/>
+    <path d="M90 174 V186 H167 V192 M244 98 V186 H167" stroke="#B58CFF" stroke-dasharray="1 2"/></svg>`;
+  c.insertAdjacentHTML("beforeend", svg +
+    card(122, 6, "Welcome", `<span class="chip">Full</span><span class="chip">Freezes</span><span class="chip">No place</span>`) +
+    card(122, 36, "Spawn Hall", `<span class="chip g">Fork · 2</span><span class="chip">Full</span><span class="chip q">Place</span>`) +
+    `<span class="lbl" style="position:absolute;left:46px;top:66px;color:var(--G)">Full tour</span><span class="lbl" style="position:absolute;left:250px;top:66px;color:var(--G)">Quick start</span>` +
+    card(45, 76, "The Bank", `<span class="chip">Full</span><span class="chip q">Place</span>`) +
+    card(45, 114, "The Market", `<span class="chip">Full</span><span class="chip q">Place</span>`, true) +
+    card(45, 152, "Land Office", `<span class="chip">Small</span><span class="chip">Fades 8 s</span>`) +
+    card(199, 76, "Starter Kit", `<span class="chip">Small</span><span class="chip">Freezes</span>`) +
+    card(122, 192, "Portal Room", `<span class="chip">Full</span><span class="chip q">Place</span><span class="chip">End</span>`) +
+    badge(94, 103, "g", "Path 42 blocks") + badge(94, 141, "r", "No path") +
+    `<span class="k g" style="position:absolute;left:138px;top:139px">Draw path</span>` +
+    badge(248, 140, "v", "Teleport → BSP-Spawn") + badge(94, 178, "v", "Teleport") +
+    `<span class="i" style="position:absolute;left:6px;bottom:4px;font-size:5.4px">Click a card to edit its popup · click a link for its path</span>`);
+})();
+
+/* ================================================================ AV C */
+(() => {
+  const f = $("av-c"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="ttl">Tutorials</span><span class="seg"><span class="k on">★ Welcome to BSP</span><span class="k">Mining 101</span><span class="k">Farming basics</span><span class="k">+</span></span>
+      <span class="sp g" style="font-size:6px">Draft</span><span class="k v">Publish</span><span class="x">✕</span></div>
+    <div class="well" style="left:6px;top:26px;width:150px;height:226px;padding:3px 0;box-sizing:border-box">
+      <div class="ol"><span class="t">1</span>Welcome <span class="i sp">no place</span></div>
+      <div class="ol"><span class="t">2</span>Spawn Hall <span class="chip g sp">fork</span></div>
+      <div class="ol" style="padding-left:12px"><span class="t">├</span><span class="g">Full tour</span></div>
+      <div class="ol" style="padding-left:18px"><span class="t">3</span>The Bank <span class="g sp">━ 33</span></div>
+      <div class="ol sel" style="padding-left:18px"><span class="t">4</span>The Market <span class="g sp">━ 42</span></div>
+      <div class="ol" style="padding-left:18px"><span class="t">5</span>Land Office <span class="r sp">no path</span></div>
+      <div class="ol" style="padding-left:12px"><span class="t">└</span><span class="g">Quick start</span></div>
+      <div class="ol" style="padding-left:18px"><span class="t">6</span>Starter Kit <span class="g sp">━ 18</span></div>
+      <div class="ol" style="padding-left:18px"><span class="t">7</span>Teams Board <span class="g sp">━ 25</span></div>
+      <div class="ol"><span class="t">8</span>Portal Room <span class="v sp">BSP-Spawn</span></div>
+      <div class="row" style="padding:6px 5px;gap:3px"><span class="k">+ Point</span><span class="k">+ Fork</span><span class="k">Settings</span></div>
+      <div class="i" style="padding:2px 6px;font-size:5.4px">Starts on first join · new players only</div>
+    </div>
+    <div class="well" id="av-c-m" style="left:162px;top:26px;width:300px;height:226px;overflow:hidden;background-color:#0A0D11;background-image:linear-gradient(rgba(154,163,181,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(154,163,181,.07) 1px,transparent 1px);background-size:16px 16px"></div>
+  </div>`);
+  const m = $("av-c-m");
+  m.insertAdjacentHTML("beforeend", `<div class="row" style="position:absolute;left:4px;top:4px"><span class="seg"><span class="k on">BSP-SafeRoom · overworld · 6</span><span class="k">BSP-Spawn · 2</span></span></div>
+    <svg width="300" height="226" style="position:absolute;inset:0" fill="none">
+      <polyline points="60,170 70,150 88,138 104,118 118,96" stroke="#FFD23A" stroke-width="1.6"/>
+      <polyline points="118,96 138,90 160,80 178,70 196,66 214,58" stroke="#FFD23A" stroke-width="1.6"/>
+      <line x1="214" y1="58" x2="252" y2="120" stroke="#FF6B5C" stroke-dasharray="3 2"/>
+      <polyline points="60,170 82,182 108,190 140,186 166,176" stroke="#FFD23A" stroke-width="1.6"/>
+      <polyline points="166,176 190,170 214,174" stroke="#FFD23A" stroke-width="1.6"/>
+      <circle cx="214" cy="58" r="10" stroke="#B58CFF" stroke-opacity=".6" stroke-dasharray="2 2"/>
+    </svg>`);
+  [[60, 170, "2", "Spawn Hall", "fork"], [118, 96, "3", "The Bank"], [214, 58, "4", "The Market", "sel"], [252, 120, "5", "Land Office"], [166, 176, "6", "Starter Kit"], [214, 174, "7", "Teams Board"]]
+    .forEach(([x, y, g, lab, cls]) => m.insertAdjacentHTML("beforeend", `<div class="node ${cls || ""}" style="left:${x}px;top:${y}px;width:14px;height:14px;font-size:6.5px">${g}<span class="lab" style="top:15px">${lab}</span></div>`));
+  m.insertAdjacentHTML("beforeend", `<div class="box" style="left:8px;top:24px;width:84px;padding:4px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;box-shadow:0 0 0 1px var(--V)">
+      <div class="ttl" style="font-size:6.5px">The Market</div><div class="m" style="font-size:5.4px">Full · freezes · r 2</div>
+      <span class="k v">Edit popup</span><span class="k g">Draw path to 5</span><span class="k">Go there</span></div>
+    <div class="i" style="position:absolute;left:4px;bottom:4px;font-size:5.4px">North is up · 16 blocks a square · the Portal Room is on BSP-Spawn</div>`);
+})();
+
+/* ================================================================ AW: shared bits */
+function editorGrid(id, x, y, cw, rh, cols, rows, boxes) {
+  let s = `<div class="eg" id="${id}" style="left:${x}px;top:${y}px;width:${cw * cols}px;height:${rh * rows}px;background-image:linear-gradient(rgba(154,163,181,.1) 1px,transparent 1px),linear-gradient(90deg,rgba(154,163,181,.1) 1px,transparent 1px);background-size:${cw}px ${rh}px">`;
+  boxes.forEach(([c, r, cs, rs, label, cls]) => s += `<div class="gb ${cls || ""}" style="left:${c * cw + 1}px;top:${r * rh + 1}px;width:${cs * cw - 2}px;height:${rs * rh - 2}px">${label}</div>`);
+  return s + "</div>";
+}
+const BOXES = sel => [[0, 0, 7, 1, "T · Heading", sel === "h" ? "sel" : ""], [8, 0, 4, 5, "▣ Image", "img" + (sel === "i" ? " sel" : "")], [0, 1, 7, 4, "T · Body", sel === "b" ? "sel" : ""], [0, 5, 12, 1, "T · Tip", ""]];
+const toolbar = `<div class="row" style="gap:2px;flex-wrap:nowrap"><span class="tool on">B</span><span class="tool" style="font-style:italic">I</span><span class="tool" style="text-decoration:underline">U</span><span class="tool" style="text-decoration:line-through">S</span>
+  <span style="width:1px"></span><span class="sw" style="background:#E6EAF2"></span><span class="sw on" style="background:#FFD23A"></span><span class="sw" style="background:#19D3B0"></span><span class="sw" style="background:#FF6B5C"></span><span class="sw" style="background:#9AA3B5"></span><span class="k" style="height:9px;font-size:5px;padding:0 2px">#</span>
+  <span style="width:1px"></span><span class="seg"><span class="k" style="height:11px">S</span><span class="k on" style="height:11px">M</span><span class="k" style="height:11px">L</span><span class="k" style="height:11px">XL</span></span>
+  <span style="width:1px"></span><span class="tool on">⫷</span><span class="tool">≡</span><span class="tool">⫸</span></div>`;
+const richText = `Sell what you make at the <b class="g selx">market stalls</b><span class="caret"></span>. Prices are set by <i>players</i>, so check the <span class="q">price board</span> before you list anything.<br><br>Right-click a free stall to rent it for a week. Your takings wait in your <b>bank</b>.`;
+function miniPopup(x, y, w, h) { // a preview of the full popup in AX A's look
+  const pad = w * .05, top = h * .13;
+  return `<div class="well" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;overflow:hidden;background:linear-gradient(170deg,#3e5d39,#2a3f27 45%,#4a6f9c)">
+    <div style="position:absolute;inset:0;background:rgba(5,7,10,.55)"></div>
+    <div class="box" style="left:${pad}px;top:${pad * .7}px;right:${pad}px;bottom:${pad * .7}px;overflow:hidden">
+      <div style="position:absolute;left:0;right:0;top:0;height:${top}px;display:flex;align-items:center;padding:0 4px;box-shadow:inset 0 -1px 0 var(--D)"><span class="ttl q" style="font-size:${h * .045}px">Welcome to BSP</span></div>
+      <div style="position:absolute;left:0;top:0;width:${w * .9}px;height:${h}px;transform-origin:0 0">
+        <div style="position:absolute;left:6px;top:${top + 4}px;transform:scale(${w / 470});transform-origin:0 0;width:416px;height:170px">${popupBody(0, 0, 416, 170)}</div>
+      </div>
+      <div style="position:absolute;right:4px;bottom:3px;display:flex;gap:2px;transform:scale(${w / 430});transform-origin:100% 100%"><span class="k">Previous</span><span class="k qf">Next</span></div>
+    </div></div>`;
+}
+
+/* ================================================================ AW A */
+(() => {
+  const f = $("aw-a"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="k">‹ Tree</span><span class="ttl">Popup · The Market</span><span class="i" style="font-size:6px">Welcome to BSP</span><span class="sp k">Show as player</span><span class="k v">Save</span><span class="x">✕</span></div>
+    <div class="row" style="position:absolute;left:8px;right:8px;top:24px;height:13px;gap:5px">
+      <span class="lbl">Size</span><span class="seg"><span class="k on">Full screen</span><span class="k">Small</span></span>
+      <span class="lbl" style="margin-left:4px">Player</span><span class="seg"><span class="k on">Freezes</span><span class="k">Keeps walking</span></span>
+      <span class="lbl" style="margin-left:4px">Background</span><span class="sw on" style="background:#10151C"></span><span class="sw" style="background:#1D2B44"></span><span class="sw" style="background:#2B1D2F"></span><span class="sw" style="background:#1F2B1F"></span><span class="sw" style="background:repeating-conic-gradient(#555 0 25%,#999 0 50%) 0 0/4px 4px"></span></div>
+    <span class="lbl" style="position:absolute;left:8px;top:41px">Layout · 12 × 8</span>
+    ${editorGrid("awa-g", 8, 49, 19, 14, 12, 8, BOXES("b"))}
+    <div class="row" style="position:absolute;left:8px;top:164px;gap:3px"><span class="k">+ Text</span><span class="k">+ Image</span><span class="k r">Delete box</span><span class="i" style="font-size:5.4px;margin-left:4px">Drag a box to move it, its corner to size it</span></div>
+    <div style="position:absolute;left:8px;top:180px;width:228px;display:flex;flex-direction:column;gap:3px"><span class="lbl">Body · text</span>${toolbar}<div class="rt" style="height:36px;overflow:hidden;box-sizing:border-box">${richText}</div></div>
+    <span class="lbl" style="position:absolute;left:246px;top:41px">Preview · as a player sees it</span>
+    ${miniPopup(246, 49, 214, 120)}
+    <div style="position:absolute;left:246px;top:176px;width:214px;display:flex;flex-direction:column;gap:2px">
+      <div class="row"><span class="lbl">Buttons · 2 of 4</span><span class="k sp">+ Button</span></div>
+      <div class="well" style="position:relative">
+        <div class="btnrow"><span class="k qf">Next</span><span class="job">Next point → Land Office</span></div>
+        <div class="btnrow"><span class="k">Previous</span><span class="job">Previous popup</span></div>
+        <div class="btnrow i" style="font-size:5.4px">Drag to reorder · click to rename, recolour or change the job</div>
+      </div></div>
+  </div>`);
+})();
+
+/* ================================================================ AW B */
+(() => {
+  const f = $("aw-b"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="k">‹ Tree</span><span class="ttl">Popup · The Market</span><span class="sp k">Show as player</span><span class="k v">Save</span><span class="x">✕</span></div>
+    <div class="well" style="left:6px;top:26px;width:118px;height:226px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px">
+      <span class="lbl">Size</span><span class="seg"><span class="k on">Full</span><span class="k">Small</span></span>
+      <span class="lbl">Player</span><span class="seg"><span class="k on">Freezes</span><span class="k">Walks</span></span>
+      <span class="lbl">Background</span><div class="row" style="gap:3px"><span class="sw on" style="background:#10151C"></span><span class="sw" style="background:#1D2B44"></span><span class="sw" style="background:#2B1D2F"></span><span class="sw" style="background:#1F2B1F"></span></div>
+      <div class="row" style="margin-top:4px"><span class="lbl">Buttons</span><span class="k sp">+</span></div>
+      <div class="btnrow" style="box-shadow:inset 0 0 0 1px var(--V)"><span class="k qf">Next</span><span class="job">▾</span></div>
+      <div class="btnrow"><span class="k">Previous</span><span class="job">Previous</span></div>
+      <div class="btnrow"><span class="k">Market info</span><span class="job">Open link</span></div>
+      <span class="lbl" style="margin-top:3px">Label</span><div class="field">Next</div>
+      <span class="lbl">Colour</span><div class="row" style="gap:3px"><span class="sw on" style="background:#19D3B0"></span><span class="sw" style="background:#FFD23A"></span><span class="sw" style="background:#2A2F3A"></span><span class="sw" style="background:#FF6B5C"></span></div>
+    </div>
+    <div class="menu" style="left:60px;top:132px;width:92px">
+      <div class="on">Next point</div><div>Previous popup</div><div>End tutorial</div><div>Close (walk on)</div><div>Go to branch ▸</div><div class="sub">Full tour</div><div class="sub">Quick start</div><div>Open link…</div></div>
+    <span class="lbl" style="position:absolute;left:132px;top:28px">Layout · 12 × 8</span>
+    ${editorGrid("awb-g", 132, 36, 16, 15, 12, 8, BOXES("i"))}
+    <div class="box" style="left:184px;top:124px;width:142px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;box-shadow:0 0 0 1px var(--V),0 4px 12px rgba(0,0,0,.6);z-index:2">
+      <div class="row"><span class="ttl" style="font-size:6.5px">Image box</span><span class="x sp" style="font-size:6.5px">✕</span></div>
+      <span class="seg"><span class="k on">Server file</span><span class="k">Web address</span></span>
+      <div class="well" style="position:relative;padding:1px 0">
+        <div class="btnrow" style="background:#1A1530;color:var(--V)">market_stalls.png<span class="job">640×360 · 212 KB</span></div>
+        <div class="btnrow">bank_vault.png<span class="job">512×512 · 96 KB</span></div>
+        <div class="btnrow">portal_room.jpg<span class="job">1280×720 · 340 KB</span></div></div>
+      <span class="i" style="font-size:5.2px">config/bsp_server_utilities/tutorial_images/</span>
+      <div class="row"><span class="lbl">Fit</span><span class="seg"><span class="k on">Inside</span><span class="k">Fill</span><span class="k">Stretch</span></span></div>
+      <div class="row"><span class="k">Reload files</span></div>
+    </div>
+    <span class="lbl" style="position:absolute;left:330px;top:28px">Preview</span>
+    ${miniPopup(330, 36, 136, 77)}
+    <div style="position:absolute;left:330px;top:120px;width:136px" class="i"><div style="font-size:5.6px">A box covers whole cells. The preview redraws as you type.</div></div>
+  </div>`);
+})();
+
+/* ================================================================ AW C */
+(() => {
+  const tabs = on => `<div class="row" style="position:absolute;left:6px;top:24px;gap:0">${["Layout", "Text", "Image", "Buttons", "Popup"].map(t => `<span class="tab ${t === on ? "on" : ""}" style="height:15px;padding:0 4px;font-size:5.6px">${t}</span>`).join("")}</div>`;
+  const f = $("aw-c1"); f.style.background = "#05070a";
+  add(f, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="k">‹ Tree</span><span class="ttl">Popup · The Market</span><span class="sp k">Show as player</span><span class="k v">Save</span><span class="x">✕</span></div>
+    ${tabs("Text")}
+    <div style="position:absolute;left:8px;top:44px;width:174px;display:flex;flex-direction:column;gap:4px">
+      <div class="row"><span class="lbl">Box</span><span class="seg"><span class="k">Heading</span><span class="k on">Body</span><span class="k">Tip</span></span></div>
+      ${toolbar}
+      <div class="rt" style="height:118px">${richText}</div>
+      <div class="row i" style="font-size:5.4px">Select text, then a style. Ctrl+B, Ctrl+I, Ctrl+U work too.</div>
+      <div class="row"><span class="lbl">Box padding</span><span class="seg"><span class="k">0</span><span class="k on">4</span><span class="k">8</span></span><span class="lbl" style="margin-left:4px">Box fill</span><span class="sw on" style="background:transparent"></span><span class="sw" style="background:#0B0E13"></span></div>
+    </div>
+    ${miniPopup(190, 28, 270, 152)}
+    <div class="row" style="position:absolute;left:190px;top:186px;gap:3px"><span class="lbl">Preview at</span><span class="seg"><span class="k on">480 × 270</span><span class="k">640 × 360</span><span class="k">960 × 540</span></span></div>
+    <div class="i" style="position:absolute;left:190px;top:202px;width:270px;font-size:5.6px">The preview shows the popup at the GUI sizes players use; text that does not fit is cut with “…” and the box turns red here.</div>
+  </div>`);
+  const g = $("aw-c2"); g.style.background = "#05070a";
+  add(g, `<div class="box" style="left:6px;top:6px;width:468px;height:258px">
+    <div class="bar"><span class="k">‹ Tree</span><span class="ttl">Popup · Walk to the bank</span><span class="sp k">Show as player</span><span class="k v">Save</span><span class="x">✕</span></div>
+    ${tabs("Popup")}
+    <div style="position:absolute;left:8px;top:44px;width:174px;display:flex;flex-direction:column;gap:5px">
+      <span class="lbl">Size</span><span class="seg"><span class="k">Full screen</span><span class="k on">Small · 6 × 4 grid</span></span>
+      <span class="lbl">Player</span><span class="seg"><span class="k">Freezes</span><span class="k on">Keeps walking</span></span>
+      <span class="lbl">Fades after</span>
+      <div class="row"><div style="flex:1;height:3px;background:#1C2026;position:relative"><b style="position:absolute;left:0;top:0;bottom:0;width:22%;background:var(--V)"></b><b style="position:absolute;left:22%;top:-3px;width:3px;height:9px;background:var(--V)"></b></div><span style="font-size:6.4px">8 s</span></div>
+      <span class="i" style="font-size:5.4px">A popup that keeps the player walking has no buttons: it fades by itself and the tutorial moves on.</span>
+      <span class="lbl">Place on screen</span>
+      <div class="kv"><span>Across</span><span>4 %</span></div><div class="kv"><span>Down</span><span>9 %</span></div><div class="kv"><span>Size</span><span>140 × 46</span></div>
+      <div class="row"><span class="k">Snap to guides: on</span><span class="k">Reset</span></div>
+    </div>
+    <div class="well" style="left:190px;top:28px;width:270px;height:152px;overflow:hidden">
+      <svg viewBox="0 0 480 270" width="270" height="152" style="position:absolute;inset:0">${ground()}${road(PATH)}${buildings()}${goldDashes(PATH, .9)}</svg>
+      <div style="position:absolute;inset:0;transform:scale(.5625);transform-origin:0 0;width:480px;height:270px">
+        <div class="hud-hotbar"></div>
+        <div style="position:absolute;left:0;right:0;top:44px;border-top:1px dashed rgba(181,140,255,.7)"></div>
+        <div style="position:absolute;top:0;bottom:0;left:19px;border-left:1px dashed rgba(181,140,255,.7)"></div>
+        <div class="box" style="left:19px;top:24px;width:140px;height:46px;box-shadow:0 0 0 1px var(--V);padding:5px 7px;box-sizing:border-box">
+          <div class="ttl q" style="font-size:7px">Walk to the bank</div><div style="font-size:6.4px;margin-top:2px">Follow the gold line. The bank is the stone building on the left.</div>
+          <div style="position:absolute;right:-3px;bottom:-3px;width:6px;height:6px;background:var(--V)"></div>
+          <div style="position:absolute;left:50%;top:-9px;transform:translateX(-50%);font:600 6px Oswald,sans-serif;color:var(--V)">✥ drag</div></div>
+      </div>
+    </div>
+    <div class="i" style="position:absolute;left:190px;top:186px;width:270px;font-size:5.6px">Drag the popup anywhere; drag its corner to size it. The dashed lines are guides it snaps to (here the left edge and the top of the grid). Its place is saved as a share of the screen.</div>
+  </div>`);
+})();
+
+/* ================================================================ AX */
+function gameBg(f, dark) { world(f, { road: road(PATH), over: "" }); add(f, `<div class="dim" style="background:rgba(5,7,10,${dark})"></div>`); }
+/* A: holo */
+(() => {
+  const f = $("ax-a1"); gameBg(f, .6);
+  add(f, `<div class="box" style="left:24px;top:14px;width:432px;height:242px">
+    <div class="bar" style="height:22px"><span class="ttl q">Welcome to BSP</span><span class="i" style="font-size:6px">Full tour</span><span class="sp m" style="font-size:6px">Stop 3 of 5</span></div>
+    <div style="position:absolute;left:0;top:22px;height:1px;width:60%;background:var(--Q)"></div>
+    ${popupBody(8, 32, 416, 176)}
+    <div class="row" style="position:absolute;left:8px;right:8px;bottom:8px"><span class="k big">End tutorial</span><span class="k big sp">Previous</span><span class="k big qf">Next</span></div>
+  </div>`);
+  const g = $("ax-a2"); gameBg(g, .55);
+  add(g, `<div class="box" style="left:120px;top:72px;width:240px;height:116px;padding:10px 12px;box-sizing:border-box">
+    <div class="ttl q" style="font-size:10px">Welcome to BSP</div>
+    <div style="font-size:7px;margin-top:6px;line-height:1.5">Want a quick tour? It takes about five minutes and shows you the bank, the market and the portals.</div>
+    <div class="row" style="position:absolute;left:12px;right:12px;bottom:22px"><span class="k big qf">Yes</span><span class="k big">Later</span><span class="k big sp">No thanks</span></div>
+    <div class="i" style="position:absolute;left:12px;bottom:8px;font-size:5.8px">You can start it any time with /tutorial</div></div>`);
+  const h = $("ax-a3"); world(h, { road: road(PATH), over: goldDashes(PATH, .9) }); hud(h);
+  add(h, `<div class="box" style="left:12px;top:16px;width:150px;height:44px;padding:6px 8px;box-sizing:border-box;opacity:.72">
+    <div class="ttl q" style="font-size:7px">Walk to the market</div><div style="font-size:6.4px;margin-top:2px">Follow the gold line past the bank.</div>
+    <div style="position:absolute;left:0;bottom:0;height:2px;width:35%;background:var(--Q)"></div></div>`);
+})();
+/* B: guide */
+(() => {
+  const dots = `<span class="row" style="gap:3px">${[1, 1, 2, 0, 0].map(d => `<span style="width:5px;height:5px;border-radius:50%;${d === 2 ? "background:#FFD23A;box-shadow:0 0 4px #FFD23A" : d ? "background:rgba(255,210,58,.55)" : "box-shadow:inset 0 0 0 1px rgba(255,210,58,.55)"}"></span>`).join("")}</span>`;
+  const f = $("ax-b1"); gameBg(f, .6);
+  add(f, `<div class="box" style="left:24px;top:14px;width:432px;height:242px;background:#12110D;box-shadow:0 0 0 1px rgba(255,210,58,.35)">
+    <div style="position:absolute;left:0;right:0;top:0;height:22px;background:linear-gradient(90deg,rgba(255,210,58,.22),rgba(255,210,58,.05));display:flex;align-items:center;gap:8px;padding:0 8px;box-shadow:inset 0 -1px 0 rgba(255,210,58,.35)">
+      <span class="ttl g">Welcome to BSP · Full tour</span><span class="sp">${dots}</span></div>
+    ${popupBody(8, 32, 416, 176)}
+    <div class="row" style="position:absolute;left:8px;right:8px;bottom:8px"><span class="k big g" style="opacity:.7">End tutorial</span><span class="k big g sp">‹ Previous</span><span class="k big gf">Next ›</span></div>
+  </div>`);
+  const g = $("ax-b2"); gameBg(g, .55);
+  add(g, `<div class="box" style="left:120px;top:66px;width:240px;height:128px;padding:10px 12px;box-sizing:border-box;background:#12110D;box-shadow:0 0 0 1px rgba(255,210,58,.45)">
+    <div class="lbl" style="color:var(--G)">A tour of the server</div><div style="font:600 15px Oswald,sans-serif;letter-spacing:.04em;margin-top:2px">Welcome to BSP</div>
+    <div style="font-size:7px;margin-top:4px;line-height:1.5">Want a quick tour? It takes about five minutes and shows you the bank, the market and the portals.</div>
+    <div class="row" style="position:absolute;left:12px;right:12px;bottom:22px"><span class="k big gf">Yes</span><span class="k big g">Later</span><span class="k big g sp" style="opacity:.7">No thanks</span></div>
+    <div class="i" style="position:absolute;left:12px;bottom:8px;font-size:5.8px">You can start it any time with /tutorial</div></div>`);
+  const h = $("ax-b3"); world(h, { road: road(PATH), over: goldDashes(PATH, .9) }); hud(h);
+  add(h, `<div class="box" style="left:300px;top:16px;width:166px;height:36px;padding:5px 8px 5px 10px;box-sizing:border-box;background:rgba(18,17,13,.9);opacity:.8;box-shadow:none">
+    <div style="position:absolute;left:0;top:0;width:2px;height:60%;background:var(--G)"></div>
+    <div class="ttl g" style="font-size:7px">Walk to the market</div><div style="font-size:6.4px;margin-top:1px">Follow the gold line past the bank.</div></div>`);
+})();
+/* C: floating */
+(() => {
+  const f = $("ax-c1"); gameBg(f, .74);
+  add(f, `<div style="position:absolute;left:0;right:0;top:12px;text-align:center" class="lbl"><span class="q">Welcome to BSP</span> · Full tour · 3 / 5</div>
+    ${popupBody(32, 28, 416, 190, { cards: true })}
+    <div class="row" style="position:absolute;left:0;right:0;bottom:14px;justify-content:center;gap:8px"><span class="k big">Previous</span><span class="k big qf" style="padding:0 18px">Next</span></div>
+    <div style="position:absolute;right:12px;top:10px" class="k">End tutorial</div>`);
+  const g = $("ax-c2"); gameBg(g, .72);
+  add(g, `<div style="position:absolute;left:0;right:0;top:70px;text-align:center">
+    <div style="font:600 18px Oswald,sans-serif;letter-spacing:.05em">Welcome to BSP</div>
+    <div style="font-size:7.4px;margin:6px auto 0;width:250px;line-height:1.5;color:#d5dbe6">Want a quick tour? It takes about five minutes and shows you the bank, the market and the portals.</div>
+    <div class="row" style="justify-content:center;gap:6px;margin-top:14px"><span class="k big qf" style="padding:0 16px">Yes</span><span class="k big">Later</span><span class="k big">No thanks</span></div>
+    <div class="i" style="font-size:5.8px;margin-top:8px">You can start it any time with /tutorial</div></div>`);
+  const h = $("ax-c3"); world(h, { road: road(PATH), over: goldDashes(PATH, .9) }); hud(h);
+  add(h, `<div style="position:absolute;left:176px;top:28px;width:128px;padding:5px 8px;background:rgba(16,21,28,.85);box-shadow:0 0 0 1px rgba(25,211,176,.5);opacity:.85">
+    <div style="font-size:6.8px"><b class="q">Walk to the market.</b> Follow the gold line past the bank.</div>
+    <div class="row" style="margin-top:2px;font-size:5.6px" class="m"><span class="m">The Market · 31 m</span><span class="sp i">fades in 3 s</span></div>
+    <div style="position:absolute;left:58px;bottom:-5px;width:8px;height:8px;background:rgba(16,21,28,.85);transform:rotate(45deg);box-shadow:1px 1px 0 rgba(25,211,176,.5)"></div></div>`);
+})();
+
+/* ================================================================ AY */
+const ayWorld = (f, extra) => { world(f, { road: "", over: adminLine(DRAWN) + sphere(-10, 1, 15, 2, "THE BANK · START") + sphere(4, 1, 30, 2, "THE MARKET") + (extra || "") }); hud(f); };
+(() => {
+  const f = $("ay-a1"); ayWorld(f);
+  add(f, `<div class="box" style="left:60px;top:6px;width:360px;height:30px;padding:4px 7px;box-sizing:border-box;white-space:nowrap">
+    <div class="row" style="font-size:6.6px"><span style="width:5px;height:5px;border-radius:50%;background:#FF6B5C;box-shadow:0 0 4px #FF6B5C"></span><span class="ttl" style="font-size:7px">Drawing path</span><span>The Bank → The Market</span><span class="sp m">7 points · 19 blocks · 28 to go</span></div>
+    <div class="row" style="margin-top:3px;gap:6px;font-size:5.8px"><span><span class="k">G</span> Pause</span><span><span class="k">Z</span> Undo last</span><span><span class="k">Del</span> Cancel</span><span class="sp i">a point every 3 blocks</span></div></div>`);
+  const g = $("ay-a2"); world(g, { over: adminLine([[-6, 7], [-4.4, 5.6], [-2.6, 4.2], [-1, 3]]) }); hud(g);
+  add(g, `<div style="position:absolute;inset:0;box-shadow:inset 0 0 40px 12px rgba(150,225,255,.45)"></div>
+    <div class="box" style="left:125px;top:84px;width:230px;height:82px;padding:8px 10px;box-sizing:border-box">
+      <div class="ttl" style="font-size:8px">You reached The Market</div>
+      <div class="m" style="font-size:6.4px;margin-top:3px">The path: 17 points · 51 blocks, from The Bank.</div>
+      <div class="row" style="position:absolute;left:10px;right:10px;bottom:9px"><span class="k big gf">Finish path</span><span class="k big">Keep walking</span><span class="k big sp">Undo last</span></div></div>`);
+})();
+(() => {
+  const card = last => `<div class="box" style="left:8px;top:40px;width:124px;padding:6px 7px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px">
+    <div class="ttl" style="font-size:7px">Path · Bank → Market</div>
+    <div style="font-size:6.2px"><span class="q">✓</span> Moved to The Bank</div>
+    <div style="font-size:6.2px"><span class="q">✓</span> Path started</div>
+    <div style="font-size:6.2px">${last ? '<span class="q">✓</span>' : '<span class="g">◉</span>'} Walk to the sphere ${last ? "" : '<span class="m">· 28 blocks</span>'}</div>
+    <div style="font-size:6.2px">${last ? '<span class="g">◉</span> <b>Finish the path</b>' : '<span class="i">○ Finish the path</span>'}</div>
+    <div class="kv"><span>Points</span><span>${last ? 17 : 7}</span></div><div class="kv"><span>Length</span><span>${last ? 51 : 19} blocks</span></div>
+    <div style="font-size:5.6px;margin-top:2px;white-space:nowrap"><span class="k">G</span> pause <span class="k">Z</span> undo <span class="k">Del</span> cancel</div></div>`;
+  const f = $("ay-b1"); ayWorld(f); add(f, card(false));
+  add(f, `<div style="position:absolute;left:224px;top:206px;width:32px;text-align:center"><div style="font-size:12px;color:#FFE45C;transform:rotate(25deg);text-shadow:0 0 4px rgba(0,0,0,.8)">➤</div><div style="font:600 6.5px Oswald,sans-serif;color:#fff;text-shadow:0 0 3px #000">28 m</div></div>`);
+  const g = $("ay-b2"); world(g, { over: adminLine([[-6, 7], [-4.4, 5.6], [-2.6, 4.2], [-1, 3]]) }); hud(g);
+  add(g, `<div style="position:absolute;inset:0;box-shadow:inset 0 0 40px 12px rgba(150,225,255,.45)"></div>` + card(true) +
+    `<div class="box" style="left:252px;top:122px;width:96px;padding:5px 6px;box-sizing:border-box;box-shadow:0 0 0 1px var(--G)"><div class="ttl g" style="font-size:7px">Finish path?</div>
+     <div style="font-size:5.8px;margin-top:3px"><span class="k gf">G</span> Finish &nbsp;<span class="k">Z</span> Undo</div><div class="i" style="font-size:5.4px;margin-top:2px">Walk on to keep recording</div></div>`);
+})();
+(() => {
+  const compass = `<div style="position:absolute;left:140px;top:6px;width:200px;height:14px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);overflow:hidden;font:600 6px Oswald,sans-serif;color:#cfd6e2">
+     <span style="position:absolute;left:20px;top:3px">W</span><span style="position:absolute;left:96px;top:3px">N</span><span style="position:absolute;left:172px;top:3px">E</span>
+     <span style="position:absolute;left:128px;top:1px;color:#FFE45C">◆</span><span style="position:absolute;left:99px;bottom:0;width:1px;height:4px;background:#fff"></span></div>`;
+  const f = $("ay-c1"); ayWorld(f); add(f, compass);
+  add(f, `<div style="position:absolute;left:0;right:0;bottom:30px;text-align:center;font-size:6.8px;color:#FFE45C;text-shadow:0 0 3px #000">● Recording path · 7 points · 28 blocks to The Market</div>
+    <div class="chat" style="bottom:40px"><div><span class="v">[Tutorial]</span> Path from The Bank started. <span class="lk">[Undo last]</span> <span class="lk">[Pause]</span> <span class="lk">[Cancel]</span></div></div>`);
+  const g = $("ay-c2"); world(g, { over: adminLine([[-6, 7], [-4.4, 5.6], [-2.6, 4.2], [-1, 3]]) }); hud(g); add(g, compass);
+  add(g, `<div style="position:absolute;inset:0;box-shadow:inset 0 0 40px 12px rgba(150,225,255,.45)"></div>
+    <div style="position:absolute;left:0;right:0;top:80px;text-align:center"><div style="font:600 18px Oswald,sans-serif;color:#FFE45C;text-shadow:0 0 6px #000">The Market</div><div style="font-size:7px;color:#fff;text-shadow:0 0 3px #000">You reached the end of the path</div></div>
+    <div class="chat" style="bottom:40px"><div><span class="v">[Tutorial]</span> 17 points, 51 blocks. <span class="lk">[Finish path]</span> <span class="lk">[Keep walking]</span> <span class="lk">[Undo last]</span></div></div>`);
+})();
+
+/* ================================================================ AZ */
+const END = [-2, 33];
+function signPost(close) {
+  const [x, z] = END; const top = P(x - 2.5, 4.4, z), bot = P(x + 2.5, 2.6, z), foot = P(x, 0, z);
+  const w = bot[0] - top[0], h = bot[1] - top[1];
+  return `<line x1="${foot[0]}" y1="${foot[1]}" x2="${foot[0]}" y2="${bot[1]}" stroke="rgba(255,255,255,.55)" stroke-width="1"/>
+    <rect x="${top[0]}" y="${top[1]}" width="${w}" height="${h}" fill="rgba(16,21,28,.55)" stroke="rgba(255,210,58,.8)" stroke-width=".6"/>
+    <text x="${top[0] + w / 2}" y="${top[1] + h * .55}" text-anchor="middle" font-family="Oswald, 'Arial Narrow', sans-serif" font-weight="600" font-size="${h * .42}" fill="#FFD23A">THE MARKET</text>
+    <text x="${top[0] + w / 2}" y="${top[1] + h * .86}" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="${h * .2}" fill="#E6EAF2">Next stop</text>`;
+}
+function signPanel() {
+  const [x, z] = END; const a = P(x - 3, 5.2, z), b = P(x + 3, 3, z); const w = b[0] - a[0], h = b[1] - a[1];
+  return `<rect x="${a[0]}" y="${a[1]}" width="${w}" height="${h}" fill="rgba(16,21,28,.6)" stroke="rgba(25,211,176,.75)" stroke-width=".6"/>
+    <rect x="${a[0]}" y="${a[1]}" width="${w}" height="${h * .18}" fill="rgba(25,211,176,.35)"/>
+    <text x="${a[0] + w / 2}" y="${a[1] + h * .62}" text-anchor="middle" font-family="Oswald, 'Arial Narrow', sans-serif" font-weight="600" font-size="${h * .32}" fill="#fff">THE MARKET</text>
+    <text x="${a[0] + w / 2}" y="${a[1] + h * .88}" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="${h * .17}" fill="#19D3B0">stop 3 of 5 · 31 m</text>`;
+}
+function signBanner() {
+  const [x, z] = END; const a = P(x - 2.2, 5.6, z), b = P(x + 2.2, 3.6, z); const w = b[0] - a[0], h = b[1] - a[1]; const tip = P(x, 2.6, z);
+  return `<polygon points="${a[0]},${a[1]} ${b[0]},${a[1]} ${b[0]},${b[1]} ${tip[0]},${tip[1]} ${a[0]},${b[1]}" fill="rgba(255,210,58,.32)" stroke="#FFD23A" stroke-width=".6"/>
+    <text x="${a[0] + w / 2}" y="${a[1] + h * .62}" text-anchor="middle" font-family="Oswald, 'Arial Narrow', sans-serif" font-weight="600" font-size="${h * .4}" fill="#fff" stroke="rgba(0,0,0,.4)" stroke-width=".8" paint-order="stroke">THE MARKET</text>`;
+}
+function closeUp(f, inner) { add(f, `<div class="inset" style="right:8px;top:8px;width:110px;height:62px;background:linear-gradient(#7fb2e8,#cfe3f5)">${inner}<span class="il">Close up</span></div>`); }
+(() => {
+  const f = $("az-a"); world(f, { road: road(PATH), over: goldDashes(PATH, .9) + signPost() }); hud(f);
+  closeUp(f, `<div style="position:absolute;left:54px;top:36px;width:1px;height:26px;background:rgba(255,255,255,.7)"></div>
+    <div style="position:absolute;left:15px;top:12px;width:80px;height:26px;background:rgba(16,21,28,.55);box-shadow:0 0 0 1px rgba(255,210,58,.8);text-align:center">
+    <div style="font:600 10px Oswald,sans-serif;color:#FFD23A;margin-top:3px;letter-spacing:.06em">THE MARKET</div><div style="font-size:5.6px;color:#E6EAF2">Next stop</div></div>`);
+})();
+(() => {
+  const f = $("az-b"); world(f, { road: road(PATH), over: goldDots(PATH, .9) + signPanel() }); hud(f);
+  add(f, `<div style="position:absolute;left:0;right:0;top:6px;text-align:center"><span style="background:rgba(0,0,0,.45);padding:2px 6px;font-size:6.6px"><span class="q">Next:</span> The Market · 31 m</span></div>`);
+  closeUp(f, `<div style="position:absolute;left:12px;top:14px;width:86px;height:34px;background:rgba(16,21,28,.65);box-shadow:0 0 0 1px rgba(25,211,176,.75);text-align:center">
+    <div style="height:5px;background:rgba(25,211,176,.35)"></div><div style="font:600 10px Oswald,sans-serif;color:#fff;letter-spacing:.06em;margin-top:2px">THE MARKET</div><div style="font-size:5.6px;color:#19D3B0">stop 3 of 5 · 31 m</div></div>`);
+})();
+(() => {
+  const f = $("az-c"); world(f, { road: road(PATH), over: groundRing(END[0], END[1], 2) + goldChevrons(PATH, .9) + signBanner() }); hud(f);
+  add(f, `<div style="position:absolute;left:160px;top:6px;width:160px;height:12px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);font:600 6px Oswald,sans-serif;color:#cfd6e2">
+    <span style="position:absolute;left:16px;top:2px">W</span><span style="position:absolute;left:77px;top:2px">N</span><span style="position:absolute;left:138px;top:2px">E</span><span style="position:absolute;left:70px;top:0;color:#FFD23A">▼</span></div>`);
+  closeUp(f, `<div style="position:absolute;left:18px;top:8px;width:74px;height:22px;background:rgba(255,210,58,.32);box-shadow:0 0 0 1px #FFD23A;text-align:center;font:600 10px Oswald,sans-serif;color:#fff;line-height:22px;letter-spacing:.06em">THE MARKET</div>
+    <div style="position:absolute;left:50px;top:30px;border:5px solid transparent;border-top-color:#FFD23A"></div>
+    <div style="position:absolute;left:20px;top:46px;width:70px;height:12px;border-radius:50%;box-shadow:0 0 0 1px #FFD23A;background:rgba(255,210,58,.16)"></div>`);
+})();
+</script>
+</body>
+</html>

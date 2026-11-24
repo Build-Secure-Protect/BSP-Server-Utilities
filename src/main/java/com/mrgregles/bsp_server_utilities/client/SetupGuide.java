@@ -266,6 +266,7 @@ final class SetupGuide {
             case WELCOME -> Tr.t("admin.setup.about.welcome");
             case STAFF -> Tr.t("admin.setup.about.staff");
             case RULES -> Tr.t("admin.setup.about.rules");
+            case TUTORIAL -> Tr.t("admin.setup.about.tutorial");
             case LOG -> Tr.t("admin.setup.about.log");
             case AFK -> Tr.t("admin.setup.about.afk");
             case CHUNKS -> Tr.t("admin.setup.about.chunks");
@@ -282,6 +283,7 @@ final class SetupGuide {
             case WELCOME -> Tr.t("admin.setup.feature.welcome");
             case STAFF -> Tr.t("admin.setup.feature.staff");
             case RULES -> Tr.t("admin.setup.feature.rules");
+            case TUTORIAL -> Tr.t("admin.setup.feature.tutorial");
             case LOG -> Tr.t("admin.setup.feature.log");
             case AFK -> Tr.t("admin.setup.feature.afk");
             case CHUNKS -> Tr.t("admin.setup.feature.chunks");
