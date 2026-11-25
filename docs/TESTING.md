@@ -2884,3 +2884,7 @@ Two independent reviews (correctness; network and edge cases). Fixed:
 - The chunk test sets up inside its `try`, covers a player with only a hold, a loaded claim-only machine, a loaded machine with no owner, and a restart before the checks, and finishes the checks of the test world's leftover entries itself.
 
 GameTests **359/359**, twice in a row (`SeasonResetGameTests`: 2). Untested with a BSP-Core jar that has the season reset, and on the network.
+
+## 2026-11-25: Streamer Mode hides JourneyMap's minimap behind menus too (unreleased)
+- [ ] With JourneyMap and Streamer Mode on, and "JourneyMap minimap" hidden in the streamer menu: press Esc. The stream window shows the pause menu with no minimap; the game window shows the minimap behind the pause menu as before.
+- [ ] Back in game: the stream still has no minimap; with the minimap shown again in the streamer menu, it appears in the stream both in game and behind the pause menu.

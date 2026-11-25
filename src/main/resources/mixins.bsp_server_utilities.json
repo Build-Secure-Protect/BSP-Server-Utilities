@@ -27,6 +27,7 @@
     "GriddedListMixin",
     "JourneyMapHudMixin",
     "JourneyMapLabelMixin",
+    "JourneyMapScreenMixin",
     "ServerEntryAccess",
     "WorldListEntryAccess"
   ],

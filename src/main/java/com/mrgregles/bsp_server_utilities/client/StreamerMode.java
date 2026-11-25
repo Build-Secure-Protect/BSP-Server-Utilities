@@ -36,8 +36,8 @@ import java.util.Set;
  * the HUD, the open menu and the toasts into it, leaving out the hidden items; then Minecraft draws them again for the
  * player, so whatever a menu keeps from drawing (hover, hit boxes) is the player's (D710). After the frame,
  * {@link #present} shows the picture in the stream window ({@link StreamWindow}). Hidden HUD parts are cancelled in
- * {@code RenderGuiOverlayEvent.Pre} during the stream pass only; JourneyMap's minimap through its adapter mixin; a hidden
- * menu becomes the game behind it with the "Menu hidden" card.
+ * {@code RenderGuiOverlayEvent.Pre} during the stream pass only; JourneyMap's minimap through its adapter mixins (on the HUD, and
+ * behind menus such as the pause menu); a hidden menu becomes the game behind it with the "Menu hidden" card.
  *
  * <p>Switched in its menu ({@link StreamerScreen}, opened by the eye key or {@code /streamer}), with a key (unbound until
  * set) or {@code /streamer on|off}. What is hidden, the output and the frame rate are the client settings' {@code [streamer]}

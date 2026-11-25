@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+Client only; the network protocol is still 14.
+
+### Fixed
+- Streamer Mode: with JourneyMap's minimap hidden from the stream, it no longer shows behind the pause menu (or the other menus JourneyMap draws it behind) in the stream window. The game window still shows it there, as JourneyMap does.
+
 ## [0.25.1] - 2026-11-24
 
 BSP-Core's season reset. The network protocol is still 14: the servers need the new jar, players need nothing new.
