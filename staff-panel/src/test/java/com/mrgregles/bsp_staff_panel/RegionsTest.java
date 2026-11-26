@@ -309,4 +309,58 @@ class RegionsTest {
         JsonObject odd = r.desk.save(admin, obj("{\"server\":\"x\\n12:00 someone removed spawn\",\"dim\":\"minecraft:overworld\",\"id\":\"market\",\"version\":1,\"set\":{\"name\":\"y\"}}"));
         assertFalse(odd.get("message").getAsString().contains("\n") || odd.get("message").getAsString().contains("removed spawn"), "a request's text never reaches the log as it is: " + odd);
     }
+
+    @Test
+    void a_coin_tier_is_a_name_plots_in_pvp_has_three_settings_and_a_plot_limit_may_be_none() {
+        Rig r = new Rig();
+        Account admin = account(Rank.ADMIN);
+        JsonObject page = r.desk.server(admin, "Frostwarf", false);
+        assertTrue(page.getAsJsonArray("coinTiers").size() == 5, "BSP Core's tiers come with the page (D779)");
+        JsonObject plot = region(page, "plot_1");
+        assertEquals("gold", plot.getAsJsonObject("claim").get("coinTier").getAsString(), "a tier by name");
+        long v = plot.get("version").getAsLong();
+        JsonObject num = r.desk.save(admin, obj("{\"server\":\"Frostwarf\",\"dim\":\"minecraft:overworld\",\"id\":\"plot_1\",\"version\":" + v + ",\"set\":{\"claim\":{\"coinTier\":2}}}"));
+        assertFalse(num.get("ok").getAsBoolean(), "a number is no tier now: " + num);
+        JsonObject bad = r.desk.save(admin, obj("{\"server\":\"Frostwarf\",\"dim\":\"minecraft:overworld\",\"id\":\"plot_1\",\"version\":" + v + ",\"set\":{\"claim\":{\"plotLimit\":-2}}}"));
+        assertFalse(bad.get("ok").getAsBoolean(), "-2 is no limit");
+        JsonObject ok = r.desk.save(admin, obj("{\"server\":\"Frostwarf\",\"dim\":\"minecraft:overworld\",\"id\":\"plot_1\",\"version\":" + v + ",\"set\":{\"claim\":{\"coinTier\":\"\",\"plotLimit\":-1}}}"));
+        assertTrue(ok.get("ok").getAsBoolean(), "the config's tier and no limit: " + ok);
+        JsonObject signed = r.sent.get(r.sent.size() - 1).getAsJsonObject("set").getAsJsonObject("claim");
+        assertEquals("default", signed.get("coinTier").getAsString(), "the config's tier is sent as default");
+        assertEquals(-1, signed.get("plotLimit").getAsInt());
+
+        JsonObject g = region(r.desk.server(admin, "Frostwarf", true), "__global__");
+        assertEquals("default", g.getAsJsonObject("border").get("plotsInPvp").getAsString(), "three settings, as Region Guard keeps them (D780)");
+        long gv = g.get("version").getAsLong();
+        JsonObject on = r.desk.save(admin, obj("{\"server\":\"Frostwarf\",\"dim\":\"minecraft:overworld\",\"id\":\"__global__\",\"version\":" + gv + ",\"set\":{\"border\":{\"plotsInPvp\":true}}}"));
+        assertFalse(on.get("ok").getAsBoolean(), "on and off is no setting now");
+        JsonObject allow = r.desk.save(admin, obj("{\"server\":\"Frostwarf\",\"dim\":\"minecraft:overworld\",\"id\":\"__global__\",\"version\":" + gv + ",\"set\":{\"border\":{\"plotsInPvp\":\"allow\"}}}"));
+        assertTrue(allow.get("ok").getAsBoolean(), "allow: " + allow);
+        JsonObject dim = page.getAsJsonArray("dims").get(0).getAsJsonObject();
+        assertTrue(dim.has("plotsAllowed") && dim.has("plotRule"), "whether plots may be made, and why (D778): " + dim);
+    }
+
+    @Test
+    void a_change_on_the_server_makes_the_next_read_fresh() {
+        Rig r = new Rig();
+        Account mod = account(Rank.MODERATOR);
+        r.desk.server(mod, "Frostwarf", false);
+        r.desk.server(mod, "Frostwarf", false);
+        assertEquals(1, r.count("regions_list"), "kept a minute and shared");
+        String snap = "{\"v\":1,\"server\":\"Frostwarf\",\"at\":%d,\"answers\":true,\"regions\":true,\"regionsAt\":%d,\"mspt\":21.5,\"players\":[]}";
+        r.clock.addAndGet(1000);
+        r.feed.accept("Frostwarf", r.clock.get(), snap.formatted(r.clock.get(), 100L));
+        r.desk.server(mod, "Frostwarf", false);
+        assertEquals(1, r.count("regions_list"), "the first regionsAt heard is only remembered");
+        r.clock.addAndGet(1000);
+        r.feed.accept("Frostwarf", r.clock.get(), snap.formatted(r.clock.get(), 100L));
+        r.desk.server(mod, "Frostwarf", false);
+        assertEquals(1, r.count("regions_list"), "the same regionsAt changes nothing");
+        r.clock.addAndGet(1000);
+        r.feed.accept("Frostwarf", r.clock.get(), snap.formatted(r.clock.get(), 250L));
+        r.desk.server(mod, "Frostwarf", false);
+        assertEquals(2, r.count("regions_list"), "a region changed there: read again (D781)");
+        JsonObject live = r.feed.json();
+        assertEquals(250L, live.getAsJsonArray("servers").get(0).getAsJsonObject().get("regionsAt").getAsLong(), "the live page gets it too");
+    }
 }

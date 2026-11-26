@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-26
+
+Panel 0.8.1, for the game servers' regions (BSP-Server Utilities 0.26.0 with BSP Region Guard 0.8.0).
+
+### Changed
+- The region editor's coin tier is a row of chips, Default then each of BSP Core's Shatter Coin tiers, as the SALE tab in game, in place of a number box. A plot's or open area's "Claims a player may hold here" takes -1 for no limit.
+- The global settings' "plots and claims in PvP worlds" has Region Guard's three settings, Follow the config, Allow and Refuse, in place of an on/off box.
+- Drawing a plot for sale or an open area on the map says when Region Guard refuses them in that world and why (a PvP world, the world's global region, or the server's config), from what the game server says rather than from PvP alone.
+- A save that Region Guard refuses part way (some settings saved, then one refused) shows its message naming what was and was not saved, and the editor reads the region again so the next save is not refused as stale.
+
+### Added
+- The WORLDS tab and the map's Regions window read a server's regions again within seconds when they change on that server, in game or from another staff member's page (the game server's `regionsAt`), instead of only every minute. Unsaved edits in the editor are kept.
+
 ## [0.8.0] - 2026-11-26
 
 The WORLDS tab: every server's dimensions and its BSP Region Guard regions, and an editor for every setting and flag; the regions on the Map tab, outlined in their colours, with a Regions window; drawing a new region on the map from two points. Tried against `--demo` only: the game servers answer for their regions once BSP Region Guard has its new api (requests SU-RG3 to SU-RG5) and BSP-Server Utilities its region actions; until then a live server's tile says its Region Guard does not answer for regions. Needs no new database grant and nothing new on the game servers to install (`docs/STAFF_PANEL_SETUP.md`, Running it › Updating to panel 0.8.0).

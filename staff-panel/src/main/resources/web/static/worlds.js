@@ -15,7 +15,7 @@ const Worlds = (() => {
   const SWITCHABLE = ["protected", "plot_for_sale", "open_for_buying"];
   const CHIPS_KEY = "bsp.worldsKinds", ARM_MS = 3000;
   const st = { view: "grid", grid: null, gridErr: "", gq: "", server: null, page: null, pageErr: "", dim: null, q: "", hidden: loadHidden(),
-    sort: { col: "kind", dir: 1 }, sel: null, edit: null, loading: false, readTok: 0 };
+    sort: { col: "kind", dir: 1 }, sel: null, edit: null, loading: false, readTok: 0, gridTok: 0, afterChange: null };
   let host = null, drawerBox = null;
 
   function loadHidden() { try { return new Set(JSON.parse(localStorage.getItem(CHIPS_KEY) || "[]")); } catch (e) { return new Set(); } }
@@ -67,7 +67,9 @@ const Worlds = (() => {
 
   // ---------------------------------------------------------------- reading
   async function loadGrid() {
+    const tok = ++st.gridTok; // overlapping reads: the latest wins (audit)
     const r = await call("/api/regions/servers", {});
+    if (tok !== st.gridTok) return;
     st.grid = r.ok ? r : st.grid; st.gridErr = r.ok ? "" : r.message;
     draw();
   }
@@ -81,12 +83,14 @@ const Worlds = (() => {
     st.view = "server"; st.server = server; st.page = null; st.pageErr = ""; st.q = ""; st.edit = null; st.sel = id; st.dim = dim; st.flash = ""; st.openAfter = { dim, id };
     tab = "Worlds"; render();
   }
-  async function loadServer(refresh, afterChange) {
+  async function loadServer(refresh, wasChange) {
     const server = st.server, tok = ++st.readTok; // the latest read for the server shown wins; an older or another server's answer is dropped (audit)
+    if (wasChange) st.afterChange = server; // a read after a save: kept for whichever later read wins (audit: a live tick must not undo it)
     st.loading = true; drawHeadKey();
     const r = await call("/api/regions/server", { server, refresh: !!refresh });
     if (tok !== st.readTok || server !== st.server) return;
     st.loading = false;
+    const afterChange = st.afterChange === server; st.afterChange = null;
     if (r.ok) {
       st.page = r; st.pageErr = "";
       const dims = (r.dims || []).map((d) => d.id);
@@ -483,8 +487,20 @@ const Worlds = (() => {
       const g = el("div", "wdgrid3");
       if (d.type === "plot_for_sale") g.appendChild(num("Price (coins)", d.claim, "price", { from: oc }));
       else { g.appendChild(num("Cost a block", d.claim, "costPerBlock", { from: oc })); g.appendChild(num("Smallest side", d.claim, "minSize", { from: oc })); g.appendChild(num("Largest side", d.claim, "maxSize", { from: oc })); }
-      g.appendChild(num("Coin tier", d.claim, "coinTier", { from: oc })); g.appendChild(num("Claims a player may hold here", d.claim, "plotLimit", { from: oc }));
+      g.appendChild(num("Claims a player may hold here (-1: no limit)", d.claim, "plotLimit", { from: oc }));
       body.appendChild(g);
+      const tiers = (st.page && st.page.coinTiers) || []; // BSP Core's Shatter Coin tiers (D779), as the SALE tab in game
+      if (tiers.length) {
+        const f = el("div", "wdfield wdtiers"); f.appendChild(el("span", null, "Coin tier (when prices are in coins)"));
+        const seg = el("span", "wdtri"), cur = d.claim.coinTier || "";
+        [["", "Default"]].concat(tiers.map((t) => [t, t.charAt(0).toUpperCase() + t.slice(1)])).forEach(([v, label]) => {
+          const b = key(label, cur === v ? "a" : "", () => { d.claim.coinTier = v === (oc.coinTier || "") ? oc.coinTier : v; markBar(); drawDrawer(); });
+          b.disabled = !can; b.dataset.keep = "wd:tier:" + (v || "default"); seg.appendChild(b);
+        });
+        f.appendChild(seg);
+        if ((d.claim.coinTier || "") !== (oc.coinTier || "")) f.classList.add("ch");
+        body.appendChild(f);
+      }
     }
     if (d.type === "claim") {
       const c = d.claim || {};
@@ -560,9 +576,16 @@ const Worlds = (() => {
       const g = el("div", "wdgrid3");
       g.appendChild(num("Size in blocks (0: none)", d.border, "size", { from: ob })); g.appendChild(num("Centre x", d.border, "x", { from: ob })); g.appendChild(num("Centre z", d.border, "z", { from: ob }));
       body.appendChild(g);
-      const t = el("label", "tick wdtick"); const c = el("input"); c.type = "checkbox"; c.checked = !!d.border.plotsInPvp; c.disabled = !can; c.dataset.keep = "wd:pip";
-      c.addEventListener("change", () => { d.border.plotsInPvp = c.checked; markBar(); });
-      t.appendChild(c); t.appendChild(document.createTextNode("Plots and claims allowed in this world even with PvP on")); body.appendChild(t);
+      // plots and claims in this world when it is a PvP world: Region Guard's three settings (D780)
+      const f = el("div", "wdfield wdpip"); f.appendChild(el("span", null, "Plots and claims in this world if it is a PvP world"));
+      const seg = el("span", "wdtri"), cur = d.border.plotsInPvp || "default";
+      [["default", "Follow the config", "u"], ["allow", "Allow", "a"], ["deny", "Refuse", "d"]].forEach(([v, label, cls]) => {
+        const b = key(label, cur === v ? cls : "", () => { d.border.plotsInPvp = v === (ob.plotsInPvp || "default") ? ob.plotsInPvp : v; markBar(); drawDrawer(); });
+        b.disabled = !can; b.dataset.keep = "wd:pip:" + v; seg.appendChild(b);
+      });
+      f.appendChild(seg);
+      if (cur !== (ob.plotsInPvp || "default")) f.classList.add("ch");
+      body.appendChild(f);
     }
   }
   function totalLine(fill, into) {
@@ -713,8 +736,10 @@ const Worlds = (() => {
     if (r.ok && typeof MapRegions !== "undefined") MapRegions.forget(e.server); // the map's outlines read again (SU-156)
     if (r.ok && removing) { st.edit = null; st.sel = null; st.flash = r.message; }
     else { e.msg = r.message; e.msgOk = !!r.ok; if (r.ok && r.region) e.nextId = r.region; }
-    if (r.ok || r.stale) await loadServer(true, true); // the region as it is now (D773), saved, or refused as changed meanwhile
-    else drawDrawer(); // refused for another reason: the changes are kept to put right
+    const part = !r.ok && Array.isArray(r.saved) && r.saved.length > 0; // Region Guard refused part way: what was saved is in game (D783)
+    if (part && typeof MapRegions !== "undefined") MapRegions.forget(e.server);
+    if (r.ok || r.stale || part) await loadServer(true, true); // the region as it is now (D773): saved, refused as changed meanwhile, or saved in part
+    else drawDrawer(); // refused with nothing saved: the changes are kept to put right
   }
 
   // ---------------------------------------------------------------- drawing
@@ -736,7 +761,22 @@ const Worlds = (() => {
   function unmount(main) { if (host && host === main) { main.classList.remove("wdmain"); host = null; drawerBox = null; } }
   // from More on a phone (D765) and from elsewhere: the grid
   function home() { if (st.edit && changes(st.edit).count) return; st.view = "grid"; st.edit = null; } // unsaved edits stay open (audit)
+  // every live tick: a server whose regions changed (its regionsAt moved, in game or from another page) is read again (D781)
+  const seenAt = new Map();
+  function onLive(live) {
+    (live && live.servers || []).forEach((s) => {
+      if (typeof s.regionsAt !== "number") return;
+      const k = s.server.toLowerCase(), was = seenAt.get(k);
+      if (was !== undefined && was !== s.regionsAt && st.edit && st.server && st.server.toLowerCase() === k && host
+          && (st.edit.busy || (drawerBox && drawerBox.contains(document.activeElement)))) return; // a save out, or someone typing: on a later tick (audit)
+      seenAt.set(k, s.regionsAt);
+      if (was === undefined || was === s.regionsAt) return;
+      if (typeof MapRegions !== "undefined") MapRegions.regionsChanged(s.server);
+      if (host && st.view === "server" && st.server && st.server.toLowerCase() === k) loadServer(true); // unsaved edits are kept by loadServer
+      else if (host && st.view === "grid") loadGrid();
+    });
+  }
   addEventListener("resize", () => { if (host && st.view === "server") drawTable(); });
   addEventListener("keydown", (ev) => { if (ev.key === "Escape" && host && st.edit) closeEditor(false); });
-  return { mount, unmount, home, edit };
+  return { mount, unmount, home, edit, onLive };
 })();

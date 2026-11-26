@@ -452,6 +452,7 @@ function connect() {
     Offline.onLive(live); // someone who left is read again once their logout is written (R8)
     staffOnline();
     Lottery.onLive(live); // a draw counting somewhere (D411)
+    Worlds.onLive(live); // a server's regions changed: WORLDS and the map read them again (D781)
     App.tick();
     const now = live.servers.map((s) => s.server + ":" + s.count).join(",");
     if (now !== servers) { servers = now; ChatView.serversChanged(); } // the server chips and the TO list

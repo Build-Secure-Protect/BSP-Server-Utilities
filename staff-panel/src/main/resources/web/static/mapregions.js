@@ -66,6 +66,8 @@ const MapRegions = (() => {
   }
   /** After a change on the WORLDS tab: that server is read again when next looked at. */
   function forget(server) { const k = String(server).toLowerCase(); data.delete(k); gens.set(k, (gens.get(k) || 0) + 1); drawnSig = ""; }
+  /** A server's regions changed (its regionsAt moved, D781): read again now if its map is shown, else when next looked at. */
+  function regionsChanged(server) { const k = String(server).toLowerCase(); if (!data.has(k) && !loading.has(k)) return; forget(server); sync(); } // a read under way is dropped by its generation
 
   // ---------------------------------------------------------------- the outlines on BlueMap
   function popSet() { const b = ctx && ctx.bm(); try { return b && b.mapViewer && b.mapViewer.markers.markerSets.get("bm-popup-set"); } catch (e) { return null; } }
@@ -352,6 +354,7 @@ const MapRegions = (() => {
   // (its X and Z only). CREATE once the check passes; the window goes back to the list with the new region chosen.
   const DEF_PRI = { protected: 10, mine: 15, plot_for_sale: 30, open_for_buying: 5 }, PREFIX = { protected: "region", mine: "mine", plot_for_sale: "plot", open_for_buying: "open" };
   let dr = null, ov = null, banner = null, raf = 0, wantDraw = null, docHooked = null, formSig = "";
+  const PLOT_RULE = { pvp_denied: "it is a PvP world", world_refuses: "its global region refuses them", config_refuses: "the server's config refuses them" }; // WorldView.plotRule
   const drawing = () => !!dr;
   function startDraw() {
     if (!ctx || !admin() || !ctx.desk()) return;
@@ -360,7 +363,7 @@ const MapRegions = (() => {
     ctx.stopOthers(); chosen = null; drawnSig = "";
     dr = { server: h.server, map: h.map, dim: d.id, minY: d.minY, maxY: d.maxY, kind: "protected", phase: 1, a: null, b: null, hover: null, bx: null,
       ys: [d.minY, d.maxY], hmode: "full", id: "", name: "", priority: DEF_PRI.protected, parent: "", parentSet: false,
-      price: 4000, cost: 12, min: 5, max: 64, every: 20, fill: "minecraft:stone 100", check: null, gen: 0, timer: 0, busy: false, msg: "", pvp: !!d.pvp };
+      price: 4000, cost: 12, min: 5, max: 64, every: 20, fill: "minecraft:stone 100", check: null, gen: 0, timer: 0, busy: false, msg: "", noPlots: d.plotsAllowed === undefined ? !!d.pvp : !d.plotsAllowed, plotRule: d.plotRule || "" }; // D778
     dr.id = nextId("protected");
     pref.folded = false; savePref();
     hookDoc(); loop(); draw(); sync(); ctx.redraw();
@@ -580,7 +583,7 @@ const MapRegions = (() => {
       kc.appendChild(c);
     });
     kinds.appendChild(kc); rows.appendChild(kinds);
-    if (dr.pvp && (dr.kind === "plot_for_sale" || dr.kind === "open_for_buying")) rows.appendChild(el("div", "note mrnote", "This world has PvP on: Region Guard refuses plots and open areas here."));
+    if (dr.noPlots && (dr.kind === "plot_for_sale" || dr.kind === "open_for_buying")) rows.appendChild(el("div", "note mrnote", "Region Guard refuses plots and open areas in this world: " + (PLOT_RULE[dr.plotRule] || "it has PvP on") + "."));
     if (dr.phase < 3) {
       rows.appendChild(el("div", "note mrnote", dr.phase === 1 ? "Click the map where the first corner goes. Pan and zoom as usual; Esc or CANCEL stops." : "Corner 1 is at " + dr.a.x + ", " + dr.a.z + ". Click the map for the second."));
     } else {
@@ -683,5 +686,5 @@ const MapRegions = (() => {
   function drawIn(server, dim) { wantDraw = { server, dim, until: Date.now() + 30000 }; want = null; chosen = null; }
   addEventListener("keydown", (e) => { if (e.key === "Escape" && dr && !(e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))) stopDraw(); });
 
-  return { attach, draw, layout, sync, card, barKey, fab, back, closeSheet, frameLoaded, show, drop, active, forget, solid, drawIn, drawing, stopDraw };
+  return { attach, draw, layout, sync, card, barKey, fab, back, closeSheet, frameLoaded, show, drop, active, forget, regionsChanged, solid, drawIn, drawing, stopDraw };
 })();

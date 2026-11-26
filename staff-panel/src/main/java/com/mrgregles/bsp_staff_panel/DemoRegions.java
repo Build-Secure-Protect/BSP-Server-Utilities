@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,7 +36,7 @@ final class DemoRegions {
         }
         String server = act.has("server") ? act.get("server").getAsString() : "";
         JsonObject world = world(server);
-        return switch (what) {
+        JsonObject out = switch (what) {
             case "regions_list" -> done(true, "demo regions", world.deepCopy());
             case "region_save" -> save(world, act);
             case "region_remove" -> remove(world, act);
@@ -44,11 +45,23 @@ final class DemoRegions {
             case "region_create" -> create(world, act, server);
             default -> done(false, "Not a region action the demo knows.", null);
         };
+        if (!Set.of("regions_list", "region_check", "region_mine_reset").contains(what) && out.get("ok").getAsBoolean()) { // a mine's timer aside, as Region Guard
+            CHANGED.merge(server.toLowerCase(java.util.Locale.ROOT), System.currentTimeMillis(), (a, b) -> Math.max(a + 1, b)); // the snapshot's regionsAt (D781)
+        }
+        return out;
+    }
+
+    private static final Map<String, Long> CHANGED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The snapshot's {@code regionsAt} for a demo server: when a region there last changed, 0 when none has. */
+    static long changedAt(String server) {
+        return CHANGED.getOrDefault(server.toLowerCase(java.util.Locale.ROOT), 0L);
     }
 
     /** The made-up worlds as they start (each test starts from them). */
     static synchronized void reset() {
         WORLDS.clear();
+        CHANGED.clear();
     }
 
     /** A server that is off, remembered with what it last said (the WORLDS tab's greyed tile). */
@@ -70,6 +83,11 @@ final class DemoRegions {
         w.add("dims", dims);
         w.add("regions", regs);
         w.add("flags", flags());
+        JsonArray tiers = new JsonArray();
+        for (String t : new String[]{"copper", "gold", "diamond", "netherite", "illyrium"}) {
+            tiers.add(t); // BSP Core's Shatter Coin tiers (D779)
+        }
+        w.add("coinTiers", tiers);
         boolean pvp = server.equals("Stormfall");
         dim(dims, OW, -64, 319, pvp);
         if (!server.equals("SafeRoom")) {
@@ -119,6 +137,7 @@ final class DemoRegions {
         if (pvp) {
             set(regs, "__global__", "pvp", "allow");
         }
+        plotRules(w);
         return w;
     }
 
@@ -131,7 +150,7 @@ final class DemoRegions {
             JsonObject p = region("plot_" + (i + 1), "plot_for_sale", OW, "Plot " + (i + 1), plots[i], 30, "spawn_town");
             JsonObject c = new JsonObject();
             c.addProperty("price", Long.parseLong(price[i]));
-            c.addProperty("coinTier", 1);
+            c.addProperty("coinTier", "gold");
             c.addProperty("plotLimit", 1);
             p.add("claim", c);
             lists(p);
@@ -169,7 +188,7 @@ final class DemoRegions {
             JsonObject p = region(id + "_plot_" + i, "plot_for_sale", dim, "Plot " + i, new long[]{px, 60, z + 40, px + 28, 120, z + 80}, 30, id);
             JsonObject c = new JsonObject();
             c.addProperty("price", 3500 + 500L * i);
-            c.addProperty("coinTier", 1);
+            c.addProperty("coinTier", "");
             c.addProperty("plotLimit", 1);
             p.add("claim", c);
             lists(p);
@@ -211,7 +230,7 @@ final class DemoRegions {
         c.addProperty("costPerBlock", 12);
         c.addProperty("minSize", 5);
         c.addProperty("maxSize", 64);
-        c.addProperty("coinTier", 1);
+        c.addProperty("coinTier", "");
         c.addProperty("plotLimit", 2);
         area.add("claim", c);
         lists(area);
@@ -251,7 +270,7 @@ final class DemoRegions {
         b.addProperty("size", size);
         b.addProperty("x", x);
         b.addProperty("z", z);
-        b.addProperty("plotsInPvp", false);
+        b.addProperty("plotsInPvp", "default");
         g.add("border", b);
         regs.add(g);
         g.getAsJsonObject("flags").addProperty("creeper-explosion", "deny");
@@ -287,12 +306,27 @@ final class DemoRegions {
         r.add("lists", l);
     }
 
+    /** Each dimension's plotsAllowed and plotRule from its PvP and its global region's plots-in-PvP setting, as Region Guard's WorldView. */
+    private static void plotRules(JsonObject world) {
+        for (JsonElement e : world.getAsJsonArray("dims")) {
+            JsonObject d = e.getAsJsonObject();
+            JsonObject g = find(world, d.get("id").getAsString(), "__global__");
+            String pip = g != null && g.has("border") ? g.getAsJsonObject("border").get("plotsInPvp").getAsString() : "default";
+            boolean pvp = d.get("pvp").getAsBoolean();
+            String rule = !pvp ? "not_pvp" : pip.equals("allow") ? "world_allows" : pip.equals("deny") ? "world_refuses" : "pvp_denied";
+            d.addProperty("plotsAllowed", !pvp || pip.equals("allow"));
+            d.addProperty("plotRule", rule);
+        }
+    }
+
     private static void dim(JsonArray dims, String id, int minY, int maxY, boolean pvp) {
         JsonObject d = new JsonObject();
         d.addProperty("id", id);
         d.addProperty("minY", minY);
         d.addProperty("maxY", maxY);
         d.addProperty("pvp", pvp);
+        d.addProperty("plotsAllowed", !pvp); // as Region Guard's config says by default (D778)
+        d.addProperty("plotRule", pvp ? "pvp_denied" : "not_pvp");
         dims.add(d);
     }
 
@@ -439,7 +473,7 @@ final class DemoRegions {
         for (String part : new String[]{"claim", "mine", "border"}) {
             if (set.has(part)) {
                 JsonObject to = r.has(part) ? r.getAsJsonObject(part) : new JsonObject();
-                set.getAsJsonObject(part).entrySet().forEach(e -> to.add(e.getKey(), e.getValue()));
+                set.getAsJsonObject(part).entrySet().forEach(e -> to.add(e.getKey(), e.getKey().equals("coinTier") && e.getValue().getAsString().equals("default") ? new com.google.gson.JsonPrimitive("") : e.getValue()));
                 r.add(part, to);
             }
         }
@@ -461,6 +495,11 @@ final class DemoRegions {
         JsonObject data = new JsonObject();
         data.addProperty("region", r.get("id").getAsString());
         data.addProperty("version", r.get("version").getAsLong());
+        JsonArray saved = new JsonArray();
+        set.keySet().forEach(saved::add); // as the game servers say what was saved (D783); the demo saves all or nothing
+        data.add("saved", saved);
+        data.add("notSaved", new JsonArray());
+        plotRules(world);
         return done(true, "Saved (demo: nothing was sent to a game server).", data);
     }
 
@@ -516,7 +555,7 @@ final class DemoRegions {
             if (d.get("id").getAsString().equals(dim) && (y1 < d.get("minY").getAsLong() || y2 > d.get("maxY").getAsLong())) {
                 return done(false, "It goes beyond the world's height (Y " + d.get("minY").getAsLong() + " to " + d.get("maxY").getAsLong() + ").", null);
             }
-            if (d.get("id").getAsString().equals(dim) && d.get("pvp").getAsBoolean() && (type.equals("plot_for_sale") || type.equals("open_for_buying"))) {
+            if (d.get("id").getAsString().equals(dim) && !d.get("plotsAllowed").getAsBoolean() && (type.equals("plot_for_sale") || type.equals("open_for_buying"))) {
                 return done(false, "Plots and open areas are not allowed in this world: PvP is on.", null);
             }
         }

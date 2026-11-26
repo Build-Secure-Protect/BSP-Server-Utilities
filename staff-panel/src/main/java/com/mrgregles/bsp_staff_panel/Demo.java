@@ -596,6 +596,7 @@ final class Demo {
                 o.addProperty("totems", true); // SU-99: and its board for the TOTEMS tab
                 o.addProperty("talk", true); // SU-111: and private messages
                 o.addProperty("regions", true); // SU-155: and BSP Region Guard answering for its regions
+                o.addProperty("regionsAt", DemoRegions.changedAt(server[0])); // SU-159: when its regions last changed (D781)
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");

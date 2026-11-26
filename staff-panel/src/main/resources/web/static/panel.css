@@ -1028,6 +1028,8 @@ select.wdin { height: 32px; font-size: 13px; }
 .wdpct { width: 84px; flex: none; text-align: right; }
 .wdwarn { font-size: 11.5px; color: var(--gold); }
 .wdtick { font-size: 12.5px; }
+.wdtiers, .wdpip { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; } .wdtiers .wdtri, .wdpip .wdtri { flex-wrap: wrap; }
+.wdtiers.ch .wdtri, .wdpip.ch .wdtri { border-color: var(--gold); box-shadow: 0 0 0 2px #ffd23a22; }
 .wdftools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .wdseg { display: inline-flex; background: #12151b; border: 1px solid var(--ln); border-radius: 8px; padding: 2px; gap: 2px; }
 .wdseg .wdkey { height: 24px; border: 0; background: none; }

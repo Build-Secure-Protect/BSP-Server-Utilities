@@ -252,6 +252,19 @@ public final class Feed {
         return liveWith("regions");
     }
 
+    /**
+     * When a live server's regions last changed (its snapshot's {@code regionsAt}, SU-158, D781), or -1 when it is not
+     * live or does not say.
+     */
+    public long regionsAt(String server) {
+        Entry e = servers.get(server);
+        if (e == null || !live().contains(server)) {
+            return -1;
+        }
+        JsonElement at = e.snapshot.get("regionsAt");
+        return at != null && at.isJsonPrimitive() && at.getAsJsonPrimitive().isNumber() ? at.getAsLong() : -1;
+    }
+
     /** A live server's numbers for the WORLDS tab: {@code mspt} and {@code count} (players), or null when it is not live. */
     public JsonObject numbers(String server) {
         Entry e = servers.get(server);
@@ -366,6 +379,10 @@ public final class Feed {
             s.addProperty("tp", e.snapshot.has("tp") && e.snapshot.get("tp").isJsonPrimitive() && e.snapshot.get("tp").getAsBoolean()); // SU-43
             s.addProperty("tpName", tpName(name));
             s.addProperty("market", flag(name, "market")); // SU-51
+            long rat = regionsAt(name);
+            if (rat >= 0) {
+                s.addProperty("regionsAt", rat); // its regions changed: the WORLDS tab and the map read them again (D781)
+            }
             JsonArray ps = e.snapshot.getAsJsonArray("players");
             s.addProperty("count", ps.size());
             list.add(s);

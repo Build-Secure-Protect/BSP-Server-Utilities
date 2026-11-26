@@ -46,6 +46,7 @@ public final class RegionDesk {
     static final Pattern ID = Pattern.compile("[a-z0-9_-]{1,32}");
     static final Pattern DIM = Pattern.compile("[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,128}");
     static final Pattern FLAG = Pattern.compile("[a-z0-9-]{1,48}");
+    static final Pattern TIER = Pattern.compile("[a-z0-9_]{1,32}");
     static final Pattern PLAYER = Pattern.compile("[A-Za-z0-9_]{1,16}");
     static final Pattern UUID = Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     static final Pattern BLOCK = DIM;
@@ -86,8 +87,16 @@ public final class RegionDesk {
             if (n != null) {
                 lastLive.put(s, n.get("heardAt").getAsLong());
             }
+            long at = feed.regionsAt(s);
+            Long was = at < 0 ? null : changedAt.put(s, at);
+            if (was != null && was != at) {
+                forget(s); // a region changed there (in game or here): the next read is fresh (D781)
+            }
         }
     }
+
+    /** Each live server's last {@code regionsAt} heard (D781). */
+    private final Map<String, Long> changedAt = new java.util.concurrent.ConcurrentHashMap<>();
 
     // ------------------------------------------------------------------ reading
 
@@ -711,13 +720,20 @@ public final class RegionDesk {
             }
             JsonObject out = new JsonObject();
             for (String k : c.keySet()) {
+                if (k.equals("coinTier")) { // a tier's name, or default (D779)
+                    String t = c.get(k).isJsonPrimitive() && c.get(k).getAsJsonPrimitive().isString() ? c.get(k).getAsString().strip().toLowerCase(Locale.ROOT) : null;
+                    if (t == null || !(t.isEmpty() || TIER.matcher(t).matches())) {
+                        return "Pick the coin tier from the chips.";
+                    }
+                    out.addProperty(k, t.isEmpty() ? "default" : t);
+                    continue;
+                }
                 long v = whole(c, k);
-                boolean known = Set.of("price", "costPerBlock", "minSize", "maxSize", "plotLimit").contains(k) || k.equals("coinTier");
-                if (!known) {
+                if (!Set.of("price", "costPerBlock", "minSize", "maxSize", "plotLimit").contains(k)) {
                     return "Not a plot setting the panel knows: " + safe(k) + ".";
                 }
-                if (k.equals("coinTier") ? v < -1 || v > 64 : v < 0 || v > 1_000_000_000_000L) {
-                    return "Prices, sizes and limits are whole numbers of 0 or more.";
+                if (k.equals("plotLimit") ? v < -1 || v > 1_000_000 : v < 0 || v > 1_000_000_000_000L) {
+                    return k.equals("plotLimit") ? "Claims a player may hold is a whole number, or -1 for no limit." : "Prices and sizes are whole numbers of 0 or more.";
                 }
                 out.addProperty(k, v);
             }
@@ -818,11 +834,12 @@ public final class RegionDesk {
                         }
                         out.addProperty(k, v);
                     }
-                    case "plotsInPvp" -> {
-                        if (!bd.get(k).isJsonPrimitive() || !bd.get(k).getAsJsonPrimitive().isBoolean()) {
-                            return "Plots in PvP worlds is on or off.";
+                    case "plotsInPvp" -> { // follow the config, allow or refuse (D780)
+                        String v = bd.get(k).isJsonPrimitive() && bd.get(k).getAsJsonPrimitive().isString() ? bd.get(k).getAsString() : "";
+                        if (!Set.of("default", "allow", "deny").contains(v)) {
+                            return "Plots in PvP worlds follows the config, is allowed or is refused.";
                         }
-                        out.addProperty(k, bool(bd, k));
+                        out.addProperty(k, v);
                     }
                     default -> {
                         return "Not a border setting the panel knows: " + safe(k) + ".";
