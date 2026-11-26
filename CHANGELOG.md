@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+Client only; the network protocol is still 14.
+
+### Fixed
+- Streamer Mode over Spout2: OBS's picture no longer stays frozen on the Streamer Mode menu. A frame that Spout skipped or refused while it was still running was counted as sent, so OBS kept the last frame that got through. Frames that never reach OBS are now noticed. The sender is made again once, and if that does not help, the stream window takes over and chat says why. The log's minute line says how many frames Spout published. Choosing Spout2 again in the menu after the fallback retries it. Untested with real Spout and OBS.
+- Streamer Mode over Spout2: Spout's library could be unloaded while still in use, which would crash the game. It now stays loaded for the session, and the Spout sender is released when the game closes.
+
 ## [0.26.0] - 2026-11-26
 
 The staff web panel's regions, answered by the game servers. The network protocol is still 14: the servers need the new jar (and BSP Region Guard 0.8.0 for regions); players need nothing new.

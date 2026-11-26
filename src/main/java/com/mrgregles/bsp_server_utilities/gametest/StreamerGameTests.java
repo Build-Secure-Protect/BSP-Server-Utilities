@@ -1,6 +1,7 @@
 package com.mrgregles.bsp_server_utilities.gametest;
 
 import com.mrgregles.bsp_server_utilities.BSPServerUtilities;
+import com.mrgregles.bsp_server_utilities.streamer.SpoutWatch;
 import com.mrgregles.bsp_server_utilities.streamer.StreamerCatalog;
 import com.mrgregles.bsp_server_utilities.streamer.StreamerRules;
 import net.minecraft.gametest.framework.GameTest;
@@ -256,6 +257,105 @@ public class StreamerGameTests {
         List<Set<String>> upgrade = StreamerCatalog.applyDefaults(oldDefaults, partly);
         h.assertTrue(upgrade.get(0).contains(StreamerRules.SCREEN + "com.mrgregles.bsp_core.client.AcceleratorScreen") && !upgrade.get(0).contains("bsp_core:recall_offer"),
                 "a later version's new default is added; an older one already applied is not: " + upgrade.get(0));
+        h.succeed();
+    }
+
+    /** SU-160: a Spout sender that stops publishing frames is made again once, then given up; a working one is left alone. */
+    @GameTest(template = EMPTY)
+    public void streamer_spout2_notices_frames_that_never_reach_obs(GameTestHelper h) {
+        SpoutWatch w = new SpoutWatch();
+        for (int i = 1; i <= 2000; i++) {
+            h.assertTrue(w.record(true, i) == SpoutWatch.Verdict.OK, "frames accepted and counted carry on (" + i + ")");
+        }
+        h.assertTrue(java.util.Arrays.equals(w.takeCounts(), new int[]{2000, 2000}), "all 2000 counted as published");
+        h.assertTrue(java.util.Arrays.equals(w.takeCounts(), new int[]{0, 0}), "the counts start again after being read");
+
+        w.reset();
+        for (int i = 0; i < 2000; i++) {
+            h.assertTrue(w.record(true, 0) == SpoutWatch.Verdict.OK, "with Spout's frame counting off, accepted frames carry on");
+        }
+
+        // accepted but the count stuck (Spout skipped the copy): restart after STALL sends, give up after STALL more
+        w.reset();
+        w.record(true, 1);
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            h.assertTrue(w.record(true, 1) == SpoutWatch.Verdict.OK, "a short stall is waited out (" + i + ")");
+        }
+        h.assertTrue(w.record(true, 1) == SpoutWatch.Verdict.RESTART, "a second of the same frame count makes the sender again");
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            h.assertTrue(w.record(false, 0) == SpoutWatch.Verdict.OK, "after the restart it is given time again (" + i + ")");
+        }
+        h.assertTrue(w.record(false, 0) == SpoutWatch.Verdict.GIVE_UP, "still nothing after the restart: give up (the stream window takes over)");
+
+        // refused while initialised, the other silent case: a restart that works is kept, and once settled may restart again
+        w.reset();
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            w.record(false, 0);
+        }
+        h.assertTrue(w.record(false, 0) == SpoutWatch.Verdict.RESTART, "refused frames make the sender again");
+        for (int i = 1; i <= SpoutWatch.SETTLED; i++) {
+            h.assertTrue(w.record(true, i) == SpoutWatch.Verdict.OK, "the remade sender publishes (" + i + ")");
+        }
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            w.record(false, SpoutWatch.SETTLED);
+        }
+        h.assertTrue(w.record(false, SpoutWatch.SETTLED) == SpoutWatch.Verdict.RESTART, "after it settled, a new stall gets its own restart");
+
+        // lone refused or skipped (accepted, count unmoved) frames among good ones never act
+        w.reset();
+        long f = 0;
+        for (int i = 0; i < 5000; i++) {
+            boolean refused = i % 7 == 0, skipped = i % 11 == 0;
+            if (!refused && !skipped) {
+                f++;
+            }
+            h.assertTrue(w.record(!refused, f) == SpoutWatch.Verdict.OK, "an odd refused or skipped frame is not a stall (" + i + ")");
+        }
+
+        // counts that jump, fall back to 0 or start counting part way are still moving
+        w.reset();
+        long[] counts = {0, 0, 0, 1, 2, 5, 9, 0, 1, 2, 100, 3};
+        for (long c : counts) {
+            h.assertTrue(w.record(true, c) == SpoutWatch.Verdict.OK, "a moving count carries on (" + c + ")");
+        }
+        h.assertTrue(w.countsFrames() && w.everPublished(), "it saw Spout count frames, and frames published");
+        w.reset();
+        h.assertTrue(!w.countsFrames() && !w.everPublished(), "a new sender has seen nothing yet");
+        for (int i = 0; i < 100; i++) {
+            w.record(true, 0);
+        }
+        h.assertTrue(!w.countsFrames() && w.everPublished(), "frame counting off: published, but counting not seen");
+
+        // a remade sender whose frames are accepted but whose count is stuck again: give up
+        w.reset();
+        for (int i = 0; i < SpoutWatch.STALL; i++) {
+            w.record(true, 7);
+        }
+        // the first of those moved (from nothing to 7), so one more makes STALL unmoved sends
+        h.assertTrue(w.record(true, 7) == SpoutWatch.Verdict.RESTART, "a stuck count makes the sender again");
+        w.record(true, 1);
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            h.assertTrue(w.record(true, 1) == SpoutWatch.Verdict.OK, "the remade sender is given its time (" + i + ")");
+        }
+        h.assertTrue(w.record(true, 1) == SpoutWatch.Verdict.GIVE_UP, "stuck again after the restart: give up");
+
+        // after a restart, odd bad frames do not keep another restart from being allowed once enough frames got through
+        w.reset();
+        for (int i = 0; i < SpoutWatch.STALL; i++) {
+            w.record(false, 0);
+        }
+        f = 0;
+        for (int i = 0; i < SpoutWatch.SETTLED * 2; i++) {
+            boolean bad = i % 50 == 0;
+            if (!bad) {
+                f++;
+            }
+            w.record(!bad, f);
+        }
+        for (int i = 1; i < SpoutWatch.STALL; i++) {
+            w.record(false, f);
+        }
+        h.assertTrue(w.record(false, f) == SpoutWatch.Verdict.RESTART, "600 frames published since the restart, with odd bad ones between: a new stall gets a restart");
         h.succeed();
     }
 }

@@ -1197,6 +1197,7 @@ STREAMER = {
     "on": "Streamer Mode is on: the stream window \"BSP Stream\" is open. In OBS, add it with Window Capture.",
     "on_spout": "Streamer Mode is on: sending over Spout2 as \"BSP Stream\". In OBS, add it with Spout2 Capture.",
     "spout_failed": "Spout2 could not start (%s). The stream window \"BSP Stream\" is used instead.",
+    "spout_stopped": "Spout2 stopped reaching OBS (%s). The stream window \"BSP Stream\" is used instead. Choose Spout2 again in the Streamer Mode menu to retry.",
     "off": "Streamer Mode is off: the stream window is closed.",
     "no_window": "Streamer Mode could not open its stream window. See the game log.",
     "failed": "Streamer Mode stopped: the stream picture could not be drawn. See the game log.",

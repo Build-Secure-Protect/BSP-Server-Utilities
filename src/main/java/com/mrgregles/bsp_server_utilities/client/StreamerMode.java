@@ -20,6 +20,7 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.GameShuttingDownEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import org.jetbrains.annotations.Nullable;
@@ -66,6 +67,17 @@ public final class StreamerMode {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, StreamerMode::onOverlay);
         MinecraftForge.EVENT_BUS.addListener(StreamerMode::onTick);
         MinecraftForge.EVENT_BUS.addListener(StreamerMode::onCommands);
+        MinecraftForge.EVENT_BUS.addListener(StreamerMode::onShutdown);
+    }
+
+    /** The game is closing: Spout's sender is released with the game's context still current, so no stale "BSP Stream" stays
+     * in Spout's list for the next start to dodge as "BSP Stream_1" (audit, SU-160). */
+    private static void onShutdown(GameShuttingDownEvent event) {
+        if (on && RenderSystem.isOnRenderThread()) {
+            on = false; // quietly: no later frame may fall back and open the stream window as the game closes
+            ready = false;
+            closeOutput();
+        }
     }
 
     public static void onKeys(RegisterKeyMappingsEvent event) {
@@ -155,9 +167,10 @@ public final class StreamerMode {
         return com.mrgregles.bsp_server_utilities.ServerUtilsClientConfig.streamOutput();
     }
 
-    /** Saves the output; while on, swaps to it at once. */
+    /** Saves the output; while on, swaps to it at once. Spout2 chosen again after it fell back to the stream window tries it again. */
     public static void setOutput(String o) {
-        if (o.equals(output())) {
+        boolean retry = on && !spout && "spout2".equals(o) && SpoutOutput.available();
+        if (o.equals(output()) && !retry) {
             return;
         }
         com.mrgregles.bsp_server_utilities.ServerUtilsClientConfig.setStream(o, fps(), hidden());
@@ -165,6 +178,11 @@ public final class StreamerMode {
             closeOutput();
             if (!openOutput()) {
                 set(false); // the whole off path: picture freed, the player told (audit, SU-135)
+                return;
+            }
+            resetStats(); // the minute line names one output (audit, SU-160)
+            if (spout) {
+                say(Component.translatable("message.bsp_server_utilities.streamer.on_spout").withStyle(ChatFormatting.AQUA));
             }
         }
     }
@@ -341,8 +359,10 @@ public final class StreamerMode {
         long t0 = System.nanoTime();
         try {
             if (spout) {
-                if (!SpoutOutput.send(target)) { // Spout refused: carry on in the stream window
-                    say(Component.translatable("message.bsp_server_utilities.streamer.spout_failed", String.valueOf(SpoutOutput.failure())).withStyle(ChatFormatting.GOLD));
+                if (!SpoutOutput.send(target)) { // Spout refused or stopped reaching OBS: carry on in the stream window
+                    String key = SpoutOutput.everPublished() ? "spout_stopped" : "spout_failed";
+                    say(Component.translatable("message.bsp_server_utilities.streamer." + key, String.valueOf(SpoutOutput.failure())).withStyle(ChatFormatting.GOLD));
+                    resetStats();
                     SpoutOutput.close();
                     spout = false;
                     if (!StreamWindow.open()) {
@@ -361,9 +381,14 @@ public final class StreamerMode {
         presentNs += System.nanoTime() - t0;
         frames++;
         if (t0 - statsSince >= STATS_NS && frames > 0) {
-            BSPServerUtilities.LOGGER.info("Streamer Mode: stream picture {} ms, stream window {} ms a frame on average ({} frames, {} x {})",
-                    String.format("%.2f", passNs / 1e6 / frames), String.format("%.2f", presentNs / 1e6 / frames), frames,
+            BSPServerUtilities.LOGGER.info("Streamer Mode: stream picture {} ms, {} {} ms a frame on average ({} frames, {} x {})",
+                    String.format("%.2f", passNs / 1e6 / frames), spout ? "Spout2" : "stream window", String.format("%.2f", presentNs / 1e6 / frames), frames,
                     target == null ? 0 : target.width, target == null ? 0 : target.height);
+            if (spout) { // how many reached OBS: a frozen OBS picture shows here as frames sent but not published (SU-160)
+                int[] c = SpoutOutput.takeCounts();
+                BSPServerUtilities.LOGGER.info("Streamer Mode: Spout published {} of {} frames sent{}", c[1], c[0],
+                        SpoutOutput.countsFrames() ? "" : " (Spout's frame counting is off: only refused frames can be seen)");
+            }
             resetStats();
         }
     }

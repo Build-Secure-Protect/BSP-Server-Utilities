@@ -3006,3 +3006,59 @@ Audit: two independent reads, the game server's side and the panel's side, each 
 - A live tick while a save was out or while typing in the editor was dropped for good; now taken on a later tick. Overlapping grid reads: the latest wins.
 - Demo: plots allowed did not follow the world default's setting; mine resets moved `regionsAt`; no `saved` in answers; an unused method.
 Left as they are (noted): a price sent with a switch to an open area (or a cost with a switch to a plot) is not used and not named in the answer (the panel never sends these together); a people change Region Guard answers "Nothing changed" is listed as saved; the live refresh asks the server afresh for every open page on each change (within each staff member's reads a minute).
+
+## 2026-11-26: Spout2's picture frozen in OBS on the Streamer Mode menu (SU-160)
+
+**The report.** With Streamer Mode on and the output on Spout2, OBS's Spout2 Capture showed BSP Stream, but the picture stayed on the Streamer Mode menu: opening another menu or loading into a world did not change it. This was the first test of Spout2 anywhere (SU-134 was untested).
+
+**The cause.** `client/SpoutOutput.send` took Spout's word that each frame had been sent, and Spout 2.007.018 does not always say when one was not (read in Spout's own source for that release):
+- `SendTexture` returns true when it skips the copy: its 67 ms wait for the picture's access lock timed out, or the GL/DX lock failed. Neither moves the sender's frame count.
+- Once its GL/DX link has failed it returns false on every later frame while `IsInitialized` stays true, and our code counted "false but still initialised" as sent.
+- OBS's Spout2 source copies only when the sender's frame count moves, so it kept the last frame that got through: the first ones, sent while the Streamer Mode menu was open (where it was switched on).
+- So the sender stayed up with a dead picture and nobody was told.
+
+What made Spout skip frames on that PC cannot be seen from the code. The log line below will show it.
+
+The 0.25.2 JourneyMap change (8927d50) is not the cause. It only skips one JourneyMap draw inside the stream picture and never touches the send.
+
+**The fix.**
+- `streamer/SpoutWatch` reads each send's answer and the sender's frame count (`GetFrame`, method-table slot 11; checked in `SpoutLibrary.h` 2.007.018 that no overload moves it).
+- A frame counts as published when Spout accepted it and its frame count moved. With frame counting off in Spout's settings, only refusals can be seen.
+- After 60 sends in a row with nothing published (a second at 60 sends a second, two at 30), the sender is made again once (`ReleaseSender`, then the name again), which clears Spout's failed GL/DX link.
+- If it still publishes nothing, Streamer Mode falls back to the stream window. Chat says "Spout2 stopped reaching OBS (Spout stopped publishing frames)" or "(Spout refused the picture)", and that choosing Spout2 again retries.
+- A sender Spout cannot make at all (refused and not initialised) falls back at once, as before: "Spout2 could not start (Spout could not make its sender)".
+- A restart that works is kept. After 600 frames published since the restart (odd bad frames between them allowed), a later stall gets its own restart.
+- For Spout's copy, the scissor test, rasterizer discard and sRGB writes are switched off, and every colour channel is written. The game's framebuffer is bound, as Spout expects. All of it is put back after. Any of these could turn Spout's `glBlitFramebuffer` into a copy of nothing.
+- The log's minute line now names the output ("Spout2 ... ms"). It adds "Streamer Mode: Spout published N of M frames sent", with a note when Spout's frame counting is off.
+
+GameTest `streamer_spout2_notices_frames_that_never_reach_obs` covers the watch:
+- accepted, counted frames carry on;
+- with counting off, accepted frames carry on;
+- a stuck count or refused frames restart once after 60 sends, then give up after 60 more;
+- a working restart settles and may restart again later;
+- odd skipped frames among good ones never act.
+
+GameTests **367/367** (13 in `StreamerGameTests`). `./gradlew build` passes.
+
+**Audit of the Spout code (SU-160).** One independent read of `SpoutOutput`, `SpoutWatch`, `StreamerMode`, `StreamWindow` and the frame hooks, each finding checked in the code. Fixed:
+1. **Spout's DLL could be freed while in use** (from SU-134). JNA 5.12.1, which Minecraft ships, keeps a loaded library only through a weak reference and frees it (`FreeLibrary`) once it is collected; checked with `javap`. `SpoutOutput` kept only the Spout object's pointer, so after a garbage collection the next call would have jumped into freed memory (a crash). The library is now kept for the session.
+2. **One restart for the whole session** under odd bad frames: the restart was allowed again only after 600 good frames in a row. Now 600 published since the restart, odd bad ones between.
+3. **Choosing SPOUT2 again after the fallback did nothing** (the saved output was already Spout2). It now retries, and chat says so when it is sending again.
+4. **A sender that cannot be made** waited 120 sends before falling back; it falls back at once again.
+5. **ReleaseSender** ran without the GL save and restore that sends use; now it has them.
+6. **No release when the game closes**: a stale "BSP Stream" left in Spout's list (if OBS holds it open) would make the next start "BSP Stream_1", which OBS is not set to. Streamer Mode now switches off quietly on Forge's `GameShuttingDownEvent`, on the render thread.
+7. Wording and counts: the chat line after a stop says "stopped reaching OBS", not "could not start"; the minute line notes when frame counting is off; swapping outputs starts the minute line's figures again.
+8. The test now mixes in skipped frames (accepted, count unmoved), counts that jump, go back to 0 or start part way, a remade sender stuck again, and a second restart allowed after odd bad frames.
+
+Left as it is: giving up after the restart also when Spout accepted the frames but never published them. A reviewer pointed out this also gives up on a working sender while OBS itself is stuck. But a sender that silently skips every frame is the fault reported here, and a visible fallback (with "choose Spout2 again to retry") beats a frozen OBS that nobody is told about.
+
+**Untested with real Spout and OBS.** It is built on a Mac, where Spout2 cannot run. On the Windows PC, with OBS and Off-World-Live's Spout2 plugin:
+1. Turn Streamer Mode on with SPOUT2 chosen, from the Streamer Mode menu. In OBS, Spout2 Capture › BSP Stream shows the "Menu hidden" card.
+2. Close the menu. OBS shows the game, live: move the camera, open the inventory, open the pause menu. Each shows in OBS within a moment.
+3. Load into a world from the title screen with it on. OBS follows the loading screen into the world.
+4. Leave it a minute. The log has "Streamer Mode: Spout published N of M frames sent", with N close to M. Send that line either way.
+5. **Retry:** when it has fallen back to the stream window, choose SPOUT2 in the menu: chat says it is sending over Spout2 again and OBS is live.
+6. **Restart the game** with Streamer Mode on over Spout2, and turn it on again: OBS's source (set to BSP Stream) is live, with no "BSP Stream_1" in its sender list.
+7. If OBS still freezes, look in the log for "Spout published no frame for 60 sends (...)". It says whether Spout refused or skipped the frames, the frame count and whether it was still initialised. Then either OBS comes back after the sender is made again, or chat says Spout2 stopped and the BSP Stream window opens. Send those lines.
+8. If the frame count in that line is 0 (or the minute line says frame counting is off), Spout's frame counting is off on that PC. Skipped frames then cannot be seen, only refused ones. Say so; Spout's own settings program (SpoutSettings) can turn it on.
+
