@@ -44,6 +44,21 @@ public final class BspCore {
         return Optional.empty();
     }
 
+    /**
+     * BSP-Core's Shatter Coin tiers, cheapest first ({@code copper, gold, ...}; its {@code api.BspCoins}), for the staff
+     * panel's coin tier of a plot (D779). Empty when BSP-Core is absent or has no coins.
+     */
+    public static java.util.List<String> coinTiers() {
+        if (!isLoaded()) {
+            return java.util.List.of();
+        }
+        try {
+            return java.util.List.copyOf(com.mrgregles.bsp_core.api.BspCoins.tiers());
+        } catch (RuntimeException | LinkageError e) {
+            return java.util.List.of();
+        }
+    }
+
     /** A player's BSP-Core team as the staff web panel shows it: its id, name and colour (0xRRGGBB). */
     public record TeamInfo(java.util.UUID id, String name, int colour) {
     }

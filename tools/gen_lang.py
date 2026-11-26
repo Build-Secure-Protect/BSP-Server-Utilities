@@ -1438,6 +1438,10 @@ KEYS["gui.bsp_server_utilities.panel.log.kind.chunk_tp"] = "Chunk teleports"
 
 # the lag profiler's samples (SU-151; D749, D752, D761): what an editor is told, here or on the server they are on
 KEYS["gui.bsp_server_utilities.panel.log.kind.lag_sample"] = "Lag samples"
+# regions changed from the staff web panel (SU-158, D774)
+KEYS["gui.bsp_server_utilities.panel.log.kind.region_edit"] = "Region edits"
+KEYS["gui.bsp_server_utilities.panel.log.kind.region_create"] = "Regions made"
+KEYS["gui.bsp_server_utilities.panel.log.kind.region_remove"] = "Regions removed"
 KEYS["message.bsp_server_utilities.lag.sample_started"] = "Sampling %s for %s s."
 KEYS["message.bsp_server_utilities.lag.sample_running"] = "A sample is already running on %s, started by %s, %s s left. One sample runs on a server at a time."
 KEYS["message.bsp_server_utilities.lag.sample_stopped"] = "The sample on %s stopped after %s s, with what it had."

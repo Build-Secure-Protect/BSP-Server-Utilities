@@ -29,7 +29,7 @@ final class LogTab {
     private static final int SW_TOP = 29, KEY_W = 66, MENU_ROW = 11;
     private static final float TINY = 0.6f, SMALL = 0.7f;
     /** The kinds in {@code LogEntry.KINDS} order, with their labels. */
-    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch", "panel.log.kind.check", "panel.log.kind.afk", "panel.log.kind.room", "panel.log.kind.mob", "panel.log.kind.drops", "panel.log.kind.bank", "panel.log.kind.bounty", "panel.log.kind.tutorial", "panel.log.kind.chunk_tp", "panel.log.kind.lag_sample"};
+    private static final String[] KIND_KEYS = {"panel.log.kind.cmd", "panel.log.kind.item", "panel.log.kind.mode", "panel.log.kind.give", "panel.log.kind.switch", "panel.log.kind.check", "panel.log.kind.afk", "panel.log.kind.room", "panel.log.kind.mob", "panel.log.kind.drops", "panel.log.kind.bank", "panel.log.kind.bounty", "panel.log.kind.tutorial", "panel.log.kind.chunk_tp", "panel.log.kind.lag_sample", "panel.log.kind.region_edit", "panel.log.kind.region_create", "panel.log.kind.region_remove"};
 
     private enum Menu { NONE, SERVERS, KINDS }
 

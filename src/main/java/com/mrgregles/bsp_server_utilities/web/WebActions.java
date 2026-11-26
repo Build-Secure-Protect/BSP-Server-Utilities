@@ -399,7 +399,10 @@ public final class WebActions {
             case "totem_board" -> WebTotems.board(server, id); // the TOTEMS page (SU-96): every staff account reads it (D614)
             case "talk_send" -> WebTalk.send(server, a, id, by); // private staff messages (SU-109): every rank (D630)
             case "talk_end" -> WebTalk.end(server, a, id, by);
-            default -> new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
+            default -> {
+                Answer regions = WebRegions.handle(server, str(a, "action"), a, id, by); // the WORLDS tab and the map's regions (SU-158)
+                yield regions != null ? regions : new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
+            }
         };
     }
 

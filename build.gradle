@@ -75,6 +75,8 @@ repositories {
     mavenCentral()
     // BSP-Core has no published artifact: its built jar is picked up from the sibling repo.
     flatDir { dirs bsp_core_libs }
+    // BSP Region Guard likewise: its built jar from the sibling repo (compile only; loaded in dev runs for the GameTests).
+    flatDir { dirs region_guard_libs, 'build/rg-run' }
     // Dev-run-only jars (LuckPerms for the GameTests), not shipped. See tools/make_luckperms_dev_jar.py in BSP Region Guard.
     flatDir { dirs 'libs' }
     // CurseMaven: the exact Compact Machines file the pack ships (project and file id in gradle.properties).
@@ -103,6 +105,17 @@ dependencies {
     compileOnly fg.deobf("blank:bsp-core:${bsp_core_version}")
     // Dev runs load it (the full jar, so they also get the MySQL driver BSP-Core ships).
     runtimeOnly fg.deobf("blank:bsp-core:${bsp_core_version}")
+
+    // BSP Region Guard (API 10 or newer), optional at runtime: only compat/RegionGuard touches it, and only when it is
+    // loaded with that api (D782). Dev runs load it, so the region GameTests call the real api.
+    compileOnly fg.deobf("blank:bsp-region-guard:${region_guard_version}")
+    // -PnoRg runs without it, to check the servers that do not have it. -PrgRun=0.7.3 runs an older one (api 9), copied as
+    // build/rg-run/bsp-region-guard-run-0.7.3.jar (another name: ForgeGradle cannot hold two versions of one jar).
+    if (project.hasProperty('rgRun')) {
+        runtimeOnly fg.deobf("blank:bsp-region-guard-run:${project.property('rgRun')}")
+    } else if (!project.hasProperty('noRg')) {
+        runtimeOnly fg.deobf("blank:bsp-region-guard:${region_guard_version}")
+    }
 
     // LuckPerms API: compile only. At runtime the bridge checks whether it is present.
     compileOnly "net.luckperms:api:${luckperms_api_version}"

@@ -1268,6 +1268,23 @@ public final class JdbcBackend implements StorageBackend {
         }
     }
 
+    @Override
+    @Nullable
+    public Seen loadSeenByName(String name) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("SELECT uuid, name, at_ms, server, dimension, x, y, z, kind, line FROM " + prefix + "seen WHERE LOWER(name) = LOWER(?) ORDER BY at_ms DESC LIMIT 1")) {
+            ps.setQueryTimeout(SEEN_READ_TIMEOUT_S);
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                UUID id = uuidOrNull(rs.getString(1));
+                return id == null ? null : new Seen(id, rs.getString(2), rs.getLong(3), rs.getString(4), rs.getString(5), rs.getInt(6), rs.getInt(7), rs.getInt(8),
+                        rs.getString(9), rs.getString(10) == null ? "" : rs.getString(10));
+            }
+        }
+    }
+
     @Nullable
     private static UUID uuidOrNull(@Nullable String s) {
         if (s == null || s.isEmpty()) {

@@ -326,6 +326,13 @@ public interface StorageBackend extends com.mrgregles.bsp_server_utilities.talk.
     @Nullable
     Seen loadSeen(UUID player) throws Exception;
 
+    /**
+     * The newest row of a player by the name they had then (any case), or null: for the staff panel adding a player to a
+     * region by name when this server never saw them (SU-158, D784).
+     */
+    @Nullable
+    Seen loadSeenByName(String name) throws Exception;
+
     String describe();
 
     void close() throws Exception;

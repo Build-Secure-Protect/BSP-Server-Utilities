@@ -58,6 +58,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.support.NetworkJoins.registerNotices(); // a join to the network or a move (SU-90)
         com.mrgregles.bsp_server_utilities.talk.TalkDelivery.register(); // private staff messages reaching players and staff on every server (SU-106)
         com.mrgregles.bsp_server_utilities.web.WebTalk.register(); // and the staff web panel, live (SU-109)
+        com.mrgregles.bsp_server_utilities.web.WebRegions.register(); // BSP Region Guard's region changes, for the panel (SU-158)
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();

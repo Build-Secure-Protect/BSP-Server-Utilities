@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [0.26.0] - 2026-11-26
+
+The staff web panel's regions, answered by the game servers. The network protocol is still 14: the servers need the new jar (and BSP Region Guard 0.8.0 for regions); players need nothing new.
+
+### Added
+- The staff web panel's regions on the game servers (SU-158): with BSP Region Guard 0.8.0 or newer on a server, the panel's WORLDS tab and the map's Regions window read every region of that server (every kind, with its flags, members and owners, plot, mine and border settings) and Admins and Owners change, remove, reset and create regions through Region Guard's own rules. A save made while the region was changed in game is refused. A save that Region Guard refuses part way says what was and was not saved. A player's claim is removed by Owners only, with Region Guard's admin refund. Players are added by name: those online on that server, or anyone the network has seen (with shared storage). Every change is in the Action Log (new kinds: region edits, regions made, regions removed), and a change in game reaches open panels within seconds. Without Region Guard 0.8.0, the panel says so and nothing else changes.
+
 ## [0.25.2] - 2026-11-25
 
 Client only; the network protocol is still 14.

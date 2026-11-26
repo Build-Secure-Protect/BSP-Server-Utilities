@@ -596,6 +596,19 @@ public final class MemoryBackend implements StorageBackend {
         return seenRows.get(player);
     }
 
+    @Override
+    @Nullable
+    public synchronized Seen loadSeenByName(String name) throws Exception {
+        check();
+        Seen best = null;
+        for (Seen r : seenRows.values()) {
+            if (r.name().equalsIgnoreCase(name) && (best == null || r.atMs() > best.atMs())) {
+                best = r;
+            }
+        }
+        return best;
+    }
+
     /** How many steals the table holds (tests). */
     public synchronized int stealCount() {
         return steals.size();
