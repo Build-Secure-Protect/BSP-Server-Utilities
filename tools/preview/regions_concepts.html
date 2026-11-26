@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regions Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mock-up sets BC to BF: the staff web panel's WORLDS tab, the region editor, the Map tab's Regions window and drawing a region
+   from two points (brief 2026-11-26). Terrain drawn by the page as a stand-in for BlueMap's tiles; made-up names, places and numbers.
+   Shared parts follow staff_mapfloat_refined.html (set AE, the players window, look A). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1320px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; color:var(--acc); } h3{ font-size:16px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:90ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; overflow-x:auto; }
+@media (max-width:1300px){ .stage{ align-items:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:6px; max-width:1240px; }
+.legend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+.legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+.setnav{ display:flex; gap:8px; flex-wrap:wrap; font-size:13px; } .setnav a{ color:var(--acc); }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:1240px; height:700px; flex:none; box-sizing:border-box; border:1px solid #2a2f3a; border-radius:10px; background:var(--bg); color:var(--tx);
+  font:13px/1.35 var(--body); overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+.dk.short{ height:430px; }
+.dk *{ box-sizing:border-box; }
+.chrome{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; background:#1b1e25; border-bottom:1px solid #2a2f3a; }
+.chrome .lights{ display:flex; gap:6px; } .chrome .lights i{ width:10px; height:10px; border-radius:50%; display:block; background:#3a3f4b; }
+.chrome .url{ flex:1; max-width:440px; margin:0 auto; height:22px; border-radius:6px; background:#0f1115; color:#9aa3b5; font-size:11.5px; display:flex; align-items:center; padding:0 10px; }
+.dbody{ flex:1; display:flex; min-height:0; position:relative; }
+.side{ width:190px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; gap:2px; padding:12px 10px; }
+.side .brand{ font:15px Silkscreen,var(--mono); color:var(--teal); padding:2px 10px 12px; } .side .brand b{ color:var(--tx); font-weight:400; }
+.side .it{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--mu); font-size:13px; position:relative; }
+.side .it.on{ background:#19d3b01a; color:var(--teal); }
+.side .it.new::after{ content:"NEW"; margin-left:auto; font:600 9px var(--body); color:#10151c; background:var(--gold); border-radius:4px; padding:0 4px; }
+.side svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.main{ flex:1; min-width:0; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.pagehead{ flex:none; display:flex; align-items:center; gap:12px; padding:14px 20px 10px; }
+.pagehead .t{ font:15px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; }
+.crumb{ font-size:13px; color:var(--mu); display:flex; gap:6px; align-items:center; } .crumb b{ color:var(--tx); font-weight:600; } .crumb a{ color:var(--teal); }
+.grow{ flex:1; min-width:0; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .gd{ color:var(--gold); } .rd{ color:var(--coral); }
+.search{ height:30px; width:220px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; gap:7px; padding:0 9px; color:var(--dim); font-size:12px; }
+.search svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; }
+.key{ height:28px; padding:0 11px; border-radius:7px; display:inline-flex; align-items:center; gap:6px; font:600 11.5px var(--body); background:var(--pn); border:1px solid var(--ln); color:var(--soft); white-space:nowrap; }
+.key.pri{ background:var(--teal); border-color:var(--teal); color:#0f1115; }
+.key.vio{ background:#b58cff22; border-color:#b58cff66; color:var(--vio); }
+.key.dg{ border-color:#5a2a2a; color:var(--coral); }
+.key.sm{ height:22px; padding:0 8px; font-size:10.5px; border-radius:6px; }
+.kchip{ display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 8px; border-radius:999px; font:600 11px var(--body); border:1px solid var(--ln); background:var(--pn); color:var(--soft); white-space:nowrap; }
+.kchip i{ width:9px; height:9px; border-radius:2px; display:block; }
+.kchip.off{ opacity:.45; text-decoration:line-through; }
+.sw{ width:10px; height:10px; border-radius:3px; flex:none; display:inline-block; }
+.kt{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; }
+.note{ font-size:11.5px; color:var(--mu); line-height:1.45; }
+.sect{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; justify-content:space-between; align-items:center; }
+.rk{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; white-space:nowrap; background:#b58cff22; color:#b58cff; border:1px solid #b58cff55; }
+
+/* server tiles */
+.tiles{ display:grid; gap:12px; padding:4px 20px 20px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; position:relative; min-width:0; }
+.tile.hov{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.tile .nm{ font:14px Silkscreen,var(--mono); color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .st{ display:flex; gap:10px; font-size:11.5px; color:var(--mu); align-items:center; } .tile .st b{ color:var(--tx); font:600 12px var(--mono); }
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); display:inline-block; flex:none; } .dot.off{ background:var(--dim); }
+.counts{ display:flex; gap:8px; flex-wrap:wrap; font:600 11px var(--mono); }
+.counts span{ display:inline-flex; align-items:center; gap:4px; color:var(--soft); }
+.tile.off{ opacity:.6; }
+.thumb{ height:96px; border-radius:8px; overflow:hidden; position:relative; background:#0b0d11; }
+.thumb canvas{ width:100%; height:100%; display:block; image-rendering:pixelated; }
+
+/* tables and lists */
+.tbl{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.tbl th{ text-align:left; font-weight:500; color:var(--mu); font-size:11px; padding:7px 10px; border-bottom:1px solid var(--ln); white-space:nowrap; }
+.tbl td{ padding:7px 10px; border-bottom:1px solid #20242d; vertical-align:middle; white-space:nowrap; }
+.tbl tr.sel td{ background:#19d3b012; } .tbl tr.sel td:first-child{ box-shadow:inset 3px 0 0 var(--teal); }
+.tbl .id{ font:600 12px var(--mono); color:var(--tx); } .tbl .sub{ color:var(--mu); font-size:11px; }
+.tbl tr.kid td.idc{ padding-left:30px; }
+.lnk{ color:var(--teal); font-weight:600; font-size:11.5px; }
+.dtabs{ display:flex; gap:8px; padding:0 20px 12px; flex-wrap:wrap; }
+.dtab{ padding:8px 12px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; flex-direction:column; gap:3px; min-width:150px; }
+.dtab b{ font-size:13px; } .dtab.on{ border-color:var(--teal); background:#19d3b014; } .dtab.on b{ color:var(--teal); }
+.dtab .counts{ font-size:10.5px; }
+.box{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+.box .bh{ display:flex; align-items:center; gap:8px; padding:9px 12px; background:#1d2129; border-bottom:1px solid var(--ln); font-size:12px; color:var(--mu); }
+.lrow{ display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; border-bottom:1px solid #20242d; }
+.lrow .id{ font:600 12px var(--mono); } .lrow .r{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.lrow.on{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.grp{ display:flex; align-items:center; gap:7px; padding:9px 12px 4px; font:600 11px var(--body); color:var(--mu); } .grp .n{ margin-left:auto; font-family:var(--mono); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+/* the editor */
+.field{ display:flex; flex-direction:column; gap:3px; min-width:0; } .field label{ font-size:10.5px; color:var(--mu); font-weight:600; }
+.in{ height:30px; border-radius:7px; background:#12151b; border:1px solid var(--ln); display:flex; align-items:center; padding:0 9px; font-size:12.5px; color:var(--tx); white-space:nowrap; overflow:hidden; }
+.in.mono{ font-family:var(--mono); } .in.ch{ border-color:var(--gold); box-shadow:0 0 0 2px #ffd23a22; } .in.ro{ color:var(--mu); background:transparent; }
+.tri{ display:inline-flex; background:#12151b; border:1px solid var(--ln); border-radius:7px; padding:2px; font:600 10.5px var(--body); flex:none; }
+.tri span{ padding:2px 8px; border-radius:5px; color:var(--dim); }
+.tri span.a{ background:#19d3b0; color:#0f1115; } .tri span.d{ background:#ff6b5c; color:#10151c; } .tri span.u{ background:#2a2f3a; color:var(--soft); }
+.frow{ display:flex; align-items:center; gap:10px; padding:5px 12px; font-size:12.5px; border-bottom:1px solid #1d2028; }
+.frow .fn{ font:600 12px var(--mono); width:170px; flex:none; overflow:hidden; text-overflow:ellipsis; }
+.frow .eff{ font-size:11px; color:var(--mu); margin-left:auto; text-align:right; white-space:nowrap; }
+.frow.ch{ background:#ffd23a0d; box-shadow:inset 3px 0 0 var(--gold); }
+.fgrp{ font:600 11px var(--body); color:var(--soft); padding:10px 12px 4px; display:flex; gap:8px; align-items:center; } .fgrp .n{ color:var(--mu); font-weight:500; }
+.lchip{ display:inline-flex; align-items:center; gap:4px; height:22px; padding:0 7px; border-radius:6px; background:#12151b; border:1px solid var(--ln); font:600 11px var(--mono); color:var(--soft); }
+.savebar{ flex:none; display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid var(--ln); background:#171a20; }
+.savebar .chg{ font-size:12px; color:var(--gold); font-weight:600; }
+.drawer{ position:absolute; top:0; right:0; bottom:0; width:520px; background:var(--bg2); border-left:1px solid var(--ln); box-shadow:-18px 0 40px rgba(0,0,0,.5); display:flex; flex-direction:column; z-index:8; }
+.drawer .dh{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--ln); }
+.drawer .dbd{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:12px 14px; }
+.shade{ position:absolute; inset:0; background:rgba(5,6,8,.45); z-index:7; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12.5px; flex:none; }
+.ptabs span{ padding:9px 12px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 -2px 0 var(--teal); }
+.snav{ width:170px; flex:none; border-right:1px solid var(--ln); padding:10px 8px; display:flex; flex-direction:column; gap:2px; }
+.snav span{ padding:7px 10px; border-radius:7px; color:var(--mu); font-size:12.5px; display:flex; justify-content:space-between; } .snav span.on{ background:#19d3b01a; color:var(--teal); }
+.snav span em{ font-style:normal; font:600 10px var(--mono); color:var(--gold); }
+.fill{ display:flex; height:14px; border-radius:4px; overflow:hidden; }
+.fill i{ display:block; height:100%; }
+.toggle{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 12px; }
+.tg{ border:1px solid var(--ln); background:#12151b; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:2px; }
+.tg b{ font:600 11px var(--mono); } .tg span{ font-size:10.5px; color:var(--mu); }
+.tg.a{ border-color:#19d3b066; background:#19d3b012; } .tg.a span{ color:var(--teal); }
+.tg.d{ border-color:#ff6b5c66; background:#ff6b5c12; } .tg.d span{ color:var(--coral); }
+.tg.ch{ box-shadow:0 0 0 2px #ffd23a66; }
+
+/* ---------- the map ---------- */
+.mv{ position:absolute; inset:0; overflow:hidden; background:#0b0d11; }
+.mv canvas.ter{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; display:block; }
+.rg{ position:absolute; border:2px solid; border-radius:1px; }
+.rg.dash{ border-style:dashed; }
+.rg .lb{ position:absolute; left:3px; top:2px; font:600 10px var(--body); color:#fff; background:rgba(10,12,16,.72); padding:0 5px; border-radius:3px; white-space:nowrap; }
+.rg.hi{ border-width:3px; box-shadow:0 0 0 3px rgba(255,255,255,.18), 0 0 24px rgba(255,210,58,.35); }
+.rg.hi .lb{ background:var(--gold); color:#10151c; }
+.rg.faint{ opacity:.35; }
+.mbar{ position:absolute; top:10px; left:10px; right:10px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; z-index:3; }
+.mc{ background:rgba(20,23,29,.93); border:1px solid var(--ln); border-radius:8px; padding:5px 9px; font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; color:var(--soft); }
+.mc b{ color:var(--tx); font-weight:600; } .mc.gold{ background:var(--gold); border-color:var(--gold); color:#10151c; } .mc.gold b{ color:#10151c; }
+.mc.tealb{ border-color:var(--teal); color:var(--teal); }
+.mzoom{ position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:4px; z-index:3; }
+.mzoom span{ width:30px; height:30px; display:grid; place-items:center; background:rgba(20,23,29,.93); border:1px solid var(--ln); border-radius:8px; font:600 14px var(--body); color:var(--soft); }
+.mcoord{ position:absolute; left:10px; bottom:10px; font:600 10.5px var(--mono); color:var(--soft); background:rgba(20,23,29,.85); border:1px solid var(--ln); border-radius:6px; padding:3px 8px; z-index:3; }
+.mk{ position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; z-index:2; }
+.mk canvas{ box-shadow:0 0 0 2px #fff, 0 3px 8px rgba(0,0,0,.6); border-radius:2px; width:18px; height:18px; image-rendering:pixelated; }
+.mk .lb{ font:600 10px var(--body); color:#fff; background:rgba(10,12,16,.78); padding:0 5px; border-radius:4px; white-space:nowrap; }
+/* floating windows, the players window's look A */
+.fw{ position:absolute; z-index:5; display:flex; flex-direction:column; overflow:hidden; color:var(--tx);
+  background:rgba(20,23,29,.66); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.09); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+.fw.front{ z-index:6; }
+.fw .ft{ flex:none; display:flex; align-items:center; gap:8px; cursor:move; user-select:none; padding:7px 7px 6px 8px; }
+.fw .gp{ width:10px; height:16px; flex:none; background-image:radial-gradient(#8a91a0 1px, transparent 1.5px); background-size:4px 4px; }
+.fw .tt{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.04em; }
+.fw .ct{ font:600 11px var(--mono); color:var(--soft); }
+.fw .mn{ margin-left:auto; width:22px; height:22px; border-radius:6px; display:grid; place-items:center; color:var(--soft); font:600 15px var(--body); line-height:1; background:rgba(255,255,255,.06); }
+.fw .mn + .mn{ margin-left:0; }
+.fw .fsr{ flex:none; margin:0 8px 6px; height:30px; border-radius:8px; display:flex; align-items:center; gap:7px; padding:0 9px; font-size:12px; color:var(--dim); background:rgba(15,17,21,.55); border:1px solid rgba(255,255,255,.08); }
+.fw .fsr svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; }
+.fw .rows{ flex:1; min-height:0; overflow:hidden; padding-bottom:6px; }
+.fw .sg{ display:flex; align-items:center; gap:6px; padding:6px 12px 2px; font:600 10.5px var(--body); color:var(--mu); } .fw .sg .n{ margin-left:auto; font-family:var(--mono); }
+.fw .pr{ display:flex; align-items:center; gap:8px; padding:3px 12px; font-size:12.5px; }
+.fw .pr .nm{ font-weight:500; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.fw .pr .d{ margin-left:auto; font:600 9.5px var(--mono); color:var(--soft); opacity:.75; white-space:nowrap; }
+.fw .pr.on{ background:#ffd23a1f; box-shadow:inset 3px 0 0 var(--gold); }
+.fw .pr.kid{ padding-left:28px; }
+.fw .pr .eye{ width:14px; height:14px; flex:none; stroke:var(--soft); fill:none; stroke-width:2; opacity:.7; }
+.fw .pr .eye.off{ opacity:.25; }
+.fw .rz{ position:absolute; right:2px; bottom:2px; width:14px; height:14px; background:linear-gradient(135deg, transparent 52%, #9aa3b5 52%, #9aa3b5 60%, transparent 60%, transparent 72%, #9aa3b5 72%, #9aa3b5 80%, transparent 80%); opacity:.8; }
+.fw .chips{ display:flex; gap:4px; flex-wrap:wrap; padding:0 8px 6px; flex:none; }
+.fw .chips .kchip{ height:21px; font-size:10px; padding:0 6px; background:rgba(15,17,21,.55); border-color:rgba(255,255,255,.08); }
+.fw .ktabs{ display:flex; gap:2px; padding:0 8px 6px; flex:none; }
+.fw .ktabs span{ flex:1; text-align:center; padding:4px 0; border-radius:6px; font:600 10px var(--body); color:var(--mu); background:rgba(15,17,21,.45); }
+.fw .ktabs span.on{ background:rgba(25,211,176,.18); color:var(--teal); }
+.fw.folded .rows, .fw.folded .fsr, .fw.folded .chips, .fw.folded .ktabs, .fw.folded .rz{ display:none; }
+.fw.solid{ background:rgba(20,23,29,.97); backdrop-filter:none; -webkit-backdrop-filter:none; border-color:var(--ln); }
+.fw .foot{ flex:none; display:flex; gap:6px; padding:6px 8px 8px; border-top:1px solid rgba(255,255,255,.07); }
+.fw .foot .key{ background:rgba(15,17,21,.6); border-color:rgba(255,255,255,.1); }
+.fw .foot .key.pri{ background:var(--teal); color:#0f1115; }
+.rcard{ position:absolute; z-index:4; background:rgba(20,23,29,.97); border:1px solid var(--ln); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; width:300px; box-shadow:0 10px 26px rgba(0,0,0,.55); }
+.rcard .t{ display:flex; align-items:center; gap:8px; } .rcard .t b{ font:600 13px var(--mono); }
+.pin{ position:absolute; transform:translate(-50%,-50%); width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 11px var(--mono); color:#10151c; background:var(--gold); border:2px solid #10151c; box-shadow:0 0 0 3px #ffd23a55; z-index:3; }
+.hand{ position:absolute; width:10px; height:10px; background:#fff; border:2px solid #10151c; border-radius:2px; transform:translate(-50%,-50%); z-index:3; }
+.hand.edge{ width:8px; height:8px; border-radius:50%; }
+.size{ position:absolute; transform:translate(-50%,0); font:600 10.5px var(--mono); color:#10151c; background:var(--gold); padding:1px 6px; border-radius:4px; z-index:3; white-space:nowrap; }
+.cross{ position:absolute; width:26px; height:26px; transform:translate(-50%,-50%); z-index:3; }
+.cross::before, .cross::after{ content:""; position:absolute; background:#fff; box-shadow:0 0 0 1px #10151c; }
+.cross::before{ left:12px; top:0; width:2px; height:26px; } .cross::after{ top:12px; left:0; height:2px; width:26px; }
+.tip{ position:absolute; z-index:3; font:600 10.5px var(--mono); color:#e8eaf0; background:rgba(10,12,16,.85); border:1px solid var(--ln); padding:2px 7px; border-radius:5px; white-space:nowrap; }
+.banner{ position:absolute; left:50%; transform:translateX(-50%); top:52px; z-index:4; display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(20,23,29,.95); border:1px solid var(--gold); box-shadow:0 8px 20px rgba(0,0,0,.45); font-size:12.5px; }
+.banner b{ color:var(--gold); }
+.okline{ font-size:11.5px; color:#7fe0cf; background:#12302b; border:1px solid #24443f; border-radius:8px; padding:6px 9px; }
+.errline{ font-size:11.5px; color:#ff8f86; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:6px 9px; }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .three{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+ol.points{ margin:0; padding-left:22px; } ol.points li{ margin-bottom:8px; max-width:92ch; font-size:13.5px; } ol.points b{ color:var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Staff panel: Worlds, regions and drawing on the map: concepts</h1>
+    <p class="lede">Four sets, three looks each, for the owner's brief of 2026-11-26. BC is the new WORLDS tab: the servers, a server's dimensions, and the Region Guard regions in each. BD is the region editor. BE is the Map tab's new Regions window and the coloured rectangles. BF is drawing a new region from two points on the map. Pick one look per set, or mix them. The terrain is a drawn stand-in for BlueMap's; names, places and numbers are made up.</p>
+    <div class="legend" id="legend"></div>
+    <div class="setnav"><a href="#bc">BC Worlds tab</a> · <a href="#bd">BD Region editor</a> · <a href="#be">BE Regions window on the map</a> · <a href="#bf">BF Drawing a region</a></div>
+  </header>
+
+  <section id="bc"><h2>BC. The WORLDS tab</h2>
+    <p class="lede">Each look shows the grid of servers, then what you see after clicking Frostwarf. WORLDS sits in the menu between Map and Totems.</p>
+    <h3>BC A. Tiles, then dimension cards and a table</h3>
+    <div class="stage"><div><div class="dk short" id="bcA1"></div><div class="cap">Four tiles across: the server's name, online or not, players, tick time, its dimensions, and its regions counted by kind in their colours</div></div>
+      <div><div class="dk" id="bcA2"></div><div class="cap">Frostwarf: one card per dimension with its counts; the chosen dimension's regions in a table, sortable, with MAP › and EDIT › on each row</div></div></div>
+    <h3>BC B. Map tiles, then three columns</h3>
+    <div class="stage"><div><div class="dk short" id="bcB1"></div><div class="cap">Three tiles across, each with a small picture of its Overworld map and its regions outlined</div></div>
+      <div><div class="dk" id="bcB2"></div><div class="cap">Frostwarf: dimensions on the left, the regions grouped by kind in the middle, the chosen region's summary on the right with MAP › and EDIT ›</div></div></div>
+    <h3>BC C. Compact tiles, then a tree</h3>
+    <div class="stage"><div><div class="dk short" id="bcC1"></div><div class="cap">Five narrow tiles across: name, players and counts only; offline servers greyed with when they were last heard from</div></div>
+      <div><div class="dk" id="bcC2"></div><div class="cap">Frostwarf: every dimension as a heading that folds, the regions inside as a tree by parent (a mine's shell under its mine, plots under the town), the global region first</div></div></div>
+  </section>
+
+  <section id="bd"><h2>BD. The region editor</h2>
+    <p class="lede">Opened from EDIT › on WORLDS or on the map. Each look shows a different kind of region so all the parts are seen: A a protected region, B a player's claim (its Visitors, Owners and Members lists), C a mine (its block mix). Every look has the same parts; only the layout differs. Changes wait in gold until SAVE.</p>
+    <h3>BD A. A drawer over the list</h3>
+    <div class="stage"><div><div class="dk" id="bdA"></div><div class="cap">A drawer slides in from the right over WORLDS: general settings, bounds, people, then every flag by group as Allow / Deny / Inherit, showing what Inherit gives and where from</div></div></div>
+    <h3>BD B. A full page with sections</h3>
+    <div class="stage"><div><div class="dk" id="bdB"></div><div class="cap">The whole page: sections down the left with a gold count of unsaved changes; the flags as a table with one column per audience for claims and plots</div></div></div>
+    <h3>BD C. A card with tabs and flag tiles</h3>
+    <div class="stage"><div><div class="dk" id="bdC"></div><div class="cap">A card with tabs (Settings, Flags, People, Mine, Triggers); the mine's block mix as a bar and rows; flags shown as tiles that cycle Allow, Deny, Inherit on a click</div></div></div>
+  </section>
+
+  <section id="be"><h2>BE. The Regions window on the Map tab</h2>
+    <p class="lede">A second floating window beside the players window, with the same look: see-through, dragged by its strip, sized from its corner, folded with "–". Whichever was touched last is on top. The rectangles are BlueMap markers the page adds itself; a click on a row or a rectangle flies the map to the region and lights it.</p>
+    <h3>BE A. Grouped by kind, with colour chips</h3>
+    <div class="stage"><div><div class="dk" id="beA"></div><div class="cap">Kind chips switch each colour's rectangles on and off; the chosen region is outlined in its colour with a gold label, and a small card shows its main facts with EDIT ›</div></div></div>
+    <h3>BE B. A tree, with an eye on every row</h3>
+    <div class="stage"><div><div class="dk" id="beB"></div><div class="cap">Regions as a tree by parent, an eye on each row to show or hide its rectangle; every rectangle carries its name on the map</div></div></div>
+    <h3>BE C. Kind tabs and "in view only"</h3>
+    <div class="stage"><div><div class="dk" id="beC"></div><div class="cap">Tabs by kind, a switch to list only the regions in view, and the other regions faded while one is chosen; the players window folded to its strip</div></div></div>
+  </section>
+
+  <section id="bf"><h2>BF. Drawing a new region from two points</h2>
+    <p class="lede">From NEW REGION in the Regions window (Admins and Owners). BlueMap's page reports the block under each click, so the two corners come from the map itself. The region is made on the server that owns the world shown, by Region Guard, with Region Guard's own checks.</p>
+    <h3>BF A. Two clicks, then a form</h3>
+    <div class="stage"><div><div class="dk" id="bfA"></div><div class="cap">A gold banner says which corner to click; after the second the outline is drawn dashed between the pins and a form asks for the id, kind, priority and heights</div></div></div>
+    <h3>BF B. Two clicks, then handles to adjust</h3>
+    <div class="stage"><div><div class="dk" id="bfB"></div><div class="cap">After the two clicks the outline gets handles on its corners and edges with its size shown; the Regions window turns into the form, and Region Guard's check runs as it changes</div></div></div>
+    <h3>BF C. Typed corners with a pick key</h3>
+    <div class="stage"><div><div class="dk" id="bfC"></div><div class="cap">A form with both corners as numbers; PICK beside each puts a crosshair on the map that follows the pointer with its block, and a click fills that corner; SNAP TO CHUNKS rounds the corners out</div></div></div>
+  </section>
+
+  <section><h2>What every look shares</h2>
+    <div class="card"><ol class="points">
+      <li><b>Colours by kind.</b> Region red, mine gold, claim green, plot for sale light green with a dashed edge, open area for buying blue, the global region grey (never drawn as a rectangle: it is the whole world). Changeable in the decisions.</li>
+      <li><b>Where the regions come from.</b> Each game server answers for its own worlds, through Region Guard, when the tab or window opens and again when a region changes. A server that is off shows its tile greyed and no regions.</li>
+      <li><b>Who may change things.</b> Every rank sees; Admins and Owners edit, create and remove (Moderators see the editor read-only with "Admin" on its keys), as for items and bans.</li>
+      <li><b>Safety.</b> An edit carries the region's version: if someone changed it in game meanwhile, SAVE is refused and the new values are shown. Removing a region asks "Sure? Remove" for three seconds. Every save, creation and removal goes in the panel's log and the game's action log.</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- data ---------- */
+const K={protected:{l:"Region",c:"#ff5c5c"},mine:{l:"Mine",c:"#ffd23a"},claim:{l:"Claim",c:"#5ad16a"},plot:{l:"Plot for sale",c:"#a6e36b",dash:1},open:{l:"Open area",c:"#7fb2ff"},global:{l:"Global",c:"#9aa3b5"}};
+const KORDER=["protected","mine","plot","claim","open","global"];
+const SERVERS=[
+ {n:"BSP-Spawn",on:1,p:9,ms:14.2,d:["Overworld","Nether","End"],c:{protected:7,mine:0,plot:0,claim:0,open:0}},
+ {n:"Frostwarf",on:1,p:8,ms:21.6,d:["Overworld","Nether","End","Mining"],c:{protected:4,mine:2,plot:4,claim:31,open:1}},
+ {n:"Boulderbrook",on:1,p:6,ms:17.9,d:["Overworld","Nether","End"],c:{protected:3,mine:1,plot:6,claim:24,open:1}},
+ {n:"Moongrove",on:1,p:7,ms:33.0,d:["Overworld","Nether","End","Twilight"],c:{protected:2,mine:2,plot:2,claim:40,open:2}},
+ {n:"Stormfall",on:1,p:4,ms:12.5,d:["Overworld","Nether","End"],c:{protected:5,mine:0,plot:0,claim:0,open:0},pvp:1},
+ {n:"Sanctuary",on:1,p:2,ms:9.8,d:["Overworld"],c:{protected:1,mine:0,plot:8,claim:12,open:1}},
+ {n:"SafeRoom",on:0,p:0,ms:0,d:["Overworld"],c:{protected:1,mine:0,plot:0,claim:0,open:0},seen:"3 h ago"},
+];
+// Frostwarf's Overworld (world blocks; both corners inclusive)
+const R=[
+ {id:"__global__",k:"global",n:"Frostwarf Overworld",pri:"lowest"},
+ {id:"spawn_town",k:"protected",n:"Frostwarf Town",b:[-150,-64,-110,120,320,100],pri:10},
+ {id:"market",k:"protected",n:"Market square",b:[-40,-64,-35,30,320,20],pri:20,par:"spawn_town"},
+ {id:"plot_1",k:"plot",n:"Plot 1",b:[-140,60,52,-112,120,92],pri:30,par:"spawn_town",price:"4,000"},
+ {id:"plot_2",k:"plot",n:"Plot 2",b:[-106,60,52,-78,120,92],pri:30,par:"spawn_town",price:"4,000"},
+ {id:"plot_3",k:"plot",n:"Plot 3",b:[-72,60,52,-44,120,92],pri:30,par:"spawn_town",price:"5,500"},
+ {id:"plot_4",k:"plot",n:"Plot 4",b:[50,60,40,90,120,90],pri:30,par:"spawn_town",price:"6,000"},
+ {id:"arena",k:"protected",n:"PvP arena",b:[150,40,-205,235,140,-130],pri:10},
+ {id:"iron_mine",k:"mine",n:"Iron mine",b:[175,12,-90,222,62,-42],pri:15,reset:"14 min"},
+ {id:"iron_mine_shell",k:"protected",n:"Iron mine shell",b:[171,8,-94,226,66,-38],pri:14,par:"iron_mine",shell:1},
+ {id:"copper_mine",k:"mine",n:"Copper mine",b:[-265,20,120,-222,58,165],pri:15,reset:"41 min"},
+ {id:"wilds_east",k:"open",n:"Eastern wilds",b:[262,-64,-40,520,320,262],pri:5,cost:"12 / block"},
+ {id:"kestrel_base",k:"claim",n:"Kestrel's base",b:[330,-64,110,374,320,152],pri:40,par:"wilds_east",own:"Kestrel_88"},
+ {id:"tom_farm",k:"claim",n:"Tom's farm",b:[290,-64,180,332,320,216],pri:40,par:"wilds_east",own:"BrickLayerTom"},
+ {id:"mossy_hut",k:"claim",n:"Mossy's hut",b:[420,-64,40,446,320,66],pri:40,par:"wilds_east",own:"Mossy_Fen"},
+];
+const byId=id=>R.find(r=>r.id===id);
+const size=r=>r.b?`${r.b[3]-r.b[0]+1} × ${r.b[5]-r.b[2]+1}`:"whole world";
+const corners=r=>r.b?`${r.b[0]}, ${r.b[1]}, ${r.b[2]} → ${r.b[3]}, ${r.b[4]}, ${r.b[5]}`:"—";
+
+/* ---------- helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+ totem:'<svg viewBox="0 0 24 24"><path d="M12 2 7 7v10l5 5 5-5V7z"/><path d="M12 8v8"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ eye:'<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ eyeoff:'<svg class="eye off" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg>'};
+function frame(el,tab,url){
+  const d=document.getElementById(el);
+  d.appendChild(h(`<div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url">staff.buildsecureprotect.com${url||""}</div></div>`));
+  const body=h('<div class="dbody"></div>'); const side=h('<div class="side"><div class="brand">BSP <b>STAFF</b></div></div>');
+  [["users","Players"],["chat","Chat"],["map","Map"],["globe","Worlds"],["totem","Totems"],["shield","Staff"],["more","More"]].forEach(([i,l])=>
+    side.appendChild(h(`<div class="it${l===tab?" on":""}${l==="Worlds"?" new":""}">${SV[i]}<span>${l}</span></div>`)));
+  side.appendChild(h('<div style="margin-top:auto;padding:8px 10px;font-size:11.5px;color:#9aa3b5">Mrgregles <span class="rk">Owner</span></div>'));
+  body.appendChild(side); const main=h('<div class="main"></div>'); body.appendChild(main); d.appendChild(body); return main;}
+function counts(c,full){return `<div class="counts">${KORDER.filter(k=>k!=="global"&&(full||c[k])).map(k=>`<span title="${K[k].l}"><i class="sw" style="background:${K[k].c}"></i>${c[k]||0}</span>`).join("")}</div>`;}
+const kt=k=>`<span class="kt" style="background:${K[k].c}22;color:${K[k].c};border:1px solid ${K[k].c}55">${K[k].l}</span>`;
+const sw=k=>`<i class="sw" style="background:${K[k].c}${K[k].dash?";outline:1px dashed "+K[k].c+";outline-offset:1px":""}"></i>`;
+document.getElementById("legend").innerHTML=KORDER.map(k=>`<span><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("");
+
+/* ---------- terrain stand-in ---------- */
+function hash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function noise(seed){const p=[];const r=(()=>{let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})();
+  for(let i=0;i<64*64;i++)p.push(r());const g=(x,y)=>p[((y&63)*64)+(x&63)];
+  const sm=t=>t*t*(3-2*t);return(x,y)=>{const x0=Math.floor(x),y0=Math.floor(y),fx=sm(x-x0),fy=sm(y-y0);
+    const a=g(x0,y0),b=g(x0+1,y0),c=g(x0,y0+1),d=g(x0+1,y0+1);return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy;};}
+function terrain(cv,seed,w,hh){const s=4,W=Math.ceil(w/s),H=Math.ceil(hh/s);cv.width=W;cv.height=H;const g=cv.getContext("2d"),n=noise(seed),m=noise(seed+7);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=n(x/18,y/18)*.65+n(x/6,y/6)*.25+m(x/3,y/3)*.1;let c;
+    if(v<.27)c=[38,74,128];else if(v<.30)c=[60,104,160];else if(v<.325)c=[196,186,128];else if(v<.62)c=[78+(m(x,y)*14|0),128+(m(x/2,y/2)*18|0),58];
+    else if(v<.74)c=[46,92,44];else c=[120,120,118];const sh=(n((x+1)/18,y/18)-n(x/18,y/18))*240;g.fillStyle=`rgb(${c.map(q=>Math.max(0,Math.min(255,q+sh))|0)})`;g.fillRect(x,y,1,1);}
+  // a few paths and roofs near the town
+  g.fillStyle="#8f8466";for(let x=W*.18|0;x<W*.62;x++)g.fillRect(x,H*.5|0,1,1);for(let y=H*.2|0;y<H*.8;y++)g.fillRect(W*.4|0,y,1,1);
+  const rr=noise(seed+3);for(let i=0;i<40;i++){const x=(W*.2+rr(i,1)*W*.35)|0,y=(H*.3+rr(1,i)*H*.4)|0;g.fillStyle=["#7a3b2b","#5b5f6b","#8a6a3a"][i%3];g.fillRect(x,y,2,2);}}
+/* a map in a frame: world → pixels */
+function mapIn(main,o){const W=1050,H=666;const mv=h('<div class="mv"></div>');const cv=document.createElement("canvas");cv.className="ter";mv.appendChild(cv);terrain(cv,o.seed||11,W,H);
+  const s=o.s||1.18,cx=o.cx??120,cz=o.cz??28;const X=x=>(x-cx)*s+W/2,Z=z=>(z-cz)*s+H/2;
+  const add=(r,cls,label)=>{const k=K[r.k],e=h(`<div class="rg${k.dash?" dash":""}${cls?" "+cls:""}"></div>`);
+    e.style.left=X(r.b[0])+"px";e.style.top=Z(r.b[2])+"px";e.style.width=(r.b[3]-r.b[0]+1)*s+"px";e.style.height=(r.b[5]-r.b[2]+1)*s+"px";
+    e.style.borderColor=k.c;e.style.background=k.c+(cls&&cls.includes("hi")?"40":"26");if(label)e.appendChild(h(`<span class="lb">${label}</span>`));mv.appendChild(e);return e;};
+  main.appendChild(mv);return{mv,X,Z,add,s};}
+function heads(m,list){list.forEach(([n,x,z])=>{const c=document.createElement("canvas");c.width=8;c.height=8;const g=c.getContext("2d"),r=hash(n);
+  g.fillStyle=["#f2c9a0","#d9a066","#a8714a"][r%3];g.fillRect(0,0,8,8);g.fillStyle=["#3b2414","#d8b04a","#1a1a1a","#a33b1f"][r%4];g.fillRect(0,0,8,3);g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);
+  const e=h('<div class="mk"></div>');e.appendChild(c);e.appendChild(h(`<span class="lb">${n}</span>`));e.style.left=m.X(x)+"px";e.style.top=m.Z(z)+"px";m.mv.appendChild(e);});}
+function mapBar(m,extra){const b=h(`<div class="mbar"><span class="mc"><i class="dot"></i><b>Frostwarf</b> ▾</span><span class="mc"><b>Overworld</b> ▾</span><span class="mc">Pins ▾</span>${extra||""}</div>`);m.mv.appendChild(b);
+  m.mv.appendChild(h('<div class="mzoom"><span>+</span><span>−</span></div>'));}
+function playersWin(m,o){const w=h(`<div class="fw${o.folded?" folded":""}" style="left:${o.x}px;top:${o.y}px;width:236px;${o.folded?"":"height:"+o.h+"px"}">
+  <div class="ft"><i class="gp"></i><span class="tt">PLAYERS</span><span class="ct">46</span><span class="mn">${o.folded?"+":"–"}</span></div>
+  <div class="fsr">${SV.search}Search players</div><div class="rows">
+  <div class="sg"><span>Frostwarf</span><span class="n">8</span></div>
+  ${["Kestrel_88 OW","BrickLayerTom OW","Mossy_Fen NETHER","Juniper_K OW"].map(s=>{const[a,b]=s.split(" ");return`<div class="pr"><span class="nm">${a}</span><span class="d">${b}</span></div>`}).join("")}
+  <div class="sg"><span>BSP-Spawn</span><span class="n">9</span></div><div class="pr"><span class="nm">RuneSmith</span><span class="d">OW</span></div><div class="pr"><span class="nm">Newbie_Sam</span><span class="d">OW</span></div></div><i class="rz"></i></div>`);m.mv.appendChild(w);return w;}
+
+/* =================================================================== BC */
+function serverTile(s,look){
+  if(look==="B"){const t=h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}"><div class="thumb"><canvas></canvas></div>
+    <div style="display:flex;align-items:center;gap:8px"><i class="dot${s.on?"":" off"}"></i><span class="nm">${s.n}</span><span class="grow"></span><span class="mono mu" style="font-size:11px">${s.on?s.p+" online":"off · "+s.seen}</span></div>
+    <div class="st"><span>${s.d.length} dimensions</span>${s.on?`<span><b>${s.ms}</b> ms</span>`:""}${s.pvp?'<span class="rd">PvP world</span>':""}</div>${counts(s.c)}</div>`);
+    const cv=t.querySelector("canvas");terrain(cv,hash(s.n)%999,300,96);const g=cv.getContext("2d");
+    const rr=noise(hash(s.n));let i=0;KORDER.forEach(k=>{if(k==="global")return;for(let j=0;j<Math.min(4,s.c[k]||0);j++){i++;const x=(rr(i,2)*60+5)|0,y=(rr(2,i)*16+2)|0,w=(k==="open"?14:k==="claim"?3:6),hh=(k==="open"?9:k==="claim"?3:5);
+      g.strokeStyle=K[k].c;g.lineWidth=.6;g.fillStyle=K[k].c+"55";g.fillRect(x,y,w,hh);g.strokeRect(x+.3,y+.3,w-.6,hh-.6);}});
+    return t;}
+  if(look==="C") return h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}" style="padding:10px 12px;gap:6px"><div style="display:flex;align-items:center;gap:7px"><i class="dot${s.on?"":" off"}"></i><span class="nm" style="font-size:12px">${s.n}</span></div>
+    <div class="st" style="font-size:11px">${s.on?`<span><b>${s.p}</b> online</span><span>${s.d.length} dims</span>`:`<span>last heard ${s.seen}</span>`}</div>${counts(s.c)}</div>`);
+  return h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}"><div style="display:flex;align-items:center;gap:8px"><i class="dot${s.on?"":" off"}"></i><span class="nm">${s.n}</span>${s.pvp?'<span class="kt" style="background:#ff6b5c22;color:#ff6b5c;border:1px solid #ff6b5c55;margin-left:auto">PvP</span>':""}</div>
+    <div class="st">${s.on?`<span><b>${s.p}</b> online</span><span><b>${s.ms}</b> ms</span>`:`<span>off · last heard ${s.seen}</span>`}</div>
+    <div class="st" style="flex-wrap:wrap;gap:4px">${s.d.map(d=>`<span class="lchip" style="font-family:var(--body);font-weight:500">${d}</span>`).join("")}</div>
+    <div style="border-top:1px solid #262a33;padding-top:8px">${counts(s.c,1)}</div></div>`);}
+function grid(id,look,cols){const m=frame(id,"Worlds","/#worlds");m.appendChild(h(`<div class="pagehead"><span class="t">WORLDS</span><span class="mu" style="font-size:12px">7 servers · 6 online</span><span class="grow"></span><div class="search">${SV.search}Find a region on any server</div></div>`));
+  const g=h(`<div class="tiles" style="grid-template-columns:repeat(${cols},1fr)"></div>`);SERVERS.forEach(s=>g.appendChild(serverTile(s,look)));m.appendChild(g);}
+grid("bcA1","A",4);grid("bcB1","B",3);grid("bcC1","C",5);
+
+// A: dimension cards + table
+(()=>{const m=frame("bcA2","Worlds","/#worlds/frostwarf");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Worlds</a><span>/</span><b>Frostwarf</b><i class="dot"></i><span>8 online · 21.6 ms</span></div><span class="grow"></span><div class="search">${SV.search}Search Frostwarf's regions</div><span class="key vio">+ NEW REGION ON THE MAP</span></div>`));
+  const dc={Overworld:{protected:4,mine:2,plot:4,claim:3,open:1},Nether:{protected:1,mine:0,plot:0,claim:0,open:0},End:{protected:1},Mining:{protected:0,mine:3}};
+  const dt=h('<div class="dtabs"></div>');Object.entries(dc).forEach(([d,c],i)=>dt.appendChild(h(`<div class="dtab${i===0?" on":""}"><b>${d}</b><span class="mu" style="font-size:11px">${Object.values(c).reduce((a,b)=>a+b,0)+1} regions with the global one</span>${counts(c)}</div>`)));m.appendChild(dt);
+  const chips=h(`<div style="display:flex;gap:6px;padding:0 20px 10px;align-items:center">${KORDER.map(k=>`<span class="kchip${k==="global"?" off":""}"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}<span class="grow"></span><span class="mu" style="font-size:11.5px">Sorted by kind, then priority</span></div>`);m.appendChild(chips);
+  const box=h('<div class="box" style="margin:0 20px;flex:1"></div>');const t=h('<table class="tbl"><thead><tr><th></th><th>Id</th><th>Name</th><th>Kind</th><th>Size</th><th>Y</th><th>Priority</th><th>Parent</th><th>Owner / price</th><th></th></tr></thead><tbody></tbody></table>');
+  R.filter(r=>!r.shell&&r.k!=="global").slice(0,12).forEach((r,i)=>t.tBodies[0].appendChild(h(`<tr class="${r.id==="iron_mine"?"sel":""}"><td>${sw(r.k)}</td><td class="id">${r.id}</td><td>${r.n}</td><td>${kt(r.k)}</td><td class="mono">${size(r)}</td><td class="mono sub">${r.b[1]} to ${r.b[4]}</td><td class="mono">${r.pri}</td><td class="mono sub">${r.par||"—"}</td><td class="sub">${r.own||(r.price?r.price+" coins":r.cost||(r.reset?"resets in "+r.reset:"—"))}</td><td><span class="lnk">MAP ›</span>&nbsp;&nbsp;<span class="lnk">EDIT ›</span></td></tr>`)));
+  box.appendChild(t);m.appendChild(box);m.appendChild(h('<div style="padding:8px 20px 12px" class="note">The global region of each dimension sits under its card (GLOBAL SETTINGS ›); 3 more rows below.</div>'));})();
+
+// B: three columns
+(()=>{const m=frame("bcB2","Worlds","/#worlds/frostwarf");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Worlds</a><span>/</span><b>Frostwarf</b><span>/</span><b>Overworld</b></div><span class="grow"></span><div class="search">${SV.search}Search</div></div>`));
+  const row=h('<div style="flex:1;display:flex;gap:12px;padding:0 20px 18px;min-height:0"></div>');
+  const dims=h('<div class="box" style="width:200px;flex:none"><div class="bh">DIMENSIONS</div></div>');
+  [["Overworld",15],["Nether",2],["End",2],["Mining",4]].forEach(([d,n],i)=>dims.appendChild(h(`<div class="lrow${i===0?" on":""}"><span>${d}</span><span class="r">${n}</span></div>`)));
+  dims.appendChild(h('<div class="note" style="padding:10px 12px">Dimensions this server has loaded, with or without a map drawn.</div>'));
+  const list=h('<div class="box" style="flex:1;min-width:0"><div class="bh">REGIONS IN OVERWORLD <span class="grow"></span><span class="key sm vio">+ NEW ON THE MAP</span></div></div>');
+  KORDER.forEach(k=>{const rs=R.filter(r=>r.k===k&&!r.shell);if(!rs.length)return;list.appendChild(h(`<div class="grp">${sw(k)}${K[k].l}<span class="n">${rs.length}</span></div>`));
+    rs.slice(0,4).forEach(r=>list.appendChild(h(`<div class="lrow${r.id==="kestrel_base"?" on":""}"><span class="id">${r.id}</span><span class="mu">${r.n}</span><span class="r">${size(r)}</span></div>`)));});
+  const r=byId("kestrel_base");const det=h(`<div class="box" style="width:330px;flex:none"><div class="bh">${sw("claim")}<b style="color:#e8eaf0;font-family:var(--mono)">${r.id}</b><span class="grow"></span>${kt("claim")}</div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:12px"><div class="kv"><span>Name</span><span>${r.n}</span><span>Owner</span><span>Kestrel_88</span><span>Members</span><span>BrickLayerTom, Juniper_K</span><span>Corners</span><span class="mono">${corners(r)}</span><span>Size</span><span class="mono">${size(r)}, full height</span><span>Priority</span><span class="mono">40</span><span>Parent</span><span class="mono">wilds_east</span><span>Bought</span><span>18 Oct for 9,240 coins</span><span>Flags set</span><span>7 (visitors 5, members 2)</span></div>
+    <div style="display:flex;gap:6px"><span class="key">MAP ›</span><span class="key pri">EDIT ›</span></div><div class="note">Changes here are Region Guard's own: the owner sees them in game at once.</div></div></div>`);
+  row.appendChild(dims);row.appendChild(list);row.appendChild(det);m.appendChild(row);})();
+
+// C: tree
+(()=>{const m=frame("bcC2","Worlds","/#worlds/frostwarf");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Worlds</a><span>/</span><b>Frostwarf</b><i class="dot"></i><span>8 online</span></div><span class="grow"></span>${KORDER.slice(0,5).map(k=>`<span class="kchip"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}<div class="search" style="width:180px">${SV.search}Search</div></div>`));
+  const box=h('<div class="box" style="margin:0 20px 18px;flex:1"></div>');
+  const dimh=(d,n,open)=>h(`<div class="grp" style="background:#1d2129;padding:9px 12px;border-bottom:1px solid #2a2f3a;color:#e8eaf0;font-size:12.5px">${open?"▾":"▸"} ${d}<span class="mu" style="font-weight:500">· ${n} regions</span><span class="grow"></span>${open?'<span class="key sm vio">+ NEW ON THE MAP</span>':""}</div>`);
+  box.appendChild(dimh("Overworld",15,1));
+  const t=h('<table class="tbl"><tbody></tbody></table>');
+  const order=["__global__","spawn_town","market","plot_1","plot_2","plot_3","plot_4","arena","iron_mine","iron_mine_shell","copper_mine","wilds_east","kestrel_base","tom_farm"];
+  order.forEach(id=>{const r=byId(id);const depth=r.par?(byId(r.par).par?2:1):0;t.tBodies[0].appendChild(h(`<tr class="${id==="market"?"sel":""}"><td class="idc" style="padding-left:${12+depth*22}px">${depth?'<span class="dim">└ </span>':""}${sw(r.k)} <span class="id">${r.id}</span>${r.shell?' <span class="kt" style="background:#2a2f3a;color:#9aa3b5">shell</span>':""}</td><td>${r.n}</td><td>${kt(r.k)}</td><td class="mono">${size(r)}</td><td class="mono sub">priority ${r.pri}</td><td class="sub">${r.own||(r.price?r.price+" coins":r.reset?"resets in "+r.reset:"")}</td><td><span class="lnk">MAP ›</span>&nbsp;&nbsp;<span class="lnk">EDIT ›</span></td></tr>`));});
+  box.appendChild(t);box.appendChild(dimh("Nether",2));box.appendChild(dimh("End",2));box.appendChild(dimh("Mining",4));m.appendChild(box);})();
+
+/* =================================================================== BD */
+const FL=[
+ ["Protection",[["build","state","deny","allow","__global__"],["block-break","state",null,"deny","build"],["block-place","state",null,"deny","build"],["chest-access","state","allow",null],["interact","state","allow",null],["pvp","state","deny","deny","__global__"],["use-anvil","state",null,"allow","default"]]],
+ ["Mobs, fire and explosions",[["mob-spawning","state","deny",null],["deny-spawn","set",["minecraft:creeper","minecraft:phantom"],null],["creeper-explosion","state",null,"deny","__global__"],["fire-spread","state",null,"deny","__global__"]]],
+ ["Movement",[["entry","state",null,"allow","default"],["teleport-in","state","allow",null],["set-home","state","deny",null],["enderpearl","state",null,"allow","default"]]],
+ ["Map making",[["greeting","string","Welcome to Frostwarf Town",null],["farewell","string",null,"—"],["game-mode","mode",null,"—"],["time-lock","string",null,"—"]]],
+ ["Miscellaneous and BSP additions",[["blocked-cmds","set",["/sethome","/rtp"],null],["totem-place","state","deny",null],["allowed-ranks","set",null,"—"]]],
+];
+function triHtml(v,eff){return `<span class="tri"><span class="${v==="allow"?"a":""}">Allow</span><span class="${v==="deny"?"d":""}">Deny</span><span class="${v==null?"u":""}">Inherit</span></span>`;}
+function valHtml(t,v){if(t==="state")return triHtml(v);if(t==="set")return `<span style="display:flex;gap:4px;flex-wrap:wrap">${(v||[]).map(x=>`<span class="lchip">${x} ×</span>`).join("")}<span class="lchip" style="color:#19d3b0">+ add</span></span>`;
+  return `<span class="in${v?"":" ro"}" style="width:220px;height:26px">${v||"inherit"}</span>`;}
+
+// A: drawer, a protected region
+(()=>{const m=frame("bdA","Worlds","/#worlds/frostwarf/spawn_town");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Worlds</a><span>/</span><b>Frostwarf</b></div></div>`));
+  const t=h('<table class="tbl" style="margin:0 20px;width:calc(100% - 40px)"><tbody></tbody></table>');R.slice(1,9).forEach(r=>t.tBodies[0].appendChild(h(`<tr class="${r.id==="spawn_town"?"sel":""}"><td>${sw(r.k)}</td><td class="id">${r.id}</td><td>${r.n}</td><td>${kt(r.k)}</td><td class="mono">${size(r)}</td></tr>`)));m.appendChild(t);
+  m.appendChild(h('<div class="shade"></div>'));const r=byId("spawn_town");
+  const d=h(`<div class="drawer"><div class="dh">${sw("protected")}<b class="mono" style="font-size:14px">${r.id}</b>${kt("protected")}<span class="mu" style="font-size:11.5px">Frostwarf · Overworld · version 14</span><span class="grow"></span><span class="key sm">MAP ›</span><span class="mu" style="font-size:16px">×</span></div>
+  <div class="dbd"><div class="sect">GENERAL</div><div class="three"><div class="field"><label>Name</label><div class="in">Frostwarf Town</div></div><div class="field"><label>Id</label><div class="in mono">spawn_town</div></div><div class="field"><label>Kind</label><div class="in">Region ▾</div></div>
+    <div class="field"><label>Priority</label><div class="in mono ch">12</div></div><div class="field"><label>Parent</label><div class="in mono ro">none ▾</div></div><div class="field"><label>Children</label><div class="in ro">market, plot_1 … 4</div></div></div>
+  <div class="sect">BOUNDS <span class="key sm">REDRAW ON THE MAP</span></div><div class="three"><div class="field"><label>From x, y, z</label><div class="in mono">-150, -64, -110</div></div><div class="field"><label>To x, y, z</label><div class="in mono">120, 320, 100</div></div><div class="field"><label>Size</label><div class="in mono ro">271 × 211, full height</div></div></div>
+  <div class="sect">PEOPLE</div><div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px" class="mu">Owners <span class="lchip">Mrgregles ×</span> Members <span class="lchip" style="color:#19d3b0">+ add a player</span></div>
+  <div class="sect">FLAGS <span class="mu" style="font-family:var(--body);font-size:11px">9 set · 110 in all <span class="search" style="display:inline-flex;width:150px;height:24px;vertical-align:middle;margin-left:6px">${SV.search}Find a flag</span></span></div>
+  <div class="box" style="flex:1;border-radius:10px" id="bdAfl"></div></div>
+  <div class="savebar"><span class="chg">2 changes not saved</span><span class="grow"></span><span class="key dg">REMOVE REGION</span><span class="key">UNDO CHANGES</span><span class="key pri">SAVE</span></div></div>`);
+  const fl=d.querySelector("#bdAfl");FL.slice(0,2).forEach(([g,list])=>{fl.appendChild(h(`<div class="fgrp">${g}<span class="n">${list.length}</span></div>`));
+    list.forEach(([n,t,v,eff,from],i)=>fl.appendChild(h(`<div class="frow${n==="chest-access"?" ch":""}"><span class="fn">${n}</span>${valHtml(t,v)}<span class="eff">${v==null&&eff?`gives <b style="color:${eff==="allow"?"#19d3b0":"#ff6b5c"}">${eff}</b> from ${from}`:""}</span></div>`)));});
+  m.appendChild(d);})();
+
+// B: full page with sections, a claim
+(()=>{const m=frame("bdB","Worlds","/#worlds/frostwarf/kestrel_base");const r=byId("kestrel_base");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Frostwarf</a><span>/</span><span>Overworld</span><span>/</span>${sw("claim")}<b class="mono">${r.id}</b>${kt("claim")}<span>owned by <b>Kestrel_88</b></span></div><span class="grow"></span><span class="key">MAP ›</span><span class="key">UNDO</span><span class="key pri">SAVE 3 CHANGES</span></div>`));
+  const row=h('<div style="flex:1;display:flex;flex-direction:row;margin:0 20px 18px;min-height:0" class="box"></div>');
+  row.appendChild(h('<div class="snav"><span>General</span><span>Bounds</span><span>People</span><span class="on">Flags <em>3</em></span><span>Claim and sale</span><span>Triggers</span><span>History</span><span style="color:#ff8f86;margin-top:auto">Remove</span></div>'));
+  const c=h(`<div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="display:flex;gap:8px;padding:10px 12px;align-items:center;border-bottom:1px solid #2a2f3a"><div class="search">${SV.search}Find a flag</div>
+    <span class="kchip">All</span><span class="kchip" style="border-color:#19d3b0;color:#19d3b0">Set only</span><span class="kchip">Protection</span><span class="kchip">Mobs</span><span class="kchip">Movement</span><span class="kchip">Map making</span><span class="kchip">Other</span></div></div>`);
+  const t=h('<table class="tbl"><thead><tr><th>Flag</th><th>Region</th><th>Visitors</th><th>Members</th><th>Owners</th><th>In effect for a visitor</th></tr></thead><tbody></tbody></table>');
+  const rows=[["build",null,"deny","allow","allow","deny · from visitors"],["block-break",null,"deny","allow","allow","deny · from visitors"],["chest-access",null,"deny","deny","allow","deny · from visitors",1],["interact",null,"allow","allow","allow","allow"],["item-pickup",null,"deny","allow","allow","deny"],["enderpearl",null,null,"allow","allow","allow · default",1],["pvp","deny","—","—","—","deny · this region"],["greeting","Kestrel's base","—","—","—","“Kestrel's base”"],["mob-spawning",null,"—","—","—","allow · from wilds_east",1]];
+  const cell=v=>v==="—"?'<span class="dim">—</span>':v===null||v==="allow"||v==="deny"?triHtml(v):`<span class="in" style="height:24px;width:140px">${v}</span>`;
+  rows.forEach(([n,a,b,c2,d2,e,ch])=>t.tBodies[0].appendChild(h(`<tr class="${ch?"sel":""}"><td class="id">${n}</td><td>${cell(a)}</td><td>${cell(b)}</td><td>${cell(c2)}</td><td>${cell(d2)}</td><td class="sub">${e}</td></tr>`)));
+  c.appendChild(t);c.appendChild(h('<div class="note" style="padding:10px 12px">Visitors, Members and Owners are the claim\'s own lists, as the owner sets them with /claim flag; the Region column is the region\'s flags. Changed rows are marked; nothing is sent until SAVE.</div>'));
+  row.appendChild(c);m.appendChild(row);})();
+
+// C: card with tabs, a mine
+(()=>{const m=frame("bdC","Worlds","/#worlds/frostwarf/iron_mine");const r=byId("iron_mine");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Frostwarf</a><span>/</span><span>Overworld</span></div></div>`));
+  const card=h(`<div class="box" style="margin:0 20px 18px;flex:1"><div style="display:flex;align-items:center;gap:10px;padding:12px 14px">${sw("mine")}<b class="mono" style="font-size:15px">${r.id}</b>${kt("mine")}<span class="mu" style="font-size:12px">Iron mine · resets in 14 min · shell iron_mine_shell</span><span class="grow"></span><span class="key">RESET NOW</span><span class="key">MAP ›</span></div>
+    <div class="ptabs"><span>Settings</span><span>Flags</span><span>People</span><span class="on">Mine</span><span>Triggers</span></div>
+    <div style="display:flex;gap:18px;padding:14px;flex:1;min-height:0"><div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0" id="bdCmix"></div>
+    <div style="width:420px;flex:none;display:flex;flex-direction:column;gap:10px"><div class="sect">RESET</div><div class="two"><div class="field"><label>Every</label><div class="in mono ch">20 min</div></div><div class="field"><label>Next reset</label><div class="in ro">in 14 min (19:42)</div></div></div>
+      <div class="field"><label>Where players go when it resets</label><div class="in mono">198, 63, -96 · facing south</div></div>
+      <div class="sect">FLAGS FOR THIS MINE <span class="mu" style="font-family:var(--body);font-size:11px">click to cycle</span></div><div class="toggle" style="padding:0">
+      <div class="tg a"><b>block-break</b><span>allow</span></div><div class="tg d"><b>block-place</b><span>deny</span></div><div class="tg a ch"><b>mine-only-break</b><span>allow</span></div>
+      <div class="tg d"><b>pvp</b><span>deny</span></div><div class="tg"><b>fall-damage</b><span>inherit · allow</span></div><div class="tg d"><b>totem-place</b><span>deny</span></div>
+      <div class="tg"><b>item-pickup</b><span>inherit · allow</span></div><div class="tg d"><b>set-home</b><span>deny</span></div><div class="tg"><b>exp-drops</b><span>inherit · allow</span></div></div>
+      <div class="note">All 110 flags are on the Flags tab; this shows the ones that matter most for a mine.</div></div></div>
+    <div class="savebar"><span class="chg">2 changes not saved</span><span class="grow"></span><span class="key dg">REMOVE MINE</span><span class="key">UNDO</span><span class="key pri">SAVE</span></div></div>`);
+  const mix=card.querySelector("#bdCmix");const B=[["minecraft:stone",520,"#8a8a8a"],["minecraft:iron_ore",240,"#d8af93"],["minecraft:deepslate_iron_ore",90,"#9a7d6c"],["minecraft:coal_ore",100,"#3a3a3a"],["minecraft:andesite",50,"#a3a39c"]];
+  mix.appendChild(h('<div class="sect">BLOCK MIX <span class="mu" style="font-family:var(--body);font-size:11px">adds up to 100%</span></div>'));
+  mix.appendChild(h(`<div class="fill">${B.map(([n,w,c])=>`<i style="width:${w/10}%;background:${c}"></i>`).join("")}</div>`));
+  B.forEach(([n,w,c],i)=>mix.appendChild(h(`<div style="display:flex;align-items:center;gap:10px"><i class="sw" style="background:${c};width:14px;height:14px"></i><span class="mono" style="flex:1;font-size:12px">${n}</span><span class="in mono${i===1?" ch":""}" style="width:80px;height:26px;justify-content:flex-end">${(w/10).toFixed(1)} %</span><span class="mu">×</span></div>`)));
+  mix.appendChild(h('<div style="display:flex;gap:6px"><span class="key">+ ADD A BLOCK</span></div>'));
+  mix.appendChild(h(`<div class="sect" style="margin-top:6px">BOUNDS</div>`));mix.appendChild(h(`<div class="kv"><span>Corners</span><span class="mono">${corners(r)}</span><span>Size</span><span class="mono">${size(r)} × 51 high</span><span>Shell</span><span class="mono">iron_mine_shell, 4 blocks around</span></div>`));
+  m.appendChild(card);})();
+
+/* =================================================================== BE */
+const PL=[["Kestrel_88",352,128],["BrickLayerTom",306,198],["Juniper_K",-20,-6]];
+function regionRows(sel,group){let out="";KORDER.forEach(k=>{const rs=R.filter(r=>r.k===k&&!r.shell);if(!rs.length)return;
+  out+=`<div class="sg">${sw(k)}<span>${K[k].l}</span><span class="n">${rs.length}</span></div>`;rs.forEach(r=>out+=`<div class="pr${r.id===sel?" on":""}"><span class="nm">${r.id}</span><span class="d">${k==="global"?"world":size(r)}</span></div>`);});return out;}
+// A
+(()=>{const m0=frame("beA","Map","/#map");const m=mapIn(m0,{seed:11});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,r.id==="iron_mine"?"hi":"",r.id==="iron_mine"?"iron_mine":""));heads(m,PL);mapBar(m,'<span class="mc">Regions <b>on</b></span>');
+  playersWin(m,{x:10,y:54,h:250});
+  m.mv.appendChild(h(`<div class="fw front" style="left:258px;top:54px;width:250px;height:470px"><div class="ft"><i class="gp"></i><span class="tt">REGIONS</span><span class="ct">15</span><span class="mn">–</span></div>
+    <div class="fsr">${SV.search}Search regions</div><div class="chips">${KORDER.map(k=>`<span class="kchip${k==="global"?" off":""}"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}</div>
+    <div class="rows">${regionRows("iron_mine")}</div><div class="foot"><span class="key sm pri">+ NEW REGION</span></div><i class="rz"></i></div>`));
+  const r=byId("iron_mine");m.mv.appendChild(h(`<div class="rcard" style="right:52px;bottom:14px"><div class="t">${sw("mine")}<b>iron_mine</b>${kt("mine")}<span class="grow"></span><span class="mu">×</span></div>
+    <div class="kv"><span>Corners</span><span class="mono">${corners(r)}</span><span>Size</span><span class="mono">${size(r)}, Y 12 to 62</span><span>Priority</span><span class="mono">15</span><span>Resets</span><span>in 14 min</span></div><div style="display:flex;gap:6px"><span class="key sm">RESET NOW</span><span class="key sm pri">EDIT ›</span></div></div>`));
+  m.mv.appendChild(h('<div class="mcoord">Frostwarf · Overworld · 198, 63, -66</div>'));})();
+// B
+(()=>{const m0=frame("beB","Map","/#map");const m=mapIn(m0,{seed:11,s:1.5,cx:60,cz:10});R.filter(r=>r.b&&!r.shell&&r.id!=="tom_farm").forEach(r=>m.add(r,r.id==="plot_3"?"hi":"",r.id));heads(m,PL.slice(2));mapBar(m);
+  playersWin(m,{x:10,y:54,folded:1});
+  const tree=["__global__","spawn_town","market","plot_1","plot_2","plot_3","plot_4","arena","iron_mine","iron_mine_shell","copper_mine","wilds_east","kestrel_base","tom_farm","mossy_hut"];
+  m.mv.appendChild(h(`<div class="fw front" style="left:10px;top:96px;width:268px;height:520px"><div class="ft"><i class="gp"></i><span class="tt">REGIONS</span><span class="ct">15</span><span class="mn">–</span></div>
+    <div class="fsr">${SV.search}Search regions</div><div class="rows">${tree.map(id=>{const r=byId(id);const dp=r.par?(byId(r.par).par?2:1):0;
+      return `<div class="pr${id==="plot_3"?" on":""}" style="padding-left:${12+dp*16}px">${r.k==="global"?'<span style="width:14px"></span>':id==="tom_farm"?SV.eyeoff:SV.eye}${sw(r.k)}<span class="nm">${id}</span><span class="d">${r.k==="global"?"world":r.k==="plot"?r.price:r.own||""}</span></div>`;}).join("")}</div>
+    <div class="foot"><span class="key sm pri">+ NEW REGION</span><span class="key sm">SHOW ALL</span></div><i class="rz"></i></div>`));
+  m.mv.appendChild(h('<div class="mcoord">plot_3 · -58, 72 · for sale 5,500 coins · EDIT ›</div>'));})();
+// C
+(()=>{const m0=frame("beC","Map","/#map");const m=mapIn(m0,{seed:11});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,r.id==="wilds_east"?"hi":"faint",r.id==="wilds_east"?"wilds_east · open area":""));heads(m,PL);mapBar(m);
+  playersWin(m,{x:10,y:54,folded:1});
+  const rs=R.filter(r=>r.k!=="global"&&!r.shell);
+  m.mv.appendChild(h(`<div class="fw front" style="left:10px;top:96px;width:300px;height:420px"><div class="ft"><i class="gp"></i><span class="tt">REGIONS</span><span class="ct">15</span><span class="mn">–</span></div>
+    <div class="ktabs"><span class="on">ALL</span><span>REGION</span><span>MINE</span><span>PLOT</span><span>CLAIM</span><span>OPEN</span></div>
+    <div class="fsr">${SV.search}Search regions <span class="grow"></span><span style="color:#19d3b0;font-weight:600">● in view only</span></div>
+    <div class="rows">${rs.map(r=>`<div class="pr${r.id==="wilds_east"?" on":""}">${sw(r.k)}<span class="nm">${r.id}</span><span class="d">p${r.pri} · ${size(r)}</span></div>`).join("")}</div><i class="rz"></i></div>`));
+  const r=byId("wilds_east");m.mv.appendChild(h(`<div class="rcard" style="right:52px;top:56px"><div class="t">${sw("open")}<b>wilds_east</b>${kt("open")}<span class="grow"></span><span class="mu">×</span></div>
+    <div class="kv"><span>Size</span><span class="mono">${size(r)}, full height</span><span>Price</span><span>12 coins a block, 5 to 64 wide</span><span>Claims inside</span><span>3: kestrel_base, tom_farm, mossy_hut</span></div><div style="display:flex;gap:6px"><span class="key sm">ZOOM TO FIT</span><span class="key sm pri">EDIT ›</span></div></div>`));})();
+
+/* =================================================================== BF */
+const NEWB=[-330,-160,-250,-95];// x1,z1,x2,z2 of the drawn box
+function drawn(m,dash){const e=h(`<div class="rg dash" style="border-color:#ff5c5c;background:#ff5c5c22"></div>`);e.style.left=m.X(NEWB[0])+"px";e.style.top=m.Z(NEWB[1])+"px";e.style.width=(NEWB[2]-NEWB[0]+1)*m.s+"px";e.style.height=(NEWB[3]-NEWB[1]+1)*m.s+"px";m.mv.appendChild(e);return e;}
+// A
+(()=>{const m0=frame("bfA","Map","/#map");const m=mapIn(m0,{seed:11,cx:-80,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"faint",""));mapBar(m,'<span class="mc gold"><b>DRAWING</b> a new region · Esc to stop</span>');
+  drawn(m);[["1",NEWB[0],NEWB[1]],["2",NEWB[2],NEWB[3]]].forEach(([t,x,z])=>{const p=h(`<div class="pin">${t}</div>`);p.style.left=m.X(x)+"px";p.style.top=m.Z(z)+"px";m.mv.appendChild(p);});
+  m.mv.appendChild(h(`<div class="tip" style="left:${m.X(NEWB[0])+14}px;top:${m.Z(NEWB[1])-26}px">1 · -330, 71, -160</div>`));m.mv.appendChild(h(`<div class="tip" style="left:${m.X(NEWB[2])+14}px;top:${m.Z(NEWB[3])+8}px">2 · -250, 66, -95</div>`));
+  m.mv.appendChild(h('<div class="banner"><b>Both corners set.</b> Click either pin to move it, or fill in the form. <span class="key sm">START AGAIN</span></div>'));
+  m.mv.appendChild(h(`<div class="rcard" style="right:52px;top:56px;width:340px"><div class="t"><b style="font-family:var(--body)">New region on Frostwarf · Overworld</b></div>
+    <div class="two"><div class="field"><label>Id</label><div class="in mono">north_farms</div></div><div class="field"><label>Kind</label><div class="in">Region ▾</div></div>
+    <div class="field"><label>Name</label><div class="in">North farms</div></div><div class="field"><label>Priority</label><div class="in mono">10</div></div>
+    <div class="field"><label>Y from</label><div class="in mono">-64 (world bottom)</div></div><div class="field"><label>Y to</label><div class="in mono">320 (world top)</div></div></div>
+    <div class="note">81 × 66 blocks. Kinds: Region, Mine, Plot for sale, Open area. Claims are bought by players; each world has one global region.</div>
+    <div class="okline">Region Guard's check: fine, nothing in the way.</div><div style="display:flex;gap:6px;justify-content:flex-end"><span class="key">CANCEL</span><span class="key pri">CREATE REGION</span></div></div>`));})();
+// B
+(()=>{const m0=frame("bfB","Map","/#map");const m=mapIn(m0,{seed:11,cx:-80,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"",""));mapBar(m,'<span class="mc gold"><b>DRAWING</b> · drag a handle to adjust</span>');
+  const b=[-330,-160,-120,60];const e=h(`<div class="rg dash" style="border-color:#a6e36b;background:#a6e36b26"></div>`);e.style.left=m.X(b[0])+"px";e.style.top=m.Z(b[1])+"px";e.style.width=(b[2]-b[0]+1)*m.s+"px";e.style.height=(b[3]-b[1]+1)*m.s+"px";m.mv.appendChild(e);
+  const xs=[b[0],(b[0]+b[2])/2,b[2]],zs=[b[1],(b[1]+b[3])/2,b[3]];xs.forEach((x,i)=>zs.forEach((z,j)=>{if(i===1&&j===1)return;const hd=h(`<div class="hand${(i===1||j===1)?" edge":""}"></div>`);hd.style.left=m.X(x)+"px";hd.style.top=m.Z(z)+"px";m.mv.appendChild(hd);}));
+  m.mv.appendChild(h(`<div class="size" style="left:${m.X((b[0]+b[2])/2)}px;top:${m.Z(b[3])+8}px">211 × 221</div>`));
+  m.mv.appendChild(h(`<div class="fw front solid" style="left:10px;top:54px;width:300px;height:470px"><div class="ft"><i class="gp"></i><span class="tt">NEW REGION</span><span class="mn">–</span></div>
+    <div class="rows" style="padding:0 10px;display:flex;flex-direction:column;gap:8px"><div class="field"><label>Kind</label><div style="display:flex;gap:4px;flex-wrap:wrap">${["protected","mine","plot","open"].map(k=>`<span class="kchip${k==="plot"?"":" off"}" style="text-decoration:none"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}</div></div>
+    <div class="two"><div class="field"><label>Id</label><div class="in mono">plot_5</div></div><div class="field"><label>Price (coins)</label><div class="in mono">6,000</div></div><div class="field"><label>Priority</label><div class="in mono">30</div></div><div class="field"><label>Parent</label><div class="in mono">spawn_town ▾</div></div></div>
+    <div class="two"><div class="field"><label>Corner 1</label><div class="in mono">-330, -160</div></div><div class="field"><label>Corner 2</label><div class="in mono">-120, 60</div></div></div>
+    <div class="field"><label>Height</label><div class="in">Full height ▾</div></div>
+    <div class="errline">Region Guard refuses this: part of it lies over plot_1 (Plot 1). Drag the bottom edge back, or pick another kind.</div></div>
+    <div class="foot"><span class="key sm">CANCEL</span><span class="grow"></span><span class="key sm" style="opacity:.5">CREATE</span></div></div>`));})();
+// C
+(()=>{const m0=frame("bfC","Map","/#map");const m=mapIn(m0,{seed:11,cx:-80,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"faint",""));mapBar(m);
+  const p=h('<div class="pin">1</div>');p.style.left=m.X(-330)+"px";p.style.top=m.Z(-160)+"px";m.mv.appendChild(p);
+  const cx=m.X(-248),cz=m.Z(-96);m.mv.appendChild(h(`<div class="cross" style="left:${cx}px;top:${cz}px"></div>`));m.mv.appendChild(h(`<div class="tip" style="left:${cx+16}px;top:${cz+10}px">-248, 66, -96 · grass block</div>`));
+  const e=h('<div class="rg dash" style="border-color:#ff5c5c88;background:#ff5c5c14"></div>');e.style.left=m.X(-330)+"px";e.style.top=m.Z(-160)+"px";e.style.width=(-248+330)*m.s+"px";e.style.height=(-96+160)*m.s+"px";m.mv.appendChild(e);
+  m.mv.appendChild(h(`<div class="fw front solid" style="right:52px;left:auto;top:54px;width:330px;height:430px"><div class="ft"><i class="gp"></i><span class="tt">NEW REGION</span><span class="mn">–</span></div>
+    <div class="rows" style="padding:0 10px;display:flex;flex-direction:column;gap:8px">
+    <div class="field"><label>Corner 1 (x, y, z)</label><div style="display:flex;gap:6px"><div class="in mono" style="flex:1">-330</div><div class="in mono" style="flex:1">71</div><div class="in mono" style="flex:1">-160</div><span class="key sm">PICK</span></div></div>
+    <div class="field"><label>Corner 2 (x, y, z)</label><div style="display:flex;gap:6px"><div class="in mono ch" style="flex:1">-248</div><div class="in mono ch" style="flex:1">66</div><div class="in mono ch" style="flex:1">-96</div><span class="key sm pri">PICKING…</span></div></div>
+    <div style="display:flex;gap:10px;font-size:12px" class="mu"><span><b style="color:#19d3b0">■</b> Snap to chunks</span><span>□ Full height</span></div>
+    <div class="two"><div class="field"><label>Id</label><div class="in mono">north_farms</div></div><div class="field"><label>Kind</label><div class="in">Region ▾</div></div><div class="field"><label>Priority</label><div class="in mono">10</div></div><div class="field"><label>Parent</label><div class="in mono ro">none ▾</div></div></div>
+    <div class="note">Snapped: -336, -160 to -241, -81 (6 × 5 chunks). Y from the two picked blocks: 66 to 71; untick to choose.</div></div>
+    <div class="foot"><span class="key sm">CANCEL</span><span class="grow"></span><span class="key sm pri">CREATE</span></div></div>`));
+  m.mv.appendChild(h('<div class="mcoord">Click the map to set corner 2 · Esc to stop</div>'));})();
+</script>
+</body>
+</html>

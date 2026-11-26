@@ -1,0 +1,922 @@
+[
+ {
+  "name": "passthrough",
+  "kind": "state",
+  "group": "Protection",
+  "def": "deny",
+  "about": "allow: this region does not protect its ground, only carries flags",
+  "lists": false
+ },
+ {
+  "name": "build",
+  "kind": "state",
+  "group": "Protection",
+  "def": "",
+  "about": "the umbrella: members may build, others may not, unless set",
+  "lists": false
+ },
+ {
+  "name": "block-break",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "breaking blocks",
+  "lists": true
+ },
+ {
+  "name": "block-place",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "placing blocks",
+  "lists": true
+ },
+ {
+  "name": "interact",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "using blocks with a screen or state, animals, villagers, armour stands",
+  "lists": true
+ },
+ {
+  "name": "use",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "doors, trapdoors, gates, buttons, levers, repeaters",
+  "lists": true
+ },
+ {
+  "name": "chest-access",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "opening any inventory",
+  "lists": true
+ },
+ {
+  "name": "ride",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "mounting boats, minecarts and animals",
+  "lists": true
+ },
+ {
+  "name": "sleep",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "beds",
+  "lists": true
+ },
+ {
+  "name": "respawn-anchors",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "charging or using respawn anchors",
+  "lists": true
+ },
+ {
+  "name": "vehicle-place",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "placing boats and minecarts",
+  "lists": true
+ },
+ {
+  "name": "vehicle-destroy",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "breaking boats and minecarts",
+  "lists": true
+ },
+ {
+  "name": "lighter",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "flint and steel, fire charges",
+  "lists": true
+ },
+ {
+  "name": "block-trampling",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "farmland and turtle eggs",
+  "lists": true
+ },
+ {
+  "name": "item-frame-rotation",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "rotating items in frames",
+  "lists": true
+ },
+ {
+  "name": "use-anvil",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "anvils",
+  "lists": true
+ },
+ {
+  "name": "use-dripleaf",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "big dripleaf",
+  "lists": true
+ },
+ {
+  "name": "damage-animals",
+  "kind": "state",
+  "group": "Protection",
+  "def": "build",
+  "about": "hurting animals, villagers, golems",
+  "lists": true
+ },
+ {
+  "name": "pvp",
+  "kind": "state",
+  "group": "Protection",
+  "def": "allow",
+  "about": "player against player, where either stands",
+  "lists": false
+ },
+ {
+  "name": "tnt",
+  "kind": "state",
+  "group": "Protection",
+  "def": "allow",
+  "about": "TNT and TNT minecarts",
+  "lists": false
+ },
+ {
+  "name": "firework-damage",
+  "kind": "state",
+  "group": "Protection",
+  "def": "allow",
+  "about": "firework rockets hurting players",
+  "lists": false
+ },
+ {
+  "name": "creeper-explosion",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "creeper blasts; also spares blocks inside",
+  "lists": false
+ },
+ {
+  "name": "enderdragon-block-damage",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "the dragon breaking blocks",
+  "lists": false
+ },
+ {
+  "name": "ghast-fireball",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "fireballs and wither skulls",
+  "lists": false
+ },
+ {
+  "name": "other-explosion",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "beds, crystals, modded explosions",
+  "lists": false
+ },
+ {
+  "name": "wither-damage",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "wither explosions and block breaking",
+  "lists": false
+ },
+ {
+  "name": "fire-spread",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "fire catching on new blocks (mixin: fire)",
+  "lists": false
+ },
+ {
+  "name": "fire-burn",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "fire destroying a block (mixin: fire)",
+  "lists": false
+ },
+ {
+  "name": "lava-fire",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "lava starting fires (mixin: fire)",
+  "lists": false
+ },
+ {
+  "name": "enderman-grief",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "endermen picking up or placing blocks",
+  "lists": false
+ },
+ {
+  "name": "snowman-trails",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "snow golems leaving snow",
+  "lists": false
+ },
+ {
+  "name": "ravager-grief",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "ravagers breaking blocks",
+  "lists": false
+ },
+ {
+  "name": "mob-damage",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "mobs hurting players",
+  "lists": false
+ },
+ {
+  "name": "mob-spawning",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "natural, spawner and egg spawns",
+  "lists": false
+ },
+ {
+  "name": "deny-spawn",
+  "kind": "string-set",
+  "group": "Mobs, fire and explosions",
+  "def": "",
+  "about": "mob ids that may not spawn, comma separated",
+  "lists": false
+ },
+ {
+  "name": "entity-painting-destroy",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "non-players breaking paintings",
+  "lists": false
+ },
+ {
+  "name": "entity-item-frame-destroy",
+  "kind": "state",
+  "group": "Mobs, fire and explosions",
+  "def": "allow",
+  "about": "non-players breaking item frames",
+  "lists": false
+ },
+ {
+  "name": "lightning",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "lightning strikes",
+  "lists": false
+ },
+ {
+  "name": "water-flow",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "water spreading in or into the region (mixin: fluids)",
+  "lists": false
+ },
+ {
+  "name": "lava-flow",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "lava spreading in or into the region (mixin: fluids)",
+  "lists": false
+ },
+ {
+  "name": "snow-fall",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "snow settling (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "snow-melt",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "snow melting (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "ice-form",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "water freezing (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "ice-melt",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "ice melting (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "frosted-ice-form",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "Frost Walker ice (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "frosted-ice-melt",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "frosted ice melting (mixin: weather)",
+  "lists": false
+ },
+ {
+  "name": "mushroom-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "mushrooms spreading (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "leaf-decay",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "leaves decaying (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "grass-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "grass spreading onto dirt (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "mycelium-spread",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "mycelium spreading (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "vine-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "vines and kelp growing",
+  "lists": false
+ },
+ {
+  "name": "rock-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "dripstone and amethyst growing (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "sculk-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "sculk spreading (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "crop-growth",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "crops, saplings, cactus, sugar cane, bamboo",
+  "lists": false
+ },
+ {
+  "name": "soil-dry",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "farmland turning back to dirt (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "coral-fade",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "coral dying out of water (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "copper-fade",
+  "kind": "state",
+  "group": "Natural events",
+  "def": "allow",
+  "about": "copper oxidising (mixin: growth)",
+  "lists": false
+ },
+ {
+  "name": "entry",
+  "kind": "state",
+  "group": "Movement",
+  "def": "",
+  "about": "deny keeps non-members out; members always pass",
+  "lists": false
+ },
+ {
+  "name": "exit",
+  "kind": "state",
+  "group": "Movement",
+  "def": "",
+  "about": "deny keeps non-members in; members always pass",
+  "lists": false
+ },
+ {
+  "name": "exit-via-teleport",
+  "kind": "state",
+  "group": "Movement",
+  "def": "allow",
+  "about": "leaving by teleport when exit is denied",
+  "lists": false
+ },
+ {
+  "name": "exit-override",
+  "kind": "boolean",
+  "group": "Movement",
+  "def": "",
+  "about": "true: everyone may always leave",
+  "lists": false
+ },
+ {
+  "name": "entry-deny-message",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "shown when entry is refused",
+  "lists": false
+ },
+ {
+  "name": "exit-deny-message",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "shown when exit is refused",
+  "lists": false
+ },
+ {
+  "name": "notify-enter",
+  "kind": "boolean",
+  "group": "Movement",
+  "def": "",
+  "about": "tell admins when someone enters",
+  "lists": false
+ },
+ {
+  "name": "notify-leave",
+  "kind": "boolean",
+  "group": "Movement",
+  "def": "",
+  "about": "tell admins when someone leaves",
+  "lists": false
+ },
+ {
+  "name": "greeting",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "chat line on entering",
+  "lists": false
+ },
+ {
+  "name": "greeting-title",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "title on entering; \\\\n before the subtitle",
+  "lists": false
+ },
+ {
+  "name": "farewell",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "chat line on leaving",
+  "lists": false
+ },
+ {
+  "name": "farewell-title",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "title on leaving; \\\\n before the subtitle",
+  "lists": false
+ },
+ {
+  "name": "enderpearl",
+  "kind": "state",
+  "group": "Movement",
+  "def": "allow",
+  "about": "ender pearls from or into the region",
+  "lists": true
+ },
+ {
+  "name": "chorus-fruit-teleport",
+  "kind": "state",
+  "group": "Movement",
+  "def": "allow",
+  "about": "chorus fruit from or into the region",
+  "lists": true
+ },
+ {
+  "name": "teleport",
+  "kind": "location",
+  "group": "Movement",
+  "def": "",
+  "about": "where /rg teleport goes; 'here' for your position",
+  "lists": false
+ },
+ {
+  "name": "spawn",
+  "kind": "location",
+  "group": "Movement",
+  "def": "",
+  "about": "where players who die inside respawn",
+  "lists": false
+ },
+ {
+  "name": "sale-group",
+  "kind": "string",
+  "group": "Map making",
+  "def": "",
+  "about": "a plot's sale group: Land Offices set to CHOSEN list the groups ticked for them (D143)",
+  "lists": false
+ },
+ {
+  "name": "teleport-message",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "shown after /rg teleport",
+  "lists": false
+ },
+ {
+  "name": "border-warning",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "world default: shown near the world border (border.warnDistance blocks before it)",
+  "lists": false
+ },
+ {
+  "name": "border-message",
+  "kind": "string",
+  "group": "Movement",
+  "def": "",
+  "about": "world default: shown when a player is pushed back at the world border",
+  "lists": false
+ },
+ {
+  "name": "item-pickup",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "picking up items",
+  "lists": true
+ },
+ {
+  "name": "item-drop",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "dropping items",
+  "lists": true
+ },
+ {
+  "name": "exp-drops",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "experience orbs from mobs and blocks",
+  "lists": false
+ },
+ {
+  "name": "deny-message",
+  "kind": "string",
+  "group": "Map making",
+  "def": "",
+  "about": "the refusal message",
+  "lists": false
+ },
+ {
+  "name": "invincible",
+  "kind": "state",
+  "group": "Map making",
+  "def": "deny",
+  "about": "allow: players inside take no damage",
+  "lists": false
+ },
+ {
+  "name": "fall-damage",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "fall damage",
+  "lists": false
+ },
+ {
+  "name": "game-mode",
+  "kind": "game-mode",
+  "group": "Map making",
+  "def": "",
+  "about": "game mode forced while inside",
+  "lists": false
+ },
+ {
+  "name": "time-lock",
+  "kind": "string",
+  "group": "Map making",
+  "def": "",
+  "about": "day, noon, night, midnight or ticks; what players see",
+  "lists": false
+ },
+ {
+  "name": "weather-lock",
+  "kind": "string",
+  "group": "Map making",
+  "def": "",
+  "about": "clear or downfall; what players see",
+  "lists": false
+ },
+ {
+  "name": "natural-health-regen",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "healing from food (mixin: hunger)",
+  "lists": false
+ },
+ {
+  "name": "natural-hunger-drain",
+  "kind": "state",
+  "group": "Map making",
+  "def": "allow",
+  "about": "getting hungry (mixin: hunger)",
+  "lists": false
+ },
+ {
+  "name": "heal-delay",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "seconds between heals",
+  "lists": false
+ },
+ {
+  "name": "heal-amount",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "half-hearts per heal; negative hurts",
+  "lists": false
+ },
+ {
+  "name": "heal-min-health",
+  "kind": "double",
+  "group": "Map making",
+  "def": "",
+  "about": "hurting stops at this health",
+  "lists": false
+ },
+ {
+  "name": "heal-max-health",
+  "kind": "double",
+  "group": "Map making",
+  "def": "",
+  "about": "healing stops at this health",
+  "lists": false
+ },
+ {
+  "name": "feed-delay",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "seconds between feedings",
+  "lists": false
+ },
+ {
+  "name": "feed-amount",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "food points per feeding; negative starves",
+  "lists": false
+ },
+ {
+  "name": "feed-min-hunger",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "starving stops at this food level",
+  "lists": false
+ },
+ {
+  "name": "feed-max-hunger",
+  "kind": "int",
+  "group": "Map making",
+  "def": "",
+  "about": "feeding stops at this food level",
+  "lists": false
+ },
+ {
+  "name": "blocked-cmds",
+  "kind": "string-set",
+  "group": "Map making",
+  "def": "",
+  "about": "commands refused inside, comma separated",
+  "lists": false
+ },
+ {
+  "name": "allowed-cmds",
+  "kind": "string-set",
+  "group": "Map making",
+  "def": "",
+  "about": "only these commands work inside",
+  "lists": false
+ },
+ {
+  "name": "pistons",
+  "kind": "state",
+  "group": "Miscellaneous",
+  "def": "allow",
+  "about": "pistons moving, including into the region",
+  "lists": false
+ },
+ {
+  "name": "send-chat",
+  "kind": "state",
+  "group": "Miscellaneous",
+  "def": "allow",
+  "about": "chatting from inside",
+  "lists": false
+ },
+ {
+  "name": "receive-chat",
+  "kind": "state",
+  "group": "Miscellaneous",
+  "def": "allow",
+  "about": "hearing chat while inside",
+  "lists": false
+ },
+ {
+  "name": "potion-splash",
+  "kind": "state",
+  "group": "Miscellaneous",
+  "def": "allow",
+  "about": "splash and lingering potions landing",
+  "lists": false
+ },
+ {
+  "name": "dispenser-use",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "dispensers firing into the region (mixin: dispensers)",
+  "lists": false
+ },
+ {
+  "name": "falling-blocks",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "sand and gravel landing inside (mixin: fallingBlocks)",
+  "lists": false
+ },
+ {
+  "name": "deny-place",
+  "kind": "string-set",
+  "group": "BSP",
+  "def": "",
+  "about": "blocks nobody may place here: ids, @mod, #tag",
+  "lists": false
+ },
+ {
+  "name": "deny-use",
+  "kind": "string-set",
+  "group": "BSP",
+  "def": "",
+  "about": "blocks and items nobody may right-click here",
+  "lists": false
+ },
+ {
+  "name": "deny-break",
+  "kind": "string-set",
+  "group": "BSP",
+  "def": "",
+  "about": "blocks nobody may break here",
+  "lists": false
+ },
+ {
+  "name": "deny-carry",
+  "kind": "string-set",
+  "group": "BSP",
+  "def": "",
+  "about": "blocks and items not allowed in at all, even carried",
+  "lists": false
+ },
+ {
+  "name": "allowed-ranks",
+  "kind": "string-set",
+  "group": "BSP",
+  "def": "",
+  "about": "LuckPerms groups that may enter",
+  "lists": false
+ },
+ {
+  "name": "teleport-in",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "BSP Teleport: teleporting into the region",
+  "lists": false
+ },
+ {
+  "name": "teleport-out",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "BSP Teleport: teleporting out",
+  "lists": false
+ },
+ {
+  "name": "set-home",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "BSP Teleport: setting a home here",
+  "lists": false
+ },
+ {
+  "name": "totem-place",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "BSP Core: placing Shatter Totems",
+  "lists": false
+ },
+ {
+  "name": "totem-drop",
+  "kind": "state",
+  "group": "BSP",
+  "def": "allow",
+  "about": "BSP Core: dropping Shatter Totems",
+  "lists": false
+ },
+ {
+  "name": "mine-only-break",
+  "kind": "state",
+  "group": "BSP",
+  "def": "deny",
+  "about": "mines: only the mine's blocks may be broken",
+  "lists": false
+ }
+]

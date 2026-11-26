@@ -146,7 +146,12 @@ const MapView = (() => {
       root = el("div", "mapview"); list = el("div", "mlist"); stage = el("div", "mstage");
       root.appendChild(list); root.appendChild(stage);
       wtag = el("div", "mtag hidden"); root.appendChild(wtag); // the size while the window is dragged bigger (D562)
-      list.addEventListener("pointerdown", () => list.classList.add("front"), true); // last touched on top (D556)
+      list.addEventListener("pointerdown", () => { list.classList.add("front"); MapRegions.back(); }, true); // last touched on top (D556, D776)
+      MapRegions.attach({ root, cur: () => cur, serverName, serverOf, dimOf, mapId, bm, desk, cardBox: () => cardBox, sizeTag: () => wtag, // SU-156
+        frame: () => frame, stage: () => stage, // drawing (SU-157)
+        stopOthers: () => { stopQuiet(); if (offSel) { offSel = null; dropOffPin(); } }, redraw: () => { if (host) redraw(); }, redrawCard: () => { if (host && frame) drawCard(); },
+        back: () => list.classList.remove("front"), closePlayers: () => { if (listOpen) { listOpen = false; drawList(); } },
+        playersRect: () => (desk() && list.offsetWidth ? { x: list.offsetLeft, y: list.offsetTop, w: list.offsetWidth } : null) });
     }
     main.appendChild(root);
     if (maps === null || mapsStale) await loadMaps();
@@ -172,18 +177,19 @@ const MapView = (() => {
       bar = el("div", "mbar"); cardBox = el("div", "mcardhost"); line = el("div", "mgold hidden");
       cardBox.addEventListener("pointerdown", () => list.classList.remove("front")); // the card touched: it is on top (D556)
       fab = el("button", "mfab"); fab.type = "button"; fab.title = "Players"; fab.dataset.keep = "mfab"; fab.innerHTML = ICONS.Players; // a fixed icon of this page's own
-      fab.addEventListener("click", () => { listOpen = !listOpen; drawList(); });
-      stage.appendChild(frame); stage.appendChild(bar); stage.appendChild(line); stage.appendChild(cardBox); stage.appendChild(fab);
+      fab.addEventListener("click", () => { listOpen = !listOpen; if (listOpen) MapRegions.closeSheet(); drawList(); });
+      stage.appendChild(frame); stage.appendChild(bar); stage.appendChild(line); stage.appendChild(cardBox); stage.appendChild(fab); stage.appendChild(MapRegions.fab());
     }
     redraw();
   }
   function unmount(main) {
-    if (host && host === main) { if (offSel) offSel.placed = false; /* its pin goes with the frame: put back when the tab opens again */ spot = null; clearTimeout(spotRetry); clearTimeout(spotTimer); spotMap = null; closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
+    if (host && host === main) { MapRegions.stopDraw(); if (offSel) offSel.placed = false; /* its pin goes with the frame: put back when the tab opens again */ spot = null; clearTimeout(spotRetry); clearTimeout(spotTimer); spotMap = null; closeSheet(); main.classList.remove("mapmain"); if (root && root.parentNode) root.remove(); host = null; frame = null; resetSwitching(); }
   }
 
   // BlueMap's own bar is hidden (the panel's replaces it); clicks on heads follow, clicks on pins open the panel's box
   function setup() {
     const d = frame.contentDocument; if (!d) return;
+    MapRegions.frameLoaded();
     try { frame.contentWindow.addEventListener("keydown", escKey); } catch (e) { /* not the same site */ } // Esc with the map clicked (audit)
     const st = d.createElement("style");
     st.textContent = ".control-bar{display:none!important}.bm-marker-poi-label{display:none!important}"
@@ -196,7 +202,7 @@ const MapView = (() => {
     if (follow) setTimeout(() => { const p = lastLive.players.find((x) => x.id === follow); if (p && mapId(p.server, p.dim) === cur) centre(p); }, 1500); // the tab opened again (audit)
   }
   function fit() { try { frame.contentWindow.dispatchEvent(new Event("resize")); } catch (e) { /* gone */ } }
-  addEventListener("resize", () => { if (host) layoutWin(); if (host && frame) fit(); });
+  addEventListener("resize", () => { if (host) { layoutWin(); MapRegions.layout(); } if (host && frame) fit(); });
   function hook() {
     const b = bm(); if (!b || !b.mapViewer) return;
     if (!busy && cur && b.mapViewer.map && b.mapViewer.map.data.id !== cur && b.mapsMap && b.mapsMap.has(cur)) { // BlueMap shows another map: put it right
@@ -206,23 +212,25 @@ const MapView = (() => {
     const players = sets.get("bm-players");
     if (players) players.markers.forEach((m) => {
       if (m._bsp) return; m._bsp = true;
-      m.onClick = () => { const p = lastLive.players.find((x) => x.id === m.data.playerUuid); if (p) start(p); return true; };
+      m.onClick = () => { if (MapRegions.drawing()) return false; const p = lastLive.players.find((x) => x.id === m.data.playerUuid); if (p) start(p); return true; }; // a corner while drawing (audit)
     });
     ["bsp-warps", "bsp-portal-warps", "bsp-spawns", "bsp-graves"].forEach((id) => {
       const s = sets.get(id); if (!s) return;
       s.markers.forEach((m) => {
         if (m._bsp) return; m._bsp = true;
-        m.onClick = (ev) => { const r = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), pt = ev && ev.event; // BlueMap passes {event, data} (audit)
+        m.onClick = (ev) => { if (MapRegions.drawing()) return false; const r = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), pt = ev && ev.event; // BlueMap passes {event, data} (audit)
           pinBox = { set: id, data: m.data, x: (pt ? pt.clientX : r.width / 2) + r.left - sr.left, y: (pt ? pt.clientY : r.height / 2) + r.top - sr.top }; drawPinBox(); return true; };
       });
     });
     const vis = { "bm-players": show.players, "bsp-warps": show.warps, "bsp-spawns": show.spawns, "bsp-graves": show.graves };
     Object.entries(vis).forEach(([id, on]) => { const s = sets.get(id); if (s && s.visible !== on) s.visible = on; });
+    MapRegions.sync(); // the region outlines of the map shown (SU-156)
   }
 
   // ---------------------------------------------------------------- following (D389, D391, D392, D395 R3)
   function start(p) {
     if (offSel) { offSel = null; dropOffPin(); } // following a player online: the offline one chosen goes (D662)
+    MapRegions.drop(); MapRegions.stopDraw(); // and a region chosen (SU-156) or being drawn (SU-157)
     follow = p.id; followName = p.name; trail = []; gone = null; gold = null; itemsOpen = false; notesOpen = false; Players.closeKeys();
     const id = mapId(p.server, p.dim);
     if (id !== cur && maps.includes(id)) switchTo(id, p);
@@ -337,6 +345,7 @@ const MapView = (() => {
     if (!host) return;
     const h = hold();
     drawList();
+    MapRegions.draw(); // SU-156
     if (frame) {
       const a = document.activeElement;
       if (!(a && a.tagName === "SELECT" && bar.contains(a))) drawBar(); // the server picker open: not closed under the pointer
@@ -415,7 +424,7 @@ const MapView = (() => {
   // an offline player chosen (in the window, or MAP › on their card): nobody followed, their map at the block with a grey
   // pin until another player is chosen or the card is closed (D662); a world without a map shown leaves the map as it is
   function chooseOff(p) {
-    stopQuiet(); dropOffPin();
+    stopQuiet(); dropOffPin(); MapRegions.drop(); MapRegions.stopDraw();
     offSel = { id: String(p.id).toLowerCase(), name: p.name, placed: false, hidden: false };
     itemsOpen = false; notesOpen = false; pinBox = null; Players.closeKeys();
     Offline.remember(p);
@@ -517,6 +526,7 @@ const MapView = (() => {
     let on = false;
     if (c && desk()) { const a = list.getBoundingClientRect(), b = c.getBoundingClientRect(); on = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom; }
     list.classList.toggle("solid", on);
+    MapRegions.solid();
   }
   // dragged by its strip; a click on a folded strip opens it (D553, D554, D568)
   function moveWin() {
@@ -595,6 +605,7 @@ const MapView = (() => {
       l.appendChild(c); l.appendChild(document.createTextNode(t)); pins.appendChild(l);
     });
     bar.appendChild(pins);
+    bar.appendChild(MapRegions.barKey()); // every region outline on or off (D768)
     if (owner()) bar.appendChild(mapsKey());
     if (follow) {
       const f = el("div", "mc mfol"); f.appendChild(document.createTextNode("Following ")); f.appendChild(el("b", null, followName));
@@ -612,8 +623,8 @@ const MapView = (() => {
   }
   function drawCard() {
     cardBox.textContent = "";
-    stage.classList.toggle("fol", !!follow || !!offSel); // on a phone the players button moves up out of the sheet's way
-    if (!follow) { if (offSel) drawOffCard(); return; }
+    stage.classList.toggle("fol", !!follow || !!offSel || MapRegions.active()); // on a phone the players button moves up out of the sheet's way
+    if (!follow) { if (offSel) drawOffCard(); else MapRegions.card(cardBox); return; } // a region chosen (SU-156)
     const p = lastLive.players.find((x) => x.id === follow);
     const box = el("div", "mcard" + (gone ? " left" : "") + (sheetUp ? " up" : "")); cardBox.appendChild(box); // "left", not "gone": the Staff tab styles that (audit)
     box.dataset.scroll = "mcard"; // its scroll kept through every redraw (audit)
@@ -876,5 +887,23 @@ const MapView = (() => {
     const b = bm();
     try { const pop = b && b.mapViewer.markers.markerSets.get("bm-popup-set"), m = pop && pop.markers.get("bsp-spot"); if (m) pop.remove(m); } catch (e) { /* gone */ }
   }
-  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged, canShow, showSpot, showOffline, offlineOn: () => offOn && !!host };
+  /** WORLDS' MAP › (SU-156): the region's map, zoomed to it and chosen once its regions are read; false when that map is not shown. */
+  function showRegion(server, dim, id) {
+    const m = mapId(server, dim);
+    if (!maps || !maps.includes(m)) return false;
+    stopQuiet(); if (offSel) { offSel = null; dropOffPin(); } spot = null;
+    MapRegions.show(server, dim, id);
+    cur = m; saveLast(m);
+    return true;
+  }
+  /** WORLDS' + NEW REGION ON THE MAP (SU-157): that world's map, drawing once its regions are read; false when that map is not shown. */
+  function drawRegionIn(server, dim) {
+    const m = mapId(server, dim);
+    if (!maps || !maps.includes(m)) return false;
+    stopQuiet(); if (offSel) { offSel = null; dropOffPin(); } spot = null;
+    MapRegions.drawIn(server, dim);
+    cur = m; saveLast(m);
+    return true;
+  }
+  return { mount, unmount, live: onLive, redraw: redrawIfOpen, mapId, mapsChanged, canShow, showSpot, showOffline, showRegion, drawRegionIn, offlineOn: () => offOn && !!host };
 })();

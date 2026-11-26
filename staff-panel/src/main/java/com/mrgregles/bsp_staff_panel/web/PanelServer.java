@@ -284,6 +284,14 @@ public final class PanelServer {
         return this;
     }
 
+    private volatile com.mrgregles.bsp_staff_panel.regions.RegionDesk regionDesk;
+
+    /** The WORLDS tab and the region editor (SU-155; D762 to D777). */
+    public PanelServer withRegions(com.mrgregles.bsp_staff_panel.regions.RegionDesk d) {
+        this.regionDesk = d;
+        return this;
+    }
+
     /** The Bounty Board (SU-76; D524 to D538). */
     public PanelServer withBounties(com.mrgregles.bsp_staff_panel.market.BountyDesk d) {
         this.bountyDesk = d;
@@ -551,6 +559,8 @@ public final class PanelServer {
             case "/api/bounties", "/api/bounties/history", "/api/bounties/players", "/api/bounties/add", "/api/bounties/remove", "/api/bounties/extend",
                  "/api/bounties/blank" -> bountyPost(ex, id, path, body);
             case "/api/totems", "/api/totems/player" -> totemsPost(ex, id, path, body);
+            case "/api/regions/servers", "/api/regions/server", "/api/regions/save", "/api/regions/remove", "/api/regions/reset", "/api/regions/check",
+                 "/api/regions/create" -> regionsPost(ex, id, path, body);
             case "/api/pmsg", "/api/pmsg/list", "/api/pmsg/send", "/api/pmsg/end" -> playerTalkPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
@@ -1848,6 +1858,46 @@ public final class PanelServer {
             store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, "ended the private conversation with " + str(b, "name")));
         }
         json(ex, 200, out);
+    }
+
+    /**
+     * The WORLDS tab (SU-155): {@code /api/regions/servers} the grid, {@code /api/regions/server} ({@code server},
+     * {@code refresh}) one server's dimensions and regions, for every rank (D769); {@code /api/regions/save},
+     * {@code /remove}, {@code /reset} and {@code /create} (SU-157) for Admins and Owners, each a line in the panel's log
+     * (D774), and {@code /check}, Region Guard's dry run for a region being drawn (Admins and Owners, not logged).
+     */
+    private void regionsPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.regions.RegionDesk desk = regionDesk;
+        if (desk == null) {
+            json(ex, 200, refused("Regions are not set up on this panel."));
+            return;
+        }
+        Account me = a.get();
+        JsonObject o = switch (path) {
+            case "/api/regions/servers" -> desk.servers(me);
+            case "/api/regions/server" -> desk.server(me, str(b, "server"), bool(b, "refresh"));
+            case "/api/regions/save" -> desk.save(me, b);
+            case "/api/regions/remove" -> desk.remove(me, b);
+            case "/api/regions/check" -> desk.check(me, b); // SU-157
+            case "/api/regions/create" -> desk.create(me, b);
+            default -> desk.resetMine(me, b);
+        };
+        String log = o.has("panelLog") ? str(o, "panelLog") : null;
+        o.remove("panelLog");
+        if (log != null) {
+            String said = str(o, "message").replaceAll("[\\p{Cntrl}\\p{Cf}]", " "); // one line in the log, whatever a server answered (audit)
+            said = said.length() > 200 ? said.substring(0, 200) + "…" : said;
+            boolean ok = o.has("ok") && o.get("ok").getAsBoolean();
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (ok ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
+        }
+        json(ex, ("/api/regions/save".equals(path) || "/api/regions/remove".equals(path) || "/api/regions/reset".equals(path) || "/api/regions/check".equals(path)
+                || "/api/regions/create".equals(path))
+                && !me.rank.atLeast(com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN) ? 403 : 200, o);
     }
 
     /** The TOTEMS page (SU-97): every rank reads it (D614); {@code days} 1, 7, 30 or 90; {@code id} a player's UUID for their row. */

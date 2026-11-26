@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regions Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page for mock-up sets BC to BF (D764: BC A, BD A, BE A, BF B; D762 to D777). Sets BC to BF: the staff web panel's WORLDS tab, the region editor, the Map tab's Regions window and drawing a region
+   from two points (brief 2026-11-26). Terrain drawn by the page as a stand-in for BlueMap's tiles; made-up names, places and numbers.
+   Shared parts follow staff_mapfloat_refined.html (set AE, the players window, look A). */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1320px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; color:var(--acc); } h3{ font-size:16px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:90ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; overflow-x:auto; }
+@media (max-width:1300px){ .stage{ align-items:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:6px; max-width:1240px; }
+.legend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+.legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+.setnav{ display:flex; gap:8px; flex-wrap:wrap; font-size:13px; } .setnav a{ color:var(--acc); }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:1240px; height:700px; flex:none; box-sizing:border-box; border:1px solid #2a2f3a; border-radius:10px; background:var(--bg); color:var(--tx);
+  font:13px/1.35 var(--body); overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+.dk.short{ height:430px; }
+.dk *{ box-sizing:border-box; }
+.chrome{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; background:#1b1e25; border-bottom:1px solid #2a2f3a; }
+.chrome .lights{ display:flex; gap:6px; } .chrome .lights i{ width:10px; height:10px; border-radius:50%; display:block; background:#3a3f4b; }
+.chrome .url{ flex:1; max-width:440px; margin:0 auto; height:22px; border-radius:6px; background:#0f1115; color:#9aa3b5; font-size:11.5px; display:flex; align-items:center; padding:0 10px; }
+.dbody{ flex:1; display:flex; min-height:0; position:relative; }
+.side{ width:190px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; gap:2px; padding:12px 10px; }
+.side .brand{ font:15px Silkscreen,var(--mono); color:var(--teal); padding:2px 10px 12px; } .side .brand b{ color:var(--tx); font-weight:400; }
+.side .it{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--mu); font-size:13px; position:relative; }
+.side .it.on{ background:#19d3b01a; color:var(--teal); }
+.side .it.new::after{ content:"NEW"; margin-left:auto; font:600 9px var(--body); color:#10151c; background:var(--gold); border-radius:4px; padding:0 4px; }
+.side svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.main{ flex:1; min-width:0; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.pagehead{ flex:none; display:flex; align-items:center; gap:12px; padding:14px 20px 10px; }
+.pagehead .t{ font:15px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; }
+.crumb{ font-size:13px; color:var(--mu); display:flex; gap:6px; align-items:center; } .crumb b{ color:var(--tx); font-weight:600; } .crumb a{ color:var(--teal); }
+.grow{ flex:1; min-width:0; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .gd{ color:var(--gold); } .rd{ color:var(--coral); }
+.search{ height:30px; width:220px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; gap:7px; padding:0 9px; color:var(--dim); font-size:12px; }
+.search svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; }
+.key{ height:28px; padding:0 11px; border-radius:7px; display:inline-flex; align-items:center; gap:6px; font:600 11.5px var(--body); background:var(--pn); border:1px solid var(--ln); color:var(--soft); white-space:nowrap; }
+.key.pri{ background:var(--teal); border-color:var(--teal); color:#0f1115; }
+.key.vio{ background:#b58cff22; border-color:#b58cff66; color:var(--vio); }
+.key.dg{ border-color:#5a2a2a; color:var(--coral); }
+.key.sm{ height:22px; padding:0 8px; font-size:10.5px; border-radius:6px; }
+.kchip{ display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 8px; border-radius:999px; font:600 11px var(--body); border:1px solid var(--ln); background:var(--pn); color:var(--soft); white-space:nowrap; }
+.kchip i{ width:9px; height:9px; border-radius:2px; display:block; }
+.kchip.off{ opacity:.45; text-decoration:line-through; }
+.sw{ width:10px; height:10px; border-radius:3px; flex:none; display:inline-block; }
+.kt{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; }
+.note{ font-size:11.5px; color:var(--mu); line-height:1.45; }
+.sect{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; justify-content:space-between; align-items:center; }
+.rk{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; white-space:nowrap; background:#b58cff22; color:#b58cff; border:1px solid #b58cff55; }
+
+/* server tiles */
+.tiles{ display:grid; gap:12px; padding:4px 20px 20px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; position:relative; min-width:0; }
+.tile.hov{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.tile .nm{ font:14px Silkscreen,var(--mono); color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .st{ display:flex; gap:10px; font-size:11.5px; color:var(--mu); align-items:center; } .tile .st b{ color:var(--tx); font:600 12px var(--mono); }
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); display:inline-block; flex:none; } .dot.off{ background:var(--dim); }
+.counts{ display:flex; gap:8px; flex-wrap:wrap; font:600 11px var(--mono); }
+.counts span{ display:inline-flex; align-items:center; gap:4px; color:var(--soft); }
+.tile.off{ opacity:.6; }
+.thumb{ height:96px; border-radius:8px; overflow:hidden; position:relative; background:#0b0d11; }
+.thumb canvas{ width:100%; height:100%; display:block; image-rendering:pixelated; }
+
+/* tables and lists */
+.tbl{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.tbl th{ text-align:left; font-weight:500; color:var(--mu); font-size:11px; padding:7px 10px; border-bottom:1px solid var(--ln); white-space:nowrap; }
+.tbl td{ padding:7px 10px; border-bottom:1px solid #20242d; vertical-align:middle; white-space:nowrap; }
+.tbl tr.sel td{ background:#19d3b012; } .tbl tr.sel td:first-child{ box-shadow:inset 3px 0 0 var(--teal); }
+.tbl .id{ font:600 12px var(--mono); color:var(--tx); } .tbl .sub{ color:var(--mu); font-size:11px; }
+.tbl tr.kid td.idc{ padding-left:30px; }
+.lnk{ color:var(--teal); font-weight:600; font-size:11.5px; }
+.dtabs{ display:flex; gap:8px; padding:0 20px 12px; flex-wrap:wrap; }
+.dtab{ padding:8px 12px; border-radius:10px; background:var(--pn); border:1px solid var(--ln); display:flex; flex-direction:column; gap:3px; min-width:150px; }
+.dtab b{ font-size:13px; } .dtab.on{ border-color:var(--teal); background:#19d3b014; } .dtab.on b{ color:var(--teal); }
+.dtab .counts{ font-size:10.5px; }
+.box{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+.box .bh{ display:flex; align-items:center; gap:8px; padding:9px 12px; background:#1d2129; border-bottom:1px solid var(--ln); font-size:12px; color:var(--mu); }
+.lrow{ display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; border-bottom:1px solid #20242d; }
+.lrow .id{ font:600 12px var(--mono); } .lrow .r{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.lrow.on{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.grp{ display:flex; align-items:center; gap:7px; padding:9px 12px 4px; font:600 11px var(--body); color:var(--mu); } .grp .n{ margin-left:auto; font-family:var(--mono); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+/* the editor */
+.field{ display:flex; flex-direction:column; gap:3px; min-width:0; } .field label{ font-size:10.5px; color:var(--mu); font-weight:600; }
+.in{ height:30px; border-radius:7px; background:#12151b; border:1px solid var(--ln); display:flex; align-items:center; padding:0 9px; font-size:12.5px; color:var(--tx); white-space:nowrap; overflow:hidden; }
+.in.mono{ font-family:var(--mono); } .in.ch{ border-color:var(--gold); box-shadow:0 0 0 2px #ffd23a22; } .in.ro{ color:var(--mu); background:transparent; }
+.tri{ display:inline-flex; background:#12151b; border:1px solid var(--ln); border-radius:7px; padding:2px; font:600 10.5px var(--body); flex:none; }
+.tri span{ padding:2px 8px; border-radius:5px; color:var(--dim); }
+.tri span.a{ background:#19d3b0; color:#0f1115; } .tri span.d{ background:#ff6b5c; color:#10151c; } .tri span.u{ background:#2a2f3a; color:var(--soft); }
+.frow{ display:flex; align-items:center; gap:10px; padding:5px 12px; font-size:12.5px; border-bottom:1px solid #1d2028; }
+.frow .fn{ font:600 12px var(--mono); width:170px; flex:none; overflow:hidden; text-overflow:ellipsis; }
+.frow .eff{ font-size:11px; color:var(--mu); margin-left:auto; text-align:right; white-space:nowrap; }
+.frow.ch{ background:#ffd23a0d; box-shadow:inset 3px 0 0 var(--gold); }
+.fgrp{ font:600 11px var(--body); color:var(--soft); padding:10px 12px 4px; display:flex; gap:8px; align-items:center; } .fgrp .n{ color:var(--mu); font-weight:500; }
+.lchip{ display:inline-flex; align-items:center; gap:4px; height:22px; padding:0 7px; border-radius:6px; background:#12151b; border:1px solid var(--ln); font:600 11px var(--mono); color:var(--soft); }
+.savebar{ flex:none; display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid var(--ln); background:#171a20; }
+.savebar .chg{ font-size:12px; color:var(--gold); font-weight:600; }
+.drawer{ position:absolute; top:0; right:0; bottom:0; width:520px; background:var(--bg2); border-left:1px solid var(--ln); box-shadow:-18px 0 40px rgba(0,0,0,.5); display:flex; flex-direction:column; z-index:8; }
+.drawer .dh{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--ln); }
+.drawer .dbd{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:12px 14px; }
+.shade{ position:absolute; inset:0; background:rgba(5,6,8,.45); z-index:7; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12.5px; flex:none; }
+.ptabs span{ padding:9px 12px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 -2px 0 var(--teal); }
+.snav{ width:170px; flex:none; border-right:1px solid var(--ln); padding:10px 8px; display:flex; flex-direction:column; gap:2px; }
+.snav span{ padding:7px 10px; border-radius:7px; color:var(--mu); font-size:12.5px; display:flex; justify-content:space-between; } .snav span.on{ background:#19d3b01a; color:var(--teal); }
+.snav span em{ font-style:normal; font:600 10px var(--mono); color:var(--gold); }
+.fill{ display:flex; height:14px; border-radius:4px; overflow:hidden; }
+.fill i{ display:block; height:100%; }
+.toggle{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 12px; }
+.tg{ border:1px solid var(--ln); background:#12151b; border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:2px; }
+.tg b{ font:600 11px var(--mono); } .tg span{ font-size:10.5px; color:var(--mu); }
+.tg.a{ border-color:#19d3b066; background:#19d3b012; } .tg.a span{ color:var(--teal); }
+.tg.d{ border-color:#ff6b5c66; background:#ff6b5c12; } .tg.d span{ color:var(--coral); }
+.tg.ch{ box-shadow:0 0 0 2px #ffd23a66; }
+
+/* ---------- the map ---------- */
+.mv{ position:absolute; inset:0; overflow:hidden; background:#0b0d11; }
+.mv canvas.ter{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; display:block; }
+.rg{ position:absolute; border:2px solid; border-radius:1px; }
+.rg.dash{ border-style:dashed; }
+.rg .lb{ position:absolute; left:3px; top:2px; font:600 10px var(--body); color:#fff; background:rgba(10,12,16,.72); padding:0 5px; border-radius:3px; white-space:nowrap; }
+.rg.hi{ border-width:3px; box-shadow:0 0 0 3px rgba(255,255,255,.18), 0 0 24px rgba(255,210,58,.35); }
+.rg.hi .lb{ background:var(--gold); color:#10151c; }
+.rg.faint{ opacity:.35; }
+.mbar{ position:absolute; top:10px; left:10px; right:10px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; z-index:3; }
+.mc{ background:rgba(20,23,29,.93); border:1px solid var(--ln); border-radius:8px; padding:5px 9px; font-size:11.5px; display:flex; gap:6px; align-items:center; white-space:nowrap; color:var(--soft); }
+.mc b{ color:var(--tx); font-weight:600; } .mc.gold{ background:var(--gold); border-color:var(--gold); color:#10151c; } .mc.gold b{ color:#10151c; }
+.mc.tealb{ border-color:var(--teal); color:var(--teal); }
+.mzoom{ position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:4px; z-index:3; }
+.mzoom span{ width:30px; height:30px; display:grid; place-items:center; background:rgba(20,23,29,.93); border:1px solid var(--ln); border-radius:8px; font:600 14px var(--body); color:var(--soft); }
+.mcoord{ position:absolute; left:10px; bottom:10px; font:600 10.5px var(--mono); color:var(--soft); background:rgba(20,23,29,.85); border:1px solid var(--ln); border-radius:6px; padding:3px 8px; z-index:3; }
+.mk{ position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; z-index:2; }
+.mk canvas{ box-shadow:0 0 0 2px #fff, 0 3px 8px rgba(0,0,0,.6); border-radius:2px; width:18px; height:18px; image-rendering:pixelated; }
+.mk .lb{ font:600 10px var(--body); color:#fff; background:rgba(10,12,16,.78); padding:0 5px; border-radius:4px; white-space:nowrap; }
+/* floating windows, the players window's look A */
+.fw{ position:absolute; z-index:5; display:flex; flex-direction:column; overflow:hidden; color:var(--tx);
+  background:rgba(20,23,29,.66); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.09); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+.fw.front{ z-index:6; }
+.fw .ft{ flex:none; display:flex; align-items:center; gap:8px; cursor:move; user-select:none; padding:7px 7px 6px 8px; }
+.fw .gp{ width:10px; height:16px; flex:none; background-image:radial-gradient(#8a91a0 1px, transparent 1.5px); background-size:4px 4px; }
+.fw .tt{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.04em; }
+.fw .ct{ font:600 11px var(--mono); color:var(--soft); }
+.fw .mn{ margin-left:auto; width:22px; height:22px; border-radius:6px; display:grid; place-items:center; color:var(--soft); font:600 15px var(--body); line-height:1; background:rgba(255,255,255,.06); }
+.fw .mn + .mn{ margin-left:0; }
+.fw .fsr{ flex:none; margin:0 8px 6px; height:30px; border-radius:8px; display:flex; align-items:center; gap:7px; padding:0 9px; font-size:12px; color:var(--dim); background:rgba(15,17,21,.55); border:1px solid rgba(255,255,255,.08); }
+.fw .fsr svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; }
+.fw .rows{ flex:1; min-height:0; overflow:hidden; padding-bottom:6px; }
+.fw .sg{ display:flex; align-items:center; gap:6px; padding:6px 12px 2px; font:600 10.5px var(--body); color:var(--mu); } .fw .sg .n{ margin-left:auto; font-family:var(--mono); }
+.fw .pr{ display:flex; align-items:center; gap:8px; padding:3px 12px; font-size:12.5px; }
+.fw .pr .nm{ font-weight:500; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.fw .pr .d{ margin-left:auto; font:600 9.5px var(--mono); color:var(--soft); opacity:.75; white-space:nowrap; }
+.fw .pr.on{ background:#ffd23a1f; box-shadow:inset 3px 0 0 var(--gold); }
+.fw .pr.kid{ padding-left:28px; }
+.fw .pr .eye{ width:14px; height:14px; flex:none; stroke:var(--soft); fill:none; stroke-width:2; opacity:.7; }
+.fw .pr .eye.off{ opacity:.25; }
+.fw .rz{ position:absolute; right:2px; bottom:2px; width:14px; height:14px; background:linear-gradient(135deg, transparent 52%, #9aa3b5 52%, #9aa3b5 60%, transparent 60%, transparent 72%, #9aa3b5 72%, #9aa3b5 80%, transparent 80%); opacity:.8; }
+.fw .chips{ display:flex; gap:4px; flex-wrap:wrap; padding:0 8px 6px; flex:none; }
+.fw .chips .kchip{ height:21px; font-size:10px; padding:0 6px; background:rgba(15,17,21,.55); border-color:rgba(255,255,255,.08); }
+.fw .ktabs{ display:flex; gap:2px; padding:0 8px 6px; flex:none; }
+.fw .ktabs span{ flex:1; text-align:center; padding:4px 0; border-radius:6px; font:600 10px var(--body); color:var(--mu); background:rgba(15,17,21,.45); }
+.fw .ktabs span.on{ background:rgba(25,211,176,.18); color:var(--teal); }
+.fw.folded .rows, .fw.folded .fsr, .fw.folded .chips, .fw.folded .ktabs, .fw.folded .rz{ display:none; }
+.fw.solid{ background:rgba(20,23,29,.97); backdrop-filter:none; -webkit-backdrop-filter:none; border-color:var(--ln); }
+.fw .foot{ flex:none; display:flex; gap:6px; padding:6px 8px 8px; border-top:1px solid rgba(255,255,255,.07); }
+.fw .foot .key{ background:rgba(15,17,21,.6); border-color:rgba(255,255,255,.1); }
+.fw .foot .key.pri{ background:var(--teal); color:#0f1115; }
+.rcard{ position:absolute; z-index:4; background:rgba(20,23,29,.97); border:1px solid var(--ln); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; width:300px; box-shadow:0 10px 26px rgba(0,0,0,.55); }
+.rcard .t{ display:flex; align-items:center; gap:8px; } .rcard .t b{ font:600 13px var(--mono); }
+.pin{ position:absolute; transform:translate(-50%,-50%); width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 11px var(--mono); color:#10151c; background:var(--gold); border:2px solid #10151c; box-shadow:0 0 0 3px #ffd23a55; z-index:3; }
+.hand{ position:absolute; width:10px; height:10px; background:#fff; border:2px solid #10151c; border-radius:2px; transform:translate(-50%,-50%); z-index:3; }
+.hand.edge{ width:8px; height:8px; border-radius:50%; }
+.size{ position:absolute; transform:translate(-50%,0); font:600 10.5px var(--mono); color:#10151c; background:var(--gold); padding:1px 6px; border-radius:4px; z-index:3; white-space:nowrap; }
+.cross{ position:absolute; width:26px; height:26px; transform:translate(-50%,-50%); z-index:3; }
+.cross::before, .cross::after{ content:""; position:absolute; background:#fff; box-shadow:0 0 0 1px #10151c; }
+.cross::before{ left:12px; top:0; width:2px; height:26px; } .cross::after{ top:12px; left:0; height:2px; width:26px; }
+.tip{ position:absolute; z-index:3; font:600 10.5px var(--mono); color:#e8eaf0; background:rgba(10,12,16,.85); border:1px solid var(--ln); padding:2px 7px; border-radius:5px; white-space:nowrap; }
+.banner{ position:absolute; left:50%; transform:translateX(-50%); top:52px; z-index:4; display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(20,23,29,.95); border:1px solid var(--gold); box-shadow:0 8px 20px rgba(0,0,0,.45); font-size:12.5px; }
+.banner b{ color:var(--gold); }
+.okline{ font-size:11.5px; color:#7fe0cf; background:#12302b; border:1px solid #24443f; border-radius:8px; padding:6px 9px; }
+.errline{ font-size:11.5px; color:#ff8f86; background:#3a1d1d; border:1px solid #5a2a2a; border-radius:8px; padding:6px 9px; }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .three{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+ol.points{ margin:0; padding-left:22px; } ol.points li{ margin-bottom:8px; max-width:92ch; font-size:13.5px; } ol.points b{ color:var(--fg); }
+
+/* refined: phones */
+.ph{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180; --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c;
+  width:340px; height:720px; flex:none; box-sizing:border-box; border:8px solid #050608; border-radius:30px; background:var(--bg); color:var(--tx); font:13px/1.35 var(--body); position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.ph *{ box-sizing:border-box; }
+.ph .sbar{ height:22px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font:600 11px var(--body); color:var(--soft); }
+.ph .pbody{ flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+.ph .tnav{ flex:none; display:flex; justify-content:space-around; padding:8px 6px 14px; border-top:1px solid var(--ln); background:var(--bg2); }
+.ph .tnav div{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; color:var(--mu); } .ph .tnav div.on{ color:var(--teal); }
+.ph .tnav svg, .ph .lrow svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.ph .lrow svg.eye{ width:14px; height:14px; stroke:var(--soft); opacity:.7; flex:none; }
+.ph .sheet{ position:absolute; left:0; right:0; bottom:0; z-index:4; background:rgba(20,23,29,.92); backdrop-filter:blur(6px); border-top:1px solid var(--ln); border-radius:18px 18px 0 0; padding:8px 14px 12px; display:flex; flex-direction:column; gap:6px; }
+.ph .grab{ width:38px; height:4px; border-radius:2px; background:#3a3f4b; margin:0 auto 2px; }
+.ph .fsr2{ height:30px; border-radius:8px; display:flex; align-items:center; gap:7px; padding:0 9px; font-size:12px; color:var(--dim); background:rgba(15,17,21,.55); border:1px solid rgba(255,255,255,.08); }
+.ph .fsr2 svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; }
+.ph .pagehead .t{ font:15px Silkscreen,var(--mono); color:var(--teal); } .ph .crumb a{ color:var(--teal); } .ph .crumb b{ color:var(--tx); }
+.ph .mbar{ flex-wrap:nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Staff panel: Worlds, regions and drawing on the map: refined</h1>
+    <p class="lede">The looks picked (D764): BC A for the WORLDS tab, BD A for the editor, BE A for the Regions window, BF B for drawing. With the owner's two additions: an eye on every region to show or hide its outline (D768), and the height of a new region set in the form (D771). Nine points to confirm at the foot. The terrain is a drawn stand-in for BlueMap's; names, places and numbers are made up.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <section><h2>R1. The WORLDS tab</h2>
+    <div class="stage"><div><div class="dk" id="r1"></div><div class="cap">Seven servers, four across; a server that is off is greyed with when it was last heard from and lists no regions</div></div></div></section>
+  <section><h2>R2. A server: its dimensions and regions</h2>
+    <div class="stage"><div><div class="dk" id="r2"></div><div class="cap">Frostwarf's Overworld chosen; the kind chips filter the table; GLOBAL SETTINGS › opens that dimension's global region in the editor</div></div></div></section>
+  <section><h2>R3. The editor: a player's claim</h2>
+    <div class="stage"><div><div class="dk" id="r3"></div><div class="cap">The drawer over the table. A claim adds a CLAIM part and an audience switch over its flags: Region, Visitors, Members, Owners</div></div></div></section>
+  <section><h2>R4. The editor: a mine, as a Moderator sees it</h2>
+    <div class="stage"><div><div class="dk" id="r4"></div><div class="cap">A mine adds a MINE part (block mix, reset time, where players go). A Moderator sees every value but cannot change it: the keys are dimmed and marked Admin</div></div></div></section>
+  <section><h2>R5. The Map tab: the Regions window</h2>
+    <div class="stage"><div><div class="dk" id="r5"></div><div class="cap">Beside the players window, same look. Kind chips and an eye on every row; the chosen region drawn as a box of its real heights with its card</div></div></div></section>
+  <section><h2>R6. Drawing: the first corner</h2>
+    <div class="stage"><div><div class="dk" id="r6"></div><div class="cap">NEW REGION turns the window into the form and asks for the first corner; the block under the pointer is shown as it moves</div></div></div></section>
+  <section><h2>R7. Drawing: adjusting, refused</h2>
+    <div class="stage"><div><div class="dk" id="r7"></div><div class="cap">After the second click: handles on corners and edges, the size, and Region Guard's check, which refuses this plot for lying across plot_1</div></div></div></section>
+  <section><h2>R8. Drawing: a mine, with its heights</h2>
+    <div class="stage"><div><div class="dk" id="r8"></div><div class="cap">A mine takes its heights from the two clicked blocks; Y from and Y to can be typed, or set with FULL HEIGHT or CLICKED BLOCKS. Check passed, CREATE lit</div></div></div></section>
+  <section><h2>R9. On a phone</h2>
+    <div class="stage" style="flex-direction:row;flex-wrap:wrap;justify-content:center"><div><div class="ph" id="r9a"></div><div class="cap">WORLDS from More</div></div><div><div class="ph" id="r9b"></div><div class="cap">A server's regions as a list</div></div><div><div class="ph" id="r9c"></div><div class="cap">The map's Regions sheet</div></div></div></section>
+
+  <section><h2>To confirm</h2>
+    <div class="card"><ol class="points">
+      <li><b>R1. Tiles.</b> Name, online or off (and when last heard from), players, tick time, PvP world marked, each dimension, and the regions counted by kind in their colours (claims included). A click opens the server. "Find a region on any server" searches ids and names everywhere and opens the server at that region.</li>
+      <li><b>R2. The server page.</b> One card per dimension the server has loaded (with or without a map drawn), each with its counts and GLOBAL SETTINGS ›. The table: colour, id, name, kind, size, heights, priority, parent, and owner, price or next reset; sorted by kind then priority, any column sortable by a click on its heading. A mine's shell is not a row of its own: it is edited inside its mine. MAP › opens the Map tab on that region; EDIT › opens the drawer. + NEW REGION ON THE MAP opens the Map tab on this dimension, drawing.</li>
+      <li><b>R3. The drawer.</b> GENERAL (name, id, kind, priority, parent), BOUNDS (both corners, size, REDRAW ON THE MAP), PEOPLE (owners and members by name), then the part for the kind (CLAIM, PLOT, OPEN AREA, MINE or the global region's BORDER), then FLAGS: every flag Region Guard has, by its groups, the set ones first, a search, and "Inherit" showing what applies and where from. Claims, plots and open areas switch the flags between the region's own and its Visitors, Members and Owners lists. Changed values in gold until SAVE; UNDO CHANGES drops them; closing with changes asks first.</li>
+      <li><b>R4. Moderators.</b> The same drawer, every value shown, nothing editable, SAVE, REMOVE and RESET NOW dimmed with "Admin" (D769). Removing a claim is for Owners only (D772).</li>
+      <li><b>R5. The Regions window.</b> Starts folded beside the players window at its right edge, remembered in this browser apart from it (D776). Kind chips hide or show a whole kind; the eye on a row hides or shows that one region; both remembered in this browser (D768). Rows list the map shown, by kind. A click on a row or on a rectangle switches server and dimension if needed, zooms to fit, draws the region as a box of its real heights and opens its card (D777). REGIONS in the map's bar hides every outline at once.</li>
+      <li><b>R6. The first corner.</b> NEW REGION (Admins and Owners) asks for the kind first, then the first click. The map still pans and zooms while drawing; Esc or CANCEL stops. Clicks on other regions' rectangles set a corner instead of opening their card while drawing.</li>
+      <li><b>R7. Adjusting.</b> Corner handles move two sides, edge handles one; the corners in the form follow, and typing in them moves the outline. Region Guard's check runs a moment after each change (SU-RG5's dry run): green when fine, red with its reason when not, and CREATE stays dim until it passes.</li>
+      <li><b>R8. Heights.</b> Y from and Y to, typed or set with FULL HEIGHT (the world's bottom to top) or CLICKED BLOCKS (the two blocks clicked). Regions, plots and open areas start at full height; mines start at the clicked blocks (D771). After CREATE the window goes back to the list with the new region chosen; the same heights can be changed later in the editor.</li>
+      <li><b>R9. Phones.</b> WORLDS is the first line of More (D765); a server's regions as a list by dimension with the kind chips; the editor as a full-height sheet. On the map, a REGIONS key beside the players key opens a sheet with the same list; drawing is offered on a computer only.</li>
+    </ol>
+    <p>Or say what to change.</p></div></section>
+</div>
+<script>
+/* ---------- data ---------- */
+const K={protected:{l:"Region",c:"#ff5c5c"},mine:{l:"Mine",c:"#ffd23a"},claim:{l:"Claim",c:"#5ad16a"},plot:{l:"Plot for sale",c:"#a6e36b",dash:1},open:{l:"Open area",c:"#7fb2ff"},global:{l:"Global",c:"#9aa3b5"}};
+const KORDER=["protected","mine","plot","claim","open","global"];
+const SERVERS=[
+ {n:"BSP-Spawn",on:1,p:9,ms:14.2,d:["Overworld","Nether","End"],c:{protected:7,mine:0,plot:0,claim:0,open:0}},
+ {n:"Frostwarf",on:1,p:8,ms:21.6,d:["Overworld","Nether","End","Mining"],c:{protected:4,mine:2,plot:4,claim:31,open:1}},
+ {n:"Boulderbrook",on:1,p:6,ms:17.9,d:["Overworld","Nether","End"],c:{protected:3,mine:1,plot:6,claim:24,open:1}},
+ {n:"Moongrove",on:1,p:7,ms:33.0,d:["Overworld","Nether","End","Twilight"],c:{protected:2,mine:2,plot:2,claim:40,open:2}},
+ {n:"Stormfall",on:1,p:4,ms:12.5,d:["Overworld","Nether","End"],c:{protected:5,mine:0,plot:0,claim:0,open:0},pvp:1},
+ {n:"Sanctuary",on:1,p:2,ms:9.8,d:["Overworld"],c:{protected:1,mine:0,plot:8,claim:12,open:1}},
+ {n:"SafeRoom",on:0,p:0,ms:0,d:["Overworld"],c:{protected:1,mine:0,plot:0,claim:0,open:0},seen:"3 h ago"},
+];
+// Frostwarf's Overworld (world blocks; both corners inclusive)
+const R=[
+ {id:"__global__",k:"global",n:"Frostwarf Overworld",pri:"lowest"},
+ {id:"spawn_town",k:"protected",n:"Frostwarf Town",b:[-150,-64,-110,120,320,100],pri:10},
+ {id:"market",k:"protected",n:"Market square",b:[-40,-64,-35,30,320,20],pri:20,par:"spawn_town"},
+ {id:"plot_1",k:"plot",n:"Plot 1",b:[-140,60,52,-112,120,92],pri:30,par:"spawn_town",price:"4,000"},
+ {id:"plot_2",k:"plot",n:"Plot 2",b:[-106,60,52,-78,120,92],pri:30,par:"spawn_town",price:"4,000"},
+ {id:"plot_3",k:"plot",n:"Plot 3",b:[-72,60,52,-44,120,92],pri:30,par:"spawn_town",price:"5,500"},
+ {id:"plot_4",k:"plot",n:"Plot 4",b:[50,60,40,90,120,90],pri:30,par:"spawn_town",price:"6,000"},
+ {id:"arena",k:"protected",n:"PvP arena",b:[150,40,-205,235,140,-130],pri:10},
+ {id:"iron_mine",k:"mine",n:"Iron mine",b:[175,12,-90,222,62,-42],pri:15,reset:"14 min"},
+ {id:"iron_mine_shell",k:"protected",n:"Iron mine shell",b:[171,8,-94,226,66,-38],pri:14,par:"iron_mine",shell:1},
+ {id:"copper_mine",k:"mine",n:"Copper mine",b:[-265,20,120,-222,58,165],pri:15,reset:"41 min"},
+ {id:"wilds_east",k:"open",n:"Eastern wilds",b:[262,-64,-40,520,320,262],pri:5,cost:"12 / block"},
+ {id:"kestrel_base",k:"claim",n:"Kestrel's base",b:[330,-64,110,374,320,152],pri:40,par:"wilds_east",own:"Kestrel_88"},
+ {id:"tom_farm",k:"claim",n:"Tom's farm",b:[290,-64,180,332,320,216],pri:40,par:"wilds_east",own:"BrickLayerTom"},
+ {id:"mossy_hut",k:"claim",n:"Mossy's hut",b:[420,-64,40,446,320,66],pri:40,par:"wilds_east",own:"Mossy_Fen"},
+];
+const byId=id=>R.find(r=>r.id===id);
+const size=r=>r.b?`${r.b[3]-r.b[0]+1} × ${r.b[5]-r.b[2]+1}`:"whole world";
+const corners=r=>r.b?`${r.b[0]}, ${r.b[1]}, ${r.b[2]} → ${r.b[3]}, ${r.b[4]}, ${r.b[5]}`:"—";
+
+/* ---------- helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+ totem:'<svg viewBox="0 0 24 24"><path d="M12 2 7 7v10l5 5 5-5V7z"/><path d="M12 8v8"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ eye:'<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ eyeoff:'<svg class="eye off" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg>'};
+function frame(el,tab,url){
+  const d=document.getElementById(el);
+  d.appendChild(h(`<div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url">staff.buildsecureprotect.com${url||""}</div></div>`));
+  const body=h('<div class="dbody"></div>'); const side=h('<div class="side"><div class="brand">BSP <b>STAFF</b></div></div>');
+  [["users","Players"],["chat","Chat"],["map","Map"],["globe","Worlds"],["totem","Totems"],["shield","Staff"],["more","More"]].forEach(([i,l])=>
+    side.appendChild(h(`<div class="it${l===tab?" on":""}${l==="Worlds"?" new":""}">${SV[i]}<span>${l}</span></div>`)));
+  side.appendChild(h('<div style="margin-top:auto;padding:8px 10px;font-size:11.5px;color:#9aa3b5">Mrgregles <span class="rk">Owner</span></div>'));
+  body.appendChild(side); const main=h('<div class="main"></div>'); body.appendChild(main); d.appendChild(body); return main;}
+function counts(c,full){return `<div class="counts">${KORDER.filter(k=>k!=="global"&&(full||c[k])).map(k=>`<span title="${K[k].l}"><i class="sw" style="background:${K[k].c}"></i>${c[k]||0}</span>`).join("")}</div>`;}
+const kt=k=>`<span class="kt" style="background:${K[k].c}22;color:${K[k].c};border:1px solid ${K[k].c}55">${K[k].l}</span>`;
+const sw=k=>`<i class="sw" style="background:${K[k].c}${K[k].dash?";outline:1px dashed "+K[k].c+";outline-offset:1px":""}"></i>`;
+document.getElementById("legend").innerHTML=KORDER.map(k=>`<span><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("");
+
+/* ---------- terrain stand-in ---------- */
+function hash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function noise(seed){const p=[];const r=(()=>{let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})();
+  for(let i=0;i<64*64;i++)p.push(r());const g=(x,y)=>p[((y&63)*64)+(x&63)];
+  const sm=t=>t*t*(3-2*t);return(x,y)=>{const x0=Math.floor(x),y0=Math.floor(y),fx=sm(x-x0),fy=sm(y-y0);
+    const a=g(x0,y0),b=g(x0+1,y0),c=g(x0,y0+1),d=g(x0+1,y0+1);return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy;};}
+function terrain(cv,seed,w,hh){const s=4,W=Math.ceil(w/s),H=Math.ceil(hh/s);cv.width=W;cv.height=H;const g=cv.getContext("2d"),n=noise(seed),m=noise(seed+7);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=n(x/18,y/18)*.65+n(x/6,y/6)*.25+m(x/3,y/3)*.1;let c;
+    if(v<.27)c=[38,74,128];else if(v<.30)c=[60,104,160];else if(v<.325)c=[196,186,128];else if(v<.62)c=[78+(m(x,y)*14|0),128+(m(x/2,y/2)*18|0),58];
+    else if(v<.74)c=[46,92,44];else c=[120,120,118];const sh=(n((x+1)/18,y/18)-n(x/18,y/18))*240;g.fillStyle=`rgb(${c.map(q=>Math.max(0,Math.min(255,q+sh))|0)})`;g.fillRect(x,y,1,1);}
+  // a few paths and roofs near the town
+  g.fillStyle="#8f8466";for(let x=W*.18|0;x<W*.62;x++)g.fillRect(x,H*.5|0,1,1);for(let y=H*.2|0;y<H*.8;y++)g.fillRect(W*.4|0,y,1,1);
+  const rr=noise(seed+3);for(let i=0;i<40;i++){const x=(W*.2+rr(i,1)*W*.35)|0,y=(H*.3+rr(1,i)*H*.4)|0;g.fillStyle=["#7a3b2b","#5b5f6b","#8a6a3a"][i%3];g.fillRect(x,y,2,2);}}
+/* a map in a frame: world → pixels */
+function mapIn(main,o){const W=1050,H=666;const mv=h('<div class="mv"></div>');const cv=document.createElement("canvas");cv.className="ter";mv.appendChild(cv);terrain(cv,o.seed||11,W,H);
+  const s=o.s||1.18,cx=o.cx??120,cz=o.cz??28;const X=x=>(x-cx)*s+W/2,Z=z=>(z-cz)*s+H/2;
+  const add=(r,cls,label)=>{const k=K[r.k],e=h(`<div class="rg${k.dash?" dash":""}${cls?" "+cls:""}"></div>`);
+    e.style.left=X(r.b[0])+"px";e.style.top=Z(r.b[2])+"px";e.style.width=(r.b[3]-r.b[0]+1)*s+"px";e.style.height=(r.b[5]-r.b[2]+1)*s+"px";
+    e.style.borderColor=k.c;e.style.background=k.c+(cls&&cls.includes("hi")?"40":"26");if(label)e.appendChild(h(`<span class="lb">${label}</span>`));mv.appendChild(e);return e;};
+  main.appendChild(mv);return{mv,X,Z,add,s};}
+function heads(m,list){list.forEach(([n,x,z])=>{const c=document.createElement("canvas");c.width=8;c.height=8;const g=c.getContext("2d"),r=hash(n);
+  g.fillStyle=["#f2c9a0","#d9a066","#a8714a"][r%3];g.fillRect(0,0,8,8);g.fillStyle=["#3b2414","#d8b04a","#1a1a1a","#a33b1f"][r%4];g.fillRect(0,0,8,3);g.fillStyle="#fff";g.fillRect(1,4,2,1);g.fillRect(5,4,2,1);
+  const e=h('<div class="mk"></div>');e.appendChild(c);e.appendChild(h(`<span class="lb">${n}</span>`));e.style.left=m.X(x)+"px";e.style.top=m.Z(z)+"px";m.mv.appendChild(e);});}
+function mapBar(m,extra){const b=h(`<div class="mbar"><span class="mc"><i class="dot"></i><b>Frostwarf</b> ▾</span><span class="mc"><b>Overworld</b> ▾</span><span class="mc">Pins ▾</span>${extra||""}</div>`);m.mv.appendChild(b);
+  m.mv.appendChild(h('<div class="mzoom"><span>+</span><span>−</span></div>'));}
+function playersWin(m,o){const w=h(`<div class="fw${o.folded?" folded":""}" style="left:${o.x}px;top:${o.y}px;width:236px;${o.folded?"":"height:"+o.h+"px"}">
+  <div class="ft"><i class="gp"></i><span class="tt">PLAYERS</span><span class="ct">46</span><span class="mn">${o.folded?"+":"–"}</span></div>
+  <div class="fsr">${SV.search}Search players</div><div class="rows">
+  <div class="sg"><span>Frostwarf</span><span class="n">8</span></div>
+  ${["Kestrel_88 OW","BrickLayerTom OW","Mossy_Fen NETHER","Juniper_K OW"].map(s=>{const[a,b]=s.split(" ");return`<div class="pr"><span class="nm">${a}</span><span class="d">${b}</span></div>`}).join("")}
+  <div class="sg"><span>BSP-Spawn</span><span class="n">9</span></div><div class="pr"><span class="nm">RuneSmith</span><span class="d">OW</span></div><div class="pr"><span class="nm">Newbie_Sam</span><span class="d">OW</span></div></div><i class="rz"></i></div>`);m.mv.appendChild(w);return w;}
+
+function serverTile(s,look){
+  if(look==="B"){const t=h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}"><div class="thumb"><canvas></canvas></div>
+    <div style="display:flex;align-items:center;gap:8px"><i class="dot${s.on?"":" off"}"></i><span class="nm">${s.n}</span><span class="grow"></span><span class="mono mu" style="font-size:11px">${s.on?s.p+" online":"off · "+s.seen}</span></div>
+    <div class="st"><span>${s.d.length} dimensions</span>${s.on?`<span><b>${s.ms}</b> ms</span>`:""}${s.pvp?'<span class="rd">PvP world</span>':""}</div>${counts(s.c)}</div>`);
+    const cv=t.querySelector("canvas");terrain(cv,hash(s.n)%999,300,96);const g=cv.getContext("2d");
+    const rr=noise(hash(s.n));let i=0;KORDER.forEach(k=>{if(k==="global")return;for(let j=0;j<Math.min(4,s.c[k]||0);j++){i++;const x=(rr(i,2)*60+5)|0,y=(rr(2,i)*16+2)|0,w=(k==="open"?14:k==="claim"?3:6),hh=(k==="open"?9:k==="claim"?3:5);
+      g.strokeStyle=K[k].c;g.lineWidth=.6;g.fillStyle=K[k].c+"55";g.fillRect(x,y,w,hh);g.strokeRect(x+.3,y+.3,w-.6,hh-.6);}});
+    return t;}
+  if(look==="C") return h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}" style="padding:10px 12px;gap:6px"><div style="display:flex;align-items:center;gap:7px"><i class="dot${s.on?"":" off"}"></i><span class="nm" style="font-size:12px">${s.n}</span></div>
+    <div class="st" style="font-size:11px">${s.on?`<span><b>${s.p}</b> online</span><span>${s.d.length} dims</span>`:`<span>last heard ${s.seen}</span>`}</div>${counts(s.c)}</div>`);
+  return h(`<div class="tile${s.on?"":" off"}${s.n==="Frostwarf"?" hov":""}"><div style="display:flex;align-items:center;gap:8px"><i class="dot${s.on?"":" off"}"></i><span class="nm">${s.n}</span>${s.pvp?'<span class="kt" style="background:#ff6b5c22;color:#ff6b5c;border:1px solid #ff6b5c55;margin-left:auto">PvP</span>':""}</div>
+    <div class="st">${s.on?`<span><b>${s.p}</b> online</span><span><b>${s.ms}</b> ms</span>`:`<span>off · last heard ${s.seen}</span>`}</div>
+    <div class="st" style="flex-wrap:wrap;gap:4px">${s.d.map(d=>`<span class="lchip" style="font-family:var(--body);font-weight:500">${d}</span>`).join("")}</div>
+    <div style="border-top:1px solid #262a33;padding-top:8px">${counts(s.c,1)}</div></div>`);}
+
+function triHtml(v,eff){return `<span class="tri"><span class="${v==="allow"?"a":""}">Allow</span><span class="${v==="deny"?"d":""}">Deny</span><span class="${v==null?"u":""}">Inherit</span></span>`;}
+function valHtml(t,v){if(t==="state")return triHtml(v);if(t==="set")return `<span style="display:flex;gap:4px;flex-wrap:wrap">${(v||[]).map(x=>`<span class="lchip">${x} ×</span>`).join("")}<span class="lchip" style="color:#19d3b0">+ add</span></span>`;
+  return `<span class="in${v?"":" ro"}" style="width:220px;height:26px">${v||"inherit"}</span>`;}
+
+
+const PL=[["Kestrel_88",352,128],["BrickLayerTom",306,198],["Juniper_K",-20,-6]];
+
+/* =================================================================== R1, R2: WORLDS (BC A) */
+(()=>{const m=frame("r1","Worlds","/#worlds");m.appendChild(h(`<div class="pagehead"><span class="t">WORLDS</span><span class="mu" style="font-size:12px">7 servers · 6 online</span><span class="grow"></span><div class="search">${SV.search}Find a region on any server</div></div>`));
+  const g=h('<div class="tiles" style="grid-template-columns:repeat(4,1fr)"></div>');SERVERS.forEach(s=>{const t=serverTile(s,"A");if(!s.on){t.querySelector(".counts").outerHTML='<div class="counts mu" style="font-family:var(--body);font-weight:500">No regions while it is off</div>';}g.appendChild(t);});m.appendChild(g);})();
+function serverPage(id,selRow){const m=frame(id,"Worlds","/#worlds/frostwarf");
+  m.appendChild(h(`<div class="pagehead"><div class="crumb"><a>‹ Worlds</a><span>/</span><b>Frostwarf</b><i class="dot"></i><span>8 online · 21.6 ms</span></div><span class="grow"></span><div class="search">${SV.search}Search Frostwarf's regions</div><span class="key vio">+ NEW REGION ON THE MAP</span></div>`));
+  const dc={Overworld:{protected:4,mine:2,plot:4,claim:3,open:1},Nether:{protected:1},End:{protected:1},Mining:{mine:3}};
+  const dt=h('<div class="dtabs"></div>');Object.entries(dc).forEach(([d,c],i)=>dt.appendChild(h(`<div class="dtab${i===0?" on":""}"><b>${d}</b>${counts(c)}<span class="lnk" style="font-size:10.5px">GLOBAL SETTINGS ›</span></div>`)));m.appendChild(dt);
+  m.appendChild(h(`<div style="display:flex;gap:6px;padding:0 20px 10px;align-items:center">${KORDER.filter(k=>k!=="global").map(k=>`<span class="kchip"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}<span class="grow"></span><span class="mu" style="font-size:11.5px">14 regions · sorted by kind, then priority ▾</span></div>`));
+  const box=h('<div class="box" style="margin:0 20px;flex:1"></div>');const t=h('<table class="tbl"><thead><tr><th></th><th>Id ▴▾</th><th>Name</th><th>Kind ▾</th><th>Size</th><th>Heights</th><th>Priority</th><th>Parent</th><th>Owner, price or reset</th><th></th></tr></thead><tbody></tbody></table>');
+  KORDER.forEach(k=>R.filter(r=>r.k===k&&!r.shell&&r.b).forEach(r=>t.tBodies[0].appendChild(h(`<tr class="${r.id===selRow?"sel":""}"><td>${sw(r.k)}</td><td class="id">${r.id}</td><td>${r.n}</td><td>${kt(r.k)}</td><td class="mono">${size(r)}</td><td class="mono sub">${r.b[1]} to ${r.b[4]}</td><td class="mono">${r.pri}</td><td class="mono sub">${r.par||"—"}</td><td class="sub">${r.own||(r.price?r.price+" coins":r.cost?r.cost+" coins":(r.reset?"resets in "+r.reset:"—"))}</td><td><span class="lnk">MAP ›</span>&nbsp;&nbsp;<span class="lnk">EDIT ›</span></td></tr>`))));
+  box.appendChild(t);m.appendChild(box);m.appendChild(h('<div style="height:14px;flex:none"></div>'));return m;}
+serverPage("r2","");
+
+/* =================================================================== R3, R4: the editor (BD A) */
+function drawer(m,o){m.appendChild(h('<div class="shade"></div>'));const r=byId(o.id),ro=o.ro;
+  const dis=ro?' style="opacity:.45"':"";const adm=ro?' <span class="rk" style="margin-left:4px">Admin</span>':"";
+  const d=h(`<div class="drawer"><div class="dh">${sw(r.k)}<b class="mono" style="font-size:14px">${r.id}</b>${kt(r.k)}<span class="mu" style="font-size:11.5px">Frostwarf · Overworld · version ${o.v}</span><span class="grow"></span><span class="key sm">MAP ›</span><span class="mu" style="font-size:16px">×</span></div>
+  <div class="dbd" style="overflow:hidden">${ro?'<div class="note" style="color:#b58cff">You can see this region; changing it is for Admins and Owners.</div>':""}
+  <div class="sect">GENERAL</div><div class="three"><div class="field"><label>Name</label><div class="in${ro?" ro":""}">${r.n}</div></div><div class="field"><label>Id</label><div class="in mono${ro?" ro":""}">${r.id}</div></div><div class="field"><label>Priority</label><div class="in mono${ro?" ro":""}">${r.pri}</div></div></div>
+  <div class="sect">BOUNDS <span class="key sm"${dis}>REDRAW ON THE MAP${adm}</span></div><div class="kv"><span>Corners</span><span class="mono">${corners(r)}</span><span>Size</span><span class="mono">${size(r)} · Y ${r.b[1]} to ${r.b[4]}</span></div>
+  ${o.part}
+  <div class="sect">FLAGS <span class="mu" style="font-family:var(--body);font-size:11px">${o.flagNote} <span class="search" style="display:inline-flex;width:140px;height:24px;vertical-align:middle;margin-left:6px">${SV.search}Find a flag</span></span></div>
+  ${o.aud?`<div style="display:flex;gap:6px;align-items:center"><span class="tri" style="font-size:11px"><span>Region</span><span class="u" style="background:#19d3b0;color:#0f1115">Visitors</span><span>Members</span><span>Owners</span></span><span class="note">who each list applies to inside this claim</span></div>`:""}
+  <div class="box" style="flex:1;border-radius:10px;min-height:120px" id="${o.flId}"></div></div>
+  <div class="savebar">${o.chg?`<span class="chg">${o.chg}</span>`:'<span class="mu" style="font-size:12px">No changes</span>'}<span class="grow"></span><span class="key dg"${dis}>REMOVE${adm}</span><span class="key"${dis}>UNDO CHANGES</span><span class="key pri"${dis}>SAVE${adm}</span></div></div>`);
+  const fl=d.querySelector("#"+o.flId);o.flags.forEach(([g,list])=>{fl.appendChild(h(`<div class="fgrp">${g}<span class="n">${list.length} set</span></div>`));
+    list.forEach(([n,t,v,eff,from,ch])=>fl.appendChild(h(`<div class="frow${ch?" ch":""}"${ro?' style="opacity:.85"':""}><span class="fn">${n}</span>${valHtml(t,v)}<span class="eff">${v==null&&eff?`gives <b style="color:${eff==="allow"?"#19d3b0":"#ff6b5c"}">${eff}</b> from ${from}`:""}</span></div>`)));});
+  m.appendChild(d);}
+(()=>{const m=serverPage("r3","kestrel_base");
+  drawer(m,{id:"kestrel_base",v:9,flId:"r3fl",aud:1,chg:"2 changes not saved",flagNote:"7 set · 110 in all",
+    part:`<div class="sect">CLAIM</div><div class="three"><div class="field"><label>Owner</label><div class="in">Kestrel_88</div></div><div class="field"><label>Members</label><div class="in ch">BrickLayerTom, Juniper_K</div></div><div class="field"><label>Bought</label><div class="in ro">18 Oct · 9,240 coins</div></div></div>`,
+    flags:[["Protection",[["build","state","deny",null,null],["chest-access","state","deny",null,null,1],["interact","state","allow",null,null],["item-pickup","state","deny",null,null]]],["Movement",[["enderpearl","state",null,"allow","default",1],["set-home","state","deny",null,null]]]]});})();
+(()=>{const m=serverPage("r4","iron_mine");const B=[["minecraft:stone",52,"#8a8a8a"],["minecraft:iron_ore",24,"#d8af93"],["minecraft:deepslate_iron_ore",9,"#9a7d6c"],["minecraft:coal_ore",10,"#3a3a3a"],["minecraft:andesite",5,"#a3a39c"]];
+  drawer(m,{id:"iron_mine",v:31,flId:"r4fl",ro:1,flagNote:"6 set · 110 in all",
+    part:`<div class="sect">MINE <span class="key sm" style="opacity:.45">RESET NOW <span class="rk">Admin</span></span></div><div class="fill">${B.map(([n,w,c])=>`<i style="width:${w}%;background:${c}"></i>`).join("")}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px">${B.map(([n,w,c])=>`<span><i class="sw" style="background:${c}"></i> <span class="mono">${n.replace("minecraft:","")}</span> <span class="mu">${w}%</span></span>`).join("")}</div>
+      <div class="kv"><span>Resets</span><span>every 20 min · next in 14 min (19:42)</span><span>Players go to</span><span class="mono">198, 63, -96, facing south</span><span>Shell</span><span class="mono">iron_mine_shell, 4 blocks around</span></div>`,
+    flags:[["Protection",[["block-break","state","allow",null,null],["block-place","state","deny",null,null],["mine-only-break","state","allow",null,null]]],["Miscellaneous and BSP additions",[["totem-place","state","deny",null,null]]]]});})();
+
+/* =================================================================== R5 to R8: the map (BE A, BF B) */
+function regionsWin(m,o){const rows=KORDER.filter(k=>k!=="global").map(k=>{const rs=R.filter(r=>r.k===k&&!r.shell);
+    return `<div class="sg">${sw(k)}<span>${K[k].l}</span><span class="n">${rs.length}</span></div>`+rs.map(r=>`<div class="pr${r.id===o.sel?" on":""}">${(o.hidden||[]).includes(r.id)?SV.eyeoff:SV.eye}<span class="nm"${(o.hidden||[]).includes(r.id)?' style="opacity:.5"':""}>${r.id}</span><span class="d">${size(r)}</span></div>`).join("");}).join("");
+  const w=h(`<div class="fw front" style="left:${o.x}px;top:54px;width:262px;height:${o.h}px"><div class="ft"><i class="gp"></i><span class="tt">REGIONS</span><span class="ct">14</span><span class="mn">–</span></div>
+    <div class="fsr">${SV.search}Search regions</div><div class="chips">${KORDER.filter(k=>k!=="global").map(k=>`<span class="kchip${(o.offKinds||[]).includes(k)?" off":""}"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}</div>
+    <div class="rows">${rows}</div><div class="foot"><span class="key sm pri">+ NEW REGION</span></div><i class="rz"></i></div>`);m.mv.appendChild(w);return w;}
+function box3d(m,r){const k=K[r.k],x1=m.X(r.b[0]),z1=m.Z(r.b[2]),x2=m.X(r.b[3]+1),z2=m.Z(r.b[5]+1),lift=Math.min(60,(r.b[4]-r.b[1])*.9),dx=-lift*.35;
+  const svg=h(`<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2" viewBox="0 0 1050 666">
+    <polygon points="${x1},${z1} ${x2},${z1} ${x2},${z2} ${x1},${z2}" fill="${k.c}22" stroke="${k.c}" stroke-width="2"/>
+    <polygon points="${x1},${z2} ${x2},${z2} ${x2+dx},${z2-lift} ${x1+dx},${z2-lift}" fill="${k.c}30" stroke="${k.c}" stroke-width="1.5"/>
+    <polygon points="${x1},${z1} ${x1},${z2} ${x1+dx},${z2-lift} ${x1+dx},${z1-lift}" fill="${k.c}26" stroke="${k.c}" stroke-width="1.5"/>
+    <polygon points="${x1+dx},${z1-lift} ${x2+dx},${z1-lift} ${x2+dx},${z2-lift} ${x1+dx},${z2-lift}" fill="${k.c}38" stroke="${k.c}" stroke-width="2.5"/></svg>`);m.mv.appendChild(svg);
+  m.mv.appendChild(h(`<span class="rg hi" style="left:${x1+dx}px;top:${z1-lift-20}px;border:0;background:none"><span class="lb" style="position:static">${r.id}</span></span>`));}
+// R5
+(()=>{const m0=frame("r5","Map","/#map");const m=mapIn(m0,{seed:11});const hidden=["copper_mine"];
+  R.filter(r=>r.b&&!r.shell&&!hidden.includes(r.id)&&r.id!=="iron_mine").forEach(r=>m.add(r,"",""));box3d(m,byId("iron_mine"));heads(m,PL);
+  mapBar(m,'<span class="mc tealb">● <b style="color:#19d3b0">REGIONS</b></span>');playersWin(m,{x:10,y:54,h:250});regionsWin(m,{x:256,h:500,sel:"iron_mine",hidden});
+  const r=byId("iron_mine");m.mv.appendChild(h(`<div class="rcard" style="right:52px;bottom:14px"><div class="t">${sw("mine")}<b>iron_mine</b>${kt("mine")}<span class="grow"></span><span class="mu">×</span></div>
+    <div class="kv"><span>Corners</span><span class="mono">${corners(r)}</span><span>Size</span><span class="mono">${size(r)}, Y 12 to 62</span><span>Priority</span><span class="mono">15</span><span>Resets</span><span>in 14 min</span></div><div style="display:flex;gap:6px"><span class="key sm">ZOOM TO FIT</span><span class="key sm">RESET NOW</span><span class="key sm pri">EDIT ›</span></div></div>`));
+  m.mv.appendChild(h('<div class="mcoord">Frostwarf · Overworld · 198, 63, -66</div>'));})();
+function formWin(m,o){const w=h(`<div class="fw front solid" style="left:10px;top:54px;width:300px;height:${o.h||540}px"><div class="ft"><i class="gp"></i><span class="tt">NEW REGION</span><span class="ct">Frostwarf · Overworld</span><span class="mn">–</span></div>
+  <div class="rows" style="padding:0 10px;display:flex;flex-direction:column;gap:8px">${o.body}</div><div class="foot"><span class="key sm">CANCEL</span><span class="grow"></span><span class="key sm${o.ok?" pri":""}"${o.ok?"":' style="opacity:.45"'}>CREATE</span></div></div>`);m.mv.appendChild(w);}
+const kindRow=sel=>`<div class="field"><label>Kind</label><div style="display:flex;gap:4px;flex-wrap:wrap">${["protected","mine","plot","open"].map(k=>`<span class="kchip${k===sel?"":" off"}" style="text-decoration:none${k===sel?";border-color:"+K[k].c:""}"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}</div></div>`;
+const heightRow=(a,b,which,ch)=>`<div class="field"><label>Height</label><div style="display:flex;gap:6px;align-items:center"><div class="in mono${ch?" ch":""}" style="flex:1">Y ${a}</div><span class="mu">to</span><div class="in mono${ch?" ch":""}" style="flex:1">Y ${b}</div></div>
+  <div style="display:flex;gap:4px;margin-top:4px"><span class="key sm${which==="full"?" pri":""}">FULL HEIGHT</span><span class="key sm${which==="clicked"?" pri":""}">CLICKED BLOCKS</span>${which==="typed"?'<span class="mu" style="font-size:10.5px;align-self:center">typed</span>':""}</div></div>`;
+// R6
+(()=>{const m0=frame("r6","Map","/#map");const m=mapIn(m0,{seed:11,cx:-250,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"faint",""));mapBar(m,'<span class="mc gold"><b>DRAWING</b> · Esc to stop</span>');
+  const cx=m.X(-330),cz=m.Z(-160);m.mv.appendChild(h(`<div class="cross" style="left:${cx}px;top:${cz}px"></div>`));m.mv.appendChild(h(`<div class="tip" style="left:${cx+16}px;top:${cz+10}px">-330, 71, -160 · grass block</div>`));
+  m.mv.appendChild(h('<div class="banner" style="left:330px;transform:none"><b>Click the first corner.</b> Pan and zoom as usual; the block under the pointer is shown.</div>'));
+  formWin(m,{h:420,body:`${kindRow("plot")}<div class="two"><div class="field"><label>Corner 1</label><div class="in mono ro">click the map</div></div><div class="field"><label>Corner 2</label><div class="in mono ro">—</div></div></div><div class="note">Choose the kind first: it sets what the form asks (a price for a plot, a cost for an open area, the block mix for a mine) and where the heights start.</div>`});})();
+// R7
+(()=>{const m0=frame("r7","Map","/#map");const m=mapIn(m0,{seed:11,cx:-200,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"",""));mapBar(m,'<span class="mc gold"><b>DRAWING</b> · drag a handle to adjust</span>');
+  const b=[-330,-160,-120,60];const e=h(`<div class="rg dash" style="border-color:#a6e36b;background:#a6e36b26;z-index:2"></div>`);e.style.left=m.X(b[0])+"px";e.style.top=m.Z(b[1])+"px";e.style.width=(b[2]-b[0]+1)*m.s+"px";e.style.height=(b[3]-b[1]+1)*m.s+"px";m.mv.appendChild(e);
+  const xs=[b[0],(b[0]+b[2])/2,b[2]],zs=[b[1],(b[1]+b[3])/2,b[3]];xs.forEach((x,i)=>zs.forEach((z,j)=>{if(i===1&&j===1)return;const hd=h(`<div class="hand${(i===1||j===1)?" edge":""}"></div>`);hd.style.left=m.X(x)+"px";hd.style.top=m.Z(z)+"px";m.mv.appendChild(hd);}));
+  m.mv.appendChild(h(`<div class="size" style="left:${m.X((b[0]+b[2])/2)}px;top:${m.Z(b[3])+8}px">211 × 221</div>`));
+  formWin(m,{body:`${kindRow("plot")}<div class="two"><div class="field"><label>Id</label><div class="in mono">plot_5</div></div><div class="field"><label>Price (coins)</label><div class="in mono">6,000</div></div><div class="field"><label>Priority</label><div class="in mono">30</div></div><div class="field"><label>Parent</label><div class="in mono">spawn_town ▾</div></div></div>
+    <div class="two"><div class="field"><label>Corner 1 (x, z)</label><div class="in mono">-330, -160</div></div><div class="field"><label>Corner 2 (x, z)</label><div class="in mono ch">-120, 60</div></div></div>${heightRow(-64,320,"full")}
+    <div class="errline">Region Guard refuses this: part of it lies over plot_1 (Plot 1). Drag the bottom edge back, or pick another kind.</div>`});})();
+// R8
+(()=>{const m0=frame("r8","Map","/#map");const m=mapIn(m0,{seed:11,cx:-250,cz:0,s:1.3});R.filter(r=>r.b&&!r.shell).forEach(r=>m.add(r,"",""));mapBar(m,'<span class="mc gold"><b>DRAWING</b> · drag a handle to adjust</span>');
+  const b=[-330,-160,-280,-110];const e=h(`<div class="rg dash" style="border-color:#ffd23a;background:#ffd23a26;z-index:2"></div>`);e.style.left=m.X(b[0])+"px";e.style.top=m.Z(b[1])+"px";e.style.width=(b[2]-b[0]+1)*m.s+"px";e.style.height=(b[3]-b[1]+1)*m.s+"px";m.mv.appendChild(e);
+  [[b[0],b[1]],[b[2],b[1]],[b[0],b[3]],[b[2],b[3]]].forEach(([x,z])=>{const hd=h('<div class="hand"></div>');hd.style.left=m.X(x)+"px";hd.style.top=m.Z(z)+"px";m.mv.appendChild(hd);});
+  m.mv.appendChild(h(`<div class="size" style="left:${m.X((b[0]+b[2])/2)}px;top:${m.Z(b[3])+8}px">51 × 51 × 49 high</div>`));
+  formWin(m,{ok:1,body:`${kindRow("mine")}<div class="two"><div class="field"><label>Id</label><div class="in mono">gold_mine</div></div><div class="field"><label>Priority</label><div class="in mono">15</div></div><div class="field"><label>Reset every</label><div class="in mono">20 min</div></div><div class="field"><label>Fill</label><div class="in">stone 70%, gold ore 30% ▾</div></div></div>
+    <div class="two"><div class="field"><label>Corner 1 (x, z)</label><div class="in mono">-330, -160</div></div><div class="field"><label>Corner 2 (x, z)</label><div class="in mono">-280, -110</div></div></div>${heightRow(14,62,"typed",1)}
+    <div class="note">Clicked blocks were Y 22 and Y 62; Y from typed down to 14. The shell is added round it, as /rg mine create does.</div><div class="okline">Region Guard's check: fine, nothing in the way.</div>`});})();
+
+/* =================================================================== R9: phone */
+function phone(id,tab,body){const p=document.getElementById(id);p.innerHTML=`<div class="sbar"><span>21:47</span><span>●●● 82%</span></div>`;const b=h('<div class="pbody"></div>');b.innerHTML=body;p.appendChild(b);
+  const nav=h('<div class="tnav"></div>');[["users","Players"],["chat","Chat"],["map","Map"],["totem","Totems"],["shield","Staff"],["more","More"]].forEach(([i,l])=>nav.appendChild(h(`<div class="${l===tab?"on":""}">${SV[i]}<span>${l}</span></div>`)));p.appendChild(nav);return b;}
+phone("r9a","More",`<div class="pagehead" style="padding:8px 14px"><span class="t">MORE</span></div>${[["globe","Worlds","7 servers · regions","new"],["users","Find a player",""],["chat","Player messages","2 waiting"],["map","Market and lottery",""],["shield","Bans",""],["more","Graves",""]].map(([i,l,s,n])=>`<div class="lrow" style="padding:11px 14px;gap:12px;font-size:14px"><span style="width:18px;height:18px;color:#19d3b0">${SV[i]}</span><span>${l}${n?' <span class="kt" style="background:#ffd23a;color:#10151c">NEW</span>':""}</span><span class="r">${s}</span></div>`).join("")}`);
+phone("r9b","More",`<div class="pagehead" style="padding:8px 14px"><div class="crumb"><a>‹</a><b>Frostwarf</b><span>· Overworld ▾</span></div></div><div style="display:flex;gap:4px;padding:0 14px 8px;flex-wrap:wrap">${KORDER.filter(k=>k!=="global").map(k=>`<span class="kchip" style="height:22px;font-size:10px"><i style="background:${K[k].c}"></i>${K[k].l}</span>`).join("")}</div>
+  ${KORDER.filter(k=>k!=="global").map(k=>{const rs=R.filter(r=>r.k===k&&!r.shell);return `<div class="grp">${sw(k)}${K[k].l}<span class="n">${rs.length}</span></div>`+rs.slice(0,3).map(r=>`<div class="lrow"><span class="id">${r.id}</span><span class="r">${size(r)} ›</span></div>`).join("");}).join("")}`);
+(()=>{const b=phone("r9c","Map","");b.style.position="relative";const mv=h('<div class="mv"></div>');const cv=document.createElement("canvas");cv.className="ter";mv.appendChild(cv);terrain(cv,11,324,600);b.appendChild(mv);
+  [[70,90,60,50,"protected"],[170,60,50,40,"mine"],[40,200,30,26,"claim"],[200,170,90,80,"open"]].forEach(([x,y,w,hh,k])=>mv.appendChild(h(`<div class="rg${K[k].dash?" dash":""}" style="left:${x}px;top:${y}px;width:${w}px;height:${hh}px;border-color:${K[k].c};background:${K[k].c}26"></div>`)));
+  mv.appendChild(h('<div class="mbar"><span class="mc"><b>Frostwarf</b> ▾</span><span class="mc">Players</span><span class="mc tealb"><b style="color:#19d3b0">Regions</b></span></div>'));
+  mv.appendChild(h(`<div class="sheet"><div class="grab"></div><div class="sect">REGIONS · 14</div><div class="fsr2">${SV.search}Search regions</div>${["spawn_town","market","iron_mine","plot_3","kestrel_base"].map(id=>{const r=byId(id);return `<div class="lrow" style="border:0;padding:5px 2px">${SV.eye}${sw(r.k)}<span class="id">${id}</span><span class="r">${size(r)}</span></div>`}).join("")}</div>`));})();
+</script>
+</body>
+</html>

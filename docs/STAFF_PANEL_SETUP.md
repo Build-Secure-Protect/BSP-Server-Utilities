@@ -594,6 +594,11 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
   LIKE 'bsp_su_seen';` shows one row first). Then update the panel as above. Without the grant the offline players are
   still listed by name, with a line saying where they logged off cannot be read. Players who last left before 0.18.0
   show "not recorded" until their next logout.
+- **Updating to panel 0.8.0 (the WORLDS tab and regions on the map).** Nothing new on the game servers and no new grant:
+  update the panel as above. The WORLDS tab, the map's Regions window and drawing regions show each server's BSP Region
+  Guard regions only once BSP Region Guard has its new api and BSP-Server Utilities answers for regions (a later
+  release); until then every live server's tile says its Region Guard does not answer for regions, and the Regions
+  window says the same.
 - **Updating to BSP-Server Utilities 0.19.0 (last seen in the in-game staff window).** No panel change and no new
   grant: the panel stays 0.7.0. **Players need the new modpack** (the protocol is 11), so put
   `bsp-server-utilities-0.19.0.jar` into the modpack and on every game server at the same time, as in part 1.

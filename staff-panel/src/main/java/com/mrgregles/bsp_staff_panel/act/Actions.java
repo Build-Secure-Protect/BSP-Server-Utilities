@@ -138,6 +138,11 @@ public final class Actions {
         return askAll(java.util.List.of(server), by, rank, fields, "read:" + by, READS_PER_MINUTE, "reads", wait).get(server);
     }
 
+    /** The same read to several servers at once (the WORLDS tab, SU-155), counted as one read; each server's answer by its name. */
+    public Map<String, Answer> readAll(java.util.List<String> servers, String by, String rank, JsonObject fields) {
+        return askAll(servers, by, rank, fields, "read:" + by, READS_PER_MINUTE, "reads", waitSeconds);
+    }
+
     private Map<String, Answer> askAll(java.util.List<String> servers, String by, String rank, JsonObject fields, String budget, int perMinute, String what, int wait) {
         long now = clock.getAsLong();
         Map<String, Answer> out = new java.util.LinkedHashMap<>();

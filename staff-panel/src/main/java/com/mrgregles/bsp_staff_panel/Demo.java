@@ -33,6 +33,18 @@ final class Demo {
             }
             String body = new String(java.util.Base64.getUrlDecoder().decode(payload.substring(0, payload.indexOf('.'))), java.nio.charset.StandardCharsets.UTF_8);
             String what = com.google.gson.JsonParser.parseString(body).getAsJsonObject().get("action").getAsString();
+            com.google.gson.JsonObject rg = DemoRegions.answer(what, com.google.gson.JsonParser.parseString(body).getAsJsonObject()); // SU-155
+            if (rg != null) {
+                com.google.gson.JsonObject ans = new com.google.gson.JsonObject();
+                ans.addProperty("id", uid);
+                ans.add("ok", rg.get("ok"));
+                ans.add("message", rg.get("message"));
+                if (!rg.get("data").isJsonNull()) {
+                    ans.add("data", rg.get("data"));
+                }
+                holder[0].acceptMessage(com.mrgregles.bsp_staff_panel.act.Actions.line("a", at, "answer", com.mrgregles.bsp_staff_panel.crypto.Signed.seal(key, ans.toString())));
+                return;
+            }
             long now = System.currentTimeMillis();
             String extra = what.equals("graves") ? ",\"data\":[{\"shortId\":\"3f9a2c1b\",\"serverId\":\"Moongrove\",\"dimension\":\"minecraft:overworld\",\"x\":-2214,\"y\":9,\"z\":902,"
                     + "\"placed\":false,\"archived\":false,\"diedAt\":" + (now - 7_200_000L) + ",\"stacks\":14,\"xp\":23,\"returnable\":true},"
@@ -583,6 +595,7 @@ final class Demo {
                 o.addProperty("bounties", true); // SU-77: and 1.19's Bounty Board
                 o.addProperty("totems", true); // SU-99: and its board for the TOTEMS tab
                 o.addProperty("talk", true); // SU-111: and private messages
+                o.addProperty("regions", true); // SU-155: and BSP Region Guard answering for its regions
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");

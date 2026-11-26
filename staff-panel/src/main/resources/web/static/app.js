@@ -1,17 +1,18 @@
 "use strict";
 // The panel's frame: the six tabs (TOTEMS added by SU-99) (bottom on a phone, a menu on the left from 900 px, D276, D287), staff online on the
 // left (D293), the live feed, and the More tab with your login and, for Owners, the staff accounts (D291).
-const TABS = ["Players", "Chat", "Map", "Totems", "Staff", "More"]; // TOTEMS between Map and Staff (D613)
+const TABS = ["Players", "Chat", "Map", "Worlds", "Totems", "Staff", "More"]; // TOTEMS between Map and Staff (D613); WORLDS between Map and Totems (D765)
 let me = null, live = { servers: [], players: [], onPanel: [] }, tab = "Players";
 
 function nav() {
   const bottom = $("tabs"), side = $("sidenav"), h = hold();
   bottom.textContent = ""; side.textContent = "";
   for (const t of TABS) {
-    const b = el("button", t === tab ? "on" : ""); b.type = "button";
+    // a phone's bottom bar keeps its six: WORLDS is in More there (D765), which is lit while it is open
+    const b = el("button", t === tab || (t === "More" && tab === "Worlds") ? "on" : ""); b.type = "button";
     b.innerHTML = ICONS[t]; b.appendChild(el("span", null, t));
     b.addEventListener("click", () => { tab = t; render(); });
-    bottom.appendChild(b);
+    if (t !== "Worlds") bottom.appendChild(b);
     const s = el("button", "nav" + (t === tab ? " on" : "")); s.type = "button";
     s.innerHTML = ICONS[t]; s.appendChild(el("span", null, t));
     s.addEventListener("click", () => { tab = t; render(); });
@@ -112,6 +113,11 @@ async function more(main) {
     moreView = "broadcast"; render();
   });
   menu.appendChild(b);
+  const wd = el("button", "item menuitem phoneonly"); wd.type = "button"; wd.dataset.keep = "more:worlds"; // WORLDS on a phone (D765, R9)
+  const wdg = el("div", "grow"); wdg.appendChild(el("div", "nm", "Worlds")); wdg.appendChild(el("div", "sub", "Every server's dimensions and its regions"));
+  wd.appendChild(wdg); wd.appendChild(el("span", "mu", "›"));
+  wd.addEventListener("click", () => { Worlds.home(); tab = "Worlds"; render(); });
+  menu.appendChild(wd);
   const pm = el("button", "item menuitem"); pm.type = "button"; pm.dataset.keep = "more:pmsg";
   const pmg = el("div", "grow"); pmg.appendChild(el("div", "nm", "Player messages")); pmg.appendChild(el("div", "sub", "Open conversations with players, replies waiting first"));
   pm.appendChild(pmg); const waitingNow = PlayerMsg.badge(); if (waitingNow) pm.appendChild(el("span", "pcountbadge", waitingNow)); pm.appendChild(el("span", "mu", "›"));
@@ -274,7 +280,7 @@ function showLink(area, text, link) {
 
 async function render() {
   const main = $("main");
-  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); Totems.unmount(main); main.textContent = "";
+  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); Totems.unmount(main); Worlds.unmount(main); main.textContent = "";
   main.classList.toggle("chatmain", tab === "Chat");
   main.classList.toggle("staffmain", tab === "Staff");
   if (tab !== "More") moreView = "home";
@@ -287,6 +293,7 @@ async function render() {
     else if (tab === "Staff") StaffView.mount(main);
     else if (tab === "Map") MapView.mount(main); // SU-47
     else if (tab === "Totems") Totems.mount(main); // SU-99
+    else if (tab === "Worlds") Worlds.mount(main); // SU-155
     else if (tab !== "Chat") main.appendChild(el("div", "note", tab + " is not part of the panel yet."));
   }
 }

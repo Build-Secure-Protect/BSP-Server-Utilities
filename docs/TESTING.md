@@ -2888,3 +2888,85 @@ GameTests **359/359**, twice in a row (`SeasonResetGameTests`: 2). Untested with
 ## 2026-11-25: Streamer Mode hides JourneyMap's minimap behind menus too (unreleased)
 - [ ] With JourneyMap and Streamer Mode on, and "JourneyMap minimap" hidden in the streamer menu: press Esc. The stream window shows the pause menu with no minimap; the game window shows the minimap behind the pause menu as before.
 - [ ] Back in game: the stream still has no minimap; with the minimap shown again in the streamer menu, it appears in the stream both in game and behind the pause menu.
+
+## 2026-11-26: the WORLDS tab and the region editor, panel 0.8.0 against `--demo` (SU-155)
+Built and checked only against `java -jar staff-panel/build/libs/bsp-staff-panel-0.8.0.jar --demo <port>`: the game servers do not answer for regions yet (BSP Region Guard's SU-RG3 to SU-RG5, then this mod's region actions). JUnit **138/138** (`RegionsTest`: 6).
+
+Checked in the browser pane on the demo (1440 px and 375 px):
+- [x] WORLDS in the menu between Map and Totems; on a phone the bottom bar keeps its six and More lists Worlds first (More lit while it is open).
+- [x] The grid: six tiles, SafeRoom greyed "off · last heard 3 h ago", Stormfall marked PvP, counts by kind; "mine" in the search finds five mines on four servers, and a hit opens Frostwarf's Mining with deep_mine chosen.
+- [x] Frostwarf's page: four dimension cards, the table sorted by kind then priority; with the chat open the heights column drops so MAP › and EDIT › stay in view.
+- [x] A claim: Allow on `build` (Visitors) and Deny on `block-break` (Members: 20 player flags listed) → "2 changes not saved" → SAVE → "Saved", version 5 → 6.
+- [x] A mine at 99% → SAVE refused "The mix must add up to 100% (it adds up to 99.0%)", the change kept; UNDO CHANGES drops it.
+- [x] As a Moderator (the page's own rank set by hand; the panel refuses the save itself, `RegionsTest`): the violet line, every field disabled, SAVE and REMOVE marked Admin.
+- [x] REMOVE on plot_4: "Sure? Remove", then gone from the table with "Removed plot_4" above it.
+- [x] GLOBAL SETTINGS › on Overworld: WORLD BORDER and FLAGS only.
+- [x] A phone: the server as a list, the editor as a full sheet, nothing wider than the screen.
+
+Still to check (not possible yet):
+- [ ] On the network, once Region Guard has SU-RG3 to SU-RG5 and the mod answers `regions_list`: the grid's counts match `/rg list` on each server; a save, a removal and a mine reset change the region in game; a region changed in game meanwhile is refused and shown as it is now.
+- [ ] MAP › on a region opens the Map tab centred on it (checked only that it asks for the map; the demo has no map unless started with a BlueMap folder).
+
+## 2026-11-26: the Map tab's Regions window and outlines, panel 0.8.0 against `--demo` with BlueMap 5.29's page (SU-156)
+Checked in the browser pane with `--demo 8210 <folder>`, where the folder is BlueMap 5.29's own web app (`webapp.zip` from `bluemap-5.29-cli.jar`) with a `settings.json` naming the demo maps and an empty `textures.json` per map: BlueMap's real page, markers, camera and clicks, but no terrain. JUnit 138/138 (no server change).
+- [x] The Regions window starts folded at the players window's right edge; "+" opens it; 13 rows on Frostwarf's Overworld by kind, each with its size; 13 outlines in BlueMap's popup set in their kind colours.
+- [x] A row chosen (iron_mine): the camera at its centre, zoomed to fit, its box added, its card with the corners, size and heights, priority and next reset, and ZOOM TO FIT, RESET NOW, EDIT ›.
+- [x] A real mouse click on an outline in BlueMap opens the panel's card (BlueMap's own popup does not open).
+- [x] The eye hides one outline; a kind chip hides that kind's; REGIONS in the bar hides all (the window says so) and brings them back; all kept in this browser.
+- [x] EDIT › opens the WORLDS tab with that region's editor; MAP › on WORLDS opens the Map tab zoomed to the region with its card, on another server too (Frostwarf to Moongrove).
+- [x] The last window touched is on top; following a player closes the region card and its box.
+- [x] A phone (375 px): the REGIONS button under the Players button opens the sheet; choosing a row closes it and shows the card as the bottom sheet; nothing wider than the screen.
+
+Still to check (not possible yet):
+- [ ] With the real map's terrain: the outlines sit where the regions are in the world and read well over the ground at every zoom; a click on an outline under a player's head or a pin.
+- [ ] On the network, once the game servers answer for regions (SU-158).
+
+## 2026-11-26: drawing a new region from two points, panel 0.8.0 against `--demo` with BlueMap 5.29's page (SU-157)
+Checked in the browser pane on the same demo as SU-156 (BlueMap's real page, no terrain: the blocks clicked come from the flat plane at the camera's height, so Y is not known and CLICKED BLOCKS is dimmed). JUnit **140/140** (`RegionsTest` 8: creating and checking by Admins only, nothing malformed signed, Region Guard's reasons word for word).
+- [x] WORLDS' + NEW REGION ON THE MAP opens the Map tab on Frostwarf's Overworld drawing: "Click the first corner." at the bottom, the form in the Regions window.
+- [x] Real clicks for both corners: after the first, the outline follows the pointer with its block shown; after the second, eight handles on the outline, the size under it, the corners in the form, id region_1, Region Guard's check "fine", CREATE lit.
+- [x] A plot drawn over the town's plots: "Region Guard refuses this: Part of it lies over plot_2 (Plot 2)." and CREATE dim; the west handle dragged clear: the corners and size follow, the check passes.
+- [x] A mine: id mine_1, priority 15; heights typed 14 to 62 ("typed", the size "× 49 high"); a mix adding to 90% is refused by the panel itself (not called Region Guard's).
+- [x] CREATE: the window is the list again with region_1 chosen and its card; Esc and CANCEL stop drawing and take the handles, the banner and the outline away.
+
+Still to check (not possible yet):
+- [ ] Over real terrain: the block under the pointer (with its Y), CLICKED BLOCKS, a mine starting at the clicked blocks; BlueMap's block popup staying shut on each corner.
+- [ ] On the network, once Region Guard has SU-RG5 and the mod answers `region_check` and `region_create` (SU-158): the region made in game with Region Guard's rules.
+
+## 2026-11-26: audit of the WORLDS tab, the Regions window and drawing (SU-155 to SU-157)
+Three independent reads (the panel's server side; the WORLDS tab; the Map tab's window and drawing), each finding checked against the code before it was fixed. JUnit **142/142** (`RegionsTest` 10). Checked again in the browser pane against `--demo` with BlueMap 5.29's page.
+
+Fixed, the panel's server side:
+- An Admin could remove a player's claim when the panel held no read of that server (the Owner-only rule failed open), or by first switching the claim to a plain region. Now a removal or a change of kind always knows the region's kind (read first when needed); a claim, a mine and the global region keep their kind; a mine's shell is removed only with its mine.
+- `newId` and `parent` could be `__global__`; `parent: null` cleared the parent; a non-object `set`, a non-object `mine.spawn` or a non-boolean `plotsInPvp` were taken quietly; Y could pass Minecraft's limits (now -2032 to 2031); the UUID check took 36 dashes.
+- Text from a request (a server's name, an unknown key) could reach the panel's log with line breaks; refusals now name only plain short values, and the log cleans whatever a server answered.
+- A server whose read failed was asked again on every grid load (each holding a slot of the panel's four for up to 6 s); now again after 20 s, its last error shown meanwhile.
+- A read begun before a change could put the old regions back for a minute; such answers are dropped.
+- "Last heard from" was the time WORLDS was last opened, not the feed's; a server that stopped before anyone opened WORLDS was missing.
+- One odd snapshot or answer (`mspt`, a dimension's `id` or `pvp` not of their kind) could break the grid for everyone.
+- Demo: a mine's shell id could clash or run past 32 characters; a renamed mine's shell kept the old id.
+
+Fixed, the WORLDS tab:
+- REMOVE and RESET NOW went back to their plain words after three seconds but stayed armed: one later click acted at once. Now armed only for their three seconds (as everywhere else in the panel).
+- A slow read of one server could fill another server's page (and a save could then name the wrong server); reads are now tied to the server they were for.
+- Unsaved edits were replaced by any read (coming back from the Map tab, More on a phone, EDIT › from the map card, RESET NOW); now kept, with a line saying so; fields are held while a save is out.
+- Member and owner flags set after switching a region to a plot were never sent.
+- A save answered after the editor was closed did not refresh the table or the map.
+- Taking a player off and adding them back sent both.
+- A corner or "where players go" that did not read kept the last good value and still turned gold; now marked red and SAVE held back.
+- + ADD A BLOCK always added stone (refused when stone was there) and could make the mix 100.1%; a blank percentage gave NaN.
+- A text flag committed on leaving the field, redrawing under the next click (a first click on SAVE could be lost); now written as typed.
+- Two keys shared one `data-keep`; READING… never showed; a "Removed …" note stayed through later saves; text and number fields had different backgrounds.
+
+Fixed, the Map tab:
+- RESET NOW on the map card: armed past its three seconds (as above); its answer could land on another region's card or throw if the card had closed.
+- A new region or an edit could stay missing from the map for a minute (a read already under way was kept); the "Created" line was never shown on the new region's card.
+- The form was rebuilt (and scrolled to the top) on every live tick; now only when its kind, step or height mode changes.
+- The handles were drawn at the camera's height, the outline at its own: they parted in BlueMap's 3D view. One height for both, and drags use it.
+- A check answer from an earlier drawing could light CREATE for a new one; CANCEL during CREATE left the map unread; a narrowed window left drawing with no CANCEL; a kind change threw away typed heights; typed corners did not update the offered parent.
+- Choosing an offline player, leaving the tab, or clicking a player head or a pin while drawing left drawing half-running (a loop that threw on other tabs); a waiting MAP › or + NEW REGION could fire later, unasked; a region with an id starting "-sel" would have clashed with the chosen box's marker.
+- A failed read hid every outline for a minute; the last good read is kept and tried again in 20 s.
+
+Left as they are (noted): number flags travel as text, as `/rg flag` takes them (said in `docs/API.md` and the Region Guard requests); a mine mix of thirds (33.3 + 33.3 + 33.3) is refused as 99.9% (type 33.4 for one); server names differing only in case are not merged.
+
+Checked in the browser after the fixes: a bad corner holds SAVE back; a typed greeting saves at once (version 15 → 16); REMOVE and the map's RESET NOW re-arm after three seconds instead of acting; outline ids `bsp-rg:<id>`; a drawn mine keeps typed heights across a kind change, its handle on the corner, CREATE shows "Created mine_1" on its card.

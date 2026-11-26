@@ -247,6 +247,25 @@ public final class Feed {
                 .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
     }
 
+    /** Live servers whose BSP Region Guard answers for their regions (their snapshot's {@code regions}, SU-155), by name. */
+    public List<String> liveWithRegions() {
+        return liveWith("regions");
+    }
+
+    /** A live server's numbers for the WORLDS tab: {@code mspt} and {@code count} (players), or null when it is not live. */
+    public JsonObject numbers(String server) {
+        Entry e = servers.get(server);
+        if (e == null || !live().contains(server)) {
+            return null;
+        }
+        JsonObject o = new JsonObject();
+        JsonElement ms = e.snapshot.get("mspt");
+        o.addProperty("mspt", ms != null && ms.isJsonPrimitive() && ms.getAsJsonPrimitive().isNumber() ? ms.getAsDouble() : 0); // never one odd snapshot breaking the grid (audit)
+        o.addProperty("count", players(server));
+        o.addProperty("heardAt", e.heardAt);
+        return o;
+    }
+
     /** Live servers that take private staff messages from the panel (their snapshot's {@code talk}, SU-109), the busiest first. */
     public List<String> liveWithTalk() {
         return liveWith("talk").stream().sorted(java.util.Comparator.comparing((String n) -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
