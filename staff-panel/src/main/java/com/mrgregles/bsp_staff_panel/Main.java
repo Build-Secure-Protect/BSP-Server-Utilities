@@ -212,6 +212,10 @@ public final class Main {
         if (demo) {
             DemoRegions.offline(regions); // a server that is off, remembered with its regions (R1)
         }
+        com.mrgregles.bsp_staff_panel.shops.ShopDesk shopDesk = new com.mrgregles.bsp_staff_panel.shops.ShopDesk(feed, () -> marketActions, System::currentTimeMillis);
+        if (demo) {
+            DemoShops.offline(shopDesk); // a server that is off, remembered with its stalls (R3)
+        }
         PanelServer server = new PanelServer(host, port, publicUrl, gate, auth, store, feed, System::currentTimeMillis).withActions(actions).withChat(chat).withTalk(talk)
                 .withNotes(notes).withPictures(pictures).withMap(mapRoot.isEmpty() ? null : Path.of(mapRoot))
                 .withMapShown(new com.mrgregles.bsp_staff_panel.web.MapShown(store, System::currentTimeMillis))
@@ -219,6 +223,7 @@ public final class Main {
                 .withBank(new com.mrgregles.bsp_staff_panel.market.BankDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withRegions(regions)
+                .withShops(shopDesk)
                 .withTotems(totems).withPlayerTalk(playerTalk)
                 .withOffline(new com.mrgregles.bsp_staff_panel.players.OfflineDesk(store, feed, System::currentTimeMillis, seenKey)).start();
         if (!mapRoot.isEmpty() && !java.nio.file.Files.isRegularFile(Path.of(mapRoot, "index.html"))) {

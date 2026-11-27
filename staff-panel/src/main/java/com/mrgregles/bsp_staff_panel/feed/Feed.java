@@ -265,6 +265,34 @@ public final class Feed {
         return at != null && at.isJsonPrimitive() && at.getAsJsonPrimitive().isNumber() ? at.getAsLong() : -1;
     }
 
+    /**
+     * Live servers whose BSP-Core answers for its shops (their snapshot's {@code shops}, SU-161; BSP-Core requests SU-BC5 to
+     * SU-BC10): database connected first, then the busiest, then by name (D789).
+     */
+    public List<String> liveWithShops() {
+        return liveWith("shops").stream().sorted(java.util.Comparator.comparing((String n) -> !flag(n, "lotteryUp"))
+                .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
+    /** When a live server last heard that a shop changed, anywhere on the network (its snapshot's {@code shopsAt}, D811), or -1. */
+    public long shopsAt(String server) {
+        return stamp(server, "shopsAt");
+    }
+
+    /** When a live server's own Market Stalls, Vendor Posts or Stall Displays last changed (its snapshot's {@code stallsAt}, SU-162), or -1. */
+    public long stallsAt(String server) {
+        return stamp(server, "stallsAt");
+    }
+
+    private long stamp(String server, String key) {
+        Entry e = servers.get(server);
+        if (e == null || !live().contains(server)) {
+            return -1;
+        }
+        JsonElement at = e.snapshot.get(key);
+        return at != null && at.isJsonPrimitive() && at.getAsJsonPrimitive().isNumber() ? at.getAsLong() : -1;
+    }
+
     /** A live server's numbers for the WORLDS tab: {@code mspt} and {@code count} (players), or null when it is not live. */
     public JsonObject numbers(String server) {
         Entry e = servers.get(server);
@@ -382,6 +410,14 @@ public final class Feed {
             long rat = regionsAt(name);
             if (rat >= 0) {
                 s.addProperty("regionsAt", rat); // its regions changed: the WORLDS tab and the map read them again (D781)
+            }
+            long sat = shopsAt(name);
+            if (sat >= 0) {
+                s.addProperty("shopsAt", sat); // a shop changed: the SHOPS tab reads again (D811)
+            }
+            long stl = stallsAt(name);
+            if (stl >= 0) {
+                s.addProperty("stallsAt", stl); // and when that server's stalls changed (SU-162)
             }
             JsonArray ps = e.snapshot.getAsJsonArray("players");
             s.addProperty("count", ps.size());

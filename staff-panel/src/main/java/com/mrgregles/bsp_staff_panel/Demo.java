@@ -33,7 +33,11 @@ final class Demo {
             }
             String body = new String(java.util.Base64.getUrlDecoder().decode(payload.substring(0, payload.indexOf('.'))), java.nio.charset.StandardCharsets.UTF_8);
             String what = com.google.gson.JsonParser.parseString(body).getAsJsonObject().get("action").getAsString();
-            com.google.gson.JsonObject rg = DemoRegions.answer(what, com.google.gson.JsonParser.parseString(body).getAsJsonObject()); // SU-155
+            com.google.gson.JsonObject parsed = com.google.gson.JsonParser.parseString(body).getAsJsonObject();
+            com.google.gson.JsonObject rg = DemoRegions.answer(what, parsed); // SU-155
+            if (rg == null) {
+                rg = DemoShops.answer(what, parsed, parsed.has("server") ? parsed.get("server").getAsString() : ""); // SU-161
+            }
             if (rg != null) {
                 com.google.gson.JsonObject ans = new com.google.gson.JsonObject();
                 ans.addProperty("id", uid);
@@ -597,6 +601,9 @@ final class Demo {
                 o.addProperty("talk", true); // SU-111: and private messages
                 o.addProperty("regions", true); // SU-155: and BSP Region Guard answering for its regions
                 o.addProperty("regionsAt", DemoRegions.changedAt(server[0])); // SU-159: when its regions last changed (D781)
+                o.addProperty("shops", true); // SU-161: and BSP-Core answering for its shops (requests SU-BC5 to SU-BC10)
+                o.addProperty("shopsAt", DemoShops.changedAt()); // D811: when a shop last changed (SU-162: the panel's own changes)
+                o.addProperty("stallsAt", 0L); // and this server's stalls (nothing moves them in the demo)
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;
                 o.addProperty("lottery", counting ? "COUNTING" : "IDLE");

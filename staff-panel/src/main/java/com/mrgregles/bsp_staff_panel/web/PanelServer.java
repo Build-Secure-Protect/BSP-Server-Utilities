@@ -292,6 +292,14 @@ public final class PanelServer {
         return this;
     }
 
+    private volatile com.mrgregles.bsp_staff_panel.shops.ShopDesk shopDesk;
+
+    /** The SHOPS tab (SU-161; D788 to D814). */
+    public PanelServer withShops(com.mrgregles.bsp_staff_panel.shops.ShopDesk d) {
+        this.shopDesk = d;
+        return this;
+    }
+
     /** The Bounty Board (SU-76; D524 to D538). */
     public PanelServer withBounties(com.mrgregles.bsp_staff_panel.market.BountyDesk d) {
         this.bountyDesk = d;
@@ -561,6 +569,9 @@ public final class PanelServer {
             case "/api/totems", "/api/totems/player" -> totemsPost(ex, id, path, body);
             case "/api/regions/servers", "/api/regions/server", "/api/regions/save", "/api/regions/remove", "/api/regions/reset", "/api/regions/check",
                  "/api/regions/create" -> regionsPost(ex, id, path, body);
+            case "/api/shops/grid", "/api/shops/shop", "/api/shops/sales", "/api/shops/create", "/api/shops/set", "/api/shops/enable", "/api/shops/copy",
+                 "/api/shops/delete", "/api/shops/card/add", "/api/shops/card/set", "/api/shops/card/move", "/api/shops/card/remove",
+                 "/api/shops/card/refill", "/api/shops/export" -> shopsPost(ex, id, path, body); // SU-161 to SU-164
             case "/api/pmsg", "/api/pmsg/list", "/api/pmsg/send", "/api/pmsg/end" -> playerTalkPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
@@ -1898,6 +1909,58 @@ public final class PanelServer {
         json(ex, ("/api/regions/save".equals(path) || "/api/regions/remove".equals(path) || "/api/regions/reset".equals(path) || "/api/regions/check".equals(path)
                 || "/api/regions/create".equals(path))
                 && !me.rank.atLeast(com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN) ? 403 : 200, o);
+    }
+
+    /**
+     * The SHOPS tab (SU-161): {@code /api/shops/grid} ({@code refresh}) every shop as a tile, {@code /api/shops/shop}
+     * ({@code id}, {@code refresh}) a shop or section with its tree and stalls, {@code /api/shops/sales} ({@code id},
+     * {@code days} 1, 7 or 30); every rank reads (D788), nothing logged. SU-162: {@code /create}, {@code /set},
+     * {@code /enable}, {@code /copy} and {@code /delete} for Admins and Owners, each a line in the panel's log (D810).
+     */
+    private void shopsPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.shops.ShopDesk desk = shopDesk;
+        if (desk == null) {
+            json(ex, 200, refused("Shops are not set up on this panel."));
+            return;
+        }
+        int days = 7;
+        try {
+            days = b.has("days") && b.get("days").isJsonPrimitive() ? b.get("days").getAsInt() : 7;
+        } catch (RuntimeException notANumber) {
+            // the usual week
+        }
+        Account me = a.get();
+        JsonObject o = switch (path) {
+            case "/api/shops/grid" -> desk.grid(me, bool(b, "refresh"));
+            case "/api/shops/shop" -> desk.shop(me, str(b, "id"), bool(b, "refresh"));
+            case "/api/shops/create" -> desk.create(me, b); // SU-162
+            case "/api/shops/set" -> desk.set(me, b);
+            case "/api/shops/enable" -> desk.enable(me, b);
+            case "/api/shops/copy" -> desk.copy(me, b);
+            case "/api/shops/delete" -> desk.delete(me, b);
+            case "/api/shops/card/add" -> desk.addCard(me, b); // SU-163
+            case "/api/shops/card/set" -> desk.setCard(me, b);
+            case "/api/shops/card/move" -> desk.moveCard(me, b);
+            case "/api/shops/card/remove" -> desk.removeCard(me, b);
+            case "/api/shops/card/refill" -> desk.refillCard(me, b);
+            case "/api/shops/export" -> desk.export(me, str(b, "id")); // SU-164: a read for every rank
+            default -> desk.sales(me, str(b, "id"), days);
+        };
+        String log = o.has("panelLog") ? str(o, "panelLog") : null; // a change: one line in the panel's log (D810)
+        o.remove("panelLog");
+        if (log != null) {
+            String said = str(o, "message").replaceAll("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]", " "); // C1 controls and line separators too (audit)
+            said = said.length() > 200 ? said.substring(0, 200) + "…" : said;
+            boolean ok = o.has("ok") && o.get("ok").isJsonPrimitive() && o.get("ok").getAsJsonPrimitive().isBoolean() && o.get("ok").getAsBoolean();
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (ok ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
+        }
+        boolean change = !java.util.Set.of("/api/shops/grid", "/api/shops/shop", "/api/shops/sales", "/api/shops/export").contains(path);
+        json(ex, change && !me.rank.atLeast(com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN) ? 403 : 200, o);
     }
 
     /** The TOTEMS page (SU-97): every rank reads it (D614); {@code days} 1, 7, 30 or 90; {@code id} a player's UUID for their row. */

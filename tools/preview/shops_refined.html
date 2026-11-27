@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shops Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The refined SHOPS tab (R1 to R12) from the owner's picks D813: BG A, BH B, BI A, BJ A, on decisions D788 to D812.
+   Built from shops_concepts.html's parts; item pictures are drawn stand-ins; names, prices and places are made up. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1320px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; color:var(--acc); } h3{ font-size:16px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.card ol{ margin:0; padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:13.5px; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; overflow-x:auto; }
+@media (max-width:1300px){ .stage{ align-items:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:6px; max-width:1240px; }
+.setnav{ display:flex; gap:8px; flex-wrap:wrap; font-size:13px; } .setnav a{ color:var(--acc); }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:1240px; height:700px; flex:none; box-sizing:border-box; border:1px solid #2a2f3a; border-radius:10px; background:var(--bg); color:var(--tx);
+  font:13px/1.35 var(--body); overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+.dk *{ box-sizing:border-box; }
+.chrome{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; background:#1b1e25; border-bottom:1px solid #2a2f3a; }
+.chrome .lights{ display:flex; gap:6px; } .chrome .lights i{ width:10px; height:10px; border-radius:50%; display:block; background:#3a3f4b; }
+.chrome .url{ flex:1; max-width:440px; margin:0 auto; height:22px; border-radius:6px; background:#0f1115; color:#9aa3b5; font-size:11.5px; display:flex; align-items:center; padding:0 10px; }
+.dbody{ flex:1; display:flex; min-height:0; position:relative; }
+.side{ width:170px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; gap:2px; padding:12px 10px; }
+.side .brand{ font:15px Silkscreen,var(--mono); color:var(--teal); padding:2px 10px 12px; } .side .brand b{ color:var(--tx); font-weight:400; }
+.side .it{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--mu); font-size:13px; }
+.side .it.on{ background:#19d3b01a; color:var(--teal); }
+.side .it.new::after{ content:"NEW"; margin-left:auto; font:600 9px var(--body); color:#10151c; background:var(--gold); border-radius:4px; padding:0 4px; }
+.side svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.main{ flex:1; min-width:0; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.pagehead{ flex:none; display:flex; align-items:center; gap:10px; padding:14px 18px 10px; }
+.pagehead .t{ font:15px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.crumb{ font-size:13px; color:var(--mu); display:flex; gap:6px; align-items:center; white-space:nowrap; } .crumb b{ color:var(--tx); font-weight:600; } .crumb a{ color:var(--teal); }
+.grow{ flex:1; min-width:0; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .gd{ color:var(--gold); } .rd{ color:var(--coral); } .vi{ color:var(--vio); }
+.search{ height:30px; width:220px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; gap:7px; padding:0 9px; color:var(--dim); font-size:12px; flex:none; }
+.search.f{ border-color:var(--teal); color:var(--tx); }
+.search svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; flex:none; }
+.key{ height:28px; padding:0 11px; border-radius:7px; display:inline-flex; align-items:center; gap:6px; font:600 11.5px var(--body); background:var(--pn); border:1px solid var(--ln); color:var(--soft); white-space:nowrap; flex:none; }
+.key.pri{ background:var(--teal); border-color:var(--teal); color:#0f1115; }
+.key.vio{ background:#b58cff22; border-color:#b58cff66; color:var(--vio); }
+.key.dg{ border-color:#5a2a2a; color:var(--coral); } .key.sure{ background:var(--coral); border-color:var(--coral); color:#10151c; }
+.key.gold{ background:var(--gold); border-color:var(--gold); color:#10151c; }
+.key.sm{ height:22px; padding:0 8px; font-size:10.5px; border-radius:6px; }
+.chip{ display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:999px; font:600 11px var(--body); border:1px solid var(--ln); background:var(--pn); color:var(--soft); white-space:nowrap; flex:none; }
+.chip.on{ border-color:var(--teal); color:var(--teal); background:#19d3b014; }
+.chip .n{ font-family:var(--mono); color:var(--mu); font-weight:600; }
+.kt{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; border:1px solid; }
+.k-shop{ color:#7fb2ff; border-color:#7fb2ff55; background:#7fb2ff1a; } .k-rot{ color:#b58cff; border-color:#b58cff55; background:#b58cff1a; }
+.k-offer{ color:#ffd23a; border-color:#ffd23a55; background:#ffd23a1a; } .k-sub{ color:#9aa3b5; border-color:#9aa3b555; background:#9aa3b51a; }
+.rk{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; background:#b58cff22; color:#b58cff; border:1px solid #b58cff55; }
+.note{ font-size:11.5px; color:var(--mu); line-height:1.45; }
+.sect{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.box{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+.box .bh{ display:flex; align-items:center; gap:8px; padding:9px 12px; background:#1d2129; border-bottom:1px solid var(--ln); font-size:12px; color:var(--mu); flex:none; }
+.lrow{ display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; border-bottom:1px solid #20242d; }
+.lrow .r{ display:inline-flex; gap:3px; align-items:center; margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); white-space:nowrap; }
+.lrow.on{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+/* switches, lamps, server chips */
+.sw{ width:34px; height:18px; border-radius:999px; background:#2a2f3a; position:relative; flex:none; display:inline-block; }
+.sw::after{ content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#6b7180; }
+.sw.on{ background:#19d3b0; } .sw.on::after{ left:18px; background:#0f1115; }
+.lamp{ display:inline-flex; align-items:center; gap:5px; font:600 10.5px var(--body); white-space:nowrap; }
+.lamp i{ width:8px; height:8px; border-radius:50%; display:block; background:var(--teal); box-shadow:0 0 6px #19d3b088; }
+.lamp.cl i{ background:var(--gold); box-shadow:none; } .lamp.off i{ background:#6b7180; box-shadow:none; }
+.lamp.cl{ color:var(--gold); } .lamp.off{ color:var(--mu); } .lamp.op{ color:var(--teal); }
+.net{ display:inline-flex; align-items:center; gap:4px; font:600 10px var(--body); color:var(--blue); white-space:nowrap; }
+.net svg{ width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2; }
+.srv{ display:inline-flex; align-items:center; gap:5px; height:20px; padding:0 7px; border-radius:6px; background:#12151b; border:1px solid var(--ln); font:600 10.5px var(--body); color:var(--soft); white-space:nowrap; }
+.srv b{ font:600 10px var(--mono); color:#0f1115; background:var(--teal); border-radius:4px; padding:0 4px; }
+.srv.none{ color:var(--dim); border-style:dashed; }
+.tip{ position:absolute; z-index:9; background:#232833; border:1px solid #3a4150; border-radius:8px; padding:8px 10px; font-size:11.5px; box-shadow:0 10px 30px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:3px; white-space:nowrap; }
+.tip b{ color:var(--tx); }
+
+/* item pictures (stand-ins for the panel's item export) */
+.ico{ width:32px; height:32px; flex:none; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr); image-rendering:pixelated; border-radius:2px; }
+.ico i{ display:block; }
+.ico.s{ width:22px; height:22px; } .ico.l{ width:40px; height:40px; }
+
+/* shop grid tiles */
+.tiles{ display:grid; gap:12px; padding:2px 18px 18px; align-content:start; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:12px 13px; display:flex; flex-direction:column; gap:8px; position:relative; min-width:0; }
+.tile.hov{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.tile .nm{ font:13.5px Silkscreen,var(--mono); color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .id{ font:11px var(--mono); color:var(--dim); }
+.tile.off{ background:repeating-linear-gradient(135deg,#1a1d24 0 10px,#171a20 10px 20px); }
+.tile.off .nm, .tile.off .pv{ opacity:.5; }
+.offband{ font:600 10px var(--body); color:var(--mu); background:#2a2f3a; border-radius:5px; padding:2px 7px; align-self:flex-start; }
+.pv{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; background:#12151b; border-radius:8px; padding:6px; }
+.pv>span{ height:38px; border-radius:5px; background:#1d2129; display:grid; place-items:center; }
+.row{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; min-width:0; }
+
+/* a shop's page as players see it */
+.page{ display:grid; gap:6px; }
+.sc{ background:#12151b; border:1px solid #262b35; border-radius:8px; padding:7px 6px 6px; display:flex; flex-direction:column; align-items:center; gap:3px; position:relative; min-width:0; }
+.sc .in{ font-size:10.5px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.sc .pr{ font:600 9.5px var(--mono); color:var(--teal); white-space:nowrap; }
+.sc .pr.s{ color:var(--gold); }
+.sc .lot{ position:absolute; top:4px; right:5px; font:600 9.5px var(--mono); color:var(--tx); }
+.sc.sec{ background:linear-gradient(#1b2230,#151a24); border-color:#36506e; }
+.sc.sec .pr{ color:var(--blue); }
+.sc.hid{ opacity:.45; } .sc.hid::after{ content:"HIDDEN"; position:absolute; left:4px; top:4px; font:600 8px var(--body); color:var(--mu); background:#2a2f3a; border-radius:3px; padding:0 3px; }
+.sc.lock .ico{ filter:grayscale(1) brightness(.6); } .sc.lock .lk{ position:absolute; left:5px; top:4px; font-size:10px; color:var(--gold); }
+.sc.lit{ border-color:var(--teal); box-shadow:0 0 0 2px #19d3b033; } .sc.dimc{ opacity:.5; }
+.sc.sel{ border-color:var(--gold); box-shadow:0 0 0 2px #ffd23a55; }
+.sc.empty{ border-style:dashed; background:transparent; min-height:72px; }
+.sc.drop{ border:2px dashed var(--teal); background:#19d3b012; min-height:72px; }
+.sc .wt{ position:absolute; left:5px; top:4px; font:600 9px var(--mono); color:var(--vio); }
+.sc .left{ position:absolute; left:5px; bottom:24px; font:600 8.5px var(--mono); color:var(--mu); }
+.ghost{ position:absolute; z-index:6; transform:rotate(-4deg); box-shadow:0 12px 26px rgba(0,0,0,.55); border-color:var(--teal) !important; width:78px; }
+.cursor{ position:absolute; z-index:7; width:14px; height:18px; }
+.pager{ display:flex; gap:6px; align-items:center; justify-content:center; font-size:11.5px; color:var(--mu); }
+.pager i{ width:7px; height:7px; border-radius:50%; background:#2a2f3a; display:block; } .pager i.on{ background:var(--teal); }
+.tree{ display:flex; flex-direction:column; font-size:12.5px; }
+.tree .tn{ display:flex; align-items:center; gap:7px; padding:6px 10px; border-radius:7px; color:var(--soft); }
+.tree .tn.on{ background:#19d3b01a; color:var(--teal); } .tree .tn .c{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.strip{ display:flex; gap:2px; height:12px; } .strip i{ flex:1; border-radius:2px; background:#2a2f3a; display:block; } .strip i.o{ background:var(--teal); }
+.hrs{ display:flex; justify-content:space-between; font:9.5px var(--mono); color:var(--dim); }
+.bars{ display:flex; flex-direction:column; gap:5px; }
+.bar{ display:grid; grid-template-columns:22px 1fr 70px; gap:7px; align-items:center; font-size:11.5px; }
+.bar .b{ height:8px; border-radius:4px; background:#2a2f3a; overflow:hidden; } .bar .b i{ display:block; height:100%; background:var(--teal); }
+.bar .v{ font:600 10.5px var(--mono); text-align:right; color:var(--soft); }
+.big{ font:600 18px var(--mono); } .big.tl{ color:var(--teal); } .big.gd{ color:var(--gold); }
+
+/* the editor and forms */
+.field{ display:flex; flex-direction:column; gap:3px; min-width:0; } .field label{ font-size:10.5px; color:var(--mu); font-weight:600; }
+.in2{ height:30px; border-radius:7px; background:#12151b; border:1px solid var(--ln); display:flex; align-items:center; padding:0 9px; font-size:12.5px; color:var(--tx); white-space:nowrap; overflow:hidden; gap:6px; }
+.in2.mono{ font-family:var(--mono); } .in2.f{ border-color:var(--teal); box-shadow:0 0 0 2px #19d3b022; } .in2.ph{ color:var(--dim); } .in2.ta{ height:58px; align-items:flex-start; padding-top:6px; white-space:normal; line-height:1.4; font-size:12px; }
+.in2 .u{ margin-left:auto; color:var(--mu); font-size:11px; }
+.chips{ display:flex; gap:5px; flex-wrap:wrap; }
+.opt{ display:inline-flex; align-items:center; height:26px; padding:0 9px; border-radius:7px; border:1px solid var(--ln); background:#12151b; font:600 11px var(--body); color:var(--mu); white-space:nowrap; }
+.opt.on{ background:#19d3b0; border-color:#19d3b0; color:#0f1115; }
+.opt .cn{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12.5px; flex:none; }
+.ptabs span{ padding:9px 12px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 -2px 0 var(--teal); }
+.drawer{ position:absolute; top:0; right:0; bottom:0; width:380px; background:var(--bg2); border-left:1px solid var(--ln); box-shadow:-18px 0 40px rgba(0,0,0,.5); display:flex; flex-direction:column; z-index:8; }
+.drawer .dh{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--ln); }
+.drawer .dbd{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:11px; padding:12px 14px; }
+.g2{ display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; } .g3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px 10px; }
+.tick{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); }
+.cb{ width:15px; height:15px; border-radius:4px; border:1px solid var(--ln); background:#12151b; display:inline-grid; place-items:center; flex:none; font:700 10px var(--body); color:#0f1115; }
+.cb.on{ background:var(--teal); border-color:var(--teal); }
+.prev{ font:600 11px var(--mono); color:var(--teal); background:#12151b; border:1px dashed var(--ln); border-radius:6px; padding:3px 8px; align-self:flex-start; }
+.warn{ font-size:11.5px; color:var(--gold); background:#ffd23a12; border:1px solid #ffd23a44; border-radius:7px; padding:6px 9px; }
+.offbar{ flex:none; display:flex; align-items:center; gap:10px; padding:8px 18px; background:#2a2f3a; color:var(--soft); font-size:12px; }
+.offbar b{ color:var(--tx); }
+.ed .pagehead{ padding-right:396px; }
+.shade{ position:absolute; inset:0; background:rgba(5,6,8,.55); z-index:7; }
+.modal{ position:absolute; z-index:8; background:var(--bg2); border:1px solid var(--ln); border-radius:12px; box-shadow:0 24px 60px rgba(0,0,0,.6); display:flex; flex-direction:column; }
+.modal .mh{ padding:12px 16px; border-bottom:1px solid var(--ln); display:flex; align-items:center; gap:10px; font:13px Silkscreen,var(--mono); color:var(--teal); }
+.modal .mb{ padding:14px 16px; display:flex; flex-direction:column; gap:12px; }
+.modal .mf{ padding:10px 16px; border-top:1px solid var(--ln); display:flex; gap:8px; justify-content:flex-end; }
+.kc{ border:1px solid var(--ln); background:#12151b; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:4px; flex:1; }
+.kc b{ font-size:12.5px; } .kc span{ font-size:11px; color:var(--mu); line-height:1.35; } .kc.on{ border-color:var(--teal); background:#19d3b012; } .kc.on b{ color:var(--teal); }
+.snav{ width:160px; flex:none; border-right:1px solid var(--ln); padding:10px 8px; display:flex; flex-direction:column; gap:2px; }
+.snav span{ padding:7px 10px; border-radius:7px; color:var(--mu); font-size:12.5px; } .snav span.on{ background:#19d3b01a; color:var(--teal); }
+.snav span.dz{ color:var(--coral); margin-top:auto; }
+.fs{ display:flex; flex-direction:column; gap:9px; padding:12px 14px; border-bottom:1px solid #20242d; }
+.bin{ position:absolute; z-index:5; border:2px dashed #5a2a2a; color:var(--coral); border-radius:10px; display:flex; align-items:center; justify-content:center; gap:6px; font:600 11.5px var(--body); background:#ff6b5c0d; }
+.bin.hot{ border-color:var(--coral); background:#ff6b5c22; }
+.float{ position:absolute; z-index:6; background:rgba(20,23,29,.94); border:1px solid var(--ln); border-radius:10px; box-shadow:0 16px 40px rgba(0,0,0,.5); display:flex; flex-direction:column; overflow:hidden; }
+.float .fh{ height:30px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px; background:#1d2129; border-bottom:1px solid var(--ln); font:600 11.5px var(--body); color:var(--soft); }
+.igrid{ display:grid; gap:4px; }
+.igrid>span{ height:40px; border-radius:6px; background:#12151b; border:1px solid #232833; display:grid; place-items:center; }
+.igrid>span.hl{ border-color:var(--teal); }
+.mcs{ background:#c6c6c6; border:3px solid; border-color:#fff #555 #555 #fff; border-radius:2px; padding:8px; color:#3f3f3f; font:11px Silkscreen,var(--mono); display:flex; flex-direction:column; gap:6px; }
+.mcs .cells{ display:grid; gap:3px; } .mcs .cells>span{ height:44px; background:#8b8b8b; border:2px solid; border-color:#373737 #fff #fff #373737; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font:600 8.5px var(--mono); color:#1d4d1d; }
+.mcs.pass{ background:#e8dcc0; border-color:#fff3d6 #8a7a55 #8a7a55 #fff3d6; } .mcs.pass .cells>span{ background:#d6c79f; border-color:#8a7a55 #fff3d6 #fff3d6 #8a7a55; }
+.mcs.board{ background:#6b4a2b; border-color:#8d6a45 #3c2914 #3c2914 #8d6a45; color:#f0e0c0; } .mcs.board .cells>span{ background:#4d331b; border-color:#2c1c0c #8d6a45 #8d6a45 #2c1c0c; color:#ffd23a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Staff panel: the SHOPS tab: refined</h1>
+    <p class="lede">The owner's picks (D813): BG A for the grid, BH B for a shop's page, BI A for the editor, BJ A for the creator and settings, drawn whole on decisions D788 to D812. R1 to R12 are the screens as they will be built; the list at the foot says what each does. Confirm, or name what to change, before SU-160. Item pictures are stand-ins for the panel's item export; names, prices and places are made up.</p>
+  </header>
+  <section><h2>R1. The SHOPS grid</h2><div class="stage"><div><div class="dk" id="r1"></div></div></div></section>
+  <section><h2>R2. A shop's page: the cards</h2><div class="stage"><div><div class="dk" id="r2"></div></div></div></section>
+  <section><h2>R3. A section open, its stalls</h2><div class="stage"><div><div class="dk" id="r3"></div></div></div></section>
+  <section><h2>R4. Sales</h2><div class="stage"><div><div class="dk" id="r4"></div></div></div></section>
+  <section><h2>R5. A rotating shop</h2><div class="stage"><div><div class="dk" id="r5"></div></div></div></section>
+  <section><h2>R6. The editor: adding an item, the CARD tab</h2><div class="stage"><div><div class="dk" id="r6"></div></div></div></section>
+  <section><h2>R7. The editor: the LIMITS tab</h2><div class="stage"><div><div class="dk" id="r7"></div></div></div></section>
+  <section><h2>R8. The editor: the NEEDS tab, removing a card</h2><div class="stage"><div><div class="dk" id="r8"></div></div></div></section>
+  <section><h2>R9. A new section</h2><div class="stage"><div><div class="dk" id="r9"></div></div></div></section>
+  <section><h2>R10. A new shop</h2><div class="stage"><div><div class="dk" id="r10"></div></div></div></section>
+  <section><h2>R11. Settings, all on one page</h2><div class="stage"><div><div class="dk" id="r11"></div></div></div></section>
+  <section><h2>R12. Copying a shop, turning one off</h2><div class="stage"><div><div class="dk" id="r12"></div></div></div></section>
+
+  <section><h2>What each screen does</h2>
+    <div class="card"><ol>
+      <li><b>R1. The grid.</b> One tile per top-level shop, A to Z: name and id, the ON/OFF switch (Admins and Owners), kind, cards and sections, the Shopping Network mark, its first four cards, open now or when it opens (OFF tiles striped, "OFF: closed for changes"), what it needs, and one chip per server with stalls; hovering a chip splits them into Market Stalls, Vendor Posts and Stall Displays. Search finds shops and sections by name or id. A click opens the shop (R2).</li>
+      <li><b>R2. The shop's page.</b> The sections as a tree on the left with their card counts; the breadcrumb on top; three tabs: Cards, Stalls, Sales. Cards are drawn as players see them, by the shop's own columns, rows and pages; section cards (blue) open the section in place; hidden cards dimmed with HIDDEN (SHOW HIDDEN turns them off); locked cards with a padlock and what they need. Hovering a card shows its full settings. Keys: the switch, SETTINGS, COPY, EXPORT, EDIT.</li>
+      <li><b>R3. Stalls.</b> Every Market Stall, Vendor Post and Stall Display linked to this shop or its sections, by server: kind, world, x y z, the section it serves, its own opening hours or "the shop's", read-only (D806). A server that is off shows its last answer greyed. Stalls not yet seen since BSP-Core started keeping the list show up the first time their chunk loads, which the tab says.</li>
+      <li><b>R4. Sales.</b> From BSP-Core's shop report (SU-BC10), 1, 7 or 30 days: pieces in and out and the net, coins in and out, then every card that traded, sorted by pieces, with items bought and sold; for a section, only its cards.</li>
+      <li><b>R5. Rotating shops.</b> The same page; a strip above the cards gives the draw: how many on show, when it changes, no repeats and how many are left in the cycle, whether it tells every player, and the last three draws. The pool's cards show their weight, the cards on show now lit.</li>
+      <li><b>R6. The editor.</b> EDIT turns the page into the editor (Admins and Owners): the item browser on the left (search by English name or id, a chip per creative tab, items with data keep it; without a picture export, a box for an item id), the page in the middle, the drawer on the right when a card is chosen. Dropping an item between cards puts it there; dragging a card moves it; each change goes to the game as it is made, and "Saved" shows on the drawer. If the shop changed in game since, the change is refused and the page reloads with a line saying so. The CARD tab: lot size (up to a stack), buy and sell (empty for off), paid in (Pieces, Copper, Gold, Diamond, Netherite, Illyrium), the price as players see it, instant, hidden, selling takes the exact item or any data, weight on a rotating shop, the three-line note.</li>
+      <li><b>R7. LIMITS.</b> Stock (buying) and sell room (selling), each for everyone and per player, in lots (empty for no limit), with their refill rules as chips (Never, After…, Every day at…, Every weekday at…, Each rotation on a rotating shop, Same as everyone for the per-player ones) and the time zone named; what is left now; REFILL NOW. A change to a limit, a rule, the lot size or the match restarts the card's counts, as in game, and the drawer says so first.</li>
+      <li><b>R8. NEEDS and removing.</b> Permission node, hours played, show locked or hide, the reason, and how players will see it. Dragging a card onto the bin under the page asks SURE? REMOVE for three seconds; the cards after it move up and their counts restart.</li>
+      <li><b>R9. A new section.</b> + SECTION asks a name, the picture (from the browser) and an id (filled from the shop's id and the name); the section card lands at the end of the page, or where it is dropped. A section has its own settings (R11) like any shop.</li>
+      <li><b>R10. A new shop.</b> Name, id (filled from the name, letters, digits and _, up to 32, checked as typed) and kind; made OFF and opened in its settings (R11).</li>
+      <li><b>R11. Settings.</b> One page in sections, a jump list on the left: General (name, id read-only, inside, Shopping Network, buy only), Look (style, cards a row, rows, a small picture of each style), Opening hours (Always, Real clock with the time zone, Minecraft day; a 24-hour strip), Rotating (only for a rotating shop: on show, every N hours or a fixed time, no repeats, tell every player), Special offer (only for an offer: percent, ends at, never ends), Needs (as R8, for the whole shop and its sections), Delete. Each field saves as it is changed, as the editor does.</li>
+      <li><b>R12. Copy and off.</b> COPY: a new name and id, the sections it copies with their new ids; made OFF, counts and sales start fresh, stalls stay with the first shop; opens in the editor. Turning a shop off asks once, naming what goes off with it; while off, a grey bar on every view of it with TURN ON.</li>
+      <li><b>Every view.</b> Moderators see everything; the switch, EDIT, + NEW SHOP, COPY and DELETE are greyed with "Admin". Pages refresh within a few seconds of a change in game. Every change is in the panel's log and the game's Action Log. On a phone SHOPS is in More, the grid one column, a shop's page with the tree as a dropdown, and editing offered on a computer only (D814, proposed).</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+ shop:'<svg viewBox="0 0 24 24"><path d="M3 9 5 4h14l2 5"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/></svg>',
+ totem:'<svg viewBox="0 0 24 24"><path d="M12 2 7 7v10l5 5 5-5V7z"/><path d="M12 8v8"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ net:'<svg viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1"/></svg>',
+ bin:'<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+ cur:'<svg viewBox="0 0 14 18" class="cursor"><path d="M1 1v14l4-3 3 6 2-1-3-6h5z" fill="#fff" stroke="#000" stroke-width="1"/></svg>'};
+function frame(el,url){
+  const d=document.getElementById(el);
+  d.appendChild(h(`<div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url">staff.buildsecureprotect.com${url||"/shops"}</div></div>`));
+  const body=h('<div class="dbody"></div>'); const side=h('<div class="side"><div class="brand">BSP <b>STAFF</b></div></div>');
+  [["users","Players"],["chat","Chat"],["map","Map"],["globe","Worlds"],["shop","Shops"],["totem","Totems"],["shield","Staff"],["more","More"]].forEach(([i,l])=>
+    side.appendChild(h(`<div class="it${l==="Shops"?" on new":""}">${SV[i]}<span>${l}</span></div>`)));
+  side.appendChild(h('<div style="margin-top:auto;padding:8px 10px;font-size:11.5px;color:#9aa3b5">Mrgregles <span class="rk">Owner</span></div>'));
+  body.appendChild(side); const main=h('<div class="main"></div>'); body.appendChild(main); d.appendChild(body); return main;}
+
+/* item pictures: a 4 x 4 stand-in drawn from the item's colours */
+const IT={
+ bread:["Bread","#c9913f","#8a5a22"], beef:["Cooked Beef","#8a4a2a","#d9a07a"], torch:["Torch","#ffd23a","#6b4a2b"], iron:["Iron Ingot","#d8d8d8","#8f8f8f"],
+ oak:["Oak Log","#a2824e","#5c4325"], coal:["Coal","#2b2b2b","#555"], glass:["Glass","#cfe8ef","#7fb2c8"], pearl:["Ender Pearl","#1e7c6b","#0b3b33"],
+ tag:["Name Tag","#e0d0a0","#8a7a55"], saddle:["Saddle","#7a4a2a","#3c2410"], elytra:["Elytra","#8f86a8","#4b4466"], diamond:["Diamond","#4fe3d6","#1a8f86"],
+ apple:["Apple","#d6352b","#5aa02c"], carrot:["Carrot","#f08a1c","#3f8f2a"], pick:["Iron Pickaxe","#d8d8d8","#6b4a2b"], axe:["Iron Axe","#cfcfcf","#6b4a2b"],
+ shovel:["Iron Shovel","#d0d0d0","#6b4a2b"], red:["Redstone Dust","#c0141a","#5a0a0c"], rep:["Repeater","#a0a0a0","#c0141a"], piston:["Piston","#a2824e","#7a7a7a"],
+ chest:["Chest","#a2702e","#4d331b"], lbglass:["Light Blue Stained Glass","#7fc8f0","#3f8fc0"], wglass:["White Stained Glass","#f0f0f0","#c0c0c0"],
+ rglass:["Red Stained Glass","#d03030","#801818"], gpane:["Glass Pane","#cfe8ef","#a0c0cc"], tglass:["Tinted Glass","#3a2f4a","#20182a"],
+ casing:["Steel Casing","#8a9aa8","#3f4a55"], frame:["Machine Frame","#b0b8c0","#59636e"], fluix:["Fluix Block","#9a6ad6","#4a2a86"], osmium:["Osmium Ingot","#a8c8d8","#5a7a8a"],
+ book:["Enchanted Book","#b55a2a","#ffd23a"], potion:["Potion of Swiftness","#7fb2ff","#e8e8e8"], wheat:["Wheat","#d8c060","#8a7a2a"], egg:["Egg","#f0e6d0","#c8b890"],
+ pumpkin:["Pumpkin","#e08a1c","#7a4a10"], melon:["Melon Slice","#e0403a","#3f8f2a"], seeds:["Wheat Seeds","#5aa02c","#2a5a14"], sugar:["Sugar Cane","#8fd06a","#4a8a2a"],
+ lantern:["Lantern","#ffd23a","#3a3f4b"], rail:["Rail","#8f8f8f","#6b4a2b"], hopper:["Hopper","#5a5a5a","#2a2a2a"], sapling:["Oak Sapling","#4a8a2a","#6b4a2b"]};
+function ico(k,size){const c=IT[k]||["?","#555","#333"];let s=0;for(const ch of k)s=(s*31+ch.charCodeAt(0))>>>0;
+  let cells="";for(let i=0;i<16;i++){const r=(s>>(i%24))&3;const x=i%4,y=i>>2;const edge=x===0||y===0||x===3||y===3;
+    const col=(edge&&r===0)?"transparent":(r===1?c[2]:c[1]);cells+=`<i style="background:${col}"></i>`;}
+  return `<span class="ico${size?" "+size:""}" title="${c[0]}">${cells}</span>`;}
+const nm=k=>(IT[k]||["?"])[0];
+
+/* ---------- data ---------- */
+const SHOPS=[
+ {id:"spawn_general",n:"General Store",k:"shop",on:1,net:1,cards:42,sec:3,open:"op",hours:"Always",style:"cash_machine",peek:["bread","torch","iron","oak"],srv:[["BSP-Spawn",6,{"Market Stalls":3,"Vendor Posts":1,"Stall Displays":2}],["Frostwarf",1]]},
+ {id:"spawn_blocks",n:"Builder's Yard",k:"shop",on:1,net:1,cards:64,sec:5,open:"op",hours:"Always",style:"market_board",peek:["glass","oak","lbglass","lantern"],srv:[["BSP-Spawn",2],["Boulderbrook",2]]},
+ {id:"spawn_challenge",n:"Challenge",k:"rot",on:1,net:1,cards:12,sec:0,open:"op",hours:"Always",style:"cash_machine",peek:["casing","frame","fluix","osmium"],srv:[["BSP-Spawn",1]],extra:"4 on show · next Mon 00:00"},
+ {id:"winter_sale",n:"Winter Sale",k:"offer",on:0,net:1,cards:16,sec:4,open:"off",hours:"Always",style:"passbook",peek:["book","potion","pearl","tag"],srv:[["BSP-Spawn",1]],extra:"25% off · ends 31 Dec 23:59"},
+ {id:"farmers_market",n:"Farmers' Market",k:"shop",on:1,net:0,cards:28,sec:2,open:"cl",until:"06:00 (game)",hours:"Minecraft day 06:00 to 20:00",style:"market_board",peek:["apple","carrot","wheat","egg"],srv:[["Moongrove",4],["Sanctuary",2]]},
+ {id:"miners_guild",n:"Miners' Guild",k:"shop",on:1,net:1,cards:20,sec:1,open:"op",hours:"Always",style:"cash_machine",peek:["pick","coal","iron","diamond"],srv:[["Frostwarf",2]],need:"bsp.rank.miner"},
+ {id:"night_market",n:"Night Market",k:"shop",on:1,net:1,cards:15,sec:0,open:"cl",until:"20:00",hours:"Real clock 20:00 to 02:00",style:"passbook",peek:["pearl","lantern","potion","book"],srv:[["Stormfall",2]]},
+ {id:"spring_fair",n:"Spring Fair",k:"shop",on:0,net:1,cards:18,sec:1,open:"off",hours:"Always",style:"passbook",peek:["sapling","egg","seeds","sugar"],srv:[["BSP-Spawn",2]]},
+];
+const KT={shop:'<span class="kt k-shop">Shop</span>',rot:'<span class="kt k-rot">Rotating</span>',offer:'<span class="kt k-offer">Special offer</span>',sub:'<span class="kt k-sub">Section</span>'};
+const lamp=s=>s.on?(s.open==="op"?'<span class="lamp op"><i></i>Open now</span>':`<span class="lamp cl"><i></i>Opens ${s.until}</span>`):'<span class="lamp off"><i></i>Closed for changes</span>';
+const netm=s=>s.net?`<span class="net">${SV.net}Network</span>`:"";
+const srvs=s=>s.srv.length?s.srv.map(([n,c])=>`<span class="srv">${n}<b>${c}</b></span>`).join(""):'<span class="srv none">No stalls yet</span>';
+function filters(active){return `<div class="row" style="padding:0 18px 12px">${[["All",8],["On",6],["Off",2],["Network",7],["Rotating",1],["Offer",1]].map(([l,n])=>`<span class="chip${l===active?" on":""}">${l} <span class="n">${n}</span></span>`).join("")}<span class="grow"></span><span class="mu" style="font-size:11.5px">A to Z · answered by BSP-Spawn 4 s ago</span></div>`;}
+function head(main,title,right){main.appendChild(h(`<div class="pagehead"><span class="t">${title}</span><span class="grow"></span>${right||""}</div>`));}
+const SEARCH=(t,f)=>`<span class="search${f?" f":""}">${SV.search}${t||"Search shops"}</span>`;
+
+/* ---------- a shop's cards ---------- */
+const GEN=[{sec:"food",k:"bread",n:"Food",c:"9 cards"},{sec:"tools",k:"pick",n:"Tools",c:"14 cards"},{sec:"redstone",k:"red",n:"Redstone",c:"11 cards"},
+ {k:"torch",lot:16,b:"32"},{k:"iron",b:"180",s:"60"},{k:"oak",lot:16,b:"96",s:"24"},{k:"coal",lot:8,b:"48",s:"12"},
+ {k:"glass",lot:16,b:"64"},{k:"pearl",b:"2 G"},{k:"tag",b:"1 D"},{k:"diamond",s:"400",left:"9/16 today"},{k:"saddle",b:"450",hid:1},{k:"elytra",b:"4 N",lock:"50 h played"},{k:"chest",b:"40"},
+ {k:"lantern",b:"55"},{k:"rail",lot:16,b:"120"},{k:"hopper",b:"260"},{k:"apple",lot:4,b:"30",s:"6"},{k:"beef",b:"75",s:"20"}];
+function cardsHTML(list,cols,opt){opt=opt||{};return `<div class="page" style="grid-template-columns:repeat(${cols},1fr)">${list.map((c,i)=>{
+  if(c.empty)return `<div class="sc empty"></div>`; if(c.drop)return `<div class="sc drop"></div>`;
+  const cls=["sc"];if(c.sec)cls.push("sec");if(c.hid)cls.push("hid");if(c.lock)cls.push("lock");if(c.lit)cls.push("lit");if(c.dim)cls.push("dimc");if(opt.sel===i)cls.push("sel");
+  const price=c.sec?`<span class="pr">› ${c.c}</span>`:(c.b?`<span class="pr">buy ${c.b}</span>`:"")+(c.s?`<span class="pr s">sell ${c.s}</span>`:"");
+  return `<div class="${cls.join(" ")}">${c.lot?`<span class="lot">×${c.lot}</span>`:""}${c.lock?'<span class="lk">🔒</span>':""}${c.w!=null?`<span class="wt">w${c.w}</span>`:""}${ico(c.k)}<span class="in">${c.n||nm(c.k)}</span>${price}${c.left&&opt.left?`<span class="dim" style="font:600 8.5px var(--mono)">${c.left}</span>`:""}</div>`;}).join("")}</div>`;}
+
+/* ---------- the item browser ---------- */
+const GLASS=["glass","lbglass","wglass","rglass","gpane","tglass","lantern","glass","lbglass","wglass","rglass","gpane"];
+const TABS=["All","Building","Coloured","Natural","Functional","Redstone","Tools","Food","Mekanism","Applied Energistics 2"];
+function browser(cols,n,sel){return `<div class="igrid" style="grid-template-columns:repeat(${cols},1fr)">${GLASS.slice(0,n).map((k,i)=>`<span${i===sel?' class="hl"':""} title="${nm(k)}">${ico(k)}</span>`).join("")}</div>`;}
+
+
+/* ---------- refined: shared parts ---------- */
+const TREE=[["chest","General Store",42,0,"spawn_general"],["bread","Food",9,1],["pick","Tools",14,1],["pick","Pickaxes",5,2],["axe","Axes",4,2],["red","Redstone",11,1],["piston","Pistons",3,2]];
+function tree(sel,list){list=list||TREE;return `<div class="box" style="width:220px;flex:none"><div class="bh">Sections<span class="grow"></span><span class="mono">${list.length-1}</span></div><div class="tree" style="padding:6px">${list.map(([k,n,c,d])=>`<div class="tn${n===sel?" on":""}" style="padding-left:${10+d*15}px">${ico(k,"s")}${n}<span class="c">${c}</span></div>`).join("")}</div></div>`;}
+const KEYS=(on)=>`<span class="sw${on?" on":""}"></span>${on?'<span class="lamp op"><i></i>On · open now</span>':'<span class="lamp off"><i></i>Off</span>'}<span class="key">SETTINGS</span><span class="key">COPY</span><span class="key">EXPORT</span><span class="key pri">EDIT</span>`;
+const CRUMB=(...p)=>`<span class="crumb"><a>SHOPS</a>${p.map((x,i)=>` › ${i===p.length-1?`<b>${x}</b>`:`<a>${x}</a>`}`).join("")}</span>`;
+function shopPage(el,url,crumb,keys,sel,tab,inner,treeList){const m=frame(el,url);head(m,crumb,keys);
+  const b=h('<div style="flex:1;display:flex;gap:14px;padding:0 18px 16px;min-height:0"></div>');b.appendChild(h(tree(sel,treeList)));
+  b.appendChild(h(`<div class="box" style="flex:1"><div class="ptabs">${["Cards","Stalls","Sales"].map(t=>`<span class="${t===tab[0]?"on":""}">${t} ${tab[1][t]||""}</span>`).join("")}<span class="grow"></span></div><div style="padding:12px;display:flex;flex-direction:column;gap:10px;min-height:0">${inner}</div></div>`));
+  m.appendChild(b);return m;}
+const GTAB={Cards:"42",Stalls:"7",Sales:""};
+
+/* R1: the grid (BG A) */
+(function(){const m=frame("r1");head(m,"SHOPS",SEARCH()+'<span class="key pri">+ NEW SHOP</span>');m.appendChild(h(filters("All")));
+  const g=h('<div class="tiles" style="grid-template-columns:repeat(4,1fr)"></div>');
+  SHOPS.forEach((s,i)=>{g.appendChild(h(`<div class="tile${s.on?"":" off"}${i===0?" hov":""}">
+    <div class="row" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><div class="nm">${s.n}</div><div class="id">${s.id}</div></div><span class="sw${s.on?" on":""}"></span></div>
+    <div class="row">${KT[s.k]}<span class="mu" style="font-size:11px">${s.cards} cards${s.sec?` · ${s.sec} sections`:""}</span>${netm(s)}</div>
+    <div class="pv">${s.peek.map(k=>`<span>${ico(k,"s")}</span>`).join("")}</div>
+    ${s.on?lamp(s):'<span class="offband">OFF: closed for changes</span>'}
+    ${s.extra?`<div class="mu" style="font-size:11px">${s.extra}</div>`:""}${s.need?`<div class="gd" style="font-size:11px">Needs ${s.need}</div>`:""}
+    <div class="row">${srvs(s)}</div></div>`));});
+  m.appendChild(g);
+  m.appendChild(h('<div class="tip" style="left:30px;top:272px"><b>BSP-Spawn: 6</b><span>3 Market Stalls</span><span>1 Vendor Post</span><span>2 Stall Displays</span><span class="dim">2 of them for the Food section</span></div>'));})();
+
+/* R2: the cards */
+shopPage("r2","/shops/spawn_general",CRUMB("General Store"),KEYS(1),"General Store",["Cards",GTAB],
+  `<div class="row mu" style="font-size:11.5px">${KT.shop}<span class="mono">spawn_general</span><span>· 7 a row, 3 rows · Cash Machine · on the Shopping Network · always open</span><span class="grow"></span><span class="chip on">Show hidden ✓</span></div>
+   ${cardsHTML(GEN.slice(0,21),7,{})}<div class="pager"><i class="on"></i><i></i><span>Page 1 of 2 · 21 of 42 cards</span></div>
+   <div class="note">Blue: a section, opened here. Dimmed: hidden from every player. Padlock: shown locked until the player meets what it needs. G, D, N: gold, diamond and netherite coins.</div>`);
+(function(){const m=document.getElementById("r2");m.appendChild(h(`<div class="tip" style="left:640px;top:300px;width:230px;white-space:normal"><b>Ender Pearl · card 9</b><span>buy 2 gold coins · selling off</span><span>no limits · instant off</span><span class="dim">minecraft:ender_pearl</span></div>`));})();
+
+/* R3: stalls */
+shopPage("r3","/shops/spawn_general/tools",CRUMB("General Store","Tools"),KEYS(1),"Tools",["Stalls",{Cards:"14",Stalls:"7"}],
+  `<div class="row mu" style="font-size:11.5px">${KT.sub}<span class="mono">spawn_general_tools</span><span>· inside General Store · showing the stalls of the whole shop</span><span class="grow"></span><span class="chip on">Whole shop</span><span class="chip">This section</span></div>
+   <table style="width:100%;border-collapse:collapse;font-size:12px">${[["Server","Kind","World","x y z","Serves","Hours"],
+     ["BSP-Spawn","Market Stall","Overworld","112 64 -40","General Store","the shop's"],["BSP-Spawn","Market Stall","Overworld","120 64 -44","Tools","the shop's"],["BSP-Spawn","Market Stall","Overworld","126 64 -44","Food","07:00 to 19:00 (real)"],
+     ["BSP-Spawn","Vendor Post","Overworld","98 65 -12","General Store","08:00 to 22:00 (real)"],["BSP-Spawn","Stall Display","Overworld","104 66 -38","Pickaxes","shows its cards in turn"],["BSP-Spawn","Stall Display","Overworld","130 66 -40","Food","pinned: Bread"],
+     ["Frostwarf","Market Stall","Overworld","-310 71 228","General Store","the shop's"]].map((r,i)=>`<tr>${r.map((c,j)=>i===0?`<th style="text-align:left;color:var(--mu);font-weight:500;font-size:11px;padding:6px 8px;border-bottom:1px solid var(--ln)">${c}</th>`:`<td style="padding:6px 8px;border-bottom:1px solid #20242d;${j===3?"font-family:var(--mono)":""}${j===1&&r[4]==="Tools"?";color:var(--teal)":""}">${c}</td>`).join("")}</tr>`).join("")}</table>
+   <div class="note">Each server answers for its own stalls. A stall's own hours win over the shop's, and are changed at the stall in game. Stalls BSP-Core has not seen since it began keeping this list show up the first time their chunk loads.</div>`);
+
+/* R4: sales */
+shopPage("r4","/shops/spawn_general/sales",CRUMB("General Store"),KEYS(1),"General Store",["Sales",GTAB],
+  `<div class="row"><span class="chip">1 day</span><span class="chip on">7 days</span><span class="chip">30 days</span><span class="grow"></span><span class="mu" style="font-size:11.5px">The whole shop with its sections · from BSP-Core's shop report</span></div>
+   <div class="row" style="gap:28px"><div><div class="mu" style="font-size:10.5px">PAID IN BY PLAYERS</div><div class="big tl">84,210</div></div><div><div class="mu" style="font-size:10.5px">PAID OUT TO PLAYERS</div><div class="big gd">31,440</div></div><div><div class="mu" style="font-size:10.5px">NET</div><div class="big">52,770</div></div><div><div class="mu" style="font-size:10.5px">COINS IN / OUT</div><div class="big" style="font-size:15px">14 G · 3 D / 0</div></div></div>
+   <table style="width:100%;border-collapse:collapse;font-size:12px">${[["","Card","Section","Bought","Sold","Pieces in","Pieces out"],["iron","Iron Ingot","General Store","79","112","14,200","6,720"],["torch","Torch ×16","General Store","309","0","9,880","0"],["oak","Oak Log ×16","General Store","77","40","7,410","960"],["pick","Iron Pickaxe","Pickaxes","21","0","6,300","0"],["bread","Bread","Food","140","0","5,600","0"],["diamond","Diamond","General Store","0","58","0","23,200"]].map((r,i)=>`<tr>${r.map((c,j)=>i===0?`<th style="text-align:${j>2?"right":"left"};color:var(--mu);font-weight:500;font-size:11px;padding:6px 8px;border-bottom:1px solid var(--ln)">${c}</th>`:`<td style="padding:5px 8px;border-bottom:1px solid #20242d;${j>2?"text-align:right;font-family:var(--mono)":""}">${j===0?ico(c,"s"):c}</td>`).join("")}</tr>`).join("")}</table>`);
+
+/* R5: a rotating shop */
+(function(){const pool=[{k:"casing",s:"2,500",w:1,lit:1},{k:"frame",s:"4,000",w:1,lit:1},{k:"fluix",s:"3,200",w:2,lit:1},{k:"osmium",lot:8,s:"900",w:3,lit:1},
+    {k:"iron",lot:16,s:"600",w:3,dim:1},{k:"diamond",lot:4,s:"1,500",w:1,dim:1},{k:"red",lot:32,s:"400",w:2,dim:1},{k:"piston",lot:4,s:"700",w:1,dim:1},{k:"hopper",lot:2,s:"800",w:1,dim:1},{k:"lantern",lot:8,s:"350",w:2,dim:1},{k:"glass",lot:32,s:"300",w:3,dim:1},{k:"book",s:"2 G",w:0,dim:1}];
+  shopPage("r5","/shops/spawn_challenge",CRUMB("Challenge")+KT.rot,KEYS(1),"Challenge",["Cards",{Cards:"12",Stalls:"1"}],
+  `<div class="box" style="background:#12151b;flex:none"><div style="display:flex;gap:22px;padding:10px 12px;font-size:12px;flex-wrap:wrap"><div><div class="mu" style="font-size:10.5px">ON SHOW</div><b>4 of 12</b></div><div><div class="mu" style="font-size:10.5px">CHANGES</div><b>Every Monday 00:00</b> <span class="dim">Europe/London</span></div><div><div class="mu" style="font-size:10.5px">NEXT</div><b class="gd">in 4 d 9 h</b></div><div><div class="mu" style="font-size:10.5px">NO REPEATS</div><b class="tl">On · 4 left this cycle</b></div><div><div class="mu" style="font-size:10.5px">TELLS EVERY PLAYER</div><b class="tl">On</b></div>
+     <div style="margin-left:auto;min-width:190px"><div class="mu" style="font-size:10.5px">LAST DRAWS</div><div class="lrow" style="padding:0;border:none">23 Nov <span class="r">${["casing","frame","fluix","osmium"].map(k=>ico(k,"s")).join("")}</span></div><div class="lrow mu" style="padding:0;border:none">16 Nov <span class="r">${["iron","red","piston","hopper"].map(k=>ico(k,"s")).join("")}</span></div></div></div></div>
+   <div class="row"><span class="chip on">The pool</span><span class="chip">On show only</span><span class="grow"></span><span class="mu" style="font-size:11.5px">w: how likely the draw picks the card (0 never)</span></div>
+   ${cardsHTML(pool,6,{})}<div class="note">The four lit cards are on show now. Each card's sell limit (4 per player) fills again at every draw.</div>`,[["casing","Challenge",12,0]]);})();
+
+/* the editor (BI A) */
+function editor(el,dr,opts){opts=opts||{};const m=frame(el,"/shops/spawn_general/edit");m.classList.add("ed");
+  head(m,CRUMB("General Store","Editing"),'<span class="sw on"></span><span class="lamp op"><i></i>On</span><span class="key">+ SECTION</span><span class="key">SETTINGS</span><span class="key">DONE</span>');
+  const b=h('<div style="flex:1;display:flex;gap:12px;padding:0 396px 16px 18px;min-height:0;position:relative"></div>');
+  b.appendChild(h(`<div class="box" style="width:236px;flex:none"><div class="bh">Items</div><div style="padding:10px;display:flex;flex-direction:column;gap:8px">
+    <span class="search${opts.q?" f":""}" style="width:100%">${SV.search}${opts.q||"Search items or ids"}</span>
+    <div class="chips">${TABS.slice(0,6).map((t,i)=>`<span class="opt${i===(opts.tab||0)?" on":""}" style="height:22px;font-size:10.5px">${t}</span>`).join("")}</div>
+    <div class="mu" style="font-size:11px">${opts.q?"27 items":"1,914 items"} · drag one onto the page</div>${opts.items||browser(4,12,1)}</div></div>`));
+  b.appendChild(h(`<div class="box" style="flex:1"><div class="bh"><b style="color:var(--tx);white-space:nowrap">${opts.crumb||"General Store"} · page 1 of 2</b><span class="grow"></span><span class="mu" style="font-size:11px">${opts.status||"Each change saves as it is made"}</span></div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:10px;flex:1">${opts.page}<div class="grow"></div>${opts.bin||`<div class="bin" style="position:static;height:34px">${SV.bin} Drag a card here to remove it</div>`}</div></div>`));
+  if(opts.extra)opts.extra.forEach(x=>b.appendChild(h(x)));
+  m.appendChild(b);if(dr)m.appendChild(h(dr));return m;}
+const drawerHead=(k,id,i,price,tab)=>`<div class="dh">${ico(k,"l")}<div class="grow"><b>${nm(k)}</b><div class="mono dim" style="font-size:11px">${id} · card ${i}${price?" · "+price:""}</div></div><span class="key sm">✕</span></div><div class="ptabs">${["CARD","LIMITS","NEEDS"].map(t=>`<span class="${t===tab?"on":""}">${t}</span>`).join("")}</div>`;
+
+/* R6: CARD */
+(function(){const page=GEN.slice(0,19).map(c=>({...c}));page.splice(7,0,{drop:1});
+  editor("r6",`<div class="drawer">${drawerHead("iron","minecraft:iron_ingot",5,"","CARD")}
+    <div class="dbd"><div class="g3"><div class="field"><label>LOT SIZE</label><div class="in2 mono">1<span class="u">of 64</span></div></div><div class="field"><label>BUY FOR</label><div class="in2 mono f">180</div></div><div class="field"><label>SELL FOR</label><div class="in2 mono">60</div></div></div>
+      <div class="field"><label>PAID IN</label><div class="chips">${[["Pieces","#19d3b0"],["Copper","#c87533"],["Gold","#ffd23a"],["Diamond","#4fe3d6"],["Netherite","#6b5a5a"],["Illyrium","#b58cff"]].map(([l,c],i)=>`<span class="opt${i===0?" on":""}"><span class="cn" style="background:${c}"></span>${l}</span>`).join("")}</div></div>
+      <div class="row"><span class="prev">buy 180</span><span class="prev" style="color:var(--gold)">sell 60</span><span class="dim" style="font-size:11px">as players see it · an empty box turns that side off</span></div>
+      <div class="g2"><span class="tick"><span class="cb">✓</span>Instant (no confirm)</span><span class="tick"><span class="cb"></span>Hidden from players</span></div>
+      <div class="field"><label>SELLING TAKES</label><div class="chips"><span class="opt on">This exact item</span><span class="opt">The item, any data</span></div></div>
+      <div class="field"><label>NOTE FOR PLAYERS (3 LINES OF 60)</label><div class="in2 ta">Smelted at the spawn forge.<br><span class="dim">line 2</span></div></div>
+      <div class="note"><span class="tl">Saved 2 s ago.</span> Changing the lot size or what selling takes starts this card's counts again.</div></div></div>`,
+   {q:"glass",page:cardsHTML(page.slice(0,20),5,{sel:4})+'<div class="note">Drop between cards to put it there; the cards after it move along, and their counts start again.</div>',
+    extra:[`<div class="sc ghost" style="left:150px;top:205px">${ico("lbglass")}<span class="in">Light Blue Stained…</span></div>`,SV.cur.replace('class="cursor"','class="cursor" style="left:212px;top:240px"')]});})();
+
+/* R7: LIMITS */
+(function(){const rule=(sel,opts)=>`<div class="chips">${opts.map(o=>`<span class="opt${o===sel?" on":""}" style="height:23px;font-size:10.5px">${o}</span>`).join("")}</div>`;
+  editor("r7",`<div class="drawer">${drawerHead("torch","minecraft:torch",3,"×16 · buy 32","LIMITS")}
+    <div class="dbd" style="gap:9px"><div class="sect">STOCK (BUYING)</div>
+      <div class="g2"><div class="field"><label>FOR EVERYONE</label><div class="in2 mono f">500<span class="u">lots</span></div></div><div class="field"><label>FOR EACH PLAYER</label><div class="in2 mono">10<span class="u">lots</span></div></div></div>
+      <div class="field"><label>EVERYONE'S FILLS AGAIN</label>${rule("After…",["Never","After…","Every day at…","Every weekday at…"])}<div class="row"><div class="in2 mono" style="width:90px">12</div><span class="opt on" style="height:23px">hours</span><span class="opt" style="height:23px">minutes</span><span class="dim" style="font-size:11px">from running out</span></div></div>
+      <div class="field"><label>EACH PLAYER'S FILLS AGAIN</label>${rule("Same as everyone",["Same as everyone","Never","After…","Every day at…","Every weekday at…"])}</div>
+      <div class="sect">SELL ROOM (SELLING) <span class="mu" style="font:11px var(--body)">selling is off on this card</span></div>
+      <div class="box" style="background:#12151b"><div class="bh">Left now</div><div class="lrow">Everyone<span class="r">312 of 500</span></div><div class="lrow">Players at their limit<span class="r">2 of 57</span></div></div>
+      <div class="row"><span class="key">REFILL NOW</span><span class="note">Fills every count of this card again, for everyone.</span></div>
+      <div class="warn">Changing a limit or a rule starts this card's counts again, as in game.</div></div></div>`,
+   {tab:5,items:`<div class="igrid" style="grid-template-columns:repeat(4,1fr)">${["red","rep","piston","hopper","rail","lantern","torch","chest"].map(k=>`<span>${ico(k)}</span>`).join("")}</div>`,page:cardsHTML(GEN.slice(0,20),5,{sel:3,left:1})});})();
+
+/* R8: NEEDS, removing */
+(function(){const page=GEN.slice(0,20).map(c=>({...c}));page[11]={empty:1};
+  editor("r8",`<div class="drawer">${drawerHead("elytra","minecraft:elytra",12,"buy 4 N","NEEDS")}
+    <div class="dbd"><div class="note">What a player needs to trade this card; both, when both are set. A whole shop's needs are in its settings and cover its sections.</div>
+      <div class="field"><label>PERMISSION (LUCKPERMS NODE)</label><div class="in2 mono ph">none</div></div>
+      <div class="field"><label>HOURS PLAYED</label><div class="in2 mono f">50<span class="u">hours</span></div></div>
+      <div class="field"><label>A PLAYER WHO DOES NOT MEET IT</label><div class="chips"><span class="opt on">Sees it locked</span><span class="opt">Does not see it</span></div></div>
+      <div class="field"><label>REASON SHOWN (64 CHARACTERS)</label><div class="in2">Veterans only</div></div>
+      <div class="box" style="background:#12151b"><div class="bh">Players see</div><div style="padding:10px;display:flex;gap:10px;align-items:center"><div class="sc lock" style="width:90px"><span class="lk">🔒</span>${ico("elytra")}<span class="in">Elytra</span><span class="pr">buy 4 N</span></div><span class="note">"Veterans only: 50 hours played (you have 12)"</span></div></div></div></div>`,
+   {page:cardsHTML(page,5,{sel:12}),bin:`<div class="bin hot" style="position:static;height:40px">${SV.bin} Remove Saddle? <span class="key sure sm" style="margin-left:6px">SURE? REMOVE</span><span class="dim" style="font-size:10.5px">3 s</span></div>`,
+    extra:[`<div class="sc ghost" style="left:470px;top:455px">${ico("saddle")}<span class="in">Saddle</span><span class="pr">buy 450</span></div>`]});})();
+
+/* R9: a new section */
+(function(){const m=editor("r9",null,{page:cardsHTML(GEN.slice(0,20),5,{}),q:""});m.classList.remove("ed");m.querySelector(".pagehead").style.paddingRight="18px";
+  m.querySelector(':scope>div[style*="396px"]').style.paddingRight="18px";
+  m.appendChild(h('<div class="shade"></div>'));
+  m.appendChild(h(`<div class="modal" style="left:50%;top:50%;transform:translate(-50%,-50%);width:520px"><div class="mh">NEW SECTION IN GENERAL STORE<span class="grow"></span><span class="key sm">✕</span></div>
+    <div class="mb"><div class="g2"><div class="field"><label>NAME</label><div class="in2 f">Lighting</div></div><div class="field"><label>ID</label><div class="in2 mono">spawn_general_lighting</div></div></div>
+      <div class="field"><label>PICTURE ON ITS CARD</label><div class="row">${ico("lantern","l")}<span class="note">Lantern · chosen from the item browser, or drag one here</span></div></div>
+      <div class="note">The section card goes at the end of this page. The new section opens in the editor, empty; its settings follow the shop's until changed.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri">MAKE SECTION</span></div></div>`));})();
+
+/* R10: a new shop (BJ A) */
+(function(){const m=frame("r10");head(m,"SHOPS",SEARCH()+'<span class="key pri">+ NEW SHOP</span>');m.appendChild(h(filters("All")));
+  const g=h('<div class="tiles" style="grid-template-columns:repeat(4,1fr)"></div>');
+  SHOPS.forEach(s=>g.appendChild(h(`<div class="tile${s.on?"":" off"}"><div class="nm">${s.n}</div><div class="row">${KT[s.k]}${netm(s)}</div><div class="pv">${s.peek.map(k=>`<span>${ico(k,"s")}</span>`).join("")}</div><div class="row">${srvs(s)}</div></div>`)));
+  m.appendChild(g);m.appendChild(h('<div class="shade"></div>'));
+  m.appendChild(h(`<div class="modal" style="left:50%;top:50%;transform:translate(-50%,-50%);width:560px"><div class="mh">NEW SHOP<span class="grow"></span><span class="key sm">✕</span></div>
+    <div class="mb"><div class="g2"><div class="field"><label>NAME (64 CHARACTERS)</label><div class="in2 f">Harbour Fish Stall</div></div><div class="field"><label>ID (LETTERS, DIGITS AND _, 32)</label><div class="in2 mono">harbour_fish_stall<span class="u tl">free</span></div></div></div>
+      <div class="field"><label>KIND</label><div class="row" style="flex-wrap:nowrap;align-items:stretch">
+        <div class="kc on"><b>Shop</b><span>Pages of cards that are always there, with sections inside.</span></div>
+        <div class="kc"><b>Rotating</b><span>A few cards of its pool on show, drawn again on a schedule.</span></div>
+        <div class="kc"><b>Special offer</b><span>A discount on every card until a date.</span></div></div></div>
+      <div class="warn">It is made OFF: fill it, then turn it on. Players see nothing until then. Stalls are pointed at it in game.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri">MAKE SHOP</span></div></div>`));})();
+
+/* R11: settings on one page */
+(function(){const m=frame("r11","/shops/harbour_fish_stall/settings");
+  head(m,CRUMB("Harbour Fish Stall","Settings")+KT.shop,KEYS(0).replace('<span class="key">SETTINGS</span>',''));
+  m.appendChild(h('<div class="offbar"><b>OFF: closed for changes.</b> Players cannot open it anywhere, and it is off the Shopping Network. <span class="grow"></span><span class="key sm pri">TURN ON</span></div>'));
+  let strip="";for(let i=0;i<24;i++)strip+=`<i class="${i>=9&&i<21?"o":""}"></i>`;
+  const opt=(sel,list)=>`<div class="chips">${list.map(o=>`<span class="opt${o===sel?" on":""}">${o}</span>`).join("")}</div>`;
+  const b=h('<div style="flex:1;display:flex;min-height:0"></div>');
+  b.appendChild(h(`<div class="snav"><span class="on">General</span><span>Look</span><span>Opening hours</span><span style="opacity:.45">Rotating</span><span style="opacity:.45">Special offer</span><span>Needs</span><span class="dz">Delete</span></div>`));
+  b.appendChild(h(`<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 18px;align-content:start;min-width:0">
+    <div class="box"><div class="fs" style="border:none"><div class="sect">GENERAL <span class="tl" style="font:600 10.5px var(--body)">saved</span></div><div class="g2"><div class="field"><label>NAME</label><div class="in2">Harbour Fish Stall</div></div><div class="field"><label>ID</label><div class="in2 mono ro" style="color:var(--mu)">harbour_fish_stall</div></div></div>
+      <div class="g2"><div class="field"><label>KIND</label>${opt("Shop",["Shop","Rotating","Special offer"])}</div><div class="field"><label>INSIDE (PARENT)</label><div class="in2 ph">top level</div></div></div><div class="g2"><span class="tick"><span class="cb on">✓</span>On the Shopping Network</span><span class="tick"><span class="cb"></span>Buy only (no selling)</span></div></div></div>
+    <div class="box"><div class="fs" style="border:none"><div class="sect">LOOK</div><div class="field"><label>STYLE</label><div class="row" style="flex-wrap:nowrap">${[["Cash Machine",""],["Passbook","pass"],["Market Board","board"]].map(([l,c],i)=>`<div class="kc${i===2?" on":""}" style="padding:6px;align-items:center"><div class="mcs ${c}" style="width:70px;padding:3px;gap:2px"><div class="cells" style="grid-template-columns:repeat(3,1fr)"><span style="height:12px"></span><span style="height:12px"></span><span style="height:12px"></span></div></div><b style="font-size:11px">${l}</b></div>`).join("")}</div></div>
+      <div class="g2"><div class="field"><label>CARDS A ROW</label>${opt("Auto",["Auto","4","5","6","7"])}</div><div class="field"><label>ROWS</label>${opt("3",["2","3"])}</div></div></div></div>
+    <div class="box"><div class="fs" style="border:none"><div class="sect">OPENING HOURS</div>${opt("Real clock",["Always","Real clock","Minecraft day"])}<div class="g2"><div class="field"><label>OPENS</label><div class="in2 mono f">09:00<span class="u">Europe/London</span></div></div><div class="field"><label>CLOSES</label><div class="in2 mono">21:00</div></div></div>
+      <div class="strip">${strip}</div><div class="hrs"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div><div class="note">Stalls with hours of their own keep them.</div></div></div>
+    <div class="box"><div class="fs" style="border:none"><div class="sect">NEEDS (THE WHOLE SHOP)</div><div class="g2"><div class="field"><label>PERMISSION</label><div class="in2 mono ph">none</div></div><div class="field"><label>HOURS PLAYED</label><div class="in2 mono ph">0</div></div></div>
+      <div class="chips"><span class="opt on">Sees it locked</span><span class="opt">Does not see it</span></div><div class="note">Rotating and Special offer show only for those kinds; the kind is changed in General.</div>
+      <div class="row" style="border-top:1px solid #20242d;padding-top:8px"><span class="sect" style="color:var(--coral)">DELETE</span><span class="note">No sections, no stalls.</span><span class="grow"></span><span class="key dg">DELETE</span></div></div></div></div>`));
+  m.appendChild(b);})();
+
+/* R12: copy, and turning one off */
+(function(){const m=shopPage("r12","/shops/winter_sale",CRUMB("Winter Sale")+KT.offer,KEYS(1),"Winter Sale",["Cards",{Cards:"16",Stalls:"1"}],
+  `${cardsHTML([{sec:1,k:"book",n:"Books",c:"6 cards"},{sec:1,k:"potion",n:"Potions",c:"5 cards"},{sec:1,k:"pearl",n:"Pearls",c:"3 cards"},{sec:1,k:"tag",n:"Tags",c:"2 cards"}],7,{})}`,
+  [["book","Winter Sale",16,0],["book","Books",6,1],["potion","Potions",5,1],["pearl","Pearls",3,1],["tag","Tags",2,1]]);
+  m.appendChild(h('<div class="shade" style="top:34px"></div>'));
+  m.appendChild(h(`<div class="modal" style="left:240px;top:120px;width:500px"><div class="mh">COPY WINTER SALE<span class="grow"></span><span class="key sm">✕</span></div>
+    <div class="mb"><div class="g2"><div class="field"><label>NEW NAME</label><div class="in2 f">Summer Sale</div></div><div class="field"><label>NEW ID</label><div class="in2 mono">summer_sale<span class="u tl">free</span></div></div></div>
+      <div class="box" style="background:#12151b"><div class="bh">Copied with it: 4 sections, 16 cards</div>
+        ${[["Books","winter_sale_books","summer_sale_1"],["Potions","winter_sale_potions","summer_sale_2"],["Pearls","winter_sale_pearls","summer_sale_3"],["Tags","winter_sale_tags","summer_sale_4"]].map(([n,a,b])=>`<div class="lrow">${n}<span class="r"><span class="dim">${a}</span> → <span class="tl">${b}</span></span></div>`).join("")}</div>
+      <div class="note">Every setting and card is copied; counts and sales start fresh. The copy is made OFF and opens in the editor. Stalls stay with the Winter Sale.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri">COPY</span></div></div>`));
+  m.appendChild(h(`<div class="modal" style="left:752px;top:180px;width:300px"><div class="mh" style="color:var(--gold)">TURN OFF?</div>
+    <div class="mb"><div class="note">The Winter Sale and its 4 sections close for every player: its stall shows closed and it leaves the Shopping Network. You can still edit it here and test it in game.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key gold">TURN OFF</span></div></div>`));})();
+</script>
+</body>
+</html>
