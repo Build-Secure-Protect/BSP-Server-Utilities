@@ -189,6 +189,7 @@ const ShopsTab = (() => {
     for (let i = 0; i < 4; i++) { const c = el("span"); const p = (s.peek || [])[i]; if (p) c.appendChild(pic(p.item, p.v, 24)); pv.appendChild(c); }
     t.appendChild(pv);
     t.appendChild(lamp(s));
+    if (s.parentGone) t.appendChild(el("div", "shgone", "Its shop is gone: off until it is moved")); // D853
     if (s.kind === "offer" && s.offerPercent > 0) t.appendChild(el("div", "mu wdsmall", s.offerPercent + "% off" + (s.offerEnd ? " · ends " + new Date(s.offerEnd).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "")));
     if (s.kind === "rotating") t.appendChild(el("div", "mu wdsmall", (s.displaySlots || 0) + " on show" + (s.nextChange ? " · next change in " + inTime(s.nextChange - Date.now()) : "")));
     const need = needsText(s.requires); if (need) t.appendChild(el("div", "shneed", "Needs " + need));
@@ -546,6 +547,7 @@ const ShopsTab = (() => {
   // the ON/OFF switch (D805): a top shop only (its sections go with it); turning off asks once
   function switchFor(s, topId) {
     const w = stateSwitch(s.enabled);
+    if (s.parentGone) { w.title = "Its shop is gone: move it to Top level first."; return w; } // D853
     if (!admin() || s.id !== topId) { if (s.id !== topId) w.title = "A section is on or off with its shop."; return w; }
     w.classList.add("click"); w.tabIndex = 0; w.setAttribute("role", "switch"); w.setAttribute("aria-checked", String(!!s.enabled));
     const go = (e) => { e.stopPropagation(); if (s.enabled) askOff(s); else change("/api/shops/enable", { shop: s.id, on: true, edited: s.edited }); };
@@ -556,6 +558,11 @@ const ShopsTab = (() => {
     const top = p.tree[0];
     if (p.shop.enabled) return;
     const bar = el("div", "shoffbar");
+    if (p.shop.parentGone) { // D853: a section whose shop is gone is off until it is moved
+      bar.appendChild(el("span", "grow", "OFF: its shop " + p.shop.parent + " is gone. Move it to Top level, or into another shop in SETTINGS, then turn it on."));
+      if (admin()) bar.appendChild(key("MOVE TO TOP LEVEL", "pri", () => change("/api/shops/set", { shop: p.shop.id, field: "parent", value: "", edited: p.shop.edited })));
+      box.appendChild(bar); return;
+    }
     bar.appendChild(el("span", "grow", "OFF: closed for changes. Players cannot open it anywhere" + (p.shop.remote ? ", and it is off the Shopping Network" : "")
       + (p.tree.length > 1 ? ", with its " + (p.tree.length - 1) + (p.tree.length === 2 ? " section." : " sections.") : ".")));
     if (admin() && p.shop.id === p.top) bar.appendChild(key("TURN ON", "pri", () => change("/api/shops/enable", { shop: p.top, on: true, edited: p.shop.edited })));
@@ -667,7 +674,8 @@ const ShopsTab = (() => {
   // COPY: a top shop only, as BSP-Core copies (D823)
   function copyKey(p) {
     const b = adminMark(key("COPY", null, () => copyShop()));
-    if (p.shop.id !== p.top && !b.disabled) { b.disabled = true; b.title = "Copy its shop instead: a section is copied with its shop."; }
+    if (p.shop.parentGone && !b.disabled) { b.disabled = true; b.title = "Move it to Top level first: its shop is gone."; } // D853
+    else if (p.shop.id !== p.top && !b.disabled) { b.disabled = true; b.title = "Copy its shop instead: a section is copied with its shop."; }
     return b;
   }
 
@@ -728,7 +736,7 @@ const ShopsTab = (() => {
 
   // R11: every setting on one page (D803), each saved as it is changed
   function drawSettings(box) {
-    const p = st.page, s = p.shop, can = admin(), isSub = s.kind === "sub";
+    const p = st.page, s = p.shop, can = admin(), isSub = s.kind === "sub" && !!s.parent; // a section moved to Top level keeps kind sub until a kind is chosen (BSP-Core 1.27.0, D853)
     if (!st.grid && !st.gridAsked) { st.gridAsked = true; ensureGrid().then(() => { st.gridAsked = false; if (st.view === "settings" && st.grid) draw(); }); } // the shops for "inside"
     const head = el("div", "wdhead");
     const crumb = el("span", "wdcrumb shcrumb"); crumb.appendChild(key("SHOPS", "link", back));
@@ -780,9 +788,9 @@ const ShopsTab = (() => {
     if (!isSub) g.appendChild(field("KIND", chips(s.kind, [["shop", "Shop"], ["rotating", "Rotating"], ["offer", "Special offer"]], (v) => set("kind", v))));
     const par = el("select", "wdin shin"); par.disabled = !can; par.dataset.keep = "shs:parent";
     const mine = new Set(subtree(p, s.id).map((n) => n.id));
-    if (!s.parent) { const o = el("option", null, "Top level"); o.value = ""; par.appendChild(o); } // a shop inside another stays inside one (BSP-Core; audit)
+    if (!s.parent || s.parentGone) { const o = el("option", null, "Top level"); o.value = ""; par.appendChild(o); } // a shop inside another stays inside one (BSP-Core; audit), unless its shop is gone (1.27.0, D853)
     (st.grid ? st.grid.shops : []).forEach((t) => [t, ...(t.sections || [])].forEach((x) => { if (mine.has(x.id)) return; const o = el("option", null, (x.name || x.id) + " (" + x.id + ")"); o.value = x.id; par.appendChild(o); }));
-    if (s.parent && ![...par.options].some((o) => o.value === s.parent)) { const o = el("option", null, s.parent); o.value = s.parent; par.appendChild(o); }
+    if (s.parent && ![...par.options].some((o) => o.value === s.parent)) { const o = el("option", null, s.parent + (s.parentGone ? " (gone)" : "")); o.value = s.parent; par.appendChild(o); }
     par.value = s.parent || "";
     par.addEventListener("change", () => set("parent", par.value));
     g.appendChild(field("INSIDE (PARENT)", par));

@@ -115,8 +115,8 @@ class ShopsTest {
         assertTrue(g.get("ok").getAsBoolean(), g.toString());
         List<String> names = new ArrayList<>();
         g.getAsJsonArray("shops").forEach(e -> names.add(e.getAsJsonObject().get("name").getAsString()));
-        assertEquals(List.of("Builder's Yard", "Challenge", "Farmers' Market", "General Store", "Miners' Guild", "Night Market", "Spring Fair", "Winter Sale"), names,
-                "top-level shops only (sections live inside), A to Z (D792)");
+        assertEquals(List.of("Builder's Yard", "Challenge", "Farmers' Market", "General Store", "Jams", "Miners' Guild", "Night Market", "Spring Fair", "Winter Sale"), names,
+                "top-level shops only (sections live inside, except one whose shop is gone, D853), A to Z (D792)");
         JsonObject general = tile(g, "spawn_general");
         List<String> secs = new ArrayList<>();
         general.getAsJsonArray("sections").forEach(e -> secs.add(e.getAsJsonObject().get("id").getAsString()));
@@ -332,6 +332,30 @@ class ShopsTest {
         JsonObject on = r.desk.enable(admin, obj("{\"shop\":\"spawn_general\",\"on\":true,\"edited\":" + edited(r, "spawn_general") + "}"));
         assertTrue(on.get("ok").getAsBoolean());
         assertTrue(tile(r.desk.grid(admin, false), "spawn_general").get("enabled").getAsBoolean());
+    }
+
+    @Test
+    void a_section_whose_shop_is_gone_is_marked_and_may_go_to_top_level_then_on() { // BSP-Core 1.27.0, D853
+        Rig r = new Rig();
+        Account admin = account(Rank.ADMIN);
+        JsonObject jam = tile(r.desk.grid(admin, false), "autumn_fair_jams");
+        assertTrue(jam.get("parentGone").getAsBoolean(), "the grid marks it: " + jam);
+        assertFalse(tile(r.desk.grid(admin, false), "spawn_general").get("parentGone").getAsBoolean());
+        assertTrue(r.desk.shop(admin, "autumn_fair_jams", false).getAsJsonObject("shop").get("parentGone").getAsBoolean(), "and its page");
+        assertFalse(r.desk.shop(admin, "spawn_general_food", false).getAsJsonObject("shop").get("parentGone").getAsBoolean(), "a section with its shop is not");
+        JsonObject on = r.desk.enable(admin, obj("{\"shop\":\"autumn_fair_jams\",\"on\":true,\"edited\":" + edited(r, "autumn_fair_jams") + "}"));
+        assertFalse(on.get("ok").getAsBoolean(), "no switch while its shop is gone: " + on);
+        JsonObject food = r.desk.set(admin, obj("{\"shop\":\"spawn_general_food\",\"field\":\"parent\",\"value\":\"\",\"edited\":" + edited(r, "spawn_general_food") + "}"));
+        assertFalse(food.get("ok").getAsBoolean(), "a section with its shop stays inside one: " + food);
+        JsonObject top = r.desk.set(admin, obj("{\"shop\":\"autumn_fair_jams\",\"field\":\"parent\",\"value\":\"\",\"edited\":" + edited(r, "autumn_fair_jams") + "}"));
+        assertTrue(top.get("ok").getAsBoolean(), "Top level: " + top);
+        JsonObject moved = tile(r.desk.grid(admin, false), "autumn_fair_jams");
+        assertFalse(moved.get("parentGone").getAsBoolean());
+        assertEquals("", moved.get("parent").getAsString());
+        JsonObject kind = r.desk.set(admin, obj("{\"shop\":\"autumn_fair_jams\",\"field\":\"kind\",\"value\":\"shop\",\"edited\":" + edited(r, "autumn_fair_jams") + "}"));
+        assertTrue(kind.get("ok").getAsBoolean(), "it chooses a kind: " + kind);
+        JsonObject turned = r.desk.enable(admin, obj("{\"shop\":\"autumn_fair_jams\",\"on\":true,\"edited\":" + edited(r, "autumn_fair_jams") + "}"));
+        assertTrue(turned.get("ok").getAsBoolean(), "then its switch works: " + turned);
     }
 
     @Test

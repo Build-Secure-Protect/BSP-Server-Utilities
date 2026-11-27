@@ -208,6 +208,7 @@ public final class ShopDesk {
                 secs.add(sec);
             }
             o.add("sections", secs);
+            o.addProperty("parentGone", parentGone(byId, s));
             JsonArray vv = perShop.getOrDefault(str(s, "id"), new JsonArray());
             o.add("venues", vv);
             out.add(o);
@@ -289,7 +290,12 @@ public final class ShopDesk {
         out.addProperty("message", "");
         out.add("server", s.get("server"));
         out.add("at", s.get("at"));
-        out.add("shop", s.get("shop"));
+        JsonElement shown = s.get("shop");
+        if (shown != null && shown.isJsonObject()) {
+            shown = shown.deepCopy();
+            shown.getAsJsonObject().addProperty("parentGone", parentGone(byId, byId.get(id)));
+        }
+        out.add("shop", shown);
         out.addProperty("top", top);
         out.add("tree", tree);
         out.add("path", path);
@@ -442,8 +448,8 @@ public final class ShopDesk {
             }
             case "kind" -> {
                 String k = prim(value);
-                if (str(shop, "kind").equals("sub")) {
-                    why = "A section stays a section.";
+                if (str(shop, "kind").equals("sub") && !str(shop, "parent").isEmpty()) {
+                    why = "A section stays a section."; // one moved to Top level (D853) chooses a kind
                 } else if (!KINDS.contains(k)) {
                     why = "A shop is a Shop, a Rotating shop or a Special offer.";
                 } else {
@@ -460,8 +466,8 @@ public final class ShopDesk {
                     why = "That shop is inside this one: it would go round in a loop.";
                 } else if (!p.isEmpty() && depth(byId, p) + 1 + height(byId, id) > MAX_DEPTH) {
                     why = "Sections go at most " + MAX_DEPTH + " deep.";
-                } else if (p.isEmpty() && !str(shop, "parent").isEmpty()) {
-                    why = "A shop inside another stays inside a shop: move it to another one."; // BSP-Core's bad_value, for any kind (audit)
+                } else if (p.isEmpty() && !str(shop, "parent").isEmpty() && !parentGone(byId, shop)) {
+                    why = "A shop inside another stays inside a shop: move it to another one."; // BSP-Core's bad_value, for any kind (audit); one whose shop is gone may go to Top level (1.27.0, D853)
                 } else {
                     put = new JsonPrimitive(p);
                 }
@@ -1195,6 +1201,15 @@ public final class ShopDesk {
      * but should one arrive, every shop in it gets the same top (the loop's first id A to Z), so none is lost from the grid;
      * a chain deeper than {@link #MAX_DEPTH} stops there. Null when {@code id} is not a shop.
      */
+    /**
+     * A section whose shop is gone (D853): its {@code parent} names no shop in the list. BSP-Core 1.27.0 keeps such a
+     * section off and lets it take {@code parent} "" (Top level), after which its switch works.
+     */
+    public static boolean parentGone(Map<String, JsonObject> byId, JsonObject s) {
+        String p = s == null ? "" : str(s, "parent");
+        return !p.isEmpty() && !byId.containsKey(p);
+    }
+
     public static String root(Map<String, JsonObject> byId, String id) {
         if (!byId.containsKey(id)) {
             return null;

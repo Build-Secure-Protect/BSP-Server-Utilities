@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-27
+
+Sections whose shop is gone, as BSP-Core 1.27.0 keeps them. Works with BSP-Server Utilities 0.27.1 on the game servers
+(0.27.0 too, with its older wording).
+
+### Added
+- A section whose shop is gone (left by a delete before BSP-Core 1.26.0, or a delete half heard on the network) is
+  marked on its tile, "Its shop is gone: off until it is moved". Its page has a MOVE TO TOP LEVEL key, its settings
+  offer Top level in INSIDE (the gone shop is named "(gone)"), and once moved it chooses a kind and turns on like any
+  shop. Until then its switch and COPY are greyed with "Move it to Top level first".
+
+### Changed
+- The demo has such a section (Jams) and, as BSP-Core 1.27.0, no opening time for a shop that is off.
+
 ## [0.10.0] - 2026-11-27
 
 Server alerts: an email and a strip on every tab when a game server freezes or crashes. Nothing new on the game servers

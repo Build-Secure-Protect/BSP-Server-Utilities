@@ -171,6 +171,9 @@ final class DemoShops {
         if (why != null) {
             return why;
         }
+        if (!s.get("parent").getAsString().isEmpty()) { // a section, or one whose shop is gone, has no switch (BSP-Core 1.27.0: not_top)
+            return done(false, "Only a top shop can do that: a section follows its shop.", null);
+        }
         boolean on = act.get("on").getAsBoolean();
         for (String id : tree(s.get("id").getAsString())) {
             shops.get(id).addProperty("enabled", on);
@@ -465,7 +468,7 @@ final class DemoShops {
     private static void refresh() {
         for (JsonObject s : shops.values()) {
             s.addProperty("openNow", s.get("enabled").getAsBoolean() && open(s.getAsJsonObject("hours")));
-            s.addProperty("opensAt", opensAt(s.getAsJsonObject("hours")));
+            s.addProperty("opensAt", s.get("enabled").getAsBoolean() ? opensAt(s.getAsJsonObject("hours")) : ""); // empty while off (BSP-Core 1.27.0)
         }
     }
 
@@ -588,10 +591,12 @@ final class DemoShops {
         shop(m, "spring_fair", "Spring Fair", "shop", "", false, true, "passbook", 0, 3, always()).add("cards", cards(
                 section("spring_fair_seeds", "minecraft:bone_meal"), card("minecraft:cake", 1, 200, -1), card("minecraft:apple", 8, 40, -1)));
         shop(m, "spring_fair_seeds", "Seeds", "sub", "spring_fair", false, true, "passbook", 0, 3, always()).add("cards", cards(card("minecraft:bone_meal", 16, 20, -1)));
+        // a section whose shop is gone (a delete half heard on a network before BSP-Core 1.26.0): off until it is moved (D853)
+        shop(m, "autumn_fair_jams", "Jams", "sub", "autumn_fair", false, true, "passbook", 0, 3, always()).add("cards", cards(card("minecraft:honey_bottle", 4, 60, -1)));
         for (JsonObject s : m.values()) { // open now follows the hours; an OFF shop is never open
             s.addProperty("edited", now - 3_600_000L);
             s.addProperty("openNow", s.get("enabled").getAsBoolean() && open(s.getAsJsonObject("hours")));
-            s.addProperty("opensAt", opensAt(s.getAsJsonObject("hours")));
+            s.addProperty("opensAt", s.get("enabled").getAsBoolean() ? opensAt(s.getAsJsonObject("hours")) : ""); // empty while off (BSP-Core 1.27.0)
         }
         return m;
     }
