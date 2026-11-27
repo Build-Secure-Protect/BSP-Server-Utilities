@@ -4,7 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
-Client only; the network protocol is still 14.
+## [0.27.0] - 2026-11-27
+
+The network protocol is still 14. The Streamer Mode fix below is client only. The shops need BSP-Core 1.26.0 on the servers (its own network protocol 25: every server and player moves to it at once) and the staff panel 0.9.0.
+
+### Added
+- The staff web panel's shops on the game servers (SU-165): with BSP-Core 1.26.0 (its `BspShops`), the panel's SHOPS tab lists every shop, its sections, cards, this server's stalls, sales and the import file, and Admins and Owners make, copy, turn on and off, change and delete shops and edit their cards, through BSP-Core's own rules. A change made while the shop was changed in game is refused and the shop shown as it is. BSP-Core's refusals are said in words (for example "A price in coins is at most 10,000 coins."). Every change is in the Action Log (new kinds: shops made, shop edits, shops copied, shops deleted, shops turned on and off), and a change anywhere reaches open panels within seconds. Without BSP-Core 1.26.0 the panel says so and nothing else changes.
 
 ### Fixed
 - Streamer Mode over Spout2: OBS's picture no longer stays frozen on the Streamer Mode menu. A frame that Spout skipped or refused while it was still running was counted as sent, so OBS kept the last frame that got through. Frames that never reach OBS are now noticed. The sender is made again once, and if that does not help, the stream window takes over and chat says why. The log's minute line says how many frames Spout published. Choosing Spout2 again in the menu after the fallback retries it. Untested with real Spout and OBS.

@@ -8,9 +8,11 @@ import org.jetbrains.annotations.Nullable;
  * hidden, {@link LogText#masked}). {@code id} is 0 until the database numbers it; {@code uid} names it across servers.
  */
 public record LogEntry(long id, String uid, long atMs, String server, String actorId, String actor, String roleGroup, String roleLabel, int colour, String kind, String text) {
-    public static final String CMD = "cmd", ITEM = "item", MODE = "mode", GIVE = "give", SWITCH = "switch", CHECK = "check", AFK = "afk", ROOM = "room", MOB = "mob", DROPS = "drops", BANK = "bank", BOUNTY = "bounty", TUTORIAL = "tutorial", CHUNK_TP = "chunk_tp", LAG_SAMPLE = "lag_sample", REGION_EDIT = "region_edit", REGION_CREATE = "region_create", REGION_REMOVE = "region_remove";
+    public static final String CMD = "cmd", ITEM = "item", MODE = "mode", GIVE = "give", SWITCH = "switch", CHECK = "check", AFK = "afk", ROOM = "room", MOB = "mob", DROPS = "drops", BANK = "bank", BOUNTY = "bounty", TUTORIAL = "tutorial", CHUNK_TP = "chunk_tp", LAG_SAMPLE = "lag_sample", REGION_EDIT = "region_edit", REGION_CREATE = "region_create", REGION_REMOVE = "region_remove",
+            SHOP_CREATE = "shop_create", SHOP_EDIT = "shop_edit", SHOP_COPY = "shop_copy", SHOP_DELETE = "shop_delete", SHOP_ON = "shop_on", SHOP_OFF = "shop_off";
     /** Every kind, in the order the Action log pane offers them. */
-    public static final java.util.List<String> KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH, CHECK, AFK, ROOM, MOB, DROPS, BANK, BOUNTY, TUTORIAL, CHUNK_TP, LAG_SAMPLE, REGION_EDIT, REGION_CREATE, REGION_REMOVE);
+    public static final java.util.List<String> KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH, CHECK, AFK, ROOM, MOB, DROPS, BANK, BOUNTY, TUTORIAL, CHUNK_TP, LAG_SAMPLE, REGION_EDIT, REGION_CREATE, REGION_REMOVE,
+            SHOP_CREATE, SHOP_EDIT, SHOP_COPY, SHOP_DELETE, SHOP_ON, SHOP_OFF);
     /** The kinds players read (on panels, {@code /actionlog}, the board): the client check's refusals and kicks, and failed AFK checks, are for staff only (D142, D213). */
     public static final java.util.List<String> PUBLIC_KINDS = java.util.List.of(CMD, ITEM, MODE, GIVE, SWITCH);
     private static final String SEP = "\u001f";

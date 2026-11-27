@@ -3062,3 +3062,113 @@ Left as it is: giving up after the restart also when Spout accepted the frames b
 7. If OBS still freezes, look in the log for "Spout published no frame for 60 sends (...)". It says whether Spout refused or skipped the frames, the frame count and whether it was still initialised. Then either OBS comes back after the sender is made again, or chat says Spout2 stopped and the BSP Stream window opens. Send those lines.
 8. If the frame count in that line is 0 (or the minute line says frame counting is off), Spout's frame counting is off on that PC. Skipped frames then cannot be seen, only refused ones. Say so; Spout's own settings program (SpoutSettings) can turn it on.
 
+## 2026-11-26: the SHOPS tab, its grid and a shop's page, panel 0.9.0 against `--demo` (SU-161)
+
+The staff panel's side only. No game server answers the `shop_*` actions yet: BSP-Core needs its shop api first (requests SU-BC5 to SU-BC10), then SU-165 makes the mod answer. Everything here was checked against the panel's demo (`java -jar staff-panel/build/libs/bsp-staff-panel-0.9.0.jar --demo 8212`), at 1400 px and on a phone (375 px).
+
+**JUnit** (`./gradlew -p staff-panel test`): 151/151; `ShopsTest` adds 7: the grid lists top shops A to Z with their sections and their stalls counted by server on the shop at the top; reads are kept a minute for everyone and read again after a minute, on REFRESH and when a server's `shopsAt` moves; a section's page carries its path, its tree depth first and the stalls of the whole tree; a malformed id signs nothing and a missing shop is said without asking for it; sales are 1, 7 or 30 days (another span is a week) and kept; a server that stops keeps its stalls greyed with when it was last heard from; no server says so; a parent loop gives every shop in it the same top, so none is lost.
+
+**In the demo browser (checked):**
+1. SHOPS sits after WORLDS in the side menu; on a phone it is in More (More is lit while it is open) and the bottom bar keeps its six.
+2. Eight tiles, A to Z. Spring Fair and Winter Sale are striped, "OFF: closed for changes". The Farmers' Market says "Opens 06:00 (game)", the Night Market "Opens 20:00" (outside 20:00 to 02:00). The Miners' Guild says what it needs. The General Store's BSP-Spawn chip shows 6; hovering it splits them (3 Market Stalls, 1 Vendor Post, 2 Stall Displays, 4 of them for its sections). SafeRoom's chip is greyed (off, three hours ago).
+3. The filter chips count and filter; the search finds a section ("pickaxes" finds the General Store).
+4. The General Store's page: the tree (General Store 27, Food, Redstone, Tools, Pickaxes), seven cards a row and three rows, page 1 of 2, blue section cards that open their section, the Shulker Box dimmed and HIDDEN, the Totem of Undying with a padlock; hovering a card gives all its settings.
+5. Pickaxes: the breadcrumb SHOPS › General Store › Tools › Pickaxes. Stalls: eight rows for the whole shop, SafeRoom's greyed; "This shop only" narrows them. Sales: 1, 7 and 30 days, totals and every card that traded.
+6. The Challenge: the draw strip (4 of 12 on show, every Monday at 00:00, next change, no repeats with 4 left, tells every player, the last three draws), the four on show lit, every card's weight; "On show only" leaves the four.
+7. A phone: the grid one column, the tree a dropdown, a shop's cards four a row (a page still holds what it holds in game).
+
+**Not checked:** against a real game server (none answers yet); a real item picture export (the demo's pictures are letters on colour); a server's `shopsAt` moving (nothing in the demo changes it; the JUnit test covers the desk's side).
+
+## 2026-11-26: making and changing shops from the panel, panel 0.9.0 against `--demo` (SU-162)
+
+The panel's side only, as SU-161: no game server answers `shop_create`, `shop_set`, `shop_enable`, `shop_copy` or `shop_delete` until BSP-Core has SU-BC6 to SU-BC8 and SU-165 is built.
+
+**JUnit** 158/158; `ShopsTest` adds 7: a Moderator signs nothing (each refusal still logged); a new shop is made off and a new section lands at the end of its shop, a stale stamp refused; fifteen bad settings (columns 3, rows 4, an unknown style, game hours past 23999, real hours below 0, `monday 25:00`, a 100% discount, a text "yes" for a switch, a node with a space, a 65-character name, a loop, itself as parent, kind `sub`, an unknown setting, an end in the past) are refused before anything is signed, and a good one moves the stamp, is read again and is logged; a requirement's reason loses its control characters; off takes the sections with it; a copy gets new ids, no card points back, is made off and leaves the stalls; deleting a section takes its card and the section under it; a change is read once (a `shopsAt` older than the read kept reads nothing) and leaves the stalls kept, and `stallsAt` re-reads only that server's stalls.
+
+**In the demo browser (checked at 1400 px, the settings also at 375 px):**
+1. + NEW SHOP: "Harbour Fish Stall" fills the id `harbour_fish_stall` (free); Rotating chosen; MAKE SHOP opens its settings with the grey OFF bar, the Rotating section shown and Special offer dimmed in the jump list.
+2. Settings: Real clock, then 08:30 typed: saved, the strip lit from 09:00 (an hour is lit when it is open at its start); `monday 25:00` refused with the reason; `Friday 18:00` saved as `friday 18:00`; Needs saved (node, 10 hours, reason) straight after another change: both saved, in order.
+3. A reason half typed, then a style chip clicked: the style saved and the half-typed reason still there.
+4. Six style and column changes in a row, then the grid after the live tick: no "30 reads in a minute" (before the fix in this task, each change read the list, the shop and every server's stalls twice).
+5. + SECTION on the General Store: "Lighting" gives `spawn_general_lighting`; "lantern" finds the Lantern; MAKE SECTION opens it, the tree shows it with 0 cards and the General Store 28.
+6. COPY of the Winter Sale as "Summer Sale": the list shows Books → `summer_sale_1`, Potions → `summer_sale_2`; the copy opens, off.
+7. The General Store's switch on its tile asks "TURN OFF?", naming its 5 sections.
+8. A new shop deleted from its settings: DELETE, SURE? DELETE (1 of 2), SURE? DELETE (2 of 2), then it is gone and the grid says "Deleted."
+
+**Not checked:** a Moderator's view in the browser (the demo has one Owner; the desk's refusals are JUnit-tested); a real game server; the change answers BSP-Core will really give (the demo's are made up to the contract in `ShopDesk`).
+
+## 2026-11-26: the card editor, panel 0.9.0 against `--demo` (SU-163)
+
+The panel's side only: no game server answers `shop_item_add`, `shop_item_set`, `shop_item_move`, `shop_item_remove` or `shop_item_refill` until BSP-Core has SU-BC6 and SU-165 is built.
+
+**JUnit** 160/160; `ShopsTest` adds 2: a bad item id signs nothing; an item dropped on card 2 is card 2 and the rest move along, the answer giving its place; past the end is the end; a card moves and is removed (logged with its item), a stale stamp and a Moderator refused; fifteen bad card values (lot size 0 and 65, a buy of -2, coin 5, weight 101, a limit of 1.5, a match of "any", four note lines, a 61-character line, "same" for everyone's rule, "rotation" outside a rotating shop, "0h", "someday 06:00", an unknown field, a number for a switch) and a price on a section's card are refused before anything is signed; a price leaves the counts, a limit says they start again; "Monday 06:00" is kept as "monday 06:00"; a note loses empty lines and its "|"; REFILL NOW is logged.
+
+**In the demo browser (checked at 1500 px with the chat open, and at 375 px):**
+1. EDIT on the General Store: 62 items on the left, 27 cards, PAGE 2 marked where the game's second page begins.
+2. "lantern" finds one item; dragged onto card 4 it lands there ("Added at card 4: set its price."), chosen, its drawer open.
+3. Buy typed as "2,500" and Gold chosen straight after: both saved in order; the preview reads "buy 2,500 G".
+4. LIMITS: 100 for everyone (the page says the counts start again; "Left now for everyone: 100 of 100"); Every day at… gives 06:00; After… gives 12 hours; 90 minutes saved.
+5. MOVE ▶: the Lantern goes to card 5 and stays chosen.
+6. A card dragged onto the bin: "Remove Lantern? SURE? REMOVE"; the key removes it (28 cards to 27).
+7. A card's NEEDS tab drawn; at 375 px EDIT is greyed ("The card editor is for a computer (D814).") and an open editor falls back to the page.
+
+**Not checked:** dragging with a real mouse (the checks above send the browser's own drag events from the page script, which run the same handlers); a real picture export with thousands of items (the browser shows the first 120 of a search); a real game server.
+
+## 2026-11-26: EXPORT and the audit of the SHOPS tab, panel 0.9.0 against `--demo` (SU-164)
+
+**EXPORT:** `shop_export` answers the shop and its sections as the import file (format 1). In the demo the Challenge's answer was `spawn_challenge-2026-11-26.json`, format 1, 1 shop, 12 cards (fetched from the page; the browser's download itself was not run).
+
+**Audit:** two independent reads, one of the panel's server side (`ShopDesk`, `DemoShops`, the routes, the feed), one of `shops.js`. Fixed:
+1. A non-boolean `on` was read as off and turned the shop and its sections off; now refused (also a non-boolean `hide`).
+2. A game server's answer could carry `panelLog` into the panel's log (also for a Moderator's read); stripped from every answer.
+3. The card checks told a refusal from a shop by an `ok` key the shop itself could hold; now a result type.
+4. `shopsAt` and `stallsAt` were compared with the panel's clock: a game server ahead made every page read again, one behind kept old reads. Now a change of value drops the kept reads, except once in 15 s after the panel's own change (already read again).
+5. A staff member's own refusals (the reads allowance, the panel busy) were kept and shown to everyone for 20 s; now never kept.
+6. The kept read and the drop after a change were not atomic; now under one lock, and a change also drops kept failures.
+7. C1 controls, U+2028/U+2029 and § codes passed into names, notes and log lines; now spaces; a game's item and section ids in log lines are ids or "?".
+8. Prices in coins went up to 10^12 while BSP-Core pays in copper up to 2^31; now at most 10,000 coins, also checked when the currency changes.
+9. Sales and failure caches could grow without end; bounded. A venue of an unknown kind no longer adds an empty row; a lot size out of range is refused; the export's date follows the desk's clock.
+10. `shops.js`: what was being typed was read after the page was cleared, so it was never kept; read first now. The page's own change no longer makes the minute's read run while someone types.
+11. Queued changes took the newest stamp a read brought (possibly from someone else's change in game) and card changes could act on a card that slid into place: stamps now move on only from the panel's own answers, and card changes go one at a time ("The last change to a card is still saving").
+12. NEW SECTION and TURN OFF sent the stamp from when the window opened; now the newest, through the change queue; a failed TURN OFF is said once.
+13. The delete warning and the parent list took the wrong sections (a sibling's children); now the subtree. The card NEEDS tab keeps a draft. A non-admin no longer sees an OPEN key for the page they are on. Sales are read once per shop and span. A refill rule clicked again is not sent (it would restart the counts). Enter then leaving a box sends once. Confirms are cleared when another page opens. Focus keys on editor cards, ticks, the parent list and the offer's end. One window at a time. Words: "1 card", "Paid in/out", "Each week on…", no decision numbers in tooltips; game minutes rounded both ways (06:59 stays 06:59).
+
+Not changed: the section dropdown already uses no-break spaces (a reported flat list was not one); a shop moved under another keeps its kind and no section card is moved (as BSP-Core's Workbench does; put to BSP-Core in the handoff).
+
+**JUnit** 164/164 (`ShopsTest` 22: the export; on must be true or false; the coin cap and currency change; no log line from an answer; a game clock far ahead and far behind; the panel's own refusals; plain text).
+
+**In the demo browser:** a name saved while the cards on show box was being typed in: the 6 typed stays and keeps focus; ◀ MOVE clicked twice: the second is refused with "The last change to a card is still saving", the card moves one place.
+
+## 2026-11-27: the game servers' shops through BSP-Core 1.26.0, mod 0.27.0 and panel 0.9.0 (SU-165, SU-166)
+
+**GameTests** (`./gradlew runGameTestServer`, BSP-Core 1.26.0's jar loaded in the dev run): 370/370; `WebShopsGameTests` adds 3, every action signed as the panel signs it:
+1. A shop is made off, listed in the panel's shape (hours, peek, requires, the time zone), read, a missing one said in words; BSP-Core's `ShopEvent.Changed` moves `shopsAt` and the snapshot carries `shops`, `shopsAt`, `stallsAt`; deleted.
+2. A Moderator changes nothing; a name saved with its stamp moves it; the old stamp is refused with `stale`; opening hours through `setHours` and needs through `setRequires`, both read back; a text "true" is not on; turned on; deleted.
+3. A section made with a potion picture (its `v` read back from the SNBT); an item added at place 0; a two-line note read back as two lines; paid in gold; a 10,001-coin price refused in words; a card's needs through `setItemRequires`; moved, refilled, removed; a section's copy refused, the shop's copy giving `<new>_1` for its section; exported (format 1, two shops); the report answered at once on a server alone (coins per tier, sellers); deleted with its section; this server's stalls read.
+
+**JUnit** (panel) 165/165: copying a section is refused before signing; the sales keep BSP-Core's own span when it is shorter (capped).
+
+**In the demo browser:** the Challenge's strip says "ON SHOW SINCE" with one time; COPY on the Tools section is greyed ("Copy its shop instead"); Sales for 30 days shows pieces and coins per tier ("78 D · 354 N"), the capped line with 14 days, Coins in and out columns and "Players paid most".
+
+**Not checked (needs the network):** the panel and a real game server together over Redis; two servers (a change on one heard by the other moving its `shopsAt`); real stalls in `shop_venues` (the GameTest world has none); a report read from MySQL; the Action Log entries seen in game. To check on a test server with BSP-Core 1.26.0, BSP-Server Utilities 0.27.0 and panel 0.9.0:
+1. The SHOPS tab lists the server's shops; place a Market Stall for one: its tile's server chip counts it within seconds.
+2. Make a shop on the panel: it is off in game (`/bsp shop edit <id>`); turn it on: a stall pointed at it opens.
+3. Change a price in the Workbench while the panel shows the card, then change it on the panel: refused, "changed in game", and the panel shows the Workbench's price.
+4. Add an item by dragging, set its price in gold, buy it in game.
+5. The LOG tab in game shows "Shop edits" by "<name> (panel)".
+
+**Audit of SU-165 and SU-166** (two independent reads: the mod against BSP-Core's api; the panel against the real answers). No field mismatch between what the mod sends and what the page reads. Fixed:
+1. The report's callback could throw on BSP-Core's own task (on a network) and leave the panel with no answer: it now always answers.
+2. A failed GameTest check left its shops in the persisted world: every shop made is deleted in `finally`. The report check no longer assumes an answer at once (a network answers later) or exactly 7 days (a shorter bank log). "On or off" is checked by its words. New: without BSP-Core's shops, every shop action says so and the snapshot says no shops.
+3. Opening hours over 2^31 wrapped when cast: clamped, so BSP-Core refuses them.
+4. A `LinkageError` (a BSP-Core whose api changed) left no answer: caught, and the words no longer claim nothing changed.
+5. Action Log lines took ids and items from the request unclean: cleaned.
+6. `stallsAt` moved every second while a player explored chunks with stalls (BSP-Core learns them as chunks load): at most once in 10 s.
+7. A BSP-Core 1.26.0 pre-release counted as older: major, minor and patch only.
+8. The copy window guessed section ids that BSP-Core may number differently: it lists the sections, and after the copy says which ids they got.
+9. "Top level" was offered for a top shop moved inside another, which BSP-Core refuses: offered only to a shop at the top, and the desk refuses it for any shop with a parent.
+10. Sales waited the short time; on a network BSP-Core reads the bank log first: the long wait. A failed shop read on the Sales tab threw in the browser: guarded.
+11. The demo made a new section off inside an on shop (BSP-Core: on with its shop). The desk's and `docs/API.md`'s contract text brought in line with BSP-Core's answers.
+Left: a card's edits within a minute are one Action Log entry each (D810's merge not built); the demo's report rows are one per card where BSP-Core's are one per shop and item.
+
+GameTests 371/371 (BSP-Core 1.26.0's jar); JUnit 166/166.

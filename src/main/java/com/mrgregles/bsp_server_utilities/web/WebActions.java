@@ -401,7 +401,8 @@ public final class WebActions {
             case "talk_end" -> WebTalk.end(server, a, id, by);
             default -> {
                 Answer regions = WebRegions.handle(server, str(a, "action"), a, id, by); // the WORLDS tab and the map's regions (SU-158)
-                yield regions != null ? regions : new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
+                Answer shops = regions != null ? null : WebShops.handle(server, str(a, "action"), a, id, by); // the SHOPS tab (SU-165)
+                yield regions != null ? regions : shops != null ? shops : new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
             }
         };
     }
