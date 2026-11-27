@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kits Mock-up</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* The KITS tab, one mock-up (set BM), modelled on the SHOPS tab as built (D813: BG A, BH B, BI A, BJ A).
+   Item pictures are drawn stand-ins; kit names, ranks, players and counts are made up. Dashed gold = waits on BSP-Core. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1320px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; color:var(--acc); } h3{ font-size:16px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.card ol{ margin:0; padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:13.5px; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; overflow-x:auto; }
+@media (max-width:1300px){ .stage{ align-items:flex-start; } }
+.cap{ font-size:12px; color:var(--muted); text-align:center; margin-top:6px; max-width:1240px; }
+.setnav{ display:flex; gap:8px; flex-wrap:wrap; font-size:13px; } .setnav a{ color:var(--acc); }
+
+/* ---------- the panel (BSP website tokens) ---------- */
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  width:1240px; height:700px; flex:none; box-sizing:border-box; border:1px solid #2a2f3a; border-radius:10px; background:var(--bg); color:var(--tx);
+  font:13px/1.35 var(--body); overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+.dk *, .phone *{ box-sizing:border-box; }
+.chrome{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; background:#1b1e25; border-bottom:1px solid #2a2f3a; }
+.chrome .lights{ display:flex; gap:6px; } .chrome .lights i{ width:10px; height:10px; border-radius:50%; display:block; background:#3a3f4b; }
+.chrome .url{ flex:1; max-width:440px; margin:0 auto; height:22px; border-radius:6px; background:#0f1115; color:#9aa3b5; font-size:11.5px; display:flex; align-items:center; padding:0 10px; }
+.dbody{ flex:1; display:flex; min-height:0; position:relative; }
+.side{ width:170px; flex:none; border-right:1px solid var(--ln); background:var(--bg2); display:flex; flex-direction:column; gap:2px; padding:12px 10px; }
+.side .brand{ font:15px Silkscreen,var(--mono); color:var(--teal); padding:2px 10px 12px; } .side .brand b{ color:var(--tx); font-weight:400; }
+.side .it{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--mu); font-size:13px; }
+.side .it.on{ background:#19d3b01a; color:var(--teal); }
+.side .it.new::after{ content:"NEW"; margin-left:auto; font:600 9px var(--body); color:#10151c; background:var(--gold); border-radius:4px; padding:0 4px; }
+.side svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.main{ flex:1; min-width:0; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.pagehead{ flex:none; display:flex; align-items:center; gap:10px; padding:14px 18px 10px; }
+.pagehead .t{ font:15px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.crumb{ font-size:13px; color:var(--mu); display:flex; gap:6px; align-items:center; white-space:nowrap; } .crumb b{ color:var(--tx); font-weight:600; } .crumb a{ color:var(--teal); }
+.grow{ flex:1; min-width:0; }
+.mono{ font-family:var(--mono); } .mu{ color:var(--mu); } .dim{ color:var(--dim); } .tl{ color:var(--teal); } .gd{ color:var(--gold); } .rd{ color:var(--coral); } .vi{ color:var(--vio); }
+.search{ height:30px; width:220px; border-radius:8px; background:var(--pn); border:1px solid var(--ln); display:flex; align-items:center; gap:7px; padding:0 9px; color:var(--dim); font-size:12px; flex:none; }
+.search.f{ border-color:var(--teal); color:var(--tx); }
+.search svg{ width:13px; height:13px; stroke:var(--dim); fill:none; stroke-width:2; flex:none; }
+.key{ height:28px; padding:0 11px; border-radius:7px; display:inline-flex; align-items:center; gap:6px; font:600 11.5px var(--body); background:var(--pn); border:1px solid var(--ln); color:var(--soft); white-space:nowrap; flex:none; }
+.key.pri{ background:var(--teal); border-color:var(--teal); color:#0f1115; }
+.key.vio{ background:#b58cff22; border-color:#b58cff66; color:var(--vio); }
+.key.dg{ border-color:#5a2a2a; color:var(--coral); } .key.sure{ background:var(--coral); border-color:var(--coral); color:#10151c; }
+.key.gold{ background:var(--gold); border-color:var(--gold); color:#10151c; }
+.key.sm{ height:22px; padding:0 8px; font-size:10.5px; border-radius:6px; }
+.chip{ display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:999px; font:600 11px var(--body); border:1px solid var(--ln); background:var(--pn); color:var(--soft); white-space:nowrap; flex:none; }
+.chip.on{ border-color:var(--teal); color:var(--teal); background:#19d3b014; }
+.chip .n{ font-family:var(--mono); color:var(--mu); font-weight:600; }
+.kt{ font:600 9.5px var(--body); padding:1px 6px; border-radius:999px; white-space:nowrap; border:1px solid; }
+.k-shop{ color:#7fb2ff; border-color:#7fb2ff55; background:#7fb2ff1a; } .k-rot{ color:#b58cff; border-color:#b58cff55; background:#b58cff1a; }
+.k-offer{ color:#ffd23a; border-color:#ffd23a55; background:#ffd23a1a; } .k-sub{ color:#9aa3b5; border-color:#9aa3b555; background:#9aa3b51a; }
+.rk{ font:600 9.5px var(--body); padding:1px 7px; border-radius:999px; background:#b58cff22; color:#b58cff; border:1px solid #b58cff55; }
+.note{ font-size:11.5px; color:var(--mu); line-height:1.45; }
+.sect{ font:11px Silkscreen,var(--mono); color:var(--teal); letter-spacing:.03em; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.box{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+.box .bh{ display:flex; align-items:center; gap:8px; padding:9px 12px; background:#1d2129; border-bottom:1px solid var(--ln); font-size:12px; color:var(--mu); flex:none; }
+.lrow{ display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; border-bottom:1px solid #20242d; }
+.lrow .r{ display:inline-flex; gap:3px; align-items:center; margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); white-space:nowrap; }
+.lrow.on{ background:#19d3b012; box-shadow:inset 3px 0 0 var(--teal); }
+.kv{ display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; } .kv span:nth-child(odd){ color:var(--mu); }
+
+/* switches, lamps, server chips */
+.sw{ width:34px; height:18px; border-radius:999px; background:#2a2f3a; position:relative; flex:none; display:inline-block; }
+.sw::after{ content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#6b7180; }
+.sw.on{ background:#19d3b0; } .sw.on::after{ left:18px; background:#0f1115; }
+.lamp{ display:inline-flex; align-items:center; gap:5px; font:600 10.5px var(--body); white-space:nowrap; }
+.lamp i{ width:8px; height:8px; border-radius:50%; display:block; background:var(--teal); box-shadow:0 0 6px #19d3b088; }
+.lamp.cl i{ background:var(--gold); box-shadow:none; } .lamp.off i{ background:#6b7180; box-shadow:none; }
+.lamp.cl{ color:var(--gold); } .lamp.off{ color:var(--mu); } .lamp.op{ color:var(--teal); }
+.net{ display:inline-flex; align-items:center; gap:4px; font:600 10px var(--body); color:var(--blue); white-space:nowrap; }
+.net svg{ width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2; }
+.srv{ display:inline-flex; align-items:center; gap:5px; height:20px; padding:0 7px; border-radius:6px; background:#12151b; border:1px solid var(--ln); font:600 10.5px var(--body); color:var(--soft); white-space:nowrap; }
+.srv b{ font:600 10px var(--mono); color:#0f1115; background:var(--teal); border-radius:4px; padding:0 4px; }
+.srv.none{ color:var(--dim); border-style:dashed; }
+.tip{ position:absolute; z-index:9; background:#232833; border:1px solid #3a4150; border-radius:8px; padding:8px 10px; font-size:11.5px; box-shadow:0 10px 30px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:3px; white-space:nowrap; }
+.tip b{ color:var(--tx); }
+
+/* item pictures (stand-ins for the panel's item export) */
+.ico{ width:32px; height:32px; flex:none; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr); image-rendering:pixelated; border-radius:2px; }
+.ico i{ display:block; }
+.ico.s{ width:22px; height:22px; } .ico.l{ width:40px; height:40px; }
+
+/* shop grid tiles */
+.tiles{ display:grid; gap:12px; padding:2px 18px 18px; align-content:start; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:12px 13px; display:flex; flex-direction:column; gap:8px; position:relative; min-width:0; }
+.tile.hov{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.tile .nm{ font:13.5px Silkscreen,var(--mono); color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .id{ font:11px var(--mono); color:var(--dim); }
+.tile.off{ background:repeating-linear-gradient(135deg,#1a1d24 0 10px,#171a20 10px 20px); }
+.tile.off .nm, .tile.off .pv{ opacity:.5; }
+.offband{ font:600 10px var(--body); color:var(--mu); background:#2a2f3a; border-radius:5px; padding:2px 7px; align-self:flex-start; }
+.pv{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; background:#12151b; border-radius:8px; padding:6px; }
+.pv>span{ height:38px; border-radius:5px; background:#1d2129; display:grid; place-items:center; }
+.row{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; min-width:0; }
+
+/* a shop's page as players see it */
+.page{ display:grid; gap:6px; }
+.sc{ background:#12151b; border:1px solid #262b35; border-radius:8px; padding:7px 6px 6px; display:flex; flex-direction:column; align-items:center; gap:3px; position:relative; min-width:0; }
+.sc .in{ font-size:10.5px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.sc .pr{ font:600 9.5px var(--mono); color:var(--teal); white-space:nowrap; }
+.sc .pr.s{ color:var(--gold); }
+.sc .lot{ position:absolute; top:4px; right:5px; font:600 9.5px var(--mono); color:var(--tx); }
+.sc.sec{ background:linear-gradient(#1b2230,#151a24); border-color:#36506e; }
+.sc.sec .pr{ color:var(--blue); }
+.sc.hid{ opacity:.45; } .sc.hid::after{ content:"HIDDEN"; position:absolute; left:4px; top:4px; font:600 8px var(--body); color:var(--mu); background:#2a2f3a; border-radius:3px; padding:0 3px; }
+.sc.lock .ico{ filter:grayscale(1) brightness(.6); } .sc.lock .lk{ position:absolute; left:5px; top:4px; font-size:10px; color:var(--gold); }
+.sc.lit{ border-color:var(--teal); box-shadow:0 0 0 2px #19d3b033; } .sc.dimc{ opacity:.5; }
+.sc.sel{ border-color:var(--gold); box-shadow:0 0 0 2px #ffd23a55; }
+.sc.empty{ border-style:dashed; background:transparent; min-height:72px; }
+.sc.drop{ border:2px dashed var(--teal); background:#19d3b012; min-height:72px; }
+.sc .wt{ position:absolute; left:5px; top:4px; font:600 9px var(--mono); color:var(--vio); }
+.sc .left{ position:absolute; left:5px; bottom:24px; font:600 8.5px var(--mono); color:var(--mu); }
+.ghost{ position:absolute; z-index:6; transform:rotate(-4deg); box-shadow:0 12px 26px rgba(0,0,0,.55); border-color:var(--teal) !important; width:78px; }
+.cursor{ position:absolute; z-index:7; width:14px; height:18px; }
+.pager{ display:flex; gap:6px; align-items:center; justify-content:center; font-size:11.5px; color:var(--mu); }
+.pager i{ width:7px; height:7px; border-radius:50%; background:#2a2f3a; display:block; } .pager i.on{ background:var(--teal); }
+.tree{ display:flex; flex-direction:column; font-size:12.5px; }
+.tree .tn{ display:flex; align-items:center; gap:7px; padding:6px 10px; border-radius:7px; color:var(--soft); }
+.tree .tn.on{ background:#19d3b01a; color:var(--teal); } .tree .tn .c{ margin-left:auto; font:600 10.5px var(--mono); color:var(--mu); }
+.strip{ display:flex; gap:2px; height:12px; } .strip i{ flex:1; border-radius:2px; background:#2a2f3a; display:block; } .strip i.o{ background:var(--teal); }
+.hrs{ display:flex; justify-content:space-between; font:9.5px var(--mono); color:var(--dim); }
+.bars{ display:flex; flex-direction:column; gap:5px; }
+.bar{ display:grid; grid-template-columns:22px 1fr 70px; gap:7px; align-items:center; font-size:11.5px; }
+.bar .b{ height:8px; border-radius:4px; background:#2a2f3a; overflow:hidden; } .bar .b i{ display:block; height:100%; background:var(--teal); }
+.bar .v{ font:600 10.5px var(--mono); text-align:right; color:var(--soft); }
+.big{ font:600 18px var(--mono); } .big.tl{ color:var(--teal); } .big.gd{ color:var(--gold); }
+
+/* the editor and forms */
+.field{ display:flex; flex-direction:column; gap:3px; min-width:0; } .field label{ font-size:10.5px; color:var(--mu); font-weight:600; }
+.in2{ height:30px; border-radius:7px; background:#12151b; border:1px solid var(--ln); display:flex; align-items:center; padding:0 9px; font-size:12.5px; color:var(--tx); white-space:nowrap; overflow:hidden; gap:6px; }
+.in2.mono{ font-family:var(--mono); } .in2.f{ border-color:var(--teal); box-shadow:0 0 0 2px #19d3b022; } .in2.ph{ color:var(--dim); } .in2.ta{ height:58px; align-items:flex-start; padding-top:6px; white-space:normal; line-height:1.4; font-size:12px; }
+.in2 .u{ margin-left:auto; color:var(--mu); font-size:11px; }
+.chips{ display:flex; gap:5px; flex-wrap:wrap; }
+.opt{ display:inline-flex; align-items:center; height:26px; padding:0 9px; border-radius:7px; border:1px solid var(--ln); background:#12151b; font:600 11px var(--body); color:var(--mu); white-space:nowrap; }
+.opt.on{ background:#19d3b0; border-color:#19d3b0; color:#0f1115; }
+.opt .cn{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+.ptabs{ display:flex; border-bottom:1px solid var(--ln); padding:0 12px; font-size:12.5px; flex:none; }
+.ptabs span{ padding:9px 12px; color:var(--mu); } .ptabs span.on{ color:var(--teal); box-shadow:inset 0 -2px 0 var(--teal); }
+.drawer{ position:absolute; top:0; right:0; bottom:0; width:380px; background:var(--bg2); border-left:1px solid var(--ln); box-shadow:-18px 0 40px rgba(0,0,0,.5); display:flex; flex-direction:column; z-index:8; }
+.drawer .dh{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--ln); }
+.drawer .dbd{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:11px; padding:12px 14px; }
+.g2{ display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; } .g3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px 10px; }
+.tick{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); }
+.cb{ width:15px; height:15px; border-radius:4px; border:1px solid var(--ln); background:#12151b; display:inline-grid; place-items:center; flex:none; font:700 10px var(--body); color:#0f1115; }
+.cb.on{ background:var(--teal); border-color:var(--teal); }
+.prev{ font:600 11px var(--mono); color:var(--teal); background:#12151b; border:1px dashed var(--ln); border-radius:6px; padding:3px 8px; align-self:flex-start; }
+.warn{ font-size:11.5px; color:var(--gold); background:#ffd23a12; border:1px solid #ffd23a44; border-radius:7px; padding:6px 9px; }
+.offbar{ flex:none; display:flex; align-items:center; gap:10px; padding:8px 18px; background:#2a2f3a; color:var(--soft); font-size:12px; }
+.offbar b{ color:var(--tx); }
+.ed .pagehead{ padding-right:396px; }
+.shade{ position:absolute; inset:0; background:rgba(5,6,8,.55); z-index:7; }
+.modal{ position:absolute; z-index:8; background:var(--bg2); border:1px solid var(--ln); border-radius:12px; box-shadow:0 24px 60px rgba(0,0,0,.6); display:flex; flex-direction:column; }
+.modal .mh{ padding:12px 16px; border-bottom:1px solid var(--ln); display:flex; align-items:center; gap:10px; font:13px Silkscreen,var(--mono); color:var(--teal); }
+.modal .mb{ padding:14px 16px; display:flex; flex-direction:column; gap:12px; }
+.modal .mf{ padding:10px 16px; border-top:1px solid var(--ln); display:flex; gap:8px; justify-content:flex-end; }
+.kc{ border:1px solid var(--ln); background:#12151b; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:4px; flex:1; }
+.kc b{ font-size:12.5px; } .kc span{ font-size:11px; color:var(--mu); line-height:1.35; } .kc.on{ border-color:var(--teal); background:#19d3b012; } .kc.on b{ color:var(--teal); }
+.snav{ width:160px; flex:none; border-right:1px solid var(--ln); padding:10px 8px; display:flex; flex-direction:column; gap:2px; }
+.snav span{ padding:7px 10px; border-radius:7px; color:var(--mu); font-size:12.5px; } .snav span.on{ background:#19d3b01a; color:var(--teal); }
+.snav span.dz{ color:var(--coral); margin-top:auto; }
+.fs{ display:flex; flex-direction:column; gap:9px; padding:12px 14px; border-bottom:1px solid #20242d; }
+.bin{ position:absolute; z-index:5; border:2px dashed #5a2a2a; color:var(--coral); border-radius:10px; display:flex; align-items:center; justify-content:center; gap:6px; font:600 11.5px var(--body); background:#ff6b5c0d; }
+.bin.hot{ border-color:var(--coral); background:#ff6b5c22; }
+.float{ position:absolute; z-index:6; background:rgba(20,23,29,.94); border:1px solid var(--ln); border-radius:10px; box-shadow:0 16px 40px rgba(0,0,0,.5); display:flex; flex-direction:column; overflow:hidden; }
+.float .fh{ height:30px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px; background:#1d2129; border-bottom:1px solid var(--ln); font:600 11.5px var(--body); color:var(--soft); }
+.igrid{ display:grid; gap:4px; }
+.igrid>span{ height:40px; border-radius:6px; background:#12151b; border:1px solid #232833; display:grid; place-items:center; }
+.igrid>span.hl{ border-color:var(--teal); }
+.mcs{ background:#c6c6c6; border:3px solid; border-color:#fff #555 #555 #fff; border-radius:2px; padding:8px; color:#3f3f3f; font:11px Silkscreen,var(--mono); display:flex; flex-direction:column; gap:6px; }
+.mcs .cells{ display:grid; gap:3px; } .mcs .cells>span{ height:44px; background:#8b8b8b; border:2px solid; border-color:#373737 #fff #fff #373737; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font:600 8.5px var(--mono); color:#1d4d1d; }
+.mcs.pass{ background:#e8dcc0; border-color:#fff3d6 #8a7a55 #8a7a55 #fff3d6; } .mcs.pass .cells>span{ background:#d6c79f; border-color:#8a7a55 #fff3d6 #fff3d6 #8a7a55; }
+.mcs.board{ background:#6b4a2b; border-color:#8d6a45 #3c2914 #3c2914 #8d6a45; color:#f0e0c0; } .mcs.board .cells>span{ background:#4d331b; border-color:#2c1c0c #8d6a45 #8d6a45 #2c1c0c; color:#ffd23a; }
+
+/* ---------- kits: added to the shops styles ---------- */
+.wait{ outline:1.5px dashed #ffd23a; outline-offset:2px; border-radius:7px; }
+.wtag{ font:600 8.5px var(--body); color:#10151c; background:var(--gold); border-radius:4px; padding:1px 5px; white-space:nowrap; letter-spacing:.02em; flex:none; }
+.v1tag{ font:600 8.5px var(--body); color:#10151c; background:var(--teal); border-radius:4px; padding:1px 5px; white-space:nowrap; letter-spacing:.02em; flex:none; }
+.legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:13px; align-items:center; }
+.legend span{ display:inline-flex; gap:8px; align-items:center; }
+.lg-w{ width:26px; height:16px; border:1.5px dashed #c9a400; border-radius:4px; display:inline-block; }
+.lg-v{ width:26px; height:16px; border:1.5px solid var(--acc); border-radius:4px; display:inline-block; }
+.slots{ display:grid; gap:3px; background:#12151b; border-radius:8px; padding:6px; }
+.slots>span{ aspect-ratio:1; border-radius:5px; background:#1d2129; border:1px solid #232833; display:grid; place-items:center; position:relative; }
+.slots>span.e{ background:#161920; border-style:dashed; border-color:#232833; }
+.slots>span.drop{ border:2px dashed var(--teal); background:#19d3b012; }
+.slots>span.sel{ border-color:var(--gold); box-shadow:0 0 0 2px #ffd23a55; }
+.slots>span.ms{ background:repeating-linear-gradient(135deg,#2a1f1f 0 6px,#211a1a 6px 12px); border-color:#5a2a2a; }
+.slots>span.ms::after{ content:"?"; font:600 13px var(--mono); color:var(--coral); }
+.slots .n{ position:absolute; right:3px; bottom:1px; font:600 9.5px var(--mono); color:#fff; text-shadow:1px 1px 0 #000; }
+.pv8{ display:grid; grid-template-columns:repeat(8,1fr); gap:3px; background:#12151b; border-radius:8px; padding:5px; }
+.pv8>span{ height:30px; border-radius:4px; background:#1d2129; display:grid; place-items:center; position:relative; }
+.pv8>span.e{ background:transparent; }
+.pv8 .n{ position:absolute; right:2px; bottom:0; font:600 8.5px var(--mono); color:#fff; text-shadow:1px 1px 0 #000; }
+.ktile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:11px 12px; display:flex; flex-direction:column; gap:7px; position:relative; min-width:0; }
+.ktile.hov{ border-color:var(--teal); box-shadow:0 0 0 3px #19d3b022; }
+.ktile.off{ background:repeating-linear-gradient(135deg,#1a1d24 0 10px,#171a20 10px 20px); }
+.ktile.off .nm, .ktile.off .pv8, .ktile.off .bigico{ opacity:.5; }
+.ktile .nm{ font:13px Silkscreen,var(--mono); color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ktile .id{ font:11px var(--mono); color:var(--dim); }
+.bigico{ width:40px; height:40px; border-radius:8px; background:#12151b; display:grid; place-items:center; flex:none; }
+.tag2{ display:inline-flex; align-items:center; height:20px; padding:0 7px; border-radius:6px; font:600 10.5px var(--body); background:#12151b; border:1px solid var(--ln); color:var(--soft); white-space:nowrap; }
+.tag2.free{ color:var(--teal); border-color:#19d3b055; } .tag2.cost{ color:var(--gold); border-color:#ffd23a55; }
+.tag2.need{ color:var(--vio); border-color:#b58cff55; } .tag2.hidn{ color:var(--mu); border-style:dashed; }
+.tag2.first{ color:var(--blue); border-color:#7fb2ff55; }
+.foot{ font:600 10.5px var(--mono); color:var(--mu); display:flex; gap:6px; align-items:center; white-space:nowrap; overflow:hidden; }
+.foot>span:last-child{ overflow:hidden; text-overflow:ellipsis; }
+.miss{ font-size:11px; color:var(--coral); }
+.mcard{ background:#c6c6c6; border:3px solid; border-color:#fff #555 #555 #fff; border-radius:2px; padding:8px 10px; color:#3f3f3f; font:11px Silkscreen,var(--mono); display:flex; gap:10px; align-items:center; }
+.mcard .ic{ width:40px; height:40px; background:#8b8b8b; border:2px solid; border-color:#373737 #fff #fff #373737; display:grid; place-items:center; flex:none; }
+.mcard .tx{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.mcard .t1{ color:#202020; font-size:12px; } .mcard .t2{ font:600 10px var(--body); color:#404040; } .mcard .t3{ font:600 10px var(--body); color:#1d6d1d; }
+.ladder{ display:flex; gap:0; } .ladder span{ height:26px; padding:0 9px; display:inline-flex; align-items:center; font:600 11px var(--body); border:1px solid var(--ln); background:#12151b; color:var(--mu); margin-left:-1px; }
+.ladder span:first-child{ border-radius:7px 0 0 7px; margin-left:0; } .ladder span:last-child{ border-radius:0 7px 7px 0; }
+.ladder span.on{ background:#19d3b0; border-color:#19d3b0; color:#0f1115; } .ladder span.up{ background:#19d3b02a; border-color:#19d3b066; color:var(--teal); }
+.phone{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180; --teal:#19d3b0; --red:#ff3b3b; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff; width:375px; height:700px; flex:none; border:1px solid #2a2f3a; border-radius:26px; background:#0f1115; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 18px 50px rgba(0,0,0,.35); color:#e8eaf0; font:13px/1.35 var(--body); position:relative; }
+.phone .pbar{ height:44px; flex:none; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid #2a2f3a; }
+.phone .pbody{ flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px; padding:12px; }
+.phone .bnav{ height:54px; flex:none; display:flex; border-top:1px solid #2a2f3a; background:#14171d; }
+.phone .bnav span{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:10px; color:#9aa3b5; }
+.phone .bnav span.on{ color:#19d3b0; } .phone .bnav svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; }
+.phones{ display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Staff panel: the KITS tab (mock-up set BM)</h1>
+    <p class="lede">One mock-up, modelled on the SHOPS tab as built: tiles in a grid, a kit's page, an editor with the item browser on the left and a drawer on the right, a NEW KIT window, two confirms for anything that cannot be undone. K1 to K7 below; the list at the foot says what each does. Item pictures are drawn stand-ins; kit names, ranks, players and counts are made up.</p>
+    <div class="card"><div class="legend">
+      <span><i class="lg-v"></i><b>Works on BSP-Core 1.27.0</b> (kit api part 1: <code>details</code>, <code>detail</code>, <code>choices</code>, <code>KitEvent.Changed</code>): reading every kit whole, the pickers, refreshing on a change.</span>
+      <span><i class="lg-w"></i><b>Waits on BSP-Core</b> (kit api parts 2 and 3; requests SU-BC11 to SU-BC13): every change, copy, delete, give, a player's records. Drawn here so the whole tab can be confirmed once.</span>
+    </div></div>
+  </header>
+  <section><h2>K1. The KITS grid <span class="v1tag">WORKS ON 1.27.0</span></h2><div class="stage"><div><div class="dk" id="k1"></div></div></div></section>
+  <section><h2>K2. A kit's page <span class="v1tag">READ: WORKS ON 1.27.0</span> <span class="wtag">KEYS WAIT</span></h2><div class="stage"><div><div class="dk" id="k2"></div></div></div></section>
+  <section><h2>K3. The editor: adding an item, the KIT tab <span class="wtag">WAITS ON BSP-CORE</span></h2><div class="stage"><div><div class="dk" id="k3"></div></div></div></section>
+  <section><h2>K4. The editor: WHO AND WHERE, removing an item <span class="wtag">WAITS ON BSP-CORE</span></h2><div class="stage"><div><div class="dk" id="k4"></div></div></div></section>
+  <section><h2>K5. A new kit, a copy <span class="wtag">WAITS ON BSP-CORE</span></h2><div class="stage"><div><div class="dk" id="k5"></div></div></div></section>
+  <section><h2>K6. Giving a kit, deleting one <span class="wtag">WAITS ON BSP-CORE</span></h2><div class="stage"><div><div class="dk" id="k6"></div></div></div></section>
+  <section><h2>K7. On a phone</h2><div class="stage"><div class="phones"><div class="phone" id="k7a"></div><div class="phone" id="k7b"></div></div></div></section>
+
+  <section><h2>What each screen does</h2>
+    <div class="card"><ol>
+      <li><b>K1. The grid.</b> One tile per kit, in the order the kit browser shows them to players (the order they were made): the icon, name and id, the ON/OFF switch (Admins and Owners), the first eight items with their counts and "+4" for the rest, the price (Free or pieces), when it can be taken again (Any time, Once, Every 7 d), hidden from the browser, handed out at first join, the ranks, servers and conditions it needs, how many times it has been taken and by whom last. OFF kits striped. A red line when the answering server cannot give some of its items (a mod not loaded there). Chips filter All, On, Off, In the browser, Hidden, First join, Free; search finds kits by name, id or an item in them. A click opens the kit (K2).</li>
+      <li><b>K2. A kit's page.</b> CONTENTS as a 9-wide grid of its stacks (up to the network's limit, 36 here), hovering a stack shows its name, count and data; the card as players see it in the kit browser; RULES (shown or hidden, price, timing, ranks, servers, needs, first join) and RECORD (taken, last taker, made, last edited, and the server that answered). Keys: the switch, COPY, GIVE TO…, DELETE, EDIT; all five wait on BSP-Core, so on 1.27.0 they are greyed with "Needs BSP-Core's kit changes".</li>
+      <li><b>K3. The editor, KIT.</b> EDIT turns the page into the editor (Admins and Owners), as the SHOPS card editor: the item browser on the left (the same one, search by English name or id, a chip per creative tab, items with data keep it), the contents in the middle, the drawer on the right. Dropping an item between stacks puts it there and at the end adds it (a kit is a list of stacks, as in game); the wheel or the count box sets a stack's count; dragging a stack moves it. The KIT tab: name (up to 24), description (up to 80, as the browser shows it), icon (an item from the browser, or the first item), shown in the browser, price in pieces (empty for free), timing (Any time, Once, Every N minutes, hours or days). Each change goes to the game as it is made and "Saved" shows; if the kit changed in game since, it is refused and the page reads again with a line saying so.</li>
+      <li><b>K4. WHO AND WHERE.</b> Ranks from BSP-Core's pickers: RankUp's ladder as steps ("Miner and up": a click on a step) or, without RankUp, LuckPerms group chips; servers it can be taken on (Everywhere, or one chip per server the network has seen); the conditions BSP-Core offers (today one: owns no Shatter Totem anywhere on the network); FIRST JOIN (Never, Once on the network, On each chosen server, with their chips). Dragging a stack onto the bin asks SURE? REMOVE for three seconds; the stacks after it move up.</li>
+      <li><b>K5. New kit and copy.</b> + NEW KIT asks a name and an id (filled from the name: 2 to 24 lower-case letters, digits and _, checked as typed); the kit is made OFF and empty and opens in the editor. COPY asks the same; settings and items are copied, made OFF, with no counts, last taker or players' records.</li>
+      <li><b>K6. Give and delete.</b> GIVE TO… picks any player the panel knows, online or not; it lands at once when they are online with room, otherwise it waits for them (a line in chat and a WAITING card in their browser), recorded as an admin give with your name. DELETE asks SURE? for three seconds and says first how many players are still owed it; their records go with it, as in game.</li>
+      <li><b>K7. A phone.</b> KITS is in More, the grid one column, a kit's page with its contents and rules; changing a kit on a computer only, as the SHOPS card editor (D814).</li>
+      <li><b>Every view.</b> Moderators see everything; the switch, EDIT, + NEW KIT, COPY, GIVE TO… and DELETE are greyed with "Admin". Pages refresh within a few seconds of a change in game (BSP-Core's change event). Every change is in the panel's log and the game's Action Log. Left in game: TEST ON ME, FROM HAND and FROM INVENTORY (they need you in the game).</li>
+    </ol></div></section>
+</div>
+<script>
+/* ---------- helpers ---------- */
+const h=(html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const SV={search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+ chat:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4.5A8 8 0 1 1 21 12z"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+ shop:'<svg viewBox="0 0 24 24"><path d="M3 9 5 4h14l2 5"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/></svg>',
+ kit:'<svg viewBox="0 0 24 24"><path d="M3 8h18v4H3z"/><path d="M5 12v9h14v-9"/><path d="M12 8v13"/><path d="M12 8C10 4 6 4 6 6.5S10 8 12 8c2 0 6 1 6-1.5S14 4 12 8"/></svg>',
+ totem:'<svg viewBox="0 0 24 24"><path d="M12 2 7 7v10l5 5 5-5V7z"/><path d="M12 8v8"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+ more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+ bin:'<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+ cur:'<svg viewBox="0 0 14 18" class="cursor"><path d="M1 1v14l4-3 3 6 2-1-3-6h5z" fill="#fff" stroke="#000" stroke-width="1"/></svg>'};
+function frame(el,url){
+  const d=document.getElementById(el);
+  d.appendChild(h(`<div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url">staff.buildsecureprotect.com${url||"/kits"}</div></div>`));
+  const body=h('<div class="dbody"></div>'); const side=h('<div class="side"><div class="brand">BSP <b>STAFF</b></div></div>');
+  [["users","Players"],["chat","Chat"],["map","Map"],["globe","Worlds"],["shop","Shops"],["kit","Kits"],["totem","Totems"],["shield","Staff"],["more","More"]].forEach(([i,l])=>
+    side.appendChild(h(`<div class="it${l==="Kits"?" on new":""}">${SV[i]}<span>${l}</span></div>`)));
+  side.appendChild(h('<div style="margin-top:auto;padding:8px 10px;font-size:11.5px;color:#9aa3b5">Mrgregles <span class="rk">Owner</span></div>'));
+  body.appendChild(side); const main=h('<div class="main"></div>'); body.appendChild(main); d.appendChild(body); return main;}
+function head(main,title,right){main.appendChild(h(`<div class="pagehead"><span class="t">${title}</span><span class="grow"></span>${right||""}</div>`));}
+const SEARCH=(t,f)=>`<span class="search${f?" f":""}">${SV.search}${t||"Search kits or items"}</span>`;
+const CRUMB=(...p)=>`<span class="crumb"><a>KITS</a>${p.map((x,i)=>` › ${i===p.length-1?`<b>${x}</b>`:`<a>${x}</a>`}`).join("")}</span>`;
+const W=(html)=>`<span class="wait" style="display:inline-flex">${html}</span>`;
+
+/* item pictures: a 4 x 4 stand-in drawn from the item's colours */
+const IT={
+ bread:["Bread","#c9913f","#8a5a22"], steak:["Steak","#8a4a2a","#d9a07a"], torch:["Torch","#ffd23a","#6b4a2b"], apple:["Apple","#d6352b","#5aa02c"],
+ ipick:["Iron Pickaxe","#d8d8d8","#6b4a2b"], isword:["Iron Sword","#e0e0e0","#6b4a2b"], ishovel:["Iron Shovel","#d0d0d0","#6b4a2b"], iaxe:["Iron Axe","#cfcfcf","#6b4a2b"],
+ dpick:["Diamond Pickaxe","#4fe3d6","#6b4a2b"], helm:["Iron Helmet","#d8d8d8","#9a9a9a"], chestp:["Iron Chestplate","#d0d0d0","#8f8f8f"], shield:["Shield","#a2824e","#7a7a7a"],
+ bow:["Bow","#8a5a22","#d8d8d8"], arrow:["Arrow","#d8d8d8","#6b4a2b"], oak:["Oak Planks","#b8945a","#7a5a30"], cobble:["Cobblestone","#7a7a7a","#555"],
+ glass:["Glass","#cfe8ef","#7fb2c8"], lantern:["Lantern","#ffd23a","#3a3f4b"], scaffold:["Scaffolding","#d8c060","#8a7a2a"], ladder:["Ladder","#a2824e","#5c4325"],
+ coal:["Coal","#2b2b2b","#555"], gapple:["Golden Apple","#ffd23a","#d6a01c"], pearl:["Ender Pearl","#1e7c6b","#0b3b33"], potion:["Potion of Healing","#f05a5a","#e8e8e8"],
+ bed:["Red Bed","#c0141a","#e8e8e8"], mapi:["Map","#e0d0a0","#8a7a55"], compass:["Compass","#c0c0c0","#c0141a"], bucket:["Water Bucket","#d0d0d0","#3f6fd0"],
+ elytra:["Elytra","#8f86a8","#4b4466"], rocket:["Firework Rocket","#d03030","#e8e8e8"], snow:["Snowball","#f0f6ff","#c8d8e8"], cake:["Cake","#f0e6d0","#c0141a"],
+ boat:["Oak Boat","#a2824e","#6b4a2b"], flint:["Flint and Steel","#555","#d8d8d8"], seeds:["Wheat Seeds","#5aa02c","#2a5a14"], hoe:["Iron Hoe","#d8d8d8","#6b4a2b"],
+ bone:["Bone Meal","#f0f0f0","#c8c8c8"], book:["Enchanted Book","#b55a2a","#ffd23a"], sapling:["Oak Sapling","#4a8a2a","#6b4a2b"], wool:["White Wool","#f0f0f0","#d0d0d0"]};
+function ico(k,size){const c=IT[k]||["?","#555","#333"];let s=0;for(const ch of k)s=(s*31+ch.charCodeAt(0))>>>0;
+  let cells="";for(let i=0;i<16;i++){const r=(s>>(i%24))&3;const x=i%4,y=i>>2;const edge=x===0||y===0||x===3||y===3;
+    const col=(edge&&r===0)?"transparent":(r===1?c[2]:c[1]);cells+=`<i style="background:${col}"></i>`;}
+  return `<span class="ico${size?" "+size:""}" title="${c[0]}">${cells}</span>`;}
+const nm=k=>(IT[k]||["?"])[0];
+
+/* ---------- data (made up) ---------- */
+const KITS=[
+ {id:"starter",n:"Starter Kit",on:1,shown:1,icon:"ipick",items:[["ipick",1],["isword",1],["iaxe",1],["bread",16],["torch",32],["oak",32],["bed",1],["mapi",1],["compass",1],["boat",1]],price:0,cd:"Once",first:"First join · network",taken:"1,204",last:"Kestrel_88 · 3 min ago"},
+ {id:"daily",n:"Daily Bread",on:1,shown:1,icon:"bread",items:[["bread",8],["steak",4],["apple",4]],price:0,cd:"Every 1 d",taken:"8,911",last:"moss_cat · 1 min ago"},
+ {id:"miner",n:"Miner's Pack",on:1,shown:1,icon:"dpick",items:[["dpick",1],["ishovel",1],["torch",64],["torch",64],["coal",32],["ladder",32],["steak",16],["bucket",1],["helm",1],["chestp",1],["potion",2],["pearl",4]],price:250,cd:"Every 7 d",ranks:"Miner and up",taken:"342",last:"Brakk · 2 h ago"},
+ {id:"builder",n:"Builder Box",on:1,shown:1,icon:"scaffold",items:[["scaffold",64],["glass",64],["oak",64],["cobble",64],["lantern",16],["ladder",32],["wool",64],["glass",64],["oak",64]],price:500,cd:"Every 3 d",ranks:"Builder and up",srv:"BSP-Spawn, Boulderbrook",taken:"97",last:"tilly.builds · yesterday"},
+ {id:"raider",n:"Raider's Edge",on:1,shown:1,icon:"isword",items:[["isword",1],["shield",1],["bow",1],["arrow",64],["gapple",2],["pearl",4],["potion",2],["helm",1],["chestp",1],["flint",1],["steak",16]],price:1000,cd:"Once",cond:"No totem",taken:"58",last:"Vex_Ronin · 5 d ago"},
+ {id:"spawn_welcome",n:"Spawn Welcome",on:1,shown:0,icon:"mapi",items:[["mapi",1],["compass",1],["bread",8]],price:0,cd:"Once",first:"First join · BSP-Spawn",taken:"2,377",last:"newbie_404 · 12 min ago"},
+ {id:"vip_monthly",n:"VIP Monthly",on:1,shown:1,icon:"gapple",items:[["gapple",4],["elytra",1],["rocket",64],["pearl",16],["book",2],["cake",1]],price:0,cd:"Every 30 d",ranks:"VIP",taken:"41",last:"Aurelia · 9 d ago"},
+ {id:"winter_event",n:"Winter Event",on:0,shown:0,icon:"snow",items:[["snow",16],["lantern",8],["cake",1]],price:0,cd:"Once",taken:"0",last:"never taken",missing:2},
+];
+const fmtPrice=k=>k.price?`<span class="tag2 cost">${k.price.toLocaleString("en-GB")} pieces</span>`:'<span class="tag2 free">Free</span>';
+function peek(k){const it=k.items.slice(0,8);let out=it.map(([i,c])=>`<span>${ico(i,"s")}${c>1?`<span class="n">${c}</span>`:""}</span>`).join("");
+  if(k.items.length>8)out=it.slice(0,7).map(([i,c])=>`<span>${ico(i,"s")}${c>1?`<span class="n">${c}</span>`:""}</span>`).join("")+`<span class="mono mu" style="font-size:10.5px;font-weight:600">+${k.items.length-7}</span>`;
+  for(let i=it.length;i<8;i++)out+='<span class="e"></span>';return `<div class="pv8">${out}</div>`;}
+function tile(k,hov){return `<div class="ktile${k.on?"":" off"}${hov?" hov":""}">
+  <div class="row" style="flex-wrap:nowrap"><span class="bigico">${ico(k.icon)}</span><div style="min-width:0;flex:1"><div class="nm">${k.n}</div><div class="id">${k.id}</div></div>${W(`<span class="sw${k.on?" on":""}"></span>`)}</div>
+  ${peek(k)}
+  <div class="row">${fmtPrice(k)}<span class="tag2">${k.cd}</span>${k.shown?"":'<span class="tag2 hidn">Hidden from the browser</span>'}${k.first?`<span class="tag2 first">${k.first}</span>`:""}</div>
+  ${k.ranks||k.srv||k.cond?`<div class="row">${k.ranks?`<span class="tag2 need">${k.ranks}</span>`:""}${k.srv?`<span class="tag2 need">On ${k.srv}</span>`:""}${k.cond?`<span class="tag2 need">${k.cond}</span>`:""}</div>`:""}
+  ${k.on?"":'<span class="offband">OFF: not in the browser, not handed out</span>'}
+  ${k.missing?`<div class="miss">${k.missing} items BSP-Spawn cannot give (a mod not loaded there)</div>`:""}
+  <div class="foot">Taken ${k.taken}<span class="dim">·</span><span style="font-weight:400" class="dim">${k.last}</span></div></div>`;}
+
+/* K1: the grid */
+(function(){const m=frame("k1");head(m,"KITS",SEARCH()+W('<span class="key pri">+ NEW KIT</span>'));
+  m.appendChild(h(`<div class="row" style="padding:0 18px 12px">${[["All",8],["On",7],["Off",1],["In the browser",6],["Hidden",2],["First join",2],["Free",5]].map(([l,n])=>`<span class="chip${l==="All"?" on":""}">${l} <span class="n">${n}</span></span>`).join("")}<span class="grow"></span><span class="mu" style="font-size:11.5px">The browser's order · answered by BSP-Spawn 4 s ago</span></div>`));
+  const g=h('<div class="tiles" style="grid-template-columns:repeat(4,1fr)"></div>');KITS.forEach((k,i)=>g.appendChild(h(tile(k,i===2))));m.appendChild(g);
+  m.appendChild(h('<div class="tip" style="left:500px;top:206px"><b>Torch × 64</b><span>minecraft:torch</span><span class="dim">2 stacks in this kit</span></div>'));})();
+
+/* the contents grid */
+function slots(k,cols,size,opt){opt=opt||{};const max=36;let out="";for(let i=0;i<max;i++){const it=k.items[i];
+  const cls=[];if(opt.drop===i)cls.push("drop");if(opt.sel===i)cls.push("sel");if(opt.ms&&opt.ms.includes(i))cls.push("ms");
+  if(opt.ms&&opt.ms.includes(i)){out+=`<span class="ms" title="An item BSP-Spawn cannot give"></span>`;continue;}
+  if(it&&opt.drop!==i)out+=`<span class="${cls.join(" ")}">${ico(it[0],size)}${it[1]>1?`<span class="n">${it[1]}</span>`:""}</span>`;else out+=`<span class="${cls.length?cls.join(" "):"e"}"></span>`;}
+  return `<div class="slots" style="grid-template-columns:repeat(${cols},1fr)">${out}</div>`;}
+const MINER=KITS[2];
+function mcard(k){return `<div class="mcard"><span class="ic">${ico(k.icon,"l")}</span><span class="tx"><span class="t1">${k.n}</span><span class="t2">Everything a deep dig needs: tools, light, food and a way out.</span><span class="t3">${k.price?k.price+" pieces":"Free"} · ${k.cd.toLowerCase()} · ${k.ranks||"anyone"}</span></span></div>`;}
+const KEYS2=(on)=>`${W(`<span class="sw${on?" on":""}"></span>`)}${on?'<span class="lamp op"><i></i>On · in the browser</span>':'<span class="lamp off"><i></i>Off</span>'}${W('<span class="key">COPY</span>')}${W('<span class="key">GIVE TO…</span>')}${W('<span class="key dg">DELETE</span>')}${W('<span class="key pri">EDIT</span>')}`;
+
+/* K2: a kit's page */
+(function(){const m=frame("k2","/kits/miner");head(m,CRUMB("Miner's Pack"),KEYS2(1));
+  const b=h('<div style="flex:1;display:flex;gap:14px;padding:0 18px 16px;min-height:0"></div>');
+  b.appendChild(h(`<div class="box" style="flex:1"><div class="bh">CONTENTS<span class="grow"></span><span class="mono">12 of 36 stacks</span></div><div style="padding:12px;display:flex;flex-direction:column;gap:12px">
+    ${slots(MINER,9,"")}
+    <div class="sect">AS PLAYERS SEE IT IN THE KIT BROWSER</div>${mcard(MINER)}
+    <div class="note">Hover a stack for its name, count and data (enchantments, names, what a box holds), as on a player's inventory page.</div></div></div>`));
+  b.appendChild(h(`<div style="width:400px;flex:none;display:flex;flex-direction:column;gap:12px">
+    <div class="box"><div class="bh">RULES</div><div style="padding:12px"><div class="kv">
+      <span>In the browser</span><span>Shown</span><span>Price</span><span class="gd">250 pieces</span><span>Taken again</span><span>Every 7 days</span>
+      <span>Ranks</span><span><span class="vi">Miner and up</span> <span class="dim">(RankUp's ladder)</span></span><span>Servers</span><span>Everywhere</span>
+      <span>Needs</span><span class="dim">Nothing more</span><span>First join</span><span class="dim">Never by itself</span><span>Description</span><span>Everything a deep dig needs: tools, light, food and a way out.</span></div></div></div>
+    <div class="box"><div class="bh">RECORD</div><div style="padding:12px"><div class="kv">
+      <span>Taken</span><span class="mono">342 times on the network</span><span>Last taken</span><span>Brakk, 2 h ago</span>
+      <span>Made</span><span>12 Oct 2026, 19:40</span><span>Last edited</span><span>25 Nov 2026, 18:02</span><span>Answered by</span><span>BSP-Spawn, 4 s ago</span></div>
+      <div class="note" style="margin-top:8px">Who has taken it and when they can again is on each player's page (PLAYERS › a player › KITS) <span class="wtag">WAITS</span></div></div></div>
+    <div class="warn">On BSP-Core 1.27.0 these keys are greyed with "Needs BSP-Core's kit changes" until parts 2 and 3 of its kit api arrive.</div></div>`));
+  m.appendChild(b);
+  m.appendChild(h('<div class="tip" style="left:50px;top:132px"><b>Diamond Pickaxe</b><span>minecraft:diamond_pickaxe</span><span class="vi">Efficiency III · Unbreaking II</span><span class="dim">slot 1 · the kit\'s icon</span></div>'));})();
+
+/* the item browser (as the SHOPS editor) */
+const TABS=["All","Building","Coloured","Natural","Functional","Redstone","Tools","Food","Combat","Mekanism"];
+const BROWSE=["torch","lantern","ladder","scaffold","coal","bucket","ipick","dpick","ishovel","iaxe","hoe","flint","compass","mapi","bed","boat","bread","steak","apple","gapple","potion","pearl","rocket","elytra"];
+function browserBox(sel){return `<div class="float" style="left:12px;top:58px;width:286px;bottom:14px"><div class="fh">ITEMS<span class="grow"></span><span class="dim" style="font-weight:400">drag onto a slot</span></div>
+  <div style="padding:8px;display:flex;flex-direction:column;gap:7px">${SEARCH("torch, lantern…",1).replace("width:220px","")}
+  <div class="chips">${TABS.map((t,i)=>`<span class="opt${i===6?" on":""}" style="height:22px;font-size:10px;padding:0 7px">${t}</span>`).join("")}</div>
+  <div class="igrid" style="grid-template-columns:repeat(6,1fr)">${BROWSE.map((k,i)=>`<span${i===sel?' class="hl"':""} title="${nm(k)}">${ico(k)}</span>`).join("")}</div>
+  <div class="note">Every item the panel's picture export knows, with its English name; an item with data keeps it. Without an export, a box for an item id.</div></div></div>`;}
+function editor(el,tab,drawerInner,opt){const m=frame(el,"/kits/miner/edit");m.classList.add("ed");m.style.position="relative";
+  m.appendChild(h(`<div class="pagehead" style="padding-left:312px;padding-right:396px"><span class="crumb"><a>KITS</a> › <a>Miner's Pack</a> › <b>EDIT</b></span><span class="grow"></span><span class="wtag">WAITS ON BSP-CORE</span><span class="key">DONE</span></div>`));
+  m.appendChild(h(browserBox(opt.bsel)));
+  m.appendChild(h(`<div style="position:absolute;left:312px;right:396px;top:58px;bottom:14px;display:flex;flex-direction:column;gap:10px">
+    <div class="box"><div class="bh">CONTENTS<span class="grow"></span><span class="mono">${opt.count} of 36 stacks</span></div><div style="padding:10px">${slots(opt.kit,9,"",opt.slot)}</div></div>
+    ${opt.below||""}</div>`));
+  m.appendChild(h(`<div class="drawer"><div class="dh">${ico(opt.kit.icon)}<div style="flex:1;min-width:0"><div style="font:13px Silkscreen,var(--mono)">${opt.kit.n}</div><div class="id mono dim" style="font-size:11px">${opt.kit.id}</div></div><span class="prev">Saved</span></div>
+    <div class="ptabs">${["KIT","WHO AND WHERE"].map(t=>`<span class="${t===tab?"on":""}">${t}</span>`).join("")}</div><div class="dbd">${drawerInner}</div></div>`));
+  return m;}
+
+/* K3: adding an item, the KIT tab */
+(function(){const kit={...MINER,items:[...MINER.items]};
+  const inner=`<div class="g2"><div class="field"><label>NAME (UP TO 24)</label><div class="in2">Miner's Pack</div></div><div class="field"><label>ID</label><div class="in2 mono" style="color:var(--dim)">miner</div></div></div>
+   <div class="field"><label>DESCRIPTION (UP TO 80, AS THE BROWSER SHOWS IT)</label><div class="in2 ta">Everything a deep dig needs: tools, light, food and a way out.<span class="u" style="align-self:flex-end">62/80</span></div></div>
+   <div class="field"><label>ICON</label><div class="row"><div class="in2" style="flex:1">${ico("dpick","s")}Diamond Pickaxe</div><span class="key sm">FIRST ITEM</span></div><span class="note">Drop an item here from the browser, or FIRST ITEM to show whatever is in slot 1.</span></div>
+   <div class="tick"><span class="cb on">✓</span>Shown in the kit browser</div>
+   <div class="field"><label>PRICE</label><div class="in2 mono">250<span class="u">pieces · empty for free</span></div></div>
+   <div class="field"><label>TAKEN AGAIN</label><div class="chips"><span class="opt">Any time</span><span class="opt">Once</span><span class="opt on">Every…</span></div>
+     <div class="row" style="margin-top:4px"><div class="in2 mono" style="width:70px">7</div><div class="chips"><span class="opt">minutes</span><span class="opt">hours</span><span class="opt on">days</span></div></div></div>
+   <div class="note">Each field is saved as it is changed. If the kit was changed in game since you opened it, the change is refused and the page reads again, saying so.</div>`;
+  const m=editor("k3","KIT",inner,{kit,count:13,bsel:0,slot:{drop:12}});
+  const ghost=h(`<div class="ghost" style="left:520px;top:175px;width:46px;height:46px;border-radius:6px;background:#1d2129;border:1px solid;display:grid;place-items:center">${ico("torch")}</div>`);m.appendChild(ghost);
+  m.appendChild(h(`<div style="position:absolute;left:556px;top:206px">${SV.cur}</div>`));
+  m.appendChild(h('<div class="tip" style="left:440px;top:250px"><b>Torch into slot 13</b><span>Count: a full stack (64)</span><span class="dim">wheel or the count box changes it</span></div>'));})();
+
+/* K4: WHO AND WHERE, removing */
+(function(){const kit={...MINER,items:[...MINER.items]};
+  const inner=`<div class="field"><label>RANKS (RANKUP'S LADDER: A CLICK ON A STEP)</label><div class="ladder"><span>Settler</span><span class="on">Miner</span><span class="up">Builder</span><span class="up">Veteran</span><span class="up">Legend</span></div><span class="note">Miner and up. Without RankUp: one chip per LuckPerms group, any of them.</span></div>
+   <div class="field"><label>SERVERS IT CAN BE TAKEN ON</label><div class="chips"><span class="opt on">Everywhere</span><span class="opt">BSP-Spawn</span><span class="opt">Frostwarf</span><span class="opt">Moongrove</span><span class="opt">Boulderbrook</span><span class="opt">Stormfall</span><span class="opt">Sanctuary</span></div></div>
+   <div class="field"><label>NEEDS</label><div class="tick"><span class="cb"></span>Owns no Shatter Totem anywhere on the network</div><span class="note">The conditions BSP-Core offers; more appear here as it adds them.</span></div>
+   <div class="field"><label>FIRST JOIN</label><div class="chips"><span class="opt on">Never by itself</span><span class="opt">Once on the network</span><span class="opt">On each chosen server</span></div>
+     <div class="chips" style="margin-top:4px;opacity:.45"><span class="opt">Every server</span><span class="opt">BSP-Spawn</span><span class="opt">Frostwarf</span><span class="opt">Moongrove</span></div></div>
+   <div class="note">Handed out at first join, it lands once the player's inventory has arrived from the last server.</div>`;
+  const below=`<div class="bin hot" style="position:relative;height:56px">${SV.bin} SURE? REMOVE · 3</div><div class="note">Drop a stack on the bin; the stacks after it move up (a kit is a list of stacks, as in game).</div>`;
+  const m=editor("k4","WHO AND WHERE",inner,{kit,count:12,bsel:-1,slot:{sel:9},below});
+  m.appendChild(h(`<div class="ghost" style="left:600px;top:282px;width:46px;height:46px;border-radius:6px;background:#1d2129;border:1px solid;display:grid;place-items:center">${ico("chestp")}</div>`));})();
+
+/* K5: new kit and copy */
+(function(){const m=frame("k5");head(m,"KITS",SEARCH()+'<span class="key pri">+ NEW KIT</span>');
+  const g=h('<div class="tiles" style="grid-template-columns:repeat(4,1fr)"></div>');KITS.forEach(k=>g.appendChild(h(tile(k))));m.appendChild(g);
+  m.appendChild(h('<div class="shade"></div>'));
+  m.appendChild(h(`<div class="modal" style="left:70px;top:110px;width:440px"><div class="mh">NEW KIT<span class="grow"></span><span class="wtag">WAITS</span></div><div class="mb">
+    <div class="field"><label>NAME</label><div class="in2 f">Nether Run</div></div>
+    <div class="field"><label>ID (2 TO 24: a to z, 0 to 9 and _)</label><div class="in2 mono">nether_run<span class="u tl">free</span></div></div>
+    <div class="note">Made OFF and empty, then opened in the editor: add its items and rules, then turn it on.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri">MAKE</span></div></div>`));
+  m.appendChild(h(`<div class="modal" style="left:560px;top:110px;width:440px"><div class="mh">COPY MINER'S PACK<span class="grow"></span><span class="wtag">WAITS</span></div><div class="mb">
+    <div class="field"><label>NAME</label><div class="in2">Miner's Pack II</div></div>
+    <div class="field"><label>ID</label><div class="in2 mono f" style="border-color:var(--coral);box-shadow:0 0 0 2px #ff6b5c22">miner_2<span class="u rd">taken: pick another</span></div></div>
+    <div class="note">Its items and every rule are copied. The copy is OFF, never taken, with no last taker and no players' records; it opens in the editor.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri" style="opacity:.5">COPY</span></div></div>`));})();
+
+/* K6: give and delete */
+(function(){const m=frame("k6","/kits/miner");
+  head(m,CRUMB("Miner's Pack"),`<span class="sw on"></span><span class="lamp op"><i></i>On · in the browser</span><span class="key">COPY</span><span class="key" style="border-color:var(--teal);color:var(--teal)">GIVE TO…</span><span class="key dg">DELETE</span><span class="key pri">EDIT</span>`);
+  const b=h('<div style="flex:1;display:flex;gap:14px;padding:0 18px 16px;min-height:0"></div>');
+  b.appendChild(h(`<div class="box" style="flex:1"><div class="bh">CONTENTS<span class="grow"></span><span class="mono">12 of 36 stacks</span></div><div style="padding:12px">${slots(MINER,9,"")}</div></div>`));
+  b.appendChild(h(`<div style="width:400px;flex:none;display:flex;flex-direction:column;gap:10px;padding-top:350px"><div class="sect">WHAT DELETE ASKS FIRST <span class="wtag">WAITS</span></div>
+    <div class="row"><span class="key sure">SURE? DELETE · 3</span><span class="note">a second click within three seconds</span></div>
+    <div class="warn" style="color:var(--coral);border-color:#ff6b5c55;background:#ff6b5c12">Deleting Miner's Pack takes it from the browser on every server and removes every player's record of it. <b>3 players are still owed it</b> and will not get it. This cannot be undone.</div></div>`));
+  m.appendChild(b);
+  m.appendChild(h(`<div class="modal" style="right:100px;top:52px;width:400px;z-index:8"><div class="mh">GIVE MINER'S PACK TO<span class="grow"></span><span class="wtag">WAITS</span></div><div class="mb">
+    ${SEARCH("bra",1).replace("width:220px","width:100%")}
+    <div class="box"><div class="lrow on">Brakk<span class="r"><span class="lamp op"><i></i>Frostwarf</span></span></div><div class="lrow">BrambleFox<span class="r"><span class="lamp off"><i></i>seen 2 d ago</span></span></div><div class="lrow">brass_monkey<span class="r"><span class="lamp op"><i></i>BSP-Spawn</span></span></div></div>
+    <div class="note">Brakk is online: it lands now if there is room, otherwise it waits for them (a line in chat and a WAITING card in their browser). No price, rank, timing or server rule applies; it is recorded as given by you.</div></div>
+    <div class="mf"><span class="key">CANCEL</span><span class="key pri">GIVE</span></div></div>`));})();
+
+/* K7: phone */
+(function(){const nav=`<div class="bnav">${[["users","Players"],["chat","Chat"],["map","Map"],["totem","Totems"],["shield","Staff"],["more","More"]].map(([i,l])=>`<span class="${l==="More"?"on":""}">${SV[i]}${l}</span>`).join("")}</div>`;
+  const a=document.getElementById("k7a");a.innerHTML=`<div class="pbar"><span style="font:15px Silkscreen,var(--mono);color:#19d3b0">KITS</span><span class="grow"></span><span class="mono mu" style="font-size:11px">8 kits</span></div>
+   <div class="pbody">${SEARCH().replace("width:220px","width:100%")}<div class="row">${[["All",8],["On",7],["Off",1],["First join",2]].map(([l,n],i)=>`<span class="chip${i===0?" on":""}">${l} <span class="n">${n}</span></span>`).join("")}</div>${tile(KITS[0])}${tile(KITS[2])}</div>${nav}`;
+  const b=document.getElementById("k7b");b.innerHTML=`<div class="pbar"><span class="crumb"><a>KITS</a> › <b>Miner's Pack</b></span><span class="grow"></span><span class="sw on"></span></div>
+   <div class="pbody"><div class="sect">CONTENTS <span class="mono mu">12 of 36</span></div>${slots(MINER,9,"s")}${mcard(MINER)}
+   <div class="box"><div class="bh">RULES</div><div style="padding:10px"><div class="kv"><span>Price</span><span class="gd">250 pieces</span><span>Taken again</span><span>Every 7 days</span><span>Ranks</span><span class="vi">Miner and up</span><span>Servers</span><span>Everywhere</span><span>Taken</span><span class="mono">342 · Brakk, 2 h ago</span></div></div></div>
+   <div class="note">Changing a kit is on a computer.</div></div>${nav}`;})();
+</script>
+</body>
+</html>

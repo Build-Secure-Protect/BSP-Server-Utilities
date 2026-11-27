@@ -60,6 +60,8 @@ public final class ShopDesk {
     /** A failed read is said again for this long before the server is asked again (as the WORLDS tab, audit). */
     static final long RETRY_MS = 20_000L;
     public static final String NO_SERVER = "No game server with BSP-Core's shops is sending to the panel right now.";
+    /** Servers sending, but none has finished reading the network's shops (D862). */
+    public static final String WAITING = "The game servers are still reading the network's shops after a restart, or cannot reach the database: the tab tries again within a minute.";
     static final Pattern ID = Pattern.compile("[a-z0-9_]{1,32}");
     /** BSP-Core's deepest shop tree ({@code Shops.MAX_DEPTH}): a walk up or down never goes further, whatever a server sends. */
     public static final int MAX_DEPTH = 16;
@@ -367,7 +369,7 @@ public final class ShopDesk {
         }
         Map<String, JsonObject> byId = known(me);
         if (byId == null) {
-            return logged(refused(NO_SERVER), tried);
+            return logged(refused(noServer()), tried);
         }
         if (byId.containsKey(id)) {
             return logged(refused("There is already a shop " + id + ": choose another id."), tried);
@@ -428,7 +430,7 @@ public final class ShopDesk {
         }
         Map<String, JsonObject> byId = known(me);
         if (byId == null) {
-            return logged(refused(NO_SERVER), tried);
+            return logged(refused(noServer()), tried);
         }
         JsonObject shop = byId.get(id);
         if (shop == null) {
@@ -568,7 +570,7 @@ public final class ShopDesk {
         }
         Map<String, JsonObject> byId = known(me);
         if (byId == null) {
-            return logged(refused(NO_SERVER), tried);
+            return logged(refused(noServer()), tried);
         }
         if (!byId.containsKey(id)) {
             return logged(refused("There is no shop " + id + " now: read it again."), tried);
@@ -613,6 +615,11 @@ public final class ShopDesk {
             Map.entry("offerPercent", "the discount"), Map.entry("offerEnd", "the offer's end"), Map.entry("hours", "the opening hours"),
             Map.entry("requires", "what it needs"));
 
+    /** No server answers: none sending with the shops, or some with the api still reading (D862). */
+    private String noServer() {
+        return !feed.live().isEmpty() && feed.anyLiveWith("shopsWait") ? WAITING : NO_SERVER;
+    }
+
     /** The shops as last read (or read now): null when no server answers. */
     private Map<String, JsonObject> known(Account me) {
         JsonObject l = list(me, false);
@@ -623,13 +630,15 @@ public final class ShopDesk {
         List<String> able = feed.liveWithShops();
         Actions act = actions.get();
         if (able.isEmpty() || act == null) {
-            return refused(NO_SERVER);
+            return refused(noServer());
         }
         String server = able.get(0);
         Actions.Answer ans = act.ask(server, me.mcName, me.rank.name(), f, Actions.LONG_WAIT_SECONDS);
         forget(null); // whatever it answered, the next read is fresh
-        long until = clock.getAsLong() + OWN_MS;
-        feed.liveWithShops().forEach(x -> ownUntil.put(x, until)); // each server's shopsAt will move once for this change: not read twice
+        if (ans.ok()) { // only a change that went through moves each server's shopsAt once: not read twice (audit)
+            long until = clock.getAsLong() + OWN_MS;
+            feed.liveWithShops().forEach(x -> ownUntil.put(x, until));
+        }
         JsonObject out = new JsonObject();
         if (ans.data() != null && ans.data().isJsonObject()) {
             ans.data().getAsJsonObject().entrySet().forEach(e -> out.add(e.getKey(), e.getValue()));
@@ -1167,7 +1176,7 @@ public final class ShopDesk {
         List<String> able = feed.liveWithShops();
         Actions act = actions.get();
         if (able.isEmpty() || act == null) {
-            return refused(NO_SERVER);
+            return refused(noServer());
         }
         String server = able.get(0);
         Actions.Answer a = wait > 0 ? act.read(server, me.mcName, me.rank.name(), f, wait) : act.read(server, me.mcName, me.rank.name(), f);

@@ -253,6 +253,7 @@ const Players = (() => {
     const bl = Bounties.line(p); // D528: bounties on them, placed or hunted by them
     if (bl) box.appendChild(bl);
     box.appendChild(Items.section({ id: p.id, name: p.name, skin: p.skin }, { live: true, redraw: () => App.refresh() })); // D279, D337
+    if (typeof KitsTab !== "undefined") box.appendChild(KitsTab.section(p)); // SU-174: their kits (D866)
     box.appendChild(Notes.section(p));
     drag(grip, box);
     box.scrollTop = scrolled;
@@ -284,6 +285,7 @@ const Players = (() => {
     const ml = Market.line(p); if (ml) box.appendChild(ml);
     const bl = Bounties.line(p); if (bl) box.appendChild(bl);
     box.appendChild(Items.section(p, { live: false, redraw: () => App.refresh() })); // the newest save (D658)
+    if (typeof KitsTab !== "undefined") box.appendChild(KitsTab.section(p)); // SU-174: their kits (D866)
     box.appendChild(Notes.section(p));
   }
   function offSub(c) {

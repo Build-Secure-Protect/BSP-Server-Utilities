@@ -1,7 +1,7 @@
 "use strict";
 // The panel's frame: the six tabs (TOTEMS added by SU-99) (bottom on a phone, a menu on the left from 900 px, D276, D287), staff online on the
 // left (D293), the live feed, and the More tab with your login and, for Owners, the staff accounts (D291).
-const TABS = ["Players", "Chat", "Map", "Worlds", "Shops", "Totems", "Staff", "More"]; // TOTEMS between Map and Staff (D613); WORLDS between Map and Totems (D765); SHOPS after WORLDS (D788)
+const TABS = ["Players", "Chat", "Map", "Worlds", "Shops", "Kits", "Totems", "Staff", "More"]; // TOTEMS between Map and Staff (D613); WORLDS between Map and Totems (D765); SHOPS after WORLDS (D788); KITS after SHOPS (D838)
 let me = null, live = { servers: [], players: [], onPanel: [] }, tab = "Players";
 
 function nav() {
@@ -9,10 +9,10 @@ function nav() {
   bottom.textContent = ""; side.textContent = "";
   for (const t of TABS) {
     // a phone's bottom bar keeps its six: WORLDS and SHOPS are in More there (D765, D814), which is lit while one is open
-    const b = el("button", t === tab || (t === "More" && (tab === "Worlds" || tab === "Shops")) ? "on" : ""); b.type = "button";
+    const b = el("button", t === tab || (t === "More" && (tab === "Worlds" || tab === "Shops" || tab === "Kits")) ? "on" : ""); b.type = "button";
     b.innerHTML = ICONS[t]; b.appendChild(el("span", null, t));
     b.addEventListener("click", () => { tab = t; render(); });
-    if (t !== "Worlds" && t !== "Shops") bottom.appendChild(b);
+    if (t !== "Worlds" && t !== "Shops" && t !== "Kits") bottom.appendChild(b); // KITS is in More on a phone too (D838)
     const s = el("button", "nav" + (t === tab ? " on" : "")); s.type = "button";
     s.innerHTML = ICONS[t]; s.appendChild(el("span", null, t));
     s.addEventListener("click", () => { tab = t; render(); });
@@ -123,6 +123,11 @@ async function more(main) {
   sh.appendChild(shg); sh.appendChild(el("span", "mu", "›"));
   sh.addEventListener("click", () => { ShopsTab.home(); tab = "Shops"; render(); });
   menu.appendChild(sh);
+  const kt = el("button", "item menuitem phoneonly"); kt.type = "button"; kt.dataset.keep = "more:kits"; // KITS on a phone (D838)
+  const ktg = el("div", "grow"); ktg.appendChild(el("div", "nm", "Kits")); ktg.appendChild(el("div", "sub", "Every kit, its items and rules"));
+  kt.appendChild(ktg); kt.appendChild(el("span", "mu", "›"));
+  kt.addEventListener("click", () => { KitsTab.home(); tab = "Kits"; render(); });
+  menu.appendChild(kt);
   const pm = el("button", "item menuitem"); pm.type = "button"; pm.dataset.keep = "more:pmsg";
   const pmg = el("div", "grow"); pmg.appendChild(el("div", "nm", "Player messages")); pmg.appendChild(el("div", "sub", "Open conversations with players, replies waiting first"));
   pm.appendChild(pmg); const waitingNow = PlayerMsg.badge(); if (waitingNow) pm.appendChild(el("span", "pcountbadge", waitingNow)); pm.appendChild(el("span", "mu", "›"));
@@ -285,7 +290,7 @@ function showLink(area, text, link) {
 
 async function render() {
   const main = $("main");
-  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); Totems.unmount(main); Worlds.unmount(main); ShopsTab.unmount(main); main.textContent = "";
+  ChatView.unmount(main); StaffView.unmount(main); MapView.unmount(main); Totems.unmount(main); Worlds.unmount(main); ShopsTab.unmount(main); KitsTab.unmount(main); main.textContent = "";
   main.classList.toggle("chatmain", tab === "Chat");
   main.classList.toggle("staffmain", tab === "Staff");
   if (tab !== "More") moreView = "home";
@@ -301,6 +306,7 @@ async function render() {
     else if (tab === "Totems") Totems.mount(main); // SU-99
     else if (tab === "Worlds") Worlds.mount(main); // SU-155
     else if (tab === "Shops") ShopsTab.mount(main); // SU-161
+    else if (tab === "Kits") KitsTab.mount(main); // SU-172
     else if (tab !== "Chat") main.appendChild(el("div", "note", tab + " is not part of the panel yet."));
   }
 }
@@ -461,6 +467,7 @@ function connect() {
     Lottery.onLive(live); // a draw counting somewhere (D411)
     Worlds.onLive(live); // a server's regions changed: WORLDS and the map read them again (D781)
     ShopsTab.onLive(live); // a shop or a stall changed, or a minute passed: SHOPS reads again (D811)
+    KitsTab.onLive(live); // a kit changed, or a minute passed: KITS reads again (D845)
     App.tick();
     const now = live.servers.map((s) => s.server + ":" + s.count).join(",");
     if (now !== servers) { servers = now; ChatView.serversChanged(); } // the server chips and the TO list

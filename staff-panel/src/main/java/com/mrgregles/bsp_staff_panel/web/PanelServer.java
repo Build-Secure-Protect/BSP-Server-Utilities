@@ -303,6 +303,13 @@ public final class PanelServer {
     }
 
     private volatile com.mrgregles.bsp_staff_panel.shops.ShopDesk shopDesk;
+    private volatile com.mrgregles.bsp_staff_panel.kits.KitDesk kitDesk;
+
+    /** The KITS tab (SU-172; D838 to D867). */
+    public PanelServer withKits(com.mrgregles.bsp_staff_panel.kits.KitDesk d) {
+        this.kitDesk = d;
+        return this;
+    }
 
     /** The SHOPS tab (SU-161; D788 to D814). */
     public PanelServer withShops(com.mrgregles.bsp_staff_panel.shops.ShopDesk d) {
@@ -582,6 +589,8 @@ public final class PanelServer {
             case "/api/shops/grid", "/api/shops/shop", "/api/shops/sales", "/api/shops/create", "/api/shops/set", "/api/shops/enable", "/api/shops/copy",
                  "/api/shops/delete", "/api/shops/card/add", "/api/shops/card/set", "/api/shops/card/move", "/api/shops/card/remove",
                  "/api/shops/card/refill", "/api/shops/export" -> shopsPost(ex, id, path, body); // SU-161 to SU-164
+            case "/api/kits/grid", "/api/kits/kit", "/api/kits/records", "/api/kits/create", "/api/kits/set", "/api/kits/items", "/api/kits/icon",
+                 "/api/kits/enable", "/api/kits/copy", "/api/kits/delete", "/api/kits/give", "/api/kits/reset" -> kitsPost(ex, id, path, body); // SU-172 to SU-174
             case "/api/pmsg", "/api/pmsg/list", "/api/pmsg/send", "/api/pmsg/end" -> playerTalkPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
@@ -2017,6 +2026,51 @@ public final class PanelServer {
             store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (ok ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
         }
         boolean change = !java.util.Set.of("/api/shops/grid", "/api/shops/shop", "/api/shops/sales", "/api/shops/export").contains(path);
+        json(ex, change && !me.rank.atLeast(com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN) ? 403 : 200, o);
+    }
+
+    /**
+     * The KITS tab (SU-172 to SU-174): {@code /api/kits/grid} ({@code refresh}) every kit with the pickers,
+     * {@code /api/kits/kit} ({@code id}, {@code refresh}) one kit, {@code /api/kits/records} ({@code player}) a player's
+     * records; every rank reads (D839), nothing logged. {@code /create}, {@code /set}, {@code /items}, {@code /icon},
+     * {@code /enable}, {@code /copy}, {@code /delete}, {@code /give} and {@code /reset} for Admins and Owners, each a line in
+     * the panel's log (D844).
+     */
+    private void kitsPost(HttpExchange ex, AccessJwt.Identity id, String path, JsonObject b) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.kits.KitDesk desk = kitDesk;
+        if (desk == null) {
+            json(ex, 200, refused("Kits are not set up on this panel."));
+            return;
+        }
+        Account me = a.get();
+        JsonObject o = switch (path) {
+            case "/api/kits/grid" -> desk.grid(me, bool(b, "refresh"));
+            case "/api/kits/kit" -> desk.kit(me, str(b, "id"), bool(b, "refresh"));
+            case "/api/kits/records" -> desk.records(me, str(b, "player")); // SU-174
+            case "/api/kits/create" -> desk.create(me, b);
+            case "/api/kits/set" -> desk.set(me, b);
+            case "/api/kits/items" -> desk.items(me, b); // SU-173
+            case "/api/kits/icon" -> desk.icon(me, b);
+            case "/api/kits/enable" -> desk.enable(me, b);
+            case "/api/kits/copy" -> desk.copy(me, b);
+            case "/api/kits/give" -> desk.give(me, b);
+            case "/api/kits/reset" -> desk.reset(me, b); // SU-174
+            default -> desk.delete(me, b);
+        };
+        String log = o.has("panelLog") ? str(o, "panelLog") : null; // a change: one line in the panel's log (D844)
+        o.remove("panelLog");
+        if (log != null) {
+            String said = str(o, "message").replaceAll("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]", " ");
+            said = said.length() > 200 ? said.substring(0, 200) + "…" : said;
+            boolean ok = o.has("ok") && o.get("ok").isJsonPrimitive() && o.get("ok").getAsJsonPrimitive().isBoolean() && o.get("ok").getAsBoolean();
+            store.log(new PanelStore.LogLine(clock.getAsLong(), me.email, log + (ok ? "" : said.startsWith("No answer") ? "; no answer in time: it may still have happened" : "; refused: " + said)));
+        }
+        boolean change = !java.util.Set.of("/api/kits/grid", "/api/kits/kit", "/api/kits/records").contains(path);
         json(ex, change && !me.rank.atLeast(com.mrgregles.bsp_staff_panel.auth.Rank.ADMIN) ? 403 : 200, o);
     }
 

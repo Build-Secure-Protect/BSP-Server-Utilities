@@ -287,6 +287,31 @@ public final class Feed {
                 .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
     }
 
+    /**
+     * Live servers whose BSP-Core answers for its kits (their snapshot's {@code kits}, SU-171; {@code BspKits.ready}): kits
+     * switched on there first (D863), then database connected, then the busiest, then by name.
+     */
+    public List<String> liveWithKits() {
+        return liveWith("kits").stream().sorted(java.util.Comparator.comparing((String n) -> !kitsOn(n)).thenComparing(n -> !flag(n, "lotteryUp"))
+                .thenComparing(n -> -players(n)).thenComparing(String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
+    /** Whether any live server's snapshot says {@code flag} (e.g. {@code shopsWait}: it has the api but is still reading, D862). */
+    public boolean anyLiveWith(String flag) {
+        return !liveWith(flag).isEmpty();
+    }
+
+    /** Whether kits are switched on on a server that answers for them (its snapshot's {@code kitsOn}; on when it does not say). */
+    public boolean kitsOn(String server) {
+        Entry e = servers.get(server);
+        return e == null || !e.snapshot.has("kitsOn") || !e.snapshot.get("kitsOn").isJsonPrimitive() || e.snapshot.get("kitsOn").getAsBoolean();
+    }
+
+    /** When a live server last heard that a kit changed, anywhere on the network (its snapshot's {@code kitsAt}, D845), or -1. */
+    public long kitsAt(String server) {
+        return stamp(server, "kitsAt");
+    }
+
     /** When a live server last heard that a shop changed, anywhere on the network (its snapshot's {@code shopsAt}, D811), or -1. */
     public long shopsAt(String server) {
         return stamp(server, "shopsAt");
@@ -431,6 +456,15 @@ public final class Feed {
             long stl = stallsAt(name);
             if (stl >= 0) {
                 s.addProperty("stallsAt", stl); // and when that server's stalls changed (SU-162)
+            }
+            boolean kits = flag(name, "kits");
+            s.addProperty("kits", kits); // it answers for the kits (SU-172)
+            if (kits) {
+                s.addProperty("kitsOn", kitsOn(name)); // the KITS tab's strip names servers with kits off (D863)
+                long kat = kitsAt(name);
+                if (kat >= 0) {
+                    s.addProperty("kitsAt", kat); // a kit changed: the KITS tab reads again (D845)
+                }
             }
             JsonArray ps = e.snapshot.getAsJsonArray("players");
             s.addProperty("count", ps.size());

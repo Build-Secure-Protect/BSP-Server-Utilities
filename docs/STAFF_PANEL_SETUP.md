@@ -614,6 +614,12 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
   table `panel_alerts` in `bsp_panel` when it starts. Make the variables below on the panel's egg first, fill them in on
   BSP-Staff-Panel's Startup tab, then update the panel as above. Its console then says "Server alerts: watching the game
   servers; email alerts on, to 1 address" (or which variable is missing); `test-email` sends a test.
+- **Updating to panel 0.11.0 with BSP-Server Utilities 0.28.0 (the KITS tab).** Each game server needs **BSP-Core
+  1.27.2** (1.27.1 at least; its network protocol is 26, so every server and every player moves to it at once: put it in
+  the modpack and on every server together) and **BSP-Server Utilities 0.28.0**; no new grant and no config change. The
+  0.28.0 jar adds eight Action Log kinds the in-game Logs tab names, so put it in the modpack too. Then update the panel
+  to 0.11.0 as above. A server with BSP-Core 1.27.0 or older says kits need 1.27.1; the SHOPS tab keeps working with
+  BSP-Core 1.26.0 or newer.
 - **Server alerts by email.** The panel emails when a game server freezes or crashes, and again when it is back. Its
   settings are variables on the BSP-Staff-Panel server in Pterodactyl, never in a file: `SMTP_HOST` (Brevo:
   `smtp-relay.brevo.com`), `SMTP_PORT` (587), `SMTP_USER` (Brevo's SMTP login from its SMTP & API page), `SMTP_PASSWORD` (Brevo's

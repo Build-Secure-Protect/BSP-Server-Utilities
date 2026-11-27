@@ -38,6 +38,9 @@ final class Demo {
             if (rg == null) {
                 rg = DemoShops.answer(what, parsed, parsed.has("server") ? parsed.get("server").getAsString() : ""); // SU-161
             }
+            if (rg == null) {
+                rg = DemoKits.answer(what, parsed, parsed.has("server") ? parsed.get("server").getAsString() : ""); // SU-172
+            }
             if (rg != null) {
                 com.google.gson.JsonObject ans = new com.google.gson.JsonObject();
                 ans.addProperty("id", uid);
@@ -603,6 +606,9 @@ final class Demo {
                 o.addProperty("regionsAt", DemoRegions.changedAt(server[0])); // SU-159: when its regions last changed (D781)
                 o.addProperty("shops", true); // SU-161: and BSP-Core answering for its shops (requests SU-BC5 to SU-BC10)
                 o.addProperty("shopsAt", DemoShops.changedAt()); // D811: when a shop last changed (SU-162: the panel's own changes)
+                o.addProperty("kits", true); // SU-172: and BSP-Core answering for its kits (requests SU-BC11 to SU-BC13)
+                o.addProperty("kitsOn", !DemoKits.OFF_SERVER.equals(server[0])); // D863: kits switched off on one demo server
+                o.addProperty("kitsAt", DemoKits.changedAt()); // D845
                 o.addProperty("stallsAt", 0L); // and this server's stalls (nothing moves them in the demo)
                 o.addProperty("lotteryUp", true);
                 boolean counting = now - drawAt < 7_000L;

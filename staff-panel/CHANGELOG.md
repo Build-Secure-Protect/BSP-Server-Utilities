@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-27
+
+The KITS tab. Works with BSP-Server Utilities 0.28.0 and BSP-Core 1.27.1 or newer (1.27.2 for the answering server's
+readiness, kits switched off and waiting counts) on the game servers.
+
+### Added
+- KITS, after SHOPS (in More on a phone): every kit as a tile in the kit browser's order, with its icon, first eight
+  items, price, how often it can be taken, hidden or first-join, the ranks, servers and conditions it needs, and who took
+  it last; OFF kits striped; filters and a search by name, id or item. Servers with kits switched off are named above.
+- A kit's page: its contents, the card players see in the kit browser, its rules and its record (taken, last taker,
+  players still waiting for it as the answering server counts them, made, last edited).
+- For Admins and Owners: NEW KIT and COPY (made off), the on and off switch, GIVE TO… any player the panel knows (through
+  the player's own server when kits are on there), DELETE with SURE? and the number still owed it. Each change names the
+  kit's stamp; one changed in game since is refused and read again. Every change is a line in the panel's log.
+- The editor on a computer: the item browser, the contents as a list of stacks (drop between stacks, drag to move, the
+  wheel or the count box for a stack's count, the bin with SURE? to take one out; changes made close together are saved
+  as one), and a drawer with KIT (name, description, icon, shown in the browser, price, taken again) and WHO AND WHERE
+  (ranks from RankUp's ladder or LuckPerms' groups, servers, conditions, first join). A kit holding items from a mod the
+  answering server lacks is only deleted there.
+- A KITS section on a player's card: each kit taken, how often and when last, how many wait for them, when they may take
+  it again (or never, for a once-only kit), first-join grants by server, kits deleted since; RESET per kit and RESET ALL
+  with two confirms.
+
+### Changed
+- SHOPS and KITS say when the game servers are still reading the network's shops or kits after a restart, instead of
+  saying no server is sending.
+
 ## [0.10.1] - 2026-11-27
 
 Sections whose shop is gone, as BSP-Core 1.27.0 keeps them. Works with BSP-Server Utilities 0.27.1 on the game servers

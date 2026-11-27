@@ -228,6 +228,7 @@ public final class Main {
                 .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withRegions(regions)
                 .withShops(shopDesk)
+                .withKits(new com.mrgregles.bsp_staff_panel.kits.KitDesk(feed, () -> marketActions, System::currentTimeMillis)) // SU-172
                 .withAlerts(alerts)
                 .withTotems(totems).withPlayerTalk(playerTalk)
                 .withOffline(new com.mrgregles.bsp_staff_panel.players.OfflineDesk(store, feed, System::currentTimeMillis, seenKey)).start();
