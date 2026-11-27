@@ -211,16 +211,16 @@ public final class WebShops {
         return v == Math.rint(v) && Math.abs(v) < 9.0e15 ? (long) v : Long.MIN_VALUE;
     }
 
-    /** BSP-Core's refusal keys as sentences for staff (D819). */
+    /** BSP-Core's refusal keys as sentences for staff (D819; worded for BSP-Core 1.27.0's answers, D850 to D852). */
     static String said(String key) {
         return switch (key) {
             case "stale" -> "It was changed in game since you read it: here it is as it is now.";
             case "no_shop" -> "There is no such shop now: it may have been deleted.";
-            case "bad_id" -> "An id is 1 to 32 lower-case letters, digits and _.";
+            case "bad_id" -> "An id is 1 to 32 lower-case letters, digits and _, and cannot be all."; // D850
             case "taken" -> "There is already a shop with that id: choose another.";
             case "bad_field" -> "That cannot be changed on this shop or card.";
-            case "bad_value" -> "That value does not fit (a section stays inside a shop; a name is 1 to 64 characters).";
-            case "bad_item" -> "That is not an item this server knows, or its data is too long.";
+            case "bad_value" -> "That value does not fit: a name needs a letter or digit you can see and is up to 64 characters; a section moves only into another shop, or to Top level when its shop is gone."; // D851
+            case "bad_item" -> "That is not an item this server knows, or its data is too long or nested too deep."; // D852
             case "bad_price" -> "A price in coins is at most 10,000 coins.";
             case "no_item" -> "There is no such card now: read the shop again.";
             case "no_parent" -> "There is no such shop to put it in.";

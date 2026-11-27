@@ -3251,3 +3251,15 @@ tiles and RECENT ALERTS in one column with no sideways scroll. No console error 
 
 **Untested live:** with real game servers, real emails and a real SEND TEST EMAIL; the strip on a phone with real
 alerts; a NOT BACK in the demo (it comes 5 minutes after the start and was not waited for).
+
+## 2026-11-27: BSP-Core 1.27.0's shop answers, mod 0.27.1 and panel 0.10.1 (SU-170; D849 to D855)
+
+**GameTests** (`./gradlew runGameTestServer`, BSP-Core 1.27.0's jar loaded in the dev run): 372/372, run twice. `WebShopsGameTests` adds one: `all` as a shop id is refused "cannot be all"; a name of only invisible characters is refused "a letter or digit you can see"; removing card -1 is "no such card" (1.26.0 threw on the server thread); item data 70 levels deep is "nested too deep". Every earlier shop test holds against 1.27.0 unchanged.
+
+**JUnit** (panel) 199/199: a section whose shop is gone is marked `parentGone` on its tile and page; its switch is refused; a section whose shop exists cannot go to Top level; the gone one can, then chooses a kind and turns on. The grid list now has the demo's Jams.
+
+**In the demo browser** (`--demo`, 0.10.1): Jams' tile is striped OFF with "Its shop is gone: off until it is moved"; its page's bar names the gone shop and has MOVE TO TOP LEVEL; COPY and the switch are greyed with "Move it to Top level first"; SETTINGS › INSIDE offers Top level and "autumn_fair (gone)"; MOVE TO TOP LEVEL says "Saved.", the bar becomes the usual OFF bar with TURN ON, KIND appears and the switch works.
+
+**Not checked (needs the network):** a real section whose shop is gone on a game server with BSP-Core 1.27.0 (none can be made through the api; it comes from a delete half heard before 1.26.0):
+1. If one exists, it shows as its own tile with the red line; MOVE TO TOP LEVEL works and the switch turns it on.
+2. `/bsp shop edit <id>` in game shows it as a top shop afterwards.

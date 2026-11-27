@@ -18,7 +18,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.List;
 
 /**
- * The staff panel's shops on the game server (SU-165; D788 to D825), through the real BSP-Core 1.26.0 jar loaded in the
+ * The staff panel's shops on the game server (SU-165; D788 to D825), through the real BSP-Core jar (1.27.0) loaded in the
  * dev run: every action as the panel signs it, BSP-Core's answers put in the panel's shape, refusals as sentences, the
  * stamp check, and the snapshot's {@code shops}, {@code shopsAt}; and without BSP-Core's shops, every action says so. The
  * test world persists, so every shop made here has an id of its own and is deleted afterwards, also when a check fails.
@@ -142,6 +142,25 @@ public class WebShopsGameTests {
             h.assertTrue(!on.ok() && on.message().contains("On or off"), "a text true is not on: " + on.message());
             WebActions.Answer turned = act(server, "ADMIN", "shop_enable", "\"shop\":\"" + id + "\",\"on\":true,\"edited\":" + stamp(server, id));
             h.assertTrue(turned.ok(), "turned on: " + turned.message());
+            h.assertTrue(act(server, "OWNER", "shop_delete", "\"shop\":\"" + id + "\",\"edited\":" + stamp(server, id)).ok(), "deleted");
+        });
+    }
+
+    /** BSP-Core 1.27.0's changed answers reach the panel as sentences (D849 to D852). */
+    @GameTest(template = SetupGameTests.EMPTY)
+    public void bsp_core_1_27_refusals_are_said_in_words(GameTestHelper h) {
+        with(h, server -> {
+            WebActions.Answer all = act(server, "OWNER", "shop_create", "\"shop\":\"all\",\"name\":\"All\",\"kind\":\"shop\"");
+            h.assertTrue(!all.ok() && all.message().contains("cannot be all"), "all is no shop id (D850): " + all.message());
+            String id = fresh();
+            h.assertTrue(act(server, "OWNER", "shop_create", "\"shop\":\"" + id + "\",\"name\":\"Words\",\"kind\":\"shop\"").ok(), "made");
+            WebActions.Answer blank = act(server, "ADMIN", "shop_set", "\"shop\":\"" + id + "\",\"field\":\"name\",\"value\":\"\\u200b\\u202e\\u200b\",\"edited\":" + stamp(server, id));
+            h.assertTrue(!blank.ok() && blank.message().contains("a letter or digit you can see"), "an invisible-only name (D851): " + blank.message());
+            WebActions.Answer under = act(server, "ADMIN", "shop_item_remove", "\"shop\":\"" + id + "\",\"index\":-1,\"edited\":" + stamp(server, id));
+            h.assertTrue(!under.ok() && under.message().contains("no such card"), "a negative place is no card: " + under.message());
+            String deep = "{a:".repeat(70) + "1" + "}".repeat(70);
+            WebActions.Answer nested = act(server, "ADMIN", "shop_item_add", "\"shop\":\"" + id + "\",\"item\":\"minecraft:stone\",\"nbt\":\"" + deep + "\",\"count\":1,\"place\":0,\"edited\":" + stamp(server, id));
+            h.assertTrue(!nested.ok() && nested.message().contains("nested too deep"), "item data 70 deep (D852): " + nested.message());
             h.assertTrue(act(server, "OWNER", "shop_delete", "\"shop\":\"" + id + "\",\"edited\":" + stamp(server, id)).ok(), "deleted");
         });
     }

@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-27
+
+Built against BSP-Core 1.27.0, whose shop fixes change a few of the answers the staff panel's SHOPS tab gets. The network protocol is still 14; BSP-Core 1.26.0 still answers every shop action as before.
+
+### Changed
+- The staff panel's shop refusals say what BSP-Core 1.27.0 refuses: an id cannot be `all`; a name needs a letter or digit you can see; a section moves only into another shop, or to Top level when its shop is gone; item data may be too long or nested too deep.
+
 ## [0.27.0] - 2026-11-27
 
 The network protocol is still 14. The Streamer Mode fix below is client only. The shops need BSP-Core 1.26.0 on the servers (its own network protocol 25: every server and player moves to it at once) and the staff panel 0.9.0.
