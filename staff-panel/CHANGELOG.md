@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-27
+
+Server alerts: an email and a strip on every tab when a game server freezes or crashes. Nothing new on the game servers
+(they send their own address in a later mod release; until then the panel's `ALERT_SERVERS` variable gives it).
+
+### Added
+- Server alerts. The panel watches every game server's snapshots. A server silent for 20 seconds is checked three times,
+  20 seconds apart, with a plain connection to its game port; after the third it is frozen (the port answers),
+  crashed (closed), not answering (no answer) or not sending (no address to check). A server that said it was stopping
+  has 5 minutes to come back before it is "not back after its restart". One email per outage and one when it is back,
+  saying how long it was out; servers silent within a minute of each other share an email. When the panel hears no
+  server at all it says so in one email instead of one per server. Slow servers (above `ALERT_SLOW_MSPT` ms a tick for
+  5 minutes) only when that variable is set. The alerts are kept 30 days in the panel's database (`panel_alerts`).
+- The email settings come only from the panel server's variables in Pterodactyl: `SMTP_HOST`, `SMTP_PORT` (587 or
+  465), `SMTP_USER`, `SMTP_PASSWORD`, `ALERT_EMAIL_TO`, optionally `ALERT_EMAIL_FROM`, `ALERT_SERVERS`
+  (`Name=host:port`, for the port check) and `ALERT_SLOW_MSPT`. Nothing prints their values. The console's `alerts`
+  and `test-email`, and an Owner's test email from the panel (once in 30 seconds, logged).
+- The alerts on the pages: a strip above every tab while a server is out (red, with a WORLDS key), restarting on
+  schedule (blue) or, on WORLDS, being checked (gold); each WORLDS tile shows its state; RECENT ALERTS under the WORLDS
+  grid lists the last 7 days, with the email line and SEND TEST EMAIL for Owners. Pages are told within a second when
+  the alerts change.
+
 ## [0.9.0] - 2026-11-27
 
 The SHOPS tab. With BSP-Server Utilities 0.27.0 and BSP-Core 1.26.0 on the game servers.

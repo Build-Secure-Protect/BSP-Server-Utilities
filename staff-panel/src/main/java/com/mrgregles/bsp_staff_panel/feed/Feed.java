@@ -57,6 +57,17 @@ public final class Feed {
         listeners.add(r);
     }
 
+    /** Hears every snapshot the feed takes, a planned stop's last one included (SU-167: the server alerts). */
+    public interface SnapshotListener {
+        void heard(String server, long heardAt, JsonObject snapshot);
+    }
+
+    private final List<SnapshotListener> snapshotListeners = new CopyOnWriteArrayList<>();
+
+    public void onSnapshot(SnapshotListener l) {
+        snapshotListeners.add(l);
+    }
+
     /** One message as it travels on the web channel: id, time, server, kind, payload on their own lines. */
     public boolean acceptMessage(String message) {
         String[] parts = message.split("\n", 5);
@@ -103,11 +114,13 @@ public final class Feed {
         }
         if (o.has("stopping") && o.get("stopping").isJsonPrimitive() && o.get("stopping").getAsBoolean()) {
             servers.remove(server); // its last word before it stops: gone at once, not 20 s later (audit)
+            snapshotListeners.forEach(l -> l.heard(server, heardAt, o)); // a planned stop (SU-167)
             lastMessageAt = clock.getAsLong();
             listeners.forEach(Runnable::run);
             return true;
         }
         servers.put(server, new Entry(server, heardAt, o));
+        snapshotListeners.forEach(l -> l.heard(server, heardAt, o)); // SU-167
         rememberSkins(o);
         lastMessageAt = clock.getAsLong();
         listeners.forEach(Runnable::run);

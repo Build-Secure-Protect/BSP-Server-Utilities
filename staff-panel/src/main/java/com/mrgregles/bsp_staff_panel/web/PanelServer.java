@@ -292,6 +292,16 @@ public final class PanelServer {
         return this;
     }
 
+    private volatile com.mrgregles.bsp_staff_panel.alerts.Alerts alerts;
+    private volatile long lastTestEmail;
+    private String lastAlerts = "";
+
+    /** The server alerts (SU-167; D826 to D834): what WORLDS and the banner show, and an Owner's test email. */
+    public PanelServer withAlerts(com.mrgregles.bsp_staff_panel.alerts.Alerts a) {
+        this.alerts = a;
+        return this;
+    }
+
     private volatile com.mrgregles.bsp_staff_panel.shops.ShopDesk shopDesk;
 
     /** The SHOPS tab (SU-161; D788 to D814). */
@@ -575,6 +585,8 @@ public final class PanelServer {
             case "/api/pmsg", "/api/pmsg/list", "/api/pmsg/send", "/api/pmsg/end" -> playerTalkPost(ex, id, path, body);
             case "/api/bans", "/api/ban/history" -> bansList(ex, id, path, body);
             case "/api/ban", "/api/ban/edit", "/api/ban/lift" -> banChange(ex, id, path, body);
+            case "/api/alerts" -> alertsGet(ex, id); // SU-167
+            case "/api/alerts/test" -> alertsTest(ex, id);
             case "/api/staff/add" -> staffAdd(ex, id, body);
             case "/api/staff/action" -> staffAction(ex, id, body);
             case "/api/chat/search" -> chatSearch(ex, id, body);
@@ -824,6 +836,51 @@ public final class PanelServer {
         JsonObject o = ok();
         o.add("staff", list);
         o.addProperty("now", now);
+        json(ex, 200, o);
+    }
+
+    /** The server alerts for anyone logged in (R4): states, open alerts, the last 7 days; Owners also the email line. */
+    private void alertsGet(HttpExchange ex, AccessJwt.Identity id) throws Exception {
+        Optional<Account> a = session(ex, id);
+        if (a.isEmpty()) {
+            json(ex, 401, refused("Log in again."));
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.alerts.Alerts al = alerts;
+        if (al == null) {
+            json(ex, 200, refused("Server alerts are not set up on this panel."));
+            return;
+        }
+        JsonObject o = al.watch().json(a.get().rank == Rank.OWNER);
+        o.addProperty("ok", true);
+        json(ex, 200, o);
+    }
+
+    /** An Owner's SEND TEST EMAIL (D829): once every 30 seconds at most, logged. */
+    private void alertsTest(HttpExchange ex, AccessJwt.Identity id) throws Exception {
+        Optional<Account> me = owner(ex, id);
+        if (me.isEmpty()) {
+            return;
+        }
+        com.mrgregles.bsp_staff_panel.alerts.Alerts al = alerts;
+        if (al == null) {
+            json(ex, 200, refused("Server alerts are not set up on this panel."));
+            return;
+        }
+        long now = clock.getAsLong();
+        if (now - lastTestEmail < 30_000L) {
+            json(ex, 200, refused("A test email went less than 30 seconds ago: wait a moment."));
+            return;
+        }
+        lastTestEmail = now;
+        String err = al.sendTest(me.get().mcName);
+        store.log(new PanelStore.LogLine(now, me.get().email, "sent a test alert email" + (err == null ? "" : "; it failed: " + err)));
+        if (err != null) {
+            json(ex, 200, refused("The test email did not go: " + err + "."));
+            return;
+        }
+        JsonObject o = ok();
+        o.addProperty("message", "Test email sent to " + al.settings().to().size() + (al.settings().to().size() == 1 ? " address." : " addresses."));
         json(ex, 200, o);
     }
 
@@ -2476,6 +2533,20 @@ public final class PanelServer {
                     desk.tick(); // a draw seen beginning or ending (D411)
                 } catch (RuntimeException bad) {
                     System.err.println("[panel] watching the lottery: " + bad); // never stops the live feed (audit)
+                }
+            }
+            com.mrgregles.bsp_staff_panel.alerts.Alerts al = alerts;
+            if (al != null) {
+                try {
+                    String sig = al.watch().signature();
+                    if (!sig.equals(lastAlerts)) { // a server checked, out, back, or an email sent: every page reads the alerts again (SU-168)
+                        lastAlerts = sig;
+                        for (Live l : live) {
+                            write(l, "event: alerts\ndata: {}\n\n");
+                        }
+                    }
+                } catch (RuntimeException bad) {
+                    System.err.println("[panel] server alerts on the pages: " + bad); // never stops the live feed
                 }
             }
             long now = clock.getAsLong();

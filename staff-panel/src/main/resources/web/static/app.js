@@ -291,6 +291,7 @@ async function render() {
   if (tab !== "More") moreView = "home";
   placeChat();
   nav();
+  AlertsView.banner(); // the alert strip above every tab (SU-168)
   if (tab === "Players") { Players.view(main, live); Players.detail(live); }
   else {
     Players.leave();
@@ -473,6 +474,7 @@ function connect() {
   on("lottery", (e) => Lottery.event(JSON.parse(e.data))); // a draw began or ended (D411)
   on("totems", (e) => Totems.event(JSON.parse(e.data))); // the board read, a steal starting or ending (SU-99)
   on("pmsg", (e) => PlayerMsg.event(JSON.parse(e.data))); // a private line to or from a player (SU-111)
+  on("alerts", () => AlertsView.load()); // a server checked, out or back (SU-168)
   on("ended", () => { drop(es); location.href = "/login"; });
   // this staff member opened the panel on more pages than the limit: this, the oldest, stops until asked (audit)
   on("replaced", () => { drop(es); replaced(); });
@@ -490,6 +492,7 @@ setInterval(() => {
 // after a gap in the feed: the chat, the room and messages, tags, the lottery and notes read again
 function afterGap() {
   ChatView.resync(); StaffView.resync(); Tags.changed(); Lottery.resync(); Notes.reset(); MapView.mapsChanged(); Totems.resync(); PlayerMsg.resync();
+  AlertsView.load();
 }
 
 function replaced() {
@@ -568,5 +571,6 @@ async function whoAmI() {
   ChatView.start();
   StaffView.start();
   PlayerMsg.start(); // the red count on More
+  AlertsView.start(); // server alerts (SU-168)
   connect();
 })();

@@ -126,18 +126,22 @@ const Worlds = (() => {
     all.forEach((s) => tiles.appendChild(tile(s)));
     if (!all.length) tiles.appendChild(el("div", "note", "No game server is sending to the panel."));
     box.appendChild(tiles);
+    if (typeof AlertsView !== "undefined") box.appendChild(AlertsView.recentBox(typeof me !== "undefined" ? me : null)); // SU-168
     drawFound();
   }
   function tile(s) {
-    const t = el("button", "wdtile" + (s.live ? "" : " off")); t.type = "button"; t.dataset.keep = "wd:tile:" + s.server;
-    const top = el("div", "wdtrow"); const dot = el("i", "wddot" + (s.live ? "" : " off")); top.appendChild(dot);
+    const al = typeof AlertsView !== "undefined" ? AlertsView.tileOf(s.server) : null; // a server out, restarting or being checked (SU-168)
+    const t = el("button", "wdtile" + (al ? " " + al.cls : s.live ? "" : " off")); t.type = "button"; t.dataset.keep = "wd:tile:" + s.server;
+    const top = el("div", "wdtrow"); const dot = el("i", "wddot" + (al ? " " + al.dot : s.live ? "" : " off")); top.appendChild(dot);
     top.appendChild(el("span", "wdname", s.server));
     if ((s.dims || []).length && st.grid && pvpOf(s)) top.appendChild(el("span", "wdpvp", "PvP"));
+    if (al) { al.chip.classList.add("wdalchip"); top.appendChild(al.chip); }
     t.appendChild(top);
+    if (al) t.appendChild(el("div", "wdalline " + al.lineCls, al.line));
     const line = el("div", "wdstat");
     if (s.live) { line.appendChild(el("span", null, (s.count || 0) + " online")); line.appendChild(el("span", null, (s.mspt || 0).toFixed(1) + " ms")); }
-    else line.appendChild(el("span", null, "off · last heard " + (s.heardAt ? ago(Date.now() - s.heardAt) : "before the panel started")));
-    t.appendChild(line);
+    else if (!al) line.appendChild(el("span", null, "off · last heard " + (s.heardAt ? ago(Date.now() - s.heardAt) : "before the panel started")));
+    if (line.children.length) t.appendChild(line); // a tile in an alert says when it was last heard in its alert line
     if (s.live && s.dims && s.dims.length) {
       const d = el("div", "wddims"); s.dims.forEach((x) => d.appendChild(el("span", "wddim", dimName(x.id)))); t.appendChild(d);
     }
@@ -777,6 +781,8 @@ const Worlds = (() => {
     });
   }
   addEventListener("resize", () => { if (host && st.view === "server") drawTable(); });
+  // the alerts changed: the grid's tiles and RECENT ALERTS are drawn again (SU-168); never under an open editor
+  if (typeof AlertsView !== "undefined") AlertsView.onChange(() => { if (host && st.view === "grid" && !st.edit) draw(); });
   addEventListener("keydown", (ev) => { if (ev.key === "Escape" && host && st.edit) closeEditor(false); });
   return { mount, unmount, home, edit, onLive };
 })();

@@ -250,6 +250,26 @@ public interface PanelStore {
     /** Saves these choices together, all or none (ALL and NONE are one change). */
     void putMapChoices(List<MapChoice> choices) throws Exception;
 
+    // ------------------------------------------------------------------ server alerts (SU-167, D826 to D834)
+
+    /**
+     * One server alert ({@code <prefix>panel_alerts} in the panel's own database): a game server frozen, crashed, not
+     * answering, not sending, not back after a planned stop, slow, or the panel hearing no server ({@code kind}). Times in
+     * ms, 0 when not yet; {@code checks} the port checks' times, comma separated. Kept 30 days (D832 e).
+     */
+    record AlertRow(long id, String server, String kind, long sinceMs, long decidedMs, long lastHeardMs, String port, String addr, int players, double mspt,
+                    String checks, long emailedMs, String emailNote, long backMs, long backEmailedMs, long endedMs, String note) {
+    }
+
+    /** Saves an alert as it is now (a new one, or a change to it). */
+    void saveAlert(AlertRow row) throws Exception;
+
+    /** The alerts that began at or after {@code sinceMs}, the oldest first. */
+    List<AlertRow> alerts(long sinceMs) throws Exception;
+
+    /** Forgets ended alerts that began before {@code beforeMs}; returns how many. */
+    int pruneAlerts(long beforeMs) throws Exception;
+
     // ------------------------------------------------------------------ the TOTEMS page (SU-97, D613 to D622)
 
     /**

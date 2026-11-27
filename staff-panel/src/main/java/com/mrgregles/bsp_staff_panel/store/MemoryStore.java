@@ -470,6 +470,27 @@ public final class MemoryStore implements PanelStore {
         choices.forEach(m -> mapChoiceRows.put(m.map(), m));
     }
 
+    // ------------------------------------------------------------------ server alerts (SU-167)
+
+    private final java.util.Map<Long, AlertRow> alertRows = new java.util.LinkedHashMap<>();
+
+    @Override
+    public synchronized void saveAlert(AlertRow row) {
+        alertRows.put(row.id(), row);
+    }
+
+    @Override
+    public synchronized List<AlertRow> alerts(long sinceMs) {
+        return alertRows.values().stream().filter(r -> r.sinceMs() >= sinceMs).sorted(java.util.Comparator.comparingLong(AlertRow::sinceMs)).toList();
+    }
+
+    @Override
+    public synchronized int pruneAlerts(long beforeMs) {
+        int before = alertRows.size();
+        alertRows.values().removeIf(r -> r.endedMs() != 0 && r.sinceMs() < beforeMs);
+        return before - alertRows.size();
+    }
+
     // ------------------------------------------------------------------ the TOTEMS page (SU-97)
 
     private final List<Steal> stealRows = new ArrayList<>();

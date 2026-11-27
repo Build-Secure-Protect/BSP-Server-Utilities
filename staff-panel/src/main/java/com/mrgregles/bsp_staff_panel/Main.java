@@ -216,6 +216,10 @@ public final class Main {
         if (demo) {
             DemoShops.offline(shopDesk); // a server that is off, remembered with its stalls (R3)
         }
+        com.mrgregles.bsp_staff_panel.alerts.Alerts alerts = com.mrgregles.bsp_staff_panel.alerts.Alerts.start(store, feed, publicUrl, seenKey, demo); // SU-167
+        if (demo) {
+            DemoAlerts.fill(alerts.watch(), port); // a server frozen soon after the start, one restarting, a few ended (SU-168)
+        }
         PanelServer server = new PanelServer(host, port, publicUrl, gate, auth, store, feed, System::currentTimeMillis).withActions(actions).withChat(chat).withTalk(talk)
                 .withNotes(notes).withPictures(pictures).withMap(mapRoot.isEmpty() ? null : Path.of(mapRoot))
                 .withMapShown(new com.mrgregles.bsp_staff_panel.web.MapShown(store, System::currentTimeMillis))
@@ -224,6 +228,7 @@ public final class Main {
                 .withBounties(new com.mrgregles.bsp_staff_panel.market.BountyDesk(feed, () -> marketActions, System::currentTimeMillis))
                 .withRegions(regions)
                 .withShops(shopDesk)
+                .withAlerts(alerts)
                 .withTotems(totems).withPlayerTalk(playerTalk)
                 .withOffline(new com.mrgregles.bsp_staff_panel.players.OfflineDesk(store, feed, System::currentTimeMillis, seenKey)).start();
         if (!mapRoot.isEmpty() && !java.nio.file.Files.isRegularFile(Path.of(mapRoot, "index.html"))) {
@@ -244,13 +249,18 @@ public final class Main {
             stopChat.run();
             stopRest.run();
         };
+        Runnable stopAll = stopFeed;
+        stopFeed = () -> {
+            alerts.stop();
+            stopAll.run();
+        };
         System.out.println("BSP staff panel listening on " + host + ":" + server.port() + " for " + publicUrl);
         if (demo) {
             Auth.NewLink l = auth.createOwner(Demo.EMAIL, "Demo_Owner");
             Demo.talk(store, l.account());
             System.out.println("DEMO: made-up data, nothing reaches a game server. Set up the demo Owner at " + publicUrl + "/setup#" + l.token());
         }
-        console(auth, store, publicUrl, server, stopFeed, actionKey, redisState, feed);
+        console(auth, store, publicUrl, server, stopFeed, actionKey, redisState, feed, alerts);
     }
 
     /** The TOTEMS page (SU-97): the board read every 30 s (D618), points changes older than 90 days dropped every hour. */
@@ -387,7 +397,7 @@ public final class Main {
     }
 
     private static void console(Auth auth, PanelStore store, String publicUrl, PanelServer server, Runnable stopFeed, String actionKey,
-                                java.util.function.Supplier<String> redisState, Feed feed) throws Exception {
+                                java.util.function.Supplier<String> redisState, Feed feed, com.mrgregles.bsp_staff_panel.alerts.Alerts alerts) throws Exception {
         System.out.println("Type help for the console's commands.");
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         String line;
@@ -404,6 +414,8 @@ public final class Main {
                             staff                                  every staff account
                             action-key                             the panel's public key, every game server's webPanel.panelKey
                             status                                 open pages and servers heard from
+                            alerts                                 server alerts: email on or off (never a value), open alerts
+                            test-email                             sends a test alert email to ALERT_EMAIL_TO
                             stop                                   stops the panel""");
                     case "create-owner" -> {
                         if (a.length != 3) {
@@ -436,6 +448,19 @@ public final class Main {
                         System.out.println(redisState.get());
                         System.out.println("Game servers sending: " + (feed.live().isEmpty() ? "none" : String.join(", ", feed.live()))
                                 + feed.live().stream().map(x -> feed.whyNoAnswers(x)).filter(java.util.Objects::nonNull).map(x -> "\n  " + x).collect(java.util.stream.Collectors.joining()));
+                    }
+                    case "alerts" -> { // SU-167: names variables, never their values
+                        System.out.println("Server alerts: " + alerts.settings() + ".");
+                        java.util.List<com.mrgregles.bsp_staff_panel.alerts.ServerWatch.Alert> open = alerts.watch().alerts().stream()
+                                .filter(com.mrgregles.bsp_staff_panel.alerts.ServerWatch.Alert::open).toList();
+                        System.out.println(open.isEmpty() ? "No open alert." : "Open: " + open.stream().map(x -> x.server() + " " + x.kind())
+                                .collect(java.util.stream.Collectors.joining(", ")));
+                    }
+                    case "test-email" -> {
+                        System.out.println("Sending a test email…");
+                        String err = alerts.sendTest("the console");
+                        System.out.println(err == null ? "Sent to " + alerts.settings().to().size() + (alerts.settings().to().size() == 1 ? " address" : " addresses")
+                                + ": look in the inbox (and the spam folder)." : "Not sent: " + err + ".");
                     }
                     case "stop" -> {
                         server.stop();

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Alerts Refined</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Refined page for sets BK and BL (D834: BK A, BL A; D826 to D833), SU-167: the staff panel
+   warns when a game server freezes or crashes. Server names are the network's; times, players and numbers are made up. */
+:root{ --bg:#f3f1ea; --panel:#ffffff; --line:#d9d4c7; --fg:#1a1b20; --muted:#5f6472; --acc:#0c8f78; --board:#e7e3d8;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e8eaf0; --muted:#9aa3b5; --acc:#19d3b0; --board:#0b0d11; color-scheme:dark; }
+*{ box-sizing:border-box; }
+body{ background:var(--bg); color:var(--fg); font-family:var(--body); margin:0; font-size:14px; line-height:1.5; }
+.wrap{ max-width:1320px; margin:0 auto; padding:28px 16px 56px; display:flex; flex-direction:column; gap:30px; }
+h1{ font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em; } h2{ font-size:20px; margin:0; color:var(--acc); } h3{ font-size:16px; margin:0; }
+.lede{ color:var(--muted); margin:0; max-width:84ch; }
+section{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.card p{ margin:0; font-size:13px; color:var(--muted); max-width:92ch; }
+.stage{ background:var(--board); border-radius:4px; padding:18px; display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; justify-content:center; overflow-x:auto; }
+.cap{ font-size:12px; color:var(--muted); margin:0; }
+.setnav{ display:flex; gap:12px; flex-wrap:wrap; font-size:13px; } .setnav a{ color:var(--acc); }
+.states{ display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ---------- the BSP panel tokens (staff-panel/src/main/resources/web/static/panel.css) ---------- */
+.dk{ --bg:#0f1115; --bg2:#14171d; --pn:#1a1d24; --ln:#2a2f3a; --tx:#e8eaf0; --soft:#cfd4de; --mu:#9aa3b5; --dim:#6b7180;
+  --teal:#19d3b0; --gold:#ffd23a; --vio:#b58cff; --coral:#ff6b5c; --blue:#7fb2ff;
+  --pbody:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --pmono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  background:var(--bg); color:var(--tx); font:14px/1.4 var(--pbody); color-scheme:dark; }
+.dk .mu{ color:var(--mu); } .dk .mono{ font-family:var(--pmono); }
+
+/* chips for the states, shared by every option */
+.chip{ font:600 10.5px var(--pbody); letter-spacing:.04em; padding:1px 8px; border-radius:999px; border:1px solid; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+.chip.frozen{ color:#ff8f86; background:#ff6b5c1f; border-color:#ff6b5c66; }
+.chip.crashed{ color:#ffb3ad; background:#ff3b3b2a; border-color:#ff3b3b77; }
+.chip.check{ color:var(--gold); background:#ffd23a1a; border-color:#ffd23a55; }
+.chip.restart{ color:var(--blue); background:#7fb2ff1a; border-color:#7fb2ff55; }
+.chip.late{ color:#ffb36b; background:#ff9a3b1f; border-color:#ff9a3b66; }
+.chip.slow{ color:var(--gold); background:#ffd23a14; border-color:#ffd23a44; }
+.chip.back{ color:var(--teal); background:#19d3b01a; border-color:#19d3b055; }
+.dots{ display:inline-flex; gap:3px; } .dots i{ width:6px; height:6px; border-radius:50%; background:#3a3f4b; } .dots i.on{ background:var(--gold); }
+
+/* ---------- mail client frame ---------- */
+.mail{ width:min(560px,100%); background:#fff; color:#1d1f24; border-radius:10px; overflow:hidden; box-shadow:0 1px 0 rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.12); font:14px/1.5 -apple-system,"Segoe UI",system-ui,sans-serif; color-scheme:light; }
+.mail .mh{ background:#f4f5f7; border-bottom:1px solid #e3e5ea; padding:10px 14px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; font-size:12.5px; }
+.mail .mh b{ color:#6a6f7b; font-weight:500; } .mail .mh .subj{ grid-column:1/-1; font-size:15px; font-weight:600; color:#111; margin-top:4px; }
+.mail .mb{ padding:16px 16px 18px; }
+.mail pre{ margin:0; font:13px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace; white-space:pre-wrap; color:#1d1f24; }
+.mail .lbl{ font-size:11px; color:#6a6f7b; text-transform:uppercase; letter-spacing:.06em; padding:6px 14px; background:#fafbfc; border-top:1px solid #eceef2; }
+/* option B's html email */
+.hm{ background:#0f1115; padding:18px; }
+.hm .hc{ background:#1a1d24; border:1px solid #2a2f3a; border-radius:12px; overflow:hidden; color:#e8eaf0; }
+.hm .hbar{ display:flex; align-items:center; gap:8px; padding:10px 14px; background:#14171d; border-bottom:1px solid #2a2f3a; font:700 12px ui-monospace,Menlo,monospace; letter-spacing:.12em; color:#19d3b0; }
+.hm .hbar b{ color:#e8eaf0; }
+.hm .hbody{ padding:16px; display:flex; flex-direction:column; gap:12px; }
+.hm .big{ font:700 22px ui-monospace,Menlo,monospace; letter-spacing:.02em; }
+.hm .big.red{ color:#ff8f86; } .hm .big.teal{ color:#19d3b0; }
+.hm table{ border-collapse:collapse; font-size:13px; width:100%; } .hm td{ padding:4px 0; vertical-align:top; } .hm td:first-child{ color:#9aa3b5; width:42%; padding-right:10px; }
+.hm .cks{ display:flex; gap:6px; flex-wrap:wrap; } .hm .ck{ font:600 11.5px ui-monospace,Menlo,monospace; padding:3px 8px; border-radius:6px; background:#12151b; border:1px solid #2a2f3a; color:#cfd4de; }
+.hm .ck i{ color:#ff8f86; font-style:normal; }
+.hm .go{ align-self:flex-start; background:#19d3b0; color:#0f1115; font-weight:600; font-size:13px; padding:8px 14px; border-radius:8px; text-decoration:none; }
+.hm .foot{ font-size:11.5px; color:#6b7180; }
+.hm .bar{ height:8px; border-radius:4px; background:#12151b; position:relative; overflow:hidden; }
+.hm .bar span{ position:absolute; top:0; bottom:0; background:#ff6b5c; border-radius:4px; }
+/* phone lock-screen preview */
+.lock{ width:300px; border-radius:26px; padding:14px 10px 18px; background:linear-gradient(160deg,#30425c,#1b2333); color:#fff; display:flex; flex-direction:column; gap:8px; font:13px/1.35 -apple-system,system-ui,sans-serif; }
+.lock .clock{ text-align:center; font-size:38px; font-weight:300; letter-spacing:-.01em; margin:4px 0 6px; }
+.note{ background:rgba(255,255,255,.18); backdrop-filter:blur(8px); border-radius:14px; padding:9px 11px; }
+.note .app{ font-size:11px; opacity:.8; display:flex; justify-content:space-between; } .note b{ display:block; font-weight:600; margin-top:1px; } .note span{ opacity:.9; }
+
+/* ---------- the panel frame ---------- */
+.pf{ width:1080px; max-width:100%; border-radius:12px; overflow:hidden; border:1px solid #2a2f3a; display:grid; grid-template-columns:168px 1fr; min-height:520px; }
+.side{ background:#14171d; border-right:1px solid #2a2f3a; padding:14px 10px; display:flex; flex-direction:column; gap:2px; }
+.side .brand{ font:700 13px var(--pmono); letter-spacing:.12em; color:var(--teal); padding:2px 8px 12px; display:flex; align-items:center; gap:8px; } .side .brand b{ color:var(--tx); }
+.side a{ display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; color:var(--mu); text-decoration:none; font-size:13px; position:relative; }
+.side a.on{ background:#19d3b014; color:var(--teal); }
+.side a .ct{ margin-left:auto; font:700 10px var(--pbody); background:#ff3b3b; color:#fff; border-radius:999px; padding:0 6px; line-height:16px; }
+.main{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.top{ display:flex; align-items:center; gap:10px; }
+.wdtitle{ font:700 13px var(--pmono); letter-spacing:.12em; color:var(--teal); }
+.small{ font-size:11.5px; } .grow{ flex:1; min-width:0; }
+.wdkey{ height:30px; padding:0 11px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; font:600 11.5px var(--pbody); background:var(--pn); border:1px solid var(--ln); color:var(--soft); }
+.wdkey.pri{ background:var(--teal); border-color:var(--teal); color:#0f1115; } .wdkey.ghost{ background:transparent; }
+.search{ height:32px; border-radius:9px; background:var(--pn); border:1px solid var(--ln); padding:0 11px; font-size:12.5px; color:var(--dim); display:flex; align-items:center; width:260px; }
+.tiles{ display:grid; grid-template-columns:repeat(auto-fill,minmax(205px,1fr)); gap:10px; }
+.tile{ background:var(--pn); border:1px solid var(--ln); border-radius:12px; padding:11px 13px; display:flex; flex-direction:column; gap:7px; position:relative; min-width:0; }
+.tile.off{ opacity:.6; }
+.trow{ display:flex; align-items:center; gap:8px; min-width:0; }
+.wname{ font:700 13.5px var(--pmono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); flex:none; } .dot.off{ background:var(--dim); } .dot.red{ background:#ff6b5c; box-shadow:0 0 0 3px #ff6b5c33; } .dot.gold{ background:var(--gold); } .dot.blue{ background:var(--blue); }
+.stat{ display:flex; gap:12px; font-size:12px; color:var(--mu); flex-wrap:wrap; }
+.dims{ display:flex; gap:4px; flex-wrap:wrap; } .dim{ font-size:11px; color:var(--soft); background:#12151b; border:1px solid var(--ln); border-radius:6px; padding:1px 7px; }
+.pvp{ margin-left:auto; font:600 10px var(--pbody); color:var(--coral); background:#ff6b5c22; border:1px solid #ff6b5c55; border-radius:999px; padding:0 7px; }
+.say{ font-size:11.5px; color:var(--soft); line-height:1.4; }
+.say.red{ color:#ff8f86; } .say.gold{ color:var(--gold); } .say.blue{ color:var(--blue); }
+/* option A */
+.banner{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:#3a1d1d; border:1px solid #5a2a2a; color:#ffd2ce; font-size:13px; flex-wrap:wrap; }
+.banner b{ color:#fff; } .banner .grow{ min-width:120px; }
+.banner + .banner{ background:#1b2433; border-color:#2c3d59; color:#cfe0ff; }
+.tile.a-red{ border-color:#ff6b5c88; background:linear-gradient(#ff6b5c10,#ff6b5c10),var(--pn); }
+.tile.a-blue{ border-color:#7fb2ff66; }
+.tile.a-gold{ border-color:#ffd23a66; }
+.hist{ background:var(--bg2); border:1px solid var(--ln); border-radius:12px; overflow:hidden; }
+.hist .hh{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid var(--ln); }
+.hrow{ display:grid; grid-template-columns:92px 140px 1fr 90px 74px; gap:10px; align-items:center; padding:7px 12px; font-size:12.5px; border-top:1px solid #20242c; }
+.hrow:first-of-type{ border-top:0; }
+.hrow .t{ font-family:var(--pmono); color:var(--mu); font-size:11.5px; }
+.hrow .s{ font-family:var(--pmono); font-weight:600; }
+.hrow .m{ color:var(--mu); text-align:right; font-size:11.5px; }
+/* option B */
+.bgrid{ display:grid; grid-template-columns:1fr 300px; gap:12px; align-items:start; }
+.tile.b{ padding-left:16px; } .tile.b::before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:4px; border-radius:0 3px 3px 0; background:transparent; }
+.tile.b.red::before{ background:#ff6b5c; } .tile.b.gold::before{ background:var(--gold); } .tile.b.blue::before{ background:var(--blue); }
+.acol{ background:var(--bg2); border:1px solid var(--ln); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; }
+.acol .hh{ display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--ln); }
+.tabs2{ display:grid; grid-template-columns:1fr 1fr; background:var(--pn); border:1px solid var(--ln); border-radius:8px; padding:2px; margin:10px 12px 4px; }
+.tabs2 span{ text-align:center; padding:4px 0; border-radius:6px; font-size:11.5px; color:var(--mu); } .tabs2 span.on{ background:var(--teal); color:#0f1115; font-weight:600; }
+.aitem{ padding:9px 12px; display:flex; flex-direction:column; gap:4px; border-top:1px solid #20242c; }
+.aitem:first-of-type{ border-top:0; }
+.aitem .r1{ display:flex; align-items:center; gap:8px; } .aitem .r1 .s{ font:600 12.5px var(--pmono); }
+.aitem .r2{ font-size:11.5px; color:var(--mu); }
+.tl{ display:flex; align-items:center; gap:0; margin-top:2px; }
+.tl i{ height:4px; flex:1; background:#2a2f3a; } .tl i.on{ background:#ff6b5c; } .tl i.g{ background:var(--gold); } .tl i.t{ background:var(--teal); }
+/* option C */
+.bell{ position:relative; width:32px; height:30px; border-radius:8px; border:1px solid var(--ln); background:var(--pn); display:grid; place-items:center; }
+.bell svg{ width:16px; height:16px; stroke:var(--soft); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.bell .ct{ position:absolute; top:-6px; right:-6px; font:700 10px var(--pbody); background:#ff3b3b; color:#fff; border-radius:999px; padding:0 5px; line-height:16px; border:2px solid var(--bg); }
+.cwrap{ position:relative; }
+.drawer{ position:absolute; top:44px; right:0; width:360px; background:var(--bg2); border:1px solid var(--ln); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.5); z-index:2; overflow:hidden; }
+.drawer .hh{ display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--ln); }
+.drawer .sec{ font:700 10.5px var(--pmono); letter-spacing:.12em; color:var(--mu); padding:8px 12px 2px; }
+.tile.c-ring{ box-shadow:0 0 0 2px #ff6b5c; border-color:transparent; }
+.tile.c-ring2{ box-shadow:0 0 0 2px #7fb2ff88; border-color:transparent; }
+.tabtitle{ display:inline-flex; align-items:center; gap:8px; background:#2b2f37; color:#e8eaf0; font:12px system-ui,sans-serif; padding:6px 12px; border-radius:8px 8px 0 0; }
+.tabtitle i{ width:10px; height:10px; background:#19d3b0; border-radius:2px; }
+.chrome{ display:flex; flex-direction:column; width:1080px; max-width:100%; }
+.chrome .bar{ background:#202329; padding:6px 10px 0; border-radius:12px 12px 0 0; }
+.chrome .pf{ border-radius:0 0 12px 12px; }
+/* phones */
+.ph{ width:375px; flex:none; border-radius:28px; border:8px solid #050608; overflow:hidden; background:#0f1115; display:flex; flex-direction:column; }
+.ph .pt{ display:flex; align-items:center; gap:8px; padding:12px 14px 8px; background:#14171d; border-bottom:1px solid #2a2f3a; }
+.ph .pt .brand{ font:700 12px var(--pmono); letter-spacing:.12em; color:var(--teal); } .ph .pt .brand b{ color:var(--tx); }
+.ph .pm{ padding:12px; display:flex; flex-direction:column; gap:10px; }
+.ph .tiles{ grid-template-columns:1fr; }
+.ph .ptabs{ display:flex; justify-content:space-around; padding:8px 6px 12px; background:#14171d; border-top:1px solid #2a2f3a; font-size:10.5px; color:var(--mu); margin-top:auto; }
+.ph .ptabs span{ position:relative; } .ph .ptabs span.on{ color:var(--teal); }
+.ph .ptabs .ct{ position:absolute; top:-8px; right:-12px; font:700 9.5px var(--pbody); background:#ff3b3b; color:#fff; border-radius:999px; padding:0 5px; line-height:14px; }
+.ph .hrow{ grid-template-columns:1fr auto; gap:2px 10px; } .ph .hrow .t{ grid-column:1/-1; }
+.ph .drawer{ position:static; width:auto; box-shadow:none; }
+.pros{ margin:0; padding-left:18px; font-size:13px; color:var(--muted); } .pros li{ margin:2px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Server alerts: the refined look</h1>
+    <p class="lede">SU-167, D826 to D834: BK A (a plain-text letter) and BL A (a banner on every tab, coloured tiles and RECENT ALERTS on WORLDS). One email per outage and one when it is back (D830, D828); servers that go out within the same minute share an email. Server names are the network's; times, players and numbers are made up.</p>
+    <div class="setnav"><a href="#r1">R1 the alert email</a><a href="#r2">R2 every kind of alert</a><a href="#r3">R3 shared and back emails</a><a href="#r4">R4 the panel</a><a href="#r5">R5 on a phone</a></div>
+  </header>
+
+  <section id="r1">
+    <h2>R1 · the alert email</h2>
+    <div class="card">
+      <p>Plain text, sent from the Google account made for alerts to the addresses in the panel's <code>ALERT_EMAIL_TO</code> variable. Times in UK time. Sent once per outage, about 80 seconds after the server was last heard (silent 20 s, then three checks 20 s apart).</p>
+      <div class="stage">
+        <div class="mail">
+          <div class="mh"><b>From</b><span>BSP staff panel</span><b>To</b><span>owner</span><span class="subj">BSP-Frostwarf is frozen</span></div>
+          <div class="mb"><pre>BSP-Frostwarf is frozen: it stopped sending at 14:02:15
+(Friday 27 November, UK time), 1 minute 20 seconds before
+this email. Its port still answers, so the game is stuck
+but the server process is still running.
+
+Last heard     14:02:15, 11 players online, 48.2 ms a tick
+Checked        14:02:55, 14:03:15, 14:03:35: silent each time
+Its port       192.168.1.27:25565 answered at 14:03:35
+
+A frozen server does not stop on its own: restart it in
+Pterodactyl (Console, Restart; Kill if it will not stop).
+
+WORLDS on the panel:
+https://staff.buildsecureprotect.com/#worlds
+
+This is the only email for this outage. You get one more
+when BSP-Frostwarf is back.</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="r2">
+    <h2>R2 · every kind of alert</h2>
+    <div class="card">
+      <p>The subject and the first paragraph for each kind; the rest of the letter is as R1 (last heard, the checks, the port, what to do, the link).</p>
+      <div class="dk" style="padding:12px;border-radius:8px;display:flex;flex-direction:column;gap:0">
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip frozen">FROZEN</span></span><span class="s">BSP-Frostwarf is frozen</span><span class="mu">Its port still answers, so the game is stuck but the server process is still running.</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip crashed">CRASHED</span></span><span class="s">BSP-Stormfall has crashed</span><span class="mu">Its port is closed: the server crashed, or was stopped without saying so (a Kill in Pterodactyl). If Pterodactyl restarts it, you get the back email.</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip crashed">NO ANSWER</span></span><span class="s">BSP-Moongrove is not answering</span><span class="mu">Its address did not answer at all within 3 seconds: the server or the machine it runs on may be down, or the network between them.</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip check">NOT SENDING</span></span><span class="s">BSP-Sanctuary is not sending</span><span class="mu">The panel has no address for it, so it cannot tell frozen from crashed. (Fixed by the address in its snapshot, or in the panel's <code>ALERT_SERVERS</code> variable.)</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip late">NOT BACK</span></span><span class="s">BSP-Spawn is not back after its restart</span><span class="mu">It said it was stopping at 06:00:04 and has not sent anything in the 5 minutes since. Its port is closed (it is not running) / still answers (it is running but stuck starting or stopping).</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip slow">SLOW</span></span><span class="s">BSP-Boulderbrook is very slow</span><span class="mu">Only when the panel's <code>ALERT_SLOW_MSPT</code> variable is set (off by default). Above 100 ms a tick (under 10 TPS) for 5 minutes running; back once it stays under for 2 minutes.</span></div>
+        <div class="hrow" style="grid-template-columns:150px 260px 1fr"><span><span class="chip frozen">PANEL</span></span><span class="s">The staff panel cannot hear the game servers</span><span class="mu">No game server has been heard for 20 seconds, so the fault is most likely the panel's own Redis or database, not seven servers at once. Server alerts wait until it hears one again; one email, and one when it hears them again.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="r3">
+    <h2>R3 · shared and back emails</h2>
+    <div class="card">
+      <p>Servers whose silences begin within a minute of each other share one email (the panel waits for the other's checks to finish, at most about a minute more). Back emails that fall due together share one too. A back email goes only after an alert email went.</p>
+      <div class="stage">
+        <div class="mail">
+          <div class="mh"><b>From</b><span>BSP staff panel</span><b>To</b><span>owner</span><span class="subj">2 game servers are out: BSP-Moongrove, BSP-Stormfall</span></div>
+          <div class="mb"><pre>2 game servers stopped sending within a minute of each
+other (Friday 27 November, UK time). Both are at
+192.168.1.28: the machine itself may be down.
+
+BSP-Moongrove has crashed
+  Last heard   09:41:02, 4 players online, 22.1 ms a tick
+  Its port     192.168.1.28:25565 is closed
+
+BSP-Stormfall has crashed
+  Last heard   09:41:05, 2 players online, 18.4 ms a tick
+  Its port     192.168.1.28:25566 is closed
+
+WORLDS on the panel:
+https://staff.buildsecureprotect.com/#worlds</pre></div>
+          <div class="lbl">back</div>
+          <div class="mh"><b>From</b><span>BSP staff panel</span><b>To</b><span>owner</span><span class="subj">BSP-Frostwarf is back after 7 minutes</span></div>
+          <div class="mb"><pre>BSP-Frostwarf is back: sending again since 14:09:40
+(Friday 27 November, UK time).
+
+Out for        7 minutes 25 seconds (14:02:15 to 14:09:40)
+What it was    frozen (its port answered)
+Now            0 players online, 41.0 ms a tick</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="r4">
+    <h2>R4 · the panel</h2>
+    <div class="card">
+      <p>A banner on every tab while an alert is open (red; blue while a planned restart is in its 5 minutes; gold while the panel is checking a server, on WORLDS only). The tiles say what happened. RECENT ALERTS under the grid: the last 7 days (30 kept), newest first. Owners also see the email line and SEND TEST EMAIL; everyone else sees the alerts only.</p>
+      <div class="stage dk" style="background:#0b0d11">
+        <div class="pf">
+          <div class="side">
+            <div class="brand">BSP <b>STAFF</b></div>
+            <a>Players</a><a>Map</a><a class="on">Worlds</a><a>Chat</a><a>Totems</a><a>Market</a><a>Shops</a><a>Staff</a>
+          </div>
+          <div class="main">
+            <div class="banner"><span class="chip frozen">FROZEN</span><span class="grow"><b>BSP-Frostwarf</b> stopped sending at 14:02:15 (4 min ago); its port still answers. Restart it in Pterodactyl. Emailed 14:03.</span><span class="wdkey ghost" style="color:#ffd2ce;border-color:#5a2a2a">WORLDS</span></div>
+            <div class="banner"><span class="chip restart">RESTARTING</span><span class="grow"><b>BSP-Spawn</b> said it was stopping at 14:04:50 (planned). An alert if it is not back by 14:09:50.</span></div>
+            <div class="top"><span class="wdtitle">WORLDS</span><span class="mu small">7 servers · 5 online</span><span class="grow"></span><span class="search">Find a region on any server</span></div>
+            <div class="tiles">
+              <div class="tile a-red"><div class="trow"><i class="dot red"></i><span class="wname">BSP-Frostwarf</span><span class="chip frozen" style="margin-left:auto">FROZEN</span></div><div class="say red">Silent since 14:02:15 (4 min) · port open</div><div class="stat"><span>was 11 online</span><span>48.2 ms</span></div></div>
+              <div class="tile a-blue"><div class="trow"><i class="dot blue"></i><span class="wname">BSP-Spawn</span><span class="chip restart" style="margin-left:auto">RESTARTING</span></div><div class="say blue">Planned stop 14:04:50 · 1:40 of 5:00</div><div class="stat"><span>was 6 online</span></div></div>
+              <div class="tile"><div class="trow"><i class="dot"></i><span class="wname">BSP-Boulderbrook</span><span class="pvp">PvP</span></div><div class="stat"><span>9 online</span><span>31.4 ms</span></div><div class="dims"><span class="dim">Overworld</span><span class="dim">Nether</span><span class="dim">End</span></div></div>
+              <div class="tile"><div class="trow"><i class="dot"></i><span class="wname">BSP-Moongrove</span></div><div class="stat"><span>4 online</span><span>22.1 ms</span></div><div class="dims"><span class="dim">Overworld</span><span class="dim">Nether</span></div></div>
+              <div class="tile a-gold"><div class="trow"><i class="dot gold"></i><span class="wname">BSP-SafeRoom</span><span class="chip check" style="margin-left:auto">CHECKING <span class="dots"><i class="on"></i><i></i><i></i></span></span></div><div class="say gold">Silent 25 s · check 1 of 3</div><div class="stat"><span>was 0 online</span><span>12.0 ms</span></div></div>
+              <div class="tile"><div class="trow"><i class="dot"></i><span class="wname">BSP-Sanctuary</span></div><div class="stat"><span>2 online</span><span>15.8 ms</span></div><div class="dims"><span class="dim">Overworld</span></div></div>
+              <div class="tile"><div class="trow"><i class="dot"></i><span class="wname">BSP-Stormfall</span><span class="pvp">PvP</span></div><div class="stat"><span>3 online</span><span>19.9 ms</span></div><div class="dims"><span class="dim">Overworld</span><span class="dim">Nether</span></div></div>
+            </div>
+            <div class="hist">
+              <div class="hh"><span class="wdtitle" style="font-size:11.5px">RECENT ALERTS</span><span class="mu small">the last 7 days</span><span class="grow"></span><span class="mu small">Email on · to 1 address</span><span class="wdkey ghost">SEND TEST EMAIL</span></div>
+              <div class="hrow"><span class="t">today 14:02</span><span class="s">BSP-Frostwarf</span><span><span class="chip frozen">FROZEN</span> <span class="mu small">still out · 4 min</span></span><span class="m">emailed 14:03</span><span class="m"></span></div>
+              <div class="hrow"><span class="t">today 06:00</span><span class="s">BSP-Spawn</span><span><span class="chip late">NOT BACK</span> <span class="mu small">planned stop · 7 min</span></span><span class="m">emailed 06:05</span><span class="m">back 06:07</span></div>
+              <div class="hrow"><span class="t">Tue 21:40</span><span class="s">BSP-Stormfall</span><span><span class="chip crashed">CRASHED</span> <span class="mu small">port closed · 3 min</span></span><span class="m">emailed 21:41</span><span class="m">back 21:43</span></div>
+              <div class="hrow"><span class="t">Tue 21:17</span><span class="s">BSP-Stormfall</span><span><span class="chip crashed">CRASHED</span> <span class="mu small">port closed · 2 min</span></span><span class="m" style="color:#ff8f86">email failed</span><span class="m">back 21:19</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p>When email is not set up, the Owner's line reads "Email off: SMTP_HOST is empty" (it names which variable, never a value), and each row says "not emailed". An "email failed" row keeps the mail server's reason for Owners on hover (never the password).</p>
+    </div>
+  </section>
+
+  <section id="r5">
+    <h2>R5 · on a phone</h2>
+    <div class="card">
+      <div class="stage dk" style="background:#0b0d11">
+        <div class="ph">
+          <div class="pt"><span class="brand">BSP <b>STAFF</b></span></div>
+          <div class="pm">
+            <div class="banner" style="font-size:12.5px"><span class="chip frozen">FROZEN</span><span class="grow"><b>BSP-Frostwarf</b> silent since 14:02:15 · port open</span></div>
+            <div class="top"><span class="wdtitle">WORLDS</span><span class="mu small">7 · 5 online</span></div>
+            <div class="tiles">
+              <div class="tile a-red"><div class="trow"><i class="dot red"></i><span class="wname">BSP-Frostwarf</span><span class="chip frozen" style="margin-left:auto">FROZEN</span></div><div class="say red">Silent since 14:02:15 (4 min) · port open</div></div>
+              <div class="tile a-blue"><div class="trow"><i class="dot blue"></i><span class="wname">BSP-Spawn</span><span class="chip restart" style="margin-left:auto">RESTARTING</span></div><div class="say blue">Planned stop · 1:40 of 5:00</div></div>
+              <div class="tile"><div class="trow"><i class="dot"></i><span class="wname">BSP-Boulderbrook</span><span class="pvp">PvP</span></div><div class="stat"><span>9 online</span><span>31.4 ms</span></div></div>
+            </div>
+            <div class="hist"><div class="hh"><span class="wdtitle" style="font-size:11.5px">RECENT ALERTS</span></div>
+              <div class="hrow"><span class="t">today 14:02 · emailed 14:03</span><span class="s">BSP-Frostwarf</span><span class="chip frozen">FROZEN</span></div>
+              <div class="hrow"><span class="t">today 06:00 · back 06:07</span><span class="s">BSP-Spawn</span><span class="chip late">NOT BACK</span></div>
+            </div>
+          </div>
+          <div class="ptabs"><span>Players</span><span>Map</span><span class="on">Worlds</span><span>Chat</span><span>More</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

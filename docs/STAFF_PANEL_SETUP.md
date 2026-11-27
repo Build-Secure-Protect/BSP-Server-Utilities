@@ -610,6 +610,18 @@ Cloudflare and passes the address's visitors to the panel. Nothing comes in thro
 - **Updating to BSP-Server Utilities 0.19.0 (last seen in the in-game staff window).** No panel change and no new
   grant: the panel stays 0.7.0. **Players need the new modpack** (the protocol is 11), so put
   `bsp-server-utilities-0.19.0.jar` into the modpack and on every game server at the same time, as in part 1.
+- **Updating to panel 0.10.0 (server alerts).** Nothing new on the game servers and no new grant: the panel makes its
+  table `panel_alerts` in `bsp_panel` when it starts. Make the variables below on the panel's egg first, fill them in on
+  BSP-Staff-Panel's Startup tab, then update the panel as above. Its console then says "Server alerts: watching the game
+  servers; email alerts on, to 1 address" (or which variable is missing); `test-email` sends a test.
+- **Server alerts by email.** The panel emails when a game server freezes or crashes, and again when it is back. Its
+  settings are variables on the BSP-Staff-Panel server in Pterodactyl, never in a file: `SMTP_HOST` (Brevo:
+  `smtp-relay.brevo.com`), `SMTP_PORT` (587), `SMTP_USER` (Brevo's SMTP login from its SMTP & API page), `SMTP_PASSWORD` (Brevo's
+  SMTP key; never the account's password; its variable not viewable by users), `ALERT_EMAIL_FROM`
+  (`alerts@buildsecureprotect.com`, a sender verified in Brevo on the authenticated domain), `ALERT_EMAIL_TO` (who gets them, separated by commas), and
+  `ALERT_SERVERS` (each game server as `Name=host:port`, so the panel can tell frozen from crashed). The panel's console
+  `alerts` says whether email is on and which variable is missing; `test-email` sends a test. The panel needs no new
+  grant: its table `panel_alerts` is made in `bsp_panel` when it starts.
 - **Restarts.** The panel, Redis, MariaDB and the game servers can each be restarted on their own: each reconnects by
   itself (Redis within 30 seconds). A game server that starts before MariaDB answers waits for it (its console says
   `storage connected` when it does) and refuses banned players from its own copy of the bans meanwhile.

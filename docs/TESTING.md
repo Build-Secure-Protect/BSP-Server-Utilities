@@ -3172,3 +3172,82 @@ Not changed: the section dropdown already uses no-break spaces (a reported flat 
 Left: a card's edits within a minute are one Action Log entry each (D810's merge not built); the demo's report rows are one per card where BSP-Core's are one per shop and item.
 
 GameTests 371/371 (BSP-Core 1.26.0's jar); JUnit 166/166.
+
+## 2026-11-27: server alerts, the panel's side (SU-167)
+
+The staff panel watches every game server's snapshots and emails when one freezes or crashes (D826 to D834). Built on
+the panel only; the game servers do not send their address yet, so until they do the port check needs the panel's
+`ALERT_SERVERS` variable (D832 a, the mod's part is a later task). The WORLDS banner, tiles and RECENT ALERTS (look BL A)
+are the next task: today the alerts are in `/api/alerts`, the console's `alerts` and the emails.
+
+**Headless:** `./gradlew -p staff-panel test`, JUnit 196/196. `AlertsTest` (29):
+- the triple check: nothing before 20 s, CHECKING at 20 s, checks at 40, 60 and 80 s, no alert before the third, the alert dated from when the server was last heard;
+- a snapshot during the checks ends them with no alert;
+- the last check decides: port open FROZEN, closed CRASHED, no answer NO_ANSWER, no address SILENT (nothing knocked on; `0.0.0.0` counts as no address);
+- planned stops: back within 5 minutes raises nothing and nothing is knocked on; not back at 5 minutes raises NOT BACK (with the port's state and the players from before the stop), then a back email;
+- the back email says how long (7 minutes 25 seconds) and what it was;
+- one email per outage, none more in an hour out, and a second outage within the hour has its own (D830);
+- servers silent within a minute share one email ("Both are at 192.168.1.27"); more than a minute apart, each its own;
+- back before its email went: no email at all, and the alert says so;
+- a failed email is kept with the mail server's reason (Owners only see the reason), and no back email follows;
+- without email set up the alert is kept and shown, the Owner's line names the empty variable;
+- the panel hearing no server: one PANEL email, no server checked meanwhile, a back email when one is heard, then the others checked as usual; a server already in an alert does not count; a network-wide planned restart is not mistaken for it;
+- the start: servers of the last day from the servers' table are watched (one that died while the panel was down alerts once), older ones not; open alerts kept in the database go back to their servers (no second alert, the back email still goes); one for a server not heard for a day is ended;
+- a server not heard for a day is no longer watched, its alert ended without a back email;
+- SLOW off without `ALERT_SLOW_MSPT`; with it, an alert after 5 minutes above and a back email after 2 minutes under;
+- `ALERT_SERVERS` wins over a snapshot's address;
+- the settings come from the environment, `toString` and the reasons name variables, never a value;
+- the mail sender against a stand-in mail server: EHLO, AUTH PLAIN with the user and password, MAIL FROM, a RCPT TO per address, a plain-text UTF-8 message in base64, a subject that cannot add a header, QUIT; a refused sign-in names SMTP_USER and SMTP_PASSWORD and holds no value; nothing sent after it; no sign-in over a connection the mail server will not encrypt;
+- the mail queue tries again (30 s, 2 min, 10 min in the panel) and then keeps the reason;
+- the port check is a plain connection (open, closed, unusable addresses); the feed tells the watch of every snapshot, a planned stop's included.
+`AlertsPanelTest` (1): every logged-in rank reads `/api/alerts`, only Owners get the email line, no setting's value reaches a page, a Moderator's test email is refused (403), an Owner's goes, once in 30 seconds, and is logged.
+
+Smoke: `--demo` starts with "Server alerts: watching the game servers; email alerts off (SMTP_HOST is empty; …)" and stays quiet past 20 seconds.
+
+**Untested live:** a real mail server (Gmail with an app password, STARTTLS on 587, its certificate), the panel's
+container reaching the game servers' ports on `192.168.1.25` to `.28`, Pterodactyl's variables reaching the panel, the
+`panel_alerts` table in the real MariaDB, a real freeze or crash, a real scheduled restart.
+
+**On the network** (after the email setup, which the owner does in Pterodactyl, one step at a time):
+1. Panel console: `alerts` says "email alerts on, to 1 address" and names no value; `test-email` says "Sent"; the email
+   arrives (look in spam too) from the alerts account, subject "Test email from the BSP staff panel".
+2. `ALERT_SERVERS` filled with each server's `Name=host:port` (as Velocity's server list has them). From the panel's
+   console nothing is printed about them but the count.
+3. A planned restart of one quiet server (its Restart button): no email; back within 5 minutes.
+4. A crash: on a quiet test server, **Kill** in Pterodactyl and leave it stopped. About 80 seconds after it was last heard,
+   one email "BSP-… has crashed" with "is closed"; **Start** it: "BSP-… is back after N minutes".
+5. A freeze cannot be made on purpose without a tool on the server, so the frozen path is checked by JUnit only.
+   The first real freeze checks it live: the email says "is frozen" and "answered at"; after Kill and Start in
+   Pterodactyl, the back email.
+6. A planned stop that does not come back: **Stop** a quiet server (it says it is stopping) and leave it 5 minutes: one
+   email "is not back after its restart", port closed. Start it: the back email.
+7. Two servers on the same machine killed within a minute: one email for both, "Both are at 192.168.1.2x".
+8. The panel's own deafness: never needed on purpose; if it happens, one email "The staff panel cannot hear the game
+   servers".
+9. Minecraft's watchdog (D832 h): in each game server's Files › `server.properties`, note `max-tick-time`. 60000 (the
+   default) ends a server stuck for a minute (a crash, which Pterodactyl may restart); `-1` lets a freeze last until
+   someone restarts it. Tell the session which servers say what; nothing is changed without the owner's word.
+
+## 2026-11-27: server alerts on the panel's pages (SU-168)
+
+Look BL A, confirmed in D835 (R4 and R5 of `tools/preview/alerts_refined.html`): a strip above every tab while an alert
+is open (red; one blue line for planned restarts in their 5 minutes; gold for servers being checked, on WORLDS only), a
+WORLDS key on it from other tabs, the state on each WORLDS tile (chip, coloured edge and dot, the alert's line), and
+RECENT ALERTS under the grid (the last 7 days, 8 rows then ALL; Owners see whether email is on, which variable is
+missing, the mail server's reason on a failed email, and SEND TEST EMAIL). The panel tells every open page within a
+second when what the pages show changes (`event: alerts`); pages also read every minute and after a gap. The strip's
+height comes off the full-height tabs (Map, Chat, Staff), so nothing scrolls twice.
+
+**Headless:** JUnit 198/198 (`AlertsTest` +1: the pages' signature moves with each change shown, not with snapshots
+that change nothing; `AlertsPanelTest` +1: an open page hears `event: alerts` within a second of a planned restart
+beginning, and `/api/alerts` then says RESTARTING).
+
+**Browser pane, `--demo`** (DemoAlerts: SafeRoom seeded 50 s quiet with the demo panel's own port, Lumen stopping, three
+ended alerts): at 1024 px the blue RESTARTING line and the gold CHECKING line, SafeRoom's tile CHECKING with its dots,
+RECENT ALERTS with "Email off: SMTP_HOST is empty; …" and SEND TEST EMAIL greyed; about a minute later, without a
+reload, SafeRoom FROZEN ("port open") in the strip, on its tile and as "still out" in RECENT ALERTS; the Map tab with
+the strip and its WORLDS key, the map's area shortened by the strip (no second scroll bar); at 375 px the strip, the
+tiles and RECENT ALERTS in one column with no sideways scroll. No console error from the alerts.
+
+**Untested live:** with real game servers, real emails and a real SEND TEST EMAIL; the strip on a phone with real
+alerts; a NOT BACK in the demo (it comes 5 minutes after the start and was not waited for).

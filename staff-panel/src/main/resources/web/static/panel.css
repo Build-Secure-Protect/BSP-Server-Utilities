@@ -224,7 +224,7 @@ a.btn { display: grid; place-items: center; text-decoration: none; }
 .bdot { position: absolute; top: -1px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--soft); }
 .side .nav { position: relative; } .side .nav .badge { position: static; margin-left: auto; } .side .nav .bdot { position: static; margin-left: auto; }
 main.chatmain { padding-bottom: 0; }
-main.chatmain .chat { height: calc(100dvh - 52px - 70px); }
+main.chatmain .chat { height: calc(100dvh - 52px - 70px - var(--alerth, 0px)); }
 .chat { display: flex; flex-direction: column; min-height: 0; position: relative; gap: 6px; }
 .chatbar { display: flex; gap: 8px; align-items: center; flex: none; }
 .chatbar .chips { flex: 1; min-width: 0; display: flex !important; } /* the Players tab hides its own chips on a computer */
@@ -277,7 +277,7 @@ select.small { height: 34px; font-size: 13px; width: auto; flex: 1 1 90px; paddi
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #22262f; border: 1px solid var(--ln); border-radius: 10px; padding: 8px 14px; font-size: 13px; z-index: 40; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .chatcol, .chatbtn, .chatgrip, .chattag { display: none; }
 @media (min-width: 900px) {
-  main.chatmain .chat { height: calc(100vh - 32px); }
+  main.chatmain .chat { height: calc(100vh - 32px - var(--alerth, 0px)); }
   .pill { bottom: 100px; }
   .csheet { left: auto; right: 24px; bottom: 24px; width: 360px; border-radius: 14px; border: 1px solid var(--ln); }
   .chatcol { width: var(--chatw, 360px); flex: none; border-left: 1px solid var(--ln); background: var(--bg2); padding: 12px 14px 8px; height: 100vh; }
@@ -307,7 +307,7 @@ select.small { height: 34px; font-size: 13px; width: auto; flex: 1 1 90px; paddi
 
 /* the Staff tab (D314, D327 to D329): room and messages under one switch on a phone, side by side on a computer */
 main.staffmain { padding-bottom: 76px; }
-.stafftab { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 52px - 84px); min-height: 0; }
+.stafftab { display: flex; flex-direction: column; gap: 8px; height: calc(100dvh - 52px - 84px - var(--alerth, 0px)); min-height: 0; }
 .staffseg { flex: none; } .staffseg button { flex: 1; position: relative; } .staffseg .n { display: inline-grid; place-items: center; min-width: 16px; height: 16px; border-radius: 8px; background: var(--coral); color: #10151c; font: 700 10px var(--body); margin-left: 6px; padding: 0 3px; }
 .staffcols { flex: 1; min-height: 0; display: flex; }
 .staffcols.room .msghalf, .staffcols.msg .roomhalf { display: none; }
@@ -340,7 +340,7 @@ textarea.ta { width: 100%; border-radius: 10px; background: var(--pn); border: 1
 textarea.ta:focus { outline: none; border-color: var(--teal); }
 @media (min-width: 900px) {
   main.staffmain { padding-bottom: 16px; }
-  .stafftab { height: calc(100vh - 32px); }
+  .stafftab { height: calc(100vh - 32px - var(--alerth, 0px)); }
   .staffseg { display: none; }
   .staffcols { gap: 18px; }
   .staffcols.room .msghalf, .staffcols.msg .roomhalf { display: flex; }
@@ -494,7 +494,7 @@ input.addcount { width: 86px; height: 30px; padding: 0 8px; border-radius: 7px; 
 
 /* the Map tab (SU-47; D389 to D395): the list, BlueMap's page in a frame, the panel's bar, the followed player's card */
 main.mapmain { padding: 0; }
-.mapview { display: flex; height: calc(100dvh - 52px - 70px); min-height: 0; position: relative; }
+.mapview { display: flex; height: calc(100dvh - 52px - 70px - var(--alerth, 0px)); min-height: 0; position: relative; }
 .mlist { display: none; }
 /* a phone (SU-48; D393, D395 R4): the map fills the screen; the players as a sheet behind a button; the card as a sheet */
 .mlist.open { display: flex; flex-direction: column; position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; overflow-y: auto; z-index: 7;
@@ -543,7 +543,7 @@ select.mc { width: auto; flex: none; height: 30px; padding: 0 8px; color: var(--
 .mpin .pt { display: flex; align-items: center; gap: 8px; } .mpin .pt b { flex: 1; font-size: 13px; }
 .mpin .close { background: none; border: 0; color: var(--mu); cursor: pointer; }
 @media (min-width: 900px) {
-  .mapview { height: 100vh; }
+  .mapview { height: calc(100vh - var(--alerth, 0px)); }
   /* the players as a window over the map (SU-79; D549 to D556, D560, D562 to D565, D567, D568; look A of set AE): placed by map.js */
   .mlist, .mlist.open { display: flex; flex-direction: column; position: absolute; z-index: 4; left: 10px; top: 54px; right: auto; bottom: auto; width: 236px; height: 33vh;
     max-height: none; overflow: hidden; padding: 0; background: rgba(20,23,29,.66); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
@@ -1304,3 +1304,54 @@ input.shsmallin, select.shsmallin { width: 96px; flex: none; }
 
 /* SHOPS: BSP-Core's report (SU-165; D820, D821) */
 .shsellers { display: flex; flex-direction: column; gap: 3px; background: #12151b; border: 1px solid var(--ln); border-radius: 10px; padding: 10px 12px; font-size: 12px; max-width: 420px; }
+
+/* server alerts (SU-168, look BL A, R4 and R5): the strip above every tab, the WORLDS tiles' states, RECENT ALERTS */
+.maincol { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.maincol > main { min-height: 0; }
+.alertbar { display: flex; flex-direction: column; gap: 6px; padding: 0 14px 10px; }
+.alertbar.hidden { display: none; }
+@media (min-width: 900px) {
+  .maincol { height: 100vh; }
+  .alertbar { padding: 12px 20px 0; }
+}
+.albanner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 10px; background: #3a1d1d; border: 1px solid #5a2a2a; color: #ffd2ce; font-size: 13px; line-height: 1.4; }
+.albanner b { color: #fff; }
+.albanner .grow { flex: 1; min-width: 160px; }
+.albanner.ab-blue { background: #1b2433; border-color: #2c3d59; color: #cfe0ff; }
+.albanner.ab-gold { background: #2a2614; border-color: #5a4a1a; color: #f3e3a0; }
+.alkey { height: 28px; padding: 0 10px; border-radius: 8px; background: transparent; border: 1px solid #5a2a2a; color: #ffd2ce; font: 600 11.5px var(--body); cursor: pointer; }
+.albanner.ab-gold .alkey { border-color: #5a4a1a; color: #f3e3a0; }
+.alchip { font: 600 10.5px var(--body); letter-spacing: .04em; padding: 1px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.alchip.alc-frozen { color: #ff8f86; background: #ff6b5c1f; border-color: #ff6b5c66; }
+.alchip.alc-crashed { color: #ffb3ad; background: #ff3b3b2a; border-color: #ff3b3b77; }
+.alchip.alc-check { color: var(--gold); background: #ffd23a1a; border-color: #ffd23a55; }
+.alchip.alc-restart { color: var(--blue); background: #7fb2ff1a; border-color: #7fb2ff55; }
+.alchip.alc-late { color: #ffb36b; background: #ff9a3b1f; border-color: #ff9a3b66; }
+.alchip.alc-slow { color: var(--gold); background: #ffd23a14; border-color: #ffd23a44; }
+.aldots { display: inline-flex; gap: 3px; } .aldots i { width: 6px; height: 6px; border-radius: 50%; background: #3a3f4b; } .aldots i.on { background: var(--gold); }
+.wdalchip { margin-left: auto; } .wdpvp + .wdalchip { margin-left: 0; }
+.wdtile.al-red { border-color: #ff6b5c88; background: linear-gradient(#ff6b5c10, #ff6b5c10), var(--pn); }
+.wdtile.al-blue { border-color: #7fb2ff66; }
+.wdtile.al-gold { border-color: #ffd23a66; }
+.wddot.ad-red { background: var(--coral); box-shadow: 0 0 0 3px #ff6b5c33; } .wddot.ad-blue { background: var(--blue); } .wddot.ad-gold { background: var(--gold); }
+.wdalline { font-size: 11.5px; line-height: 1.4; } .wdalline.al-red { color: #ff8f86; } .wdalline.al-blue { color: var(--blue); } .wdalline.al-gold { color: var(--gold); }
+.alhist { background: var(--bg2); border: 1px solid var(--ln); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.alhh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 12px; border-bottom: 1px solid var(--ln); }
+.alhtitle { font-size: 11.5px; }
+.alwarn { color: #ff8f86 !important; }
+.almsg { margin: 8px 12px 0; }
+.alrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 7px 12px; font-size: 12.5px; border-top: 1px solid #20242c; }
+.alhh + .alrow, .almsg + .alrow { border-top: 0; }
+.alrow .alt { grid-column: 1 / -1; font: 11.5px var(--mono); color: var(--mu); }
+.alrow .als { font: 600 12.5px var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alrow .alw { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.alrow .alm { font-size: 11.5px; color: var(--mu); }
+.alrow .alm:empty { display: none; }
+.alall { align-self: flex-start; margin: 4px 8px 8px; }
+@media (min-width: 900px) {
+  .alrow { grid-template-columns: 110px minmax(120px, 170px) 1fr 120px 80px; }
+  .alrow .alt { grid-column: auto; }
+  .alrow .alw { justify-content: flex-start; }
+  .alrow .alm { text-align: right; }
+  .alrow .alm:empty { display: block; }
+}

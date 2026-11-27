@@ -132,6 +132,11 @@ public final class JdbcStore implements PanelStore {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_points (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, at_ms BIGINT NOT NULL, player CHAR(36) NOT NULL,"
                     + " name VARCHAR(32) NOT NULL, before_pts INT NOT NULL, after_pts INT NOT NULL, totems INT NOT NULL, tier INT NOT NULL, first BOOLEAN NOT NULL,"
                     + " KEY player (player, at_ms), KEY at (at_ms)) DEFAULT CHARSET=utf8mb4"); // SU-97: the board's changes, 90 days
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "panel_alerts (id BIGINT NOT NULL PRIMARY KEY, server VARCHAR(64) NOT NULL, kind VARCHAR(16) NOT NULL,"
+                    + " since_ms BIGINT NOT NULL, decided_ms BIGINT NOT NULL, last_heard_ms BIGINT NOT NULL, port VARCHAR(12) NOT NULL, addr VARCHAR(100) NOT NULL,"
+                    + " players INT NOT NULL, mspt DOUBLE NOT NULL, checks VARCHAR(200) NOT NULL, emailed_ms BIGINT NOT NULL, email_note VARCHAR(255) NOT NULL,"
+                    + " back_ms BIGINT NOT NULL, back_emailed_ms BIGINT NOT NULL, ended_ms BIGINT NOT NULL, note VARCHAR(255) NOT NULL,"
+                    + " KEY since (since_ms)) DEFAULT CHARSET=utf8mb4"); // SU-167: server alerts, 30 days
         }
     }
 
@@ -1167,6 +1172,64 @@ public final class JdbcStore implements PanelStore {
             } catch (SQLException ignored) {
                 // reopened on the next call
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ server alerts (SU-167)
+
+    private static String cut(String s, int max) {
+        String t = s == null ? "" : s;
+        return t.length() > max ? t.substring(0, max) : t;
+    }
+
+    @Override
+    public synchronized void saveAlert(AlertRow r) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("INSERT INTO " + prefix + "panel_alerts (id, server, kind, since_ms, decided_ms, last_heard_ms, port, addr,"
+                + " players, mspt, checks, emailed_ms, email_note, back_ms, back_emailed_ms, ended_ms, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                + " ON DUPLICATE KEY UPDATE port = VALUES(port), addr = VALUES(addr), checks = VALUES(checks), emailed_ms = VALUES(emailed_ms),"
+                + " email_note = VALUES(email_note), back_ms = VALUES(back_ms), back_emailed_ms = VALUES(back_emailed_ms), ended_ms = VALUES(ended_ms), note = VALUES(note)")) {
+            ps.setLong(1, r.id());
+            ps.setString(2, cut(r.server(), 64));
+            ps.setString(3, cut(r.kind(), 16));
+            ps.setLong(4, r.sinceMs());
+            ps.setLong(5, r.decidedMs());
+            ps.setLong(6, r.lastHeardMs());
+            ps.setString(7, cut(r.port(), 12));
+            ps.setString(8, cut(r.addr(), 100));
+            ps.setInt(9, r.players());
+            ps.setDouble(10, r.mspt());
+            ps.setString(11, cut(r.checks(), 200));
+            ps.setLong(12, r.emailedMs());
+            ps.setString(13, cut(r.emailNote(), 255));
+            ps.setLong(14, r.backMs());
+            ps.setLong(15, r.backEmailedMs());
+            ps.setLong(16, r.endedMs());
+            ps.setString(17, cut(r.note(), 255));
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public synchronized List<AlertRow> alerts(long sinceMs) throws SQLException {
+        List<AlertRow> out = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement("SELECT id, server, kind, since_ms, decided_ms, last_heard_ms, port, addr, players, mspt, checks,"
+                + " emailed_ms, email_note, back_ms, back_emailed_ms, ended_ms, note FROM " + prefix + "panel_alerts WHERE since_ms >= ? ORDER BY since_ms, id")) {
+            ps.setLong(1, sinceMs);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new AlertRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getLong(6), rs.getString(7), rs.getString(8),
+                            rs.getInt(9), rs.getDouble(10), rs.getString(11), rs.getLong(12), rs.getString(13), rs.getLong(14), rs.getLong(15), rs.getLong(16), rs.getString(17)));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized int pruneAlerts(long beforeMs) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement("DELETE FROM " + prefix + "panel_alerts WHERE ended_ms <> 0 AND since_ms < ?")) {
+            ps.setLong(1, beforeMs);
+            return ps.executeUpdate();
         }
     }
 }
