@@ -402,7 +402,8 @@ public final class WebActions {
             default -> {
                 Answer regions = WebRegions.handle(server, str(a, "action"), a, id, by); // the WORLDS tab and the map's regions (SU-158)
                 Answer shops = regions != null ? null : WebShops.handle(server, str(a, "action"), a, id, by); // the SHOPS tab (SU-165)
-                yield regions != null ? regions : shops != null ? shops : new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
+                Answer kits = regions != null || shops != null ? null : WebKits.handle(server, str(a, "action"), a, id, by); // the KITS tab (SU-171)
+                yield regions != null ? regions : shops != null ? shops : kits != null ? kits : new Answer(id, false, "This server does not know that action; is it on the same version as the panel?");
             }
         };
     }

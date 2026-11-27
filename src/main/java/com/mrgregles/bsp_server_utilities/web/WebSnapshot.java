@@ -48,6 +48,7 @@ public final class WebSnapshot {
         WebTalk.addTo(o); // which servers take private staff messages from the panel (SU-109)
         WebRegions.addTo(o); // which servers answer for their regions, and when they last changed (SU-158)
         WebShops.addTo(server, o); // which servers answer for the shops, and when shops and their own stalls last changed (SU-165)
+        WebKits.addTo(server, o); // which servers answer for the kits, whether kits are on here, and when a kit last changed (SU-171)
         JsonArray list = new JsonArray();
         for (ServerPlayer p : players) {
             list.add(player(server, p));

@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-27
+
+The staff web panel's kits. Built against BSP-Core 1.27.2 (its network protocol 26: every server and player moves to BSP-Core 1.27.1 or later at once). The network protocol of this mod is still 14.
+
+### Added
+- The staff web panel's kits on the game servers (SU-171): with BSP-Core 1.27.1 or newer (its `BspKits`), the panel lists every kit with its items and rules, the pickers for ranks, servers and conditions, and a player's kit records with when they may take each kit again; Admins and Owners make, copy, change, turn on and off and delete kits, set their items and icon, give a kit to a player and reset a player's records. Each change names the kit's stamp, BSP-Core's refusals are said in words, and each is in the Action Log (eight new kinds). The snapshot says which servers answer for the kits, whether kits are switched on there, and moves on every kit change.
+
+### Changed
+- A server that has not finished reading the network's shops since it started or reconnected says so, instead of saying its database is not connected, and its snapshot says it is still reading (`shopsWait`, `kitsWait`), so the panel can tell that apart from no server at all.
+
 ## [0.27.1] - 2026-11-27
 
 Built against BSP-Core 1.27.0, whose shop fixes change a few of the answers the staff panel's SHOPS tab gets. The network protocol is still 14; BSP-Core 1.26.0 still answers every shop action as before.

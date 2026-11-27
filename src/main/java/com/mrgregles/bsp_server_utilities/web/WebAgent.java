@@ -81,7 +81,7 @@ public final class WebAgent {
         long now = clock.getAsLong();
         if (++watchTicks >= 20) {
             watchTicks = 0;
-            if (WebMarket.watch() | WebRegions.watch() | WebShops.watch()) { // each is asked every second (not ||); shops and stalls too (D817)
+            if (WebMarket.watch() | WebRegions.watch() | WebShops.watch() | WebKits.watch()) { // each is asked every second (not ||); shops and stalls too (D817), kits (D845)
                 nextAt = now + seconds() * 1000L;
                 send(server, s); // a draw began or ended, or a region changed: every panel sees it at once (D411, D781)
                 return;

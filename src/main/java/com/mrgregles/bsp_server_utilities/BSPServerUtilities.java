@@ -60,6 +60,7 @@ public class BSPServerUtilities {
         com.mrgregles.bsp_server_utilities.web.WebTalk.register(); // and the staff web panel, live (SU-109)
         com.mrgregles.bsp_server_utilities.web.WebRegions.register(); // BSP Region Guard's region changes, for the panel (SU-158)
         com.mrgregles.bsp_server_utilities.web.WebShops.register(); // BSP-Core's shop and stall changes, for the panel (SU-165)
+        com.mrgregles.bsp_server_utilities.web.WebKits.register(); // BSP-Core's kit changes, for the panel (SU-171)
         com.mrgregles.bsp_server_utilities.serverimages.ServerImages.registerNotices();
         com.mrgregles.bsp_server_utilities.announce.Broadcast.registerNotices();
         com.mrgregles.bsp_server_utilities.web.WebActions.registerNotices();

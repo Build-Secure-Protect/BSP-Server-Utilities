@@ -3263,3 +3263,47 @@ alerts; a NOT BACK in the demo (it comes 5 minutes after the start and was not w
 **Not checked (needs the network):** a real section whose shop is gone on a game server with BSP-Core 1.27.0 (none can be made through the api; it comes from a delete half heard before 1.26.0):
 1. If one exists, it shows as its own tile with the red line; MOVE TO TOP LEVEL works and the switch turns it on.
 2. `/bsp shop edit <id>` in game shows it as a top shop afterwards.
+
+## 2026-11-27: the game servers' kits through BSP-Core 1.27.2 (SU-171; D838 to D867)
+
+**GameTests** (`./gradlew runGameTestServer`, BSP-Core 1.27.2's jar loaded in the dev run, `BspKits.VERSION` 3): 377/377, run twice. `WebKitsGameTests` adds 5, every action signed as the panel signs it:
+1. A kit is made off and empty, `KitEvent.Changed` moves `kitsAt`, the snapshot carries `kits`, `kitsOn` and `kitsAt`; listed for a Moderator in the panel's shape (`owed`, `missing`, `grantServers`, the icon), read, a missing one said in words; the pickers (`maxItems`, `kitsOn`, three grants, the conditions); deleted.
+2. A Moderator makes nothing; a name saved with its stamp moves it; the old stamp is refused with `stale`; every other field saved and read back (lists as lists, ranks lower-cased); `bad_field` and `bad_value` in words; a text "true" is not on; turned on; no stamp, no change.
+3. Items saved in slot order with their data; the icon set and cleared; an unknown item refused with "(the one you just changed)"; a count of 0 never sent; one stack over `maxItems` refused "at most N stacks"; `bad_id` and `taken` in words; a copy made off, never taken, with the items.
+4. A gift to a player who is not online waits (even with the kit off), the kit counts it owed; a Moderator gives nothing; "nobody" is no player; the records come back with `here`, `again` and `fresh`; a reset without a kit or `all` is refused; reset one kit, then every kit.
+5. The next time worked out (once and taken, a wait running, a wait over, none); as BSP-Core VERSION 1 every kit action says it needs 1.27.1 and the snapshot says no kits; as VERSION 2 the snapshot says kits and on.
+
+**Not checked (needs the network or a client):** a gift delivered at once to a player online here (test players are not in the server's player list); `kit_records` read from MySQL (`fresh` true); `kitsOn` false on a server with `kit.enabled` off; `ready` false while a server is reading the kits after a restart (the wording D862); the panel's side (SU-172 on).
+1. On a server with kits off (`kit.enabled = false` in BSP-Core's config), the snapshot's `kitsOn` is false within 30 s.
+2. With two servers, a kit changed on one moves the other's `kitsAt` within seconds.
+3. The game's LOG tab shows "Kit edits" by "<name> (panel)".
+
+## 2026-11-27: the KITS tab, mod 0.28.0 and panel 0.11.0 (SU-172 to SU-175; D838 to D867)
+
+**JUnit** (panel) 205/205. `KitsTest` adds 6 against the demo's kits: the grid for every rank from a server with kits on, the servers with kits off named, kept a minute, dropped on each `kitsAt` move; every change for Admins and Owners only and checked before it is signed (ids, names, numbers, lists, conditions from the pickers, grants, the item limit, item ids, counts, icon), the stamp sent, a stale answer said; a kit holding items the server lacks only deleted; a gift through the player's own server when kits are on there, else the answering server; records with a deleted kit and a gift owed; reset of one kit and of every kit only when asked for; "still reading" said apart from "no server" for KITS and SHOPS; a refused change never hides the next change in game.
+
+**GameTests** (`./gradlew runGameTestServer`, BSP-Core 1.27.2): 377/377, run twice after the audit's fixes; `WebKitsGameTests` also checks `kitsOn` against BSP-Core's own `choices`, data that is not text refused, a missing icon refused, a comma inside a list entry refused, and a kit with `all` refused.
+
+**In the demo browser** (`--demo`, 0.11.0, launch entry `panel-demo-0110`): the grid (8 kits, filters, the Stormfall kits-off strip, Winter Event striped with its red line), a kit's page (contents, the browser card, RULES, RECORD with "3 players (as BSP-Spawn counts them)"), the editor (an item added from the browser saved after the pause, "Saving…" then "Saved"; a count changed with the wheel while the save was on its way reached the game; WHO AND WHERE's ladder; the bin with SURE?), NEW KIT opening the editor, DELETE with SURE?, GIVE TO… for Kestrel_88 on Frostwarf, a player's KITS section with a once-only kit, a wait, a deleted kit and RESET keys kept through the card's redraws; on a phone (375 px) KITS in More, no sideways scroll, EDIT greyed.
+
+**Audit** (two independent reads, the mod against BSP-Core 1.27.2's api, the panel against the mod's contract). Fixed:
+1. `kitsOn` was never read (its first-read time started at `Long.MIN_VALUE`, and the difference overflowed): every server said kits on, and a gift could go through a server with kits off.
+2. Item data sent as anything but text was dropped silently; a `kit_icon` without `icon` cleared the icon. Both refused now.
+3. Every kit action but the pickers and records is refused while the server is not ready, so an old copy never answers or passes an old stamp.
+4. A list entry holding a comma was merged into another name; a list for a single value was saved as its text. Both refused.
+5. `kit_copy`'s `data.kit` named the new id on a refusal; it names the kit asked to copy, with `data.newId` apart.
+6. `kit_reset` with a kit and `all` reset every kit; refused.
+7. `kitsWait` was sent when the api threw; the contract now names `kitsWait`, `shopsWait` and when `owed` comes.
+8. The panel's editor changed the very list a save was waiting on, so an edit made during a save was lost; a refusal of one kit's save could wipe the next kit's edits; the same list could go twice when leaving the editor. Lists are copied now, one list is in flight at a time, and a newer edit goes after it.
+9. With three or more changes queued, the third went with an old stamp and was refused as changed in game: every stamp the panel itself started from or brought back now counts as its own.
+10. The panel's own "ten changes a minute" refusal dropped the item edits: they wait and go again after 10 s. Item changes wait 2.5 s to go as one; ONCE is one change, not two.
+11. A malformed pickers answer could throw; checked now.
+12. A refused change (KITS and SHOPS) held back the next change made in game for 15 s; only a change that went through does.
+13. Two records of one kit (the network's and a first-join grant) shared one RESET confirm; a re-read after RESET refilled a hidden section.
+
+**Not checked (needs the network or a client):** a real game server answering the panel's kit actions over Redis; a gift delivered at once to a player online; records from MySQL; a server with kits off; the "still reading" lines after a real restart; the in-game KITS tab refusing a SAVE over a panel change.
+1. Install BSP-Core 1.27.2 on every server and in the modpack, BSP-Server Utilities 0.28.0, panel 0.11.0.
+2. KITS lists the network's kits; change a price on the panel: the in-game browser shows it; change it in game: the panel shows it within seconds.
+3. GIVE TO… yourself while online with room: it lands at once; to someone offline: it lands at their next join.
+4. A player's card › KITS › SHOW: their records; RESET a once-only kit: they can take it again.
+5. The game's LOG tab shows "Kit edits" by "<name> (panel)".

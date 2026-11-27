@@ -38,6 +38,8 @@ import java.util.function.LongSupplier;
 public final class WebShops {
     public static final String SINCE = "1.26.0";
     static final String NOT_HERE = "Shops need BSP-Core " + SINCE + " on this server.";
+    /** BspShops.ready false: no database, or its first full read since connecting not landed yet (D862). */
+    static final String NOT_READY = "This server has not finished reading the network's shops since it started or reconnected, so it cannot answer for all of them yet: try again shortly.";
     static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
     private static volatile long shopsAt, stallsAt;
     private static long toldShops = -1, toldStalls = -1;
@@ -137,6 +139,9 @@ public final class WebShops {
     public static void addTo(MinecraftServer server, JsonObject snapshot) {
         boolean on = available() && Live.ready(server);
         snapshot.addProperty("shops", on);
+        if (available() && !on) {
+            snapshot.addProperty("shopsWait", true); // it has the shops but is still reading them, or its database is down (D862)
+        }
         if (on) {
             snapshot.addProperty("shopsAt", shopsAt);
             snapshot.addProperty("stallsAt", stallsAt);
@@ -283,7 +288,7 @@ public final class WebShops {
             switch (action) {
                 case "shop_list" -> {
                     if (!ready(server)) {
-                        return no(id, "This server's database is not connected, so it cannot answer for every shop now.");
+                        return no(id, NOT_READY); // D862
                     }
                     JsonObject d = new JsonObject();
                     d.add("shops", GSON.toJsonTree(com.mrgregles.bsp_core.api.BspShops.list(server)));
